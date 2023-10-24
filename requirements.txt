@@ -1,0 +1,12 @@
+jax>=0.4.0
+jaxlib>=0.4.0
+optax>=0.1.4
+flax
+
+chex
+jaxtyping
+
+matplotlib>=3.6.2
+tqdm
+ase
+# einpos
