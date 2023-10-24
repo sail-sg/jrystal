@@ -1,4 +1,4 @@
-# Jcrystal
+# Jrystal
 
 Plane-wave density functional theory for crystals in JAX
 
