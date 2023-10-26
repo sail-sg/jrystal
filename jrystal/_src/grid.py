@@ -2,13 +2,14 @@
 
 import jax
 import jax.numpy as jnp
-from jaxtyping import Float, Int, Array
+from jaxtyping import Int, Array
 import numpy as np
-from ._utils import get_fftw_factor
+from .utils import get_fftw_factor
+
 
 def grid_1d(n: Int, normalize=False) -> Int[Array, 'n']:
-  """Return a list of integers from 0 to n/2-1 and -n/2 to -1, which represent a
-  canonical period. Used for computing fourier series.
+  """Return a list of integers from 0 to n/2-1 and -n/2 to -1, which represent 
+  a canonical period. Used for computing fourier series.
 
   Args:
     n: grid size of the period
@@ -31,14 +32,16 @@ def _vector_grid(basis: jax.Array, grid_sizes, normalize=False):
       grid_sizes (_type_): _description_
       normalize (bool, optional): _description_. Defaults to False.
   """
-  
+
   dim = len(grid_sizes)
   assert basis.shape[0] == basis.shape[1] == dim
   components = []
   for i in range(dim):
     shape = (*((grid_sizes[i] if _ == i else 1) for _ in range(dim)), dim)
     components.append(
-      jnp.reshape(jnp.outer(grid_1d(grid_sizes[i], normalize), basis[i]), shape)
+      jnp.reshape(
+        jnp.outer(grid_1d(grid_sizes[i], normalize), basis[i]), shape
+      )
     )
   return sum(components)
 
@@ -82,7 +85,7 @@ def r_vectors(a, grid_sizes):
   return _vector_grid(a, grid_sizes, normalize=True)
 
 
-def _grid_sizes(grid_sizes: Int|Int[Array, 'd']):
+def _grid_sizes(grid_sizes: Int | Int[Array, 'd']):
   if hasattr(grid_sizes, "__len__"):
     grid_sizes = np.array(grid_sizes)
   else:
@@ -90,5 +93,5 @@ def _grid_sizes(grid_sizes: Int|Int[Array, 'd']):
       grid_sizes = np.ones(3, dtype=int) * int(grid_sizes)
     except:
       raise TypeError('mesh should be a scalar, tuple, list or np.array.')
-  grid_sizes =  np.array([get_fftw_factor(i) for i in grid_sizes])
+  grid_sizes = np.array([get_fftw_factor(i) for i in grid_sizes])
   return grid_sizes

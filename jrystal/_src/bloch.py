@@ -9,8 +9,8 @@ from functools import partial
 
 # import jax._src.ad_util as ad_util
 from jax.interpreters import mlir
-from ._grid import g_vectors, r_vectors, grid_1d
-from jaxtyping import Float, Array, Int, Complex
+from .grid import g_vectors, r_vectors
+
 
 def u(a, cg, r):
   r"""This is the periodic part of the bloch wave function.
@@ -33,7 +33,9 @@ def u(a, cg, r):
   """
   return u_p.bind(a, cg, r)
 
+
 u_p = core.Primitive("u")
+
 
 def _u(g_vec, r, cg):
   ndim = r.shape[-1]
@@ -42,6 +44,7 @@ def _u(g_vec, r, cg):
   return jnp.tensordot(
     cg, expigr, axes=(tuple(range(-ndim, 0)), tuple(range(ndim)))
   )
+
 
 def _u_map(g_vec, r, cg):
   """This is because, although jax will not compute the branch not
@@ -54,12 +57,14 @@ def _u_map(g_vec, r, cg):
   out = jnp.reshape(out, (*cg.shape[:-ndim], *r.shape[:-1]))
   return out
 
+
 def _u_fft(g_vec, r, cg):
   ndim = r.shape[-1]
   grid_sizes = cg.shape[-ndim:]
   out = np.prod(grid_sizes) * jnp.fft.ifftn(cg, axes=tuple(range(-ndim, 0)))
   out = jnp.reshape(out, (*cg.shape[:-ndim], *r.shape[:-1]))
   return out
+
 
 def _u_impl(a, cg, r):
   ndim = a.shape[-1]
@@ -152,7 +157,10 @@ def _u_transpose_rule(cotangent, a, cg, r):
     r_vec = r_vectors(a, cg.aval.shape[-ndim:])
     if np.prod(r.shape) == np.prod(r_vec.shape):
       pred = jnp.array_equal(r.flatten(), r_vec.flatten())
-      wrt_cg = jax.lax.cond(pred, _transpose_u_fft, _transpose_u_map, cotangent)
+      wrt_cg = jax.lax.cond(pred, 
+                            _transpose_u_fft,
+                            _transpose_u_map, 
+                            cotangent)
     else:
       wrt_cg = _transpose_u(cotangent)
     return (None, wrt_cg, None)
@@ -194,9 +202,9 @@ def bloch_wave(a, cg, k_vec):
   """
   ndim = a.shape[1]
   grid_sizes = cg.shape[-ndim:]
-  g_vec = g_vectors(a, grid_sizes)
+  g_vec = g_vectors(a, grid_sizes) # noqa
   # r_vec is used to check whether fft should be used.
-  r_vec = r_vectors(a, grid_sizes)
+  r_vec = r_vectors(a, grid_sizes) # noqa
 
   def wave(r):
     """
@@ -213,5 +221,3 @@ def bloch_wave(a, cg, k_vec):
     return sum_cg_expigr * expikr
 
   return wave
-
-

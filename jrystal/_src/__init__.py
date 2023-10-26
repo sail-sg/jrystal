@@ -1,9 +1,25 @@
-from ._bloch import bloch_wave
-from ._grid import g_vectors, r_vectors
-from ._pw import _get_mask_radius
-from ._module import QRdecomp, BatchedFFT, BatchedInverseFFT
-from ._module import BatchedBlochWave, PlaneWave
-from ._module import ExpandCoeff, CompressCoeff
-from ._utils import vmapstack
-from ._initialize import normal_init
+from .bloch import bloch_wave
+from .grid import g_vectors, r_vectors
+from .pw import _get_mask_radius
+from .module import QRdecomp, BatchedFFT, BatchedInverseFFT
+from .module import BatchedBlochWave, PlaneWave
+from .module import ExpandCoeff, CompressCoeff
+from .utils import vmapstack, vmapstack_reverse
+from .initializer import normal_init
 
+__all__ = (
+  'bloch_wave', 
+  'g_vectors',
+  'r_vectors',
+  '_get_mask_radius',
+  'QRdecomp',
+  'BatchedFFT',
+  'BatchedInverseFFT',
+  'BatchedBlochWave',
+  'PlaneWave',
+  'ExpandCoeff',
+  'CompressCoeff',
+  'vmapstack',
+  'vmapstack_reverse',
+  'normal_init',
+  )

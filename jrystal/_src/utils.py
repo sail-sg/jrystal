@@ -5,7 +5,7 @@ from absl import logging
 import numpy as np
 
 
-def vmapstack(times:int, args:List[Dict] = None) -> Callable:
+def vmapstack(times: int, args: List[Dict] = None) -> Callable:
   """mutiple times vmap over f, from the front to the end.
   
   Example:
@@ -13,29 +13,33 @@ def vmapstack(times:int, args:List[Dict] = None) -> Callable:
     then vmapstack(f): (*batches, 3) -> (*batches, 2)
 
   Args:
-      times (Int): number of vmap times. Must be the same as the dimension of the batches.
+      times (Int): number of vmap times. Must be the same as the dimension of
+      the batches.
       args (List[Dict], optional): arguments for f. Defaults to None.
 
   Returns:
       Callable: a function that map from (*batches, _) to (*batches, _)
   """
-  
-  def  decorator(f):      
+
+  def decorator(f):
     if args:
       if len(args) != times:
-        logging.error(f'the length of args ({len(args)}) is not the same '
-                      f'of times ({times}).')
-      
+        logging.error(
+          f'the length of args ({len(args)}) is not the same '
+          f'of times ({times}).'
+        )
+
     for i in range(times):
       if args:
         f = jax.vmap(f, **args[i])
       else:
         f = jax.vmap(f)
     return f
+
   return decorator
 
 
-def vmapstack_reverse(times:int) -> Callable:
+def vmapstack_reverse(times: int) -> Callable:
   """Keep the vmap out axes at the end of the output
   arranged in 3d and the same order as the input. 
   
@@ -49,17 +53,27 @@ def vmapstack_reverse(times:int) -> Callable:
   Returns:
       Callable: _description_
   """
-  
-  args = [{'in_axes': i, 'out_axes': -i-1} for i in range(times)]
+
+  args = [{'in_axes': i, 'out_axes': -i - 1} for i in range(times)]
   decorator = vmapstack(times, args)
+
   def _decorator(f):
+
     def wrapper(x: jax.Array):
       x = decorator(f)(x)
-      assert x.ndim >= times, f"input array dim ({x.ndim}) cannot be smaller than times ({times})"
-      axes = np.concatenate((np.arange(x.ndim)[:(x.ndim-times)], 
-                            np.arange(x.ndim)[-1:-1-times:-1]))
+      assert x.ndim >= times, print(f"input array dim ({x.ndim}) cannot be"
+                                    f"smaller than times ({times})")
+      
+      axes = np.concatenate(
+        (
+          np.arange(x.ndim)[:(x.ndim - times)], 
+          np.arange(x.ndim)[-1:-1 - times:-1]
+        )
+      )
       return jnp.transpose(x, axes)
+
     return wrapper
+
   return _decorator
 
 

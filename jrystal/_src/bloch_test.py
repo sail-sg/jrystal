@@ -1,13 +1,12 @@
 import jax
 import jax.numpy as jnp
+from jax.config import config
 from absl.testing import absltest, parameterized
 import numpy as np
 import os
-from jrystal._src import u, _u_impl, bloch_wave, r_vectors
+from jrystal._src.bloch import u, _u_impl, bloch_wave, r_vectors
 
 os.environ["NVIDIA_TF32_OVERRIDE"] = "0"
-from jax.config import config
-
 config.update("jax_enable_x64", True)
 
 
@@ -93,7 +92,8 @@ class _TestBlochWave(parameterized.TestCase):
       return jnp.abs(jnp.sum(u(a, cg, r)))
 
     roll_r_vec_1d = jnp.roll(r_vec_1d, 1, axis=0)
-    g_impl = jax.jit(jax.grad(impl_loss, argnums=argnums))(a, cg, roll_r_vec_1d)
+    g_impl = jax.jit(jax.grad(impl_loss, 
+                              argnums=argnums))(a, cg, roll_r_vec_1d)
     g_custom = jax.jit(jax.grad(loss, argnums=argnums))(a, cg, roll_r_vec_1d)
     if argnums == 2:
       g_impl = jnp.roll(g_impl, -1, axis=0)
@@ -122,9 +122,9 @@ class _TestBlochWave(parameterized.TestCase):
     key, subkey = jax.random.split(key)
     k_vec = jax.random.normal(subkey, (nk, nd))
     r_vec = r_vectors(a, grid_sizes)
-    r_vec_1d = jnp.reshape(r_vec, (-1, nd))
-    ndim = a.shape[-1]
-    vmap_r = lambda u: jax.vmap(u, in_axes=0, out_axes=(cg.ndim - ndim))
+    # r_vec_1d = jnp.reshape(r_vec, (-1, nd))
+    # ndim = a.shape[-1]
+    # vmap_r = lambda u: jax.vmap(u, in_axes=0, out_axes=(cg.ndim - ndim))
 
     def loss(cg):
       wave = bloch_wave(a, cg, k_vec)
@@ -134,7 +134,12 @@ class _TestBlochWave(parameterized.TestCase):
     value, grad = value_and_grad(cg)
 
   def test_bloch_wave(self):
-    a, cg, r_vec, r_vec_1d, k_vec = self.a, self.cg, self.r_vec, self.r_vec_1d, self.k_vec
+    a = self.a
+    cg = self.cg
+    r_vec = self.r_vec
+    r_vec_1d = self.r_vec_1d
+    k_vec = self.k_vec
+    
     ndim = a.shape[-1]
     wave = bloch_wave(a, cg, k_vec)
     vmap_r = lambda u: jax.vmap(u, in_axes=0, out_axes=(cg.ndim - ndim))
