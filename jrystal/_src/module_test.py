@@ -6,6 +6,7 @@ from jrystal._src.module import QRdecomp, BatchedBlochWave
 from jrystal._src.module import BatchedInverseFFT, BatchedFFT
 from jrystal._src.module import ExpandCoeff, CompressCoeff
 from jrystal._src.module import PlaneWave, _PlaneWaveFFT
+from jrystal._src.module import PlaneWaveDensity
 from jrystal._src.grid import r_vectors
 from jax.config import config
 from flax import linen as nn
@@ -107,6 +108,20 @@ class _Test_modules(parameterized.TestCase):
     np.testing.assert_array_almost_equal(
       self.cg[mask], x.real[mask], decimal=10
     )
+
+  def test_pw_density_shape(self):
+    shape = [2, 1, self.ng, 4]
+    pwd = PlaneWaveDensity(shape, self.mask, self.a, self.k_grid, spin=0)
+    params = pwd.init(self.key, self.r_vec)
+    nr, ng = pwd.apply(params, self.r_vec, reduce=True)
+    print(nr.shape)
+    print(ng.shape)
+    nr, ng = pwd.apply(params, self.r_vec, reduce=False)
+    print(nr.shape)
+    print(ng.shape)
+    nr, ng = pwd.apply(params, jnp.arange(3), reduce=True)
+    print(nr.shape)
+    print(ng.shape)
 
 
 if __name__ == '__main__':

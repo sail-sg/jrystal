@@ -213,7 +213,7 @@ def bloch_wave(a, cg, k_vec):
         a vector of shape `(d,)`
     Returns:
       a complex tensor that is the wave function value at `r`.
-      the shape of the tensor is `(batch..., nk)`
+      the shape of the tensor is `(batch, ..., nk)`
     """
     sum_cg_expigr = u(a, cg, r)
     kr = jnp.tensordot(k_vec, r, axes=(-1, -1))

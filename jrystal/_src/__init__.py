@@ -5,7 +5,6 @@ from .module import QRdecomp, BatchedFFT, BatchedInverseFFT
 from .module import BatchedBlochWave, PlaneWave
 from .module import ExpandCoeff, CompressCoeff
 from .utils import vmapstack, vmapstack_reverse
-from .initializer import normal_init
 
 __all__ = (
   'bloch_wave', 
@@ -21,5 +20,5 @@ __all__ = (
   'CompressCoeff',
   'vmapstack',
   'vmapstack_reverse',
-  'normal_init',
+  'initializers',
   )

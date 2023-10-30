@@ -1,8 +1,46 @@
+import numpy as np
 import jax.numpy as jnp
+
+from typing import List
 from jaxtyping import Int, Float, Array, Complex
-from jrystal._src.grid import g_vectors
-from jrystal._src.utils import vmapstack
+
 from jrystal import errors
+from jrystal import Crystal
+from jrystal._src import r_vectors
+from jrystal._src.grid import g_vectors, _grid_sizes
+from jrystal._src.utils import vmapstack
+
+from ase.dft.kpoints import monkhorst_pack
+
+
+def get_plane_wave_params(
+  crystal: Crystal,
+  Ecut: Float,
+  g_grid_sizes: Int | List | Float[Array, 'nd'],  # noqa: F821
+  k_grid_sizes,
+  occ: str = 'simple',
+  polarize: bool = True
+):
+
+  crystal = crystal
+  Ecut = Ecut
+  polarize = polarize
+  g_grid_sizes = _grid_sizes(g_grid_sizes)
+  k_grid_sizes = _grid_sizes(k_grid_sizes)
+  occ = occ
+  nspin = 2 if polarize else 1
+  ni = crystal.nelec
+  nk = np.prod(k_grid_sizes)
+  spin = ni // 2
+  g_mask = _get_mask_radius(crystal.A, g_grid_sizes, Ecut)
+
+  ng = jnp.sum(g_mask)
+  k_grid = monkhorst_pack(k_grid_sizes)
+  g_vec = g_vectors(crystal.A, g_grid_sizes)
+  r_vec = r_vectors(crystal.A, g_grid_sizes)
+  cg_shape = [nspin, nk, ng, ni]
+
+  return (cg_shape, g_mask, crystal.A, k_grid, spin), (r_vec, g_vec)
 
 
 def _coeff_expand(
@@ -42,7 +80,8 @@ def _coeff_compress(
   cg: Complex[Array, "*batch_nd"],
   mask: Int[Array, "*nd"],
 ) -> Complex[Array, "*batch ng"]:
-
+  """The inverse operation of ` _coeff_expand` """
+  
   @vmapstack(times=cg.ndim - mask.ndim)
   def _get_value(c):
     return c.at[mask == 1].get()
@@ -77,8 +116,13 @@ def _get_grid_sizes_radius(a: Float[Array, 'd d'], e_cut: Float):
   pass
 
 
+def _complex_norm_square(x: Complex[Array, '...']) -> Float[Array, '...']:
+  """Compute the Square of the norm of a complex number
+  """
+  return jnp.abs(jnp.conj(x) * x)
+
+
 if __name__ == "__main__":
-  import numpy as np
   shape = (5, 6, 7)
   mask = np.random.randn(*shape) > 0
   ng = jnp.sum(mask)

@@ -2,7 +2,7 @@
 
 import jax
 import jax.numpy as jnp
-from jaxtyping import Int, Array
+from jaxtyping import Int, Array, Float
 import numpy as np
 from .utils import get_fftw_factor
 
@@ -95,3 +95,23 @@ def _grid_sizes(grid_sizes: Int | Int[Array, 'd']):
       raise TypeError('mesh should be a scalar, tuple, list or np.array.')
   grid_sizes = np.array([get_fftw_factor(i) for i in grid_sizes])
   return grid_sizes
+
+
+def _get_ewald_lattice(
+  b: Float[Array, 'd d'],
+  ew_cut: Float[Array, 'd'] = 1e4
+) -> Float[Array, 'n d']:
+  """get translation lattice for ewald sum
+
+  Args:
+      b (ndarray): the reciprocal vectors
+      ew_cut (_type_): the real space cutoff. 1/ew_cut -> 0
+      
+
+  Returns:
+      the translation lattice; shape: [nt, 3]
+  """
+  n = jnp.ceil(ew_cut / jnp.linalg.norm(jnp.sum(b, axis=0))**b.shape[0])
+  grid = _vector_grid(b, [int(n) for i in range(b.shape[0])])
+  
+  return jnp.reshape(grid, [-1, b.shape[0]])

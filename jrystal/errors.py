@@ -103,5 +103,19 @@ class ApplyFFTShapeError(JrystalError):
                      f'{fft_dim}. Got input shape: {input_shape}.')
 
 
+class WavevecOccupationMismatchError(JrystalError):
+  """The wave function should return an jax.Array with shape: 
+      wave_fun: r -> [nspin, ni, nk, ...] 
+    The occupation mask array has a shape of [nspin, ni, nk].
+    This error will return when mismatch
+
+  Args:
+      JrystalError (_type_): _description_
+  """
+  def __init__(self, wave_shape, occ_shape):
+    super().__init__(f"Wave function shape ({wave_shape}) and occupation "
+                     f"shape ({occ_shape}) mismatch.")
+
+
 if __name__ == "__main__":
   pass
