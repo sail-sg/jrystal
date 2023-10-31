@@ -38,6 +38,11 @@ u_p = core.Primitive("u")
 
 
 def _u(g_vec, r, cg):
+  r"""This is the plain implementation
+  We follow the math
+  .. math::
+    \sum_{g} c_{g} \exp(\mathrm{i}G_gr)
+  """
   ndim = r.shape[-1]
   gr = jnp.tensordot(g_vec, r, axes=(-1, -1))
   expigr = jnp.exp(1.j * gr)
@@ -47,9 +52,11 @@ def _u(g_vec, r, cg):
 
 
 def _u_map(g_vec, r, cg):
-  """This is because, although jax will not compute the branch not
-  activated in cond, it seems to be allocate memories, which will cause an oom
-  we use map here to avoid oom. This won't be called at all if r_vec is passed.
+  """This is the implementation using jax.lax.map
+  When the size of the G points are large, the plain implementation
+  could result in OOM.
+  `_u_map` simply iterate over the batch dimension of `r`, and call
+  `_u` on each element in `r`.
   """
   ndim = r.shape[-1]
   r_flat = jnp.reshape(r, (-1, ndim))
@@ -59,6 +66,10 @@ def _u_map(g_vec, r, cg):
 
 
 def _u_fft(g_vec, r, cg):
+  """This is the fft version of `_u`.
+  When the `r` happen to be the `r_vectors` of the crystal,
+  we can use fft to accelerate the computation of `_u`.
+  """
   ndim = r.shape[-1]
   grid_sizes = cg.shape[-ndim:]
   out = np.prod(grid_sizes) * jnp.fft.ifftn(cg, axes=tuple(range(-ndim, 0)))
@@ -67,6 +78,9 @@ def _u_fft(g_vec, r, cg):
 
 
 def _u_impl(a, cg, r):
+  """The implementation of the `u` primitive.
+  One of `_u`, `_u_map` and `_u_fft` will be called, based on `r` passed.
+  """
   ndim = a.shape[-1]
   assert r.shape[-1] == ndim
   assert cg.ndim >= ndim
@@ -76,8 +90,18 @@ def _u_impl(a, cg, r):
 
   if np.prod(r.shape) == np.prod(r_vec.shape):
     pred = jnp.array_equal(r.flatten(), r_vec.flatten())
+    # if `r` happen to be the `r_vectors` of the crystal,
+    # we use `_u_fft` to accelerate the computation.
+    # otherwise, we call `_u_map`.
+    # we don't use the plain `_u` here as it will cause oom.
+    # Even if the `pred` is `True` XLA will allocate memory
+    # for the unexecuted branch.
     return jax.lax.cond(pred, _u_fft, _u_map, g_vec, r, cg)
   else:
+    # if `r` is not the `r_vectors` of the crystal,
+    # then we assume the user is just passing some random `r`
+    # with a small batch size, therefore we call `_u` directly
+    # without the fear of oom.
     return _u(g_vec, r, cg)
 
 
@@ -96,6 +120,33 @@ def _u_p_abstract_eval(a, cg, r):
 
 
 def _u_jvp_rule(primals, tangents):
+  r"""This defines the JVP rule for the `u` primitive.
+  We linearize the `u` function at the `primals`, and evaluated
+  the linearized function on `tangents`.
+
+  JVP wrt `cg` is simple.
+
+  JVP wrt `a` is a bit tricky. Notice `u` doesn't directly depend on `a`,
+  but it depends on `g_vec`, which depends on `a`. Therefore, we need to
+  linearize `g_vec` wrt `a` first, then linearize `u` wrt `g_vec`.
+  While `g_vec` wrt `a` can be done by calling `jvp` on `g_vectors`,
+  here we show the math for the linearization of `u` wrt `g_vec`:
+
+  .. math::
+    u(c, r, G) = \sum_{g} c_{g} \exp(\mathrm{i}G_gr)
+    \frac{\partial{u}}{\partial{G_g}} \delta{G_g} = c_{g} \mathrm{i}\delta{G_g}r\exp(\mathrm{i}G_gr)
+
+  This is equal to applying FFT on $c_{g}\mathrm{i}\delta{G_g}$,
+  notice that $\delta{G_g}$ has shape `(n1, n2, n3, 3)`, so does
+  $c_{g}\mathrm{i}\delta{G_g}$. The FFT is applied on the `(n1, n2, n3)` axes.
+  After the FFT, we can then reduce the `(3,)` axes by contracting with `r`.
+
+  JVP wrt `r` is similar.
+
+  .. math::
+    \frac{\partial{u}}{\partial{r}} \delta{r} = \sum_{g} c_{g} \mathrm{i}G_{g}\exp(\mathrm{i}G_gr) \delta{r}
+
+  """
   a, cg, r = primals
   a_dot, cg_dot, r_dot = tangents
   ndim = a.shape[1]
@@ -103,13 +154,17 @@ def _u_jvp_rule(primals, tangents):
 
   jvps = []
   if not isinstance(a_dot, ad.Zero):
+    # if we linearize `u` wrt `a`, since `u` depends on `a` via `g_vec`,
+    # The first step we linearize the `g_vectors` function wrt `a`.
     gv = lambda a: g_vectors(a, cg.shape[-ndim:])
     g_vec_dot = jax.jvp(gv, (a,), (a_dot,))[1]
+    # The second step, we linearize the `u` function wrt `g_vec`.
     cgigdot = jnp.expand_dims(cg,
                               -ndim - 1) * 1.j * jnp.moveaxis(g_vec_dot, -1, 0)
     jvp1 = jnp.sum(u(a, cgigdot, r) * jnp.moveaxis(r, -1, 0), axis=-r.ndim)
     jvps.append(jvp1)
   if not isinstance(cg_dot, ad.Zero):
+    # `u` is linear in `cg` (FFT), therefore jvp just replaces `cg` with `cg_dot`.
     jvp2 = u(a, cg_dot, r)
     jvps.append(jvp2)
   if not isinstance(r_dot, ad.Zero):
@@ -123,7 +178,12 @@ def _u_jvp_rule(primals, tangents):
 def _u_transpose_rule(cotangent, a, cg, r):
   ndim = a.shape[1]
   if ad.is_undefined_primal(a) or ad.is_undefined_primal(r):
-    raise NotImplementedError
+    # `u` is not linear to `a` or `r`, therefore we can't compute the transpose.
+    raise ValueError(
+      "Transpose of u is not defined wrt a or r, "
+      "because u is not linear wrt a or r. "
+      "This shouldn't happen because jax always linearize before transpose."
+    )
   elif ad.is_undefined_primal(cg):
 
     def _transpose_u_fft(cotangent):
@@ -157,10 +217,7 @@ def _u_transpose_rule(cotangent, a, cg, r):
     r_vec = r_vectors(a, cg.aval.shape[-ndim:])
     if np.prod(r.shape) == np.prod(r_vec.shape):
       pred = jnp.array_equal(r.flatten(), r_vec.flatten())
-      wrt_cg = jax.lax.cond(pred, 
-                            _transpose_u_fft,
-                            _transpose_u_map, 
-                            cotangent)
+      wrt_cg = jax.lax.cond(pred, _transpose_u_fft, _transpose_u_map, cotangent)
     else:
       wrt_cg = _transpose_u(cotangent)
     return (None, wrt_cg, None)
@@ -202,9 +259,9 @@ def bloch_wave(a, cg, k_vec):
   """
   ndim = a.shape[1]
   grid_sizes = cg.shape[-ndim:]
-  g_vec = g_vectors(a, grid_sizes) # noqa
+  g_vec = g_vectors(a, grid_sizes)  # noqa
   # r_vec is used to check whether fft should be used.
-  r_vec = r_vectors(a, grid_sizes) # noqa
+  r_vec = r_vectors(a, grid_sizes)  # noqa
 
   def wave(r):
     """
