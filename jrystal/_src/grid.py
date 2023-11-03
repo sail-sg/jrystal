@@ -8,7 +8,7 @@ from .utils import get_fftw_factor
 
 
 def grid_1d(n: Int, normalize=False) -> Int[Array, 'n']:
-  """Return a list of integers from 0 to n/2-1 and -n/2 to -1, which represent 
+  """Return a list of integers from 0 to n/2-1 and -n/2 to -1, which represent
   a canonical period. Used for computing fourier series.
 
   Args:
@@ -28,9 +28,9 @@ def _vector_grid(basis: jax.Array, grid_sizes, normalize=False):
   """_summary_
 
   Args:
-      basis (_type_): _description_
-      grid_sizes (_type_): _description_
-      normalize (bool, optional): _description_. Defaults to False.
+    basis (_type_): _description_
+    grid_sizes (_type_): _description_
+    normalize (bool, optional): _description_. Defaults to False.
   """
 
   dim = len(grid_sizes)
@@ -52,15 +52,17 @@ def g_vectors(a, grid_sizes):
   in the recirpocal space.
 
   In 3D,
+
   .. math::
-    G_{ijk} = (i * b_1 + j * b_2 + k * b_3)
+    &G_{ijk} = (i\boldsymbol{b}_1 + j\boldsymbol{b}_2 + k\boldsymbol{b}_3) \\
+    &i \in [0, n_i-1], j \in [0, n_j-1], k \in [0, n_k-1]
 
   Args:
     a: real space lattice vectors for the the unit cell.
       A `(d, d)` matrix if the spatial dimension is `d`.
     grid_sizes: number of grid points along each axis.
   Returns:
-    g_vec: a tensor with shape [*grid_sizes, d].
+    jnp.ndarray: a tensor with shape `[*grid_sizes, d]`.
   """
   b = 2 * jnp.pi * jnp.linalg.inv(a).T
   return _vector_grid(b, grid_sizes)
@@ -72,15 +74,18 @@ def r_vectors(a, grid_sizes):
   in the real space.
 
   In 3D,
-  .. math::
-    R_{ijk} = (i/n_i * a_1 + j/n_j * a_2 + k/n_k * a_3)
 
+  .. math::
+    &R_{ijk} = \frac{i}{n_i}\boldsymbol{a}_1
+    + \frac{j}{n_j}\boldsymbol{a}_2
+    + \frac{k}{n_k}\boldsymbol{a}_3 \\
+    &i \in [0, n_i-1], j \in [0, n_j-1], k \in [0, n_k-1]
   Args:
     a: real space lattice vectors for the the unit cell.
       A `(d, d)` matrix if the spatial dimension is `d`.
     grid_sizes: number of grid points along each axis.
   Returns:
-    r_vec: a tensor with shape [*grid_sizes, d].
+    jnp.ndarray: a tensor with shape `[*grid_sizes, d]`.
   """
   return _vector_grid(a, grid_sizes, normalize=True)
 
@@ -97,21 +102,18 @@ def _grid_sizes(grid_sizes: Int | Int[Array, 'd']):
   return grid_sizes
 
 
-def _get_ewald_lattice(
-  b: Float[Array, 'd d'],
-  ew_cut: Float[Array, 'd'] = 1e4
-) -> Float[Array, 'n d']:
+def _get_ewald_lattice(b: Float[Array, 'd d'],
+                       ew_cut: Float[Array, 'd'] = 1e4) -> Float[Array, 'n d']:
   """get translation lattice for ewald sum
 
   Args:
-      b (ndarray): the reciprocal vectors
-      ew_cut (_type_): the real space cutoff. 1/ew_cut -> 0
-      
+    b (ndarray): the reciprocal vectors
+    ew_cut (_type_): the real space cutoff. 1/ew_cut -> 0
 
   Returns:
       the translation lattice; shape: [nt, 3]
   """
   n = jnp.ceil(ew_cut / jnp.linalg.norm(jnp.sum(b, axis=0))**b.shape[0])
   grid = _vector_grid(b, [int(n) for i in range(b.shape[0])])
-  
+
   return jnp.reshape(grid, [-1, b.shape[0]])

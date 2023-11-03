@@ -28,6 +28,7 @@ def u(a, cg, r):
   Returns:
     a complex tensor that is the wave function value at `r`.
     the shape of the tensor is `(batch_dims_of_cg..., batch_dims_of_r...)`.
+
     .. math::
       \sum_{g} c_{g} \exp(\mathrm{i}G_gr)
   """
@@ -246,7 +247,8 @@ def bloch_wave(a, cg, k_vec):
   that generates the wave function value at `r` for all `k`.
 
   .. math::
-    \psi_{ik}(r) = \exp(\mathrm{i}kr) \sum_{g} c_{ikg} \exp(\mathrm{i}gr)
+    \psi_{ik}(r) = \exp(\mathrm{i}kr) \sum_{g} c_{ikg}
+    \exp(\mathrm{i}G_gr)
 
   Args:
     a: the lattice vectors in the real space, which has shape (nd, nd).

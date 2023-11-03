@@ -7,13 +7,13 @@ from jrystal._src.pw import _complex_norm_square
 from jrystal._src.grid import _get_ewald_lattice
 
 
-def energy_hartree(
+def hartree(
   ng: Complex[Array, '*nd'], g_vec: Float[Array, '*nd d'], vol: Float[Array, '']
 ) -> Float[Array, '']:
-  """Hartree energy for plane wave orbitals on reciprocal space.
+  r"""Hartree energy for plane wave orbitals on reciprocal space.
 
   .. math::
-    E = 2\pi \sum_i \sum_k \sum_G \dfrac{|n(G)|^2}{|G|^2}
+    E = 2\pi \sum_i \sum_k \sum_G \dfrac{n(G)^2}{\|G\|^2}
 
   Args:
     density_vec_ft (3D array): the FT of density. Shape: [N1, N2, N3]
@@ -34,14 +34,14 @@ def energy_hartree(
   return output
 
 
-def energy_external(
+def external(
   ng: Complex[Array, '*nd'],
   atom_coord: Float[Array, 'ni nd'],
   atom_charge: Float[Array, 'ni'],
   g_vec: Float[Array, '*nd d'],
   vol: Float[Array, ''],
 ) -> Float[Array, '']:
-  """Externel energy for plane wave orbitals.
+  r"""Externel energy for plane wave orbitals.
 
   .. math::
     E = \sum_G \vert \sum_i s_i(G) v_i(G) \vert n(G)
@@ -49,8 +49,8 @@ def energy_external(
   where
 
   .. math::
-    S_i(G) = exp(jG\tau_i)
-    v_i(G) = -4 pi q_i / \Vert G \Vert^2
+    s_i(G) = \exp(\mathrm{i}G\tau_i)
+    v_i(G) = -4\pi \frac{q_i}{\|G\|^2}
 
   Args:
     density_vec_ft (6d array): the FT of density. Shape: [N1, N2, N3]
@@ -72,13 +72,15 @@ def energy_external(
   return -jnp.real(output)
 
 
-def energy_kin(
+def kinetic(
   g_vec: Float[Array, '*nd d'],
   k_vec: Float[Array, 'nk d'],
   coeff: Float[Array, '2 nk ni *nd'],
   occ: Float[Array, '2 nk ni'],
 ) -> Float[Array, '']:
-  """Kinetic energy
+  r"""Kinetic energy
+
+  .. math::
       E = 1/2 \sum_{G} |k + G|^2 c_{i,k,G}^2
   Args:
       gvec (4D array): G-vector. Shape: [N1, N2, N3, 3]
@@ -99,7 +101,7 @@ def energy_kin(
   return jnp.sum(e_kin * occ) / 2
 
 
-def energy_lda(nr: Float[Array, '2 *nd'], vol: Float[Array, '']):
+def lda(nr: Float[Array, '2 *nd'], vol: Float[Array, '']):
   nr = jnp.sum(nr, axis=0)
   ngrid = jnp.prod(jnp.array(nr.shape))
   e_lda = jnp.sum(lda_x_raw(nr) * nr)
@@ -117,19 +119,19 @@ def lda_x_raw(r0: Float[Array, "*nd"]):
   return res
 
 
-def energy_ewald(
+def coulomb_repulsion(
   atom_coords, atom_charges, a, gvec, vol, ew_eta, ew_cut=None, lattice=None
 ):
   """Ewald summation
 
-    Args:
-      ew_cut (): _description_
-      ew_eta (_type_): _description_
-      atom_coords (ndarray): 2d array. shape: [na, 3]
-      atom_charges (array): 1d array
-      a (ndarray): crystal lattice vectors.
-      gvec (_type_): _description_
-      vol (_type_): _description_
+  Args:
+    ew_cut (): _description_
+    ew_eta (_type_): _description_
+    atom_coords (ndarray): 2d array. shape: [na, 3]
+    atom_charges (array): 1d array
+    a (ndarray): crystal lattice vectors.
+    gvec (_type_): _description_
+    vol (_type_): _description_
   """
   if lattice is not None:
     translation = lattice

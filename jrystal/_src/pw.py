@@ -6,9 +6,9 @@ from jaxtyping import Int, Float, Array, Complex
 
 from jrystal import errors
 from jrystal import Crystal
-from jrystal._src import r_vectors
-from jrystal._src.grid import g_vectors, _grid_sizes
-from jrystal._src.utils import vmapstack
+from .grid import r_vectors
+from .grid import g_vectors, _grid_sizes
+from .utils import vmapstack
 
 from ase.dft.kpoints import monkhorst_pack
 
@@ -48,19 +48,19 @@ def _coeff_expand(
   mask: Int[Array, "*nd"],
 ) -> Complex[Array, "*batch_nd"]:
   """
-  Expand coeffcients. 
+  Expand coeffcients.
   The sum of masks should equals to the last dimension of cg.
-  
+
   Example:
-  
+
   >>> shape = (5, 6, 7)
   >>> mask = np.random.randn(*shape) > 0
   >>> ng = jnp.sum(mask)
   >>> cg = jnp.ones([2, 3, ng])
-  
+
   >>> print(_coeff_expand(cg, mask).shape)
   >>> (2, 3, 5, 6, 7)
-  
+
   Returns:
       expanded coeff: shape (*batch, *nd)
   """
@@ -81,7 +81,7 @@ def _coeff_compress(
   mask: Int[Array, "*nd"],
 ) -> Complex[Array, "*batch ng"]:
   """The inverse operation of ` _coeff_expand` """
-  
+
   @vmapstack(times=cg.ndim - mask.ndim)
   def _get_value(c):
     return c.at[mask == 1].get()
@@ -101,7 +101,7 @@ def _get_mask_cubic(a, grid_sizes, e_cut):
 
 def _get_grid_sizes_radius(a: Float[Array, 'd d'], e_cut: Float):
   """Return the smallest grid sizes given the e_cut satisfy that
-  
+
   .. math::
     n1 = n2 = n3 = n
     (n//2)^2 (b1 + b2 + b3)^2 / 2 <= e_cut
