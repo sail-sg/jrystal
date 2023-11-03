@@ -7,6 +7,8 @@ import numpy as np
 from .utils import get_fftw_factor
 
 
+# TODO(linmin): retire this function
+# this is the same as jnp.fft.fftfreq(n)
 def grid_1d(n: Int, normalize=False) -> Int[Array, 'n']:
   """Return a list of integers from 0 to n/2-1 and -n/2 to -1, which represent
   a canonical period. Used for computing fourier series.
@@ -18,7 +20,7 @@ def grid_1d(n: Int, normalize=False) -> Int[Array, 'n']:
     If n is even, return [0, 1, 2, ..., n/2-1, -n/2, -n/2+1, ..., -1]
                     else [0, 1, ..., n//2, -n//2, -n//2+1, ..., -1]
   """
-  ub = n // 2 + 1
+  ub = (n + 1) // 2
   lb = ub - n
   grid = jnp.roll(jnp.arange(lb, ub, 1), lb)
   return (grid / n if normalize else grid)
@@ -38,11 +40,10 @@ def _vector_grid(basis: jax.Array, grid_sizes, normalize=False):
   components = []
   for i in range(dim):
     shape = (*((grid_sizes[i] if _ == i else 1) for _ in range(dim)), dim)
-    components.append(
-      jnp.reshape(
-        jnp.outer(grid_1d(grid_sizes[i], normalize), basis[i]), shape
-      )
+    fftfreq = jnp.fft.fftfreq(
+      grid_sizes[i], 1 if normalize else 1 / grid_sizes[i]
     )
+    components.append(jnp.reshape(jnp.outer(fftfreq, basis[i]), shape))
   return sum(components)
 
 
