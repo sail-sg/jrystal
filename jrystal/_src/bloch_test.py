@@ -5,6 +5,7 @@ from absl.testing import absltest, parameterized
 import numpy as np
 import os
 from jrystal._src.bloch import u, _u_impl, bloch_wave, r_vectors
+from jrystal.utils import view_hlo
 
 os.environ["NVIDIA_TF32_OVERRIDE"] = "0"
 config.update("jax_enable_x64", True)
@@ -92,8 +93,7 @@ class _TestBlochWave(parameterized.TestCase):
       return jnp.abs(jnp.sum(u(a, cg, r)))
 
     roll_r_vec_1d = jnp.roll(r_vec_1d, 1, axis=0)
-    g_impl = jax.jit(jax.grad(impl_loss, 
-                              argnums=argnums))(a, cg, roll_r_vec_1d)
+    g_impl = jax.jit(jax.grad(impl_loss, argnums=argnums))(a, cg, roll_r_vec_1d)
     g_custom = jax.jit(jax.grad(loss, argnums=argnums))(a, cg, roll_r_vec_1d)
     if argnums == 2:
       g_impl = jnp.roll(g_impl, -1, axis=0)
@@ -122,6 +122,7 @@ class _TestBlochWave(parameterized.TestCase):
     key, subkey = jax.random.split(key)
     k_vec = jax.random.normal(subkey, (nk, nd))
     r_vec = r_vectors(a, grid_sizes)
+
     # r_vec_1d = jnp.reshape(r_vec, (-1, nd))
     # ndim = a.shape[-1]
     # vmap_r = lambda u: jax.vmap(u, in_axes=0, out_axes=(cg.ndim - ndim))
@@ -139,7 +140,7 @@ class _TestBlochWave(parameterized.TestCase):
     r_vec = self.r_vec
     r_vec_1d = self.r_vec_1d
     k_vec = self.k_vec
-    
+
     ndim = a.shape[-1]
     wave = bloch_wave(a, cg, k_vec)
     vmap_r = lambda u: jax.vmap(u, in_axes=0, out_axes=(cg.ndim - ndim))
@@ -161,6 +162,40 @@ class _TestBlochWave(parameterized.TestCase):
       np.testing.assert_array_almost_equal(
         out1, out3.reshape(out1.shape), decimal=5
       )
+
+  def test_view_hlo(self):
+    a = self.a
+    cg = self.cg
+    r_vec = self.r_vec
+    r_vec_1d = self.r_vec_1d
+    k_vec = self.k_vec
+
+    ndim = a.shape[-1]
+    wave = lambda r: bloch_wave(a, cg, k_vec)(r, force_fft=True)
+    vmap_r = lambda u: jax.vmap(u, in_axes=0, out_axes=(cg.ndim - ndim))
+
+    @jax.jit
+    def compute_wave():
+      return vmap_r(wave)(r_vec_1d)
+
+    view_hlo(compute_wave)()
+
+    def density(r):
+      return (wave(r).conj() * wave(r)).real
+
+    @jax.jit
+    def compute_density():
+      return vmap_r(density)(r_vec_1d)
+
+    view_hlo(compute_density)()
+
+    @jax.jit
+    def compute_reciprocal_wave():
+      wave_grid = vmap_r(vmap_r(vmap_r(wave)))(r_vec)
+      ret = jnp.fft.fftn(wave_grid, axes=tuple(range(-3, 0)))
+      return ret
+
+    view_hlo(compute_reciprocal_wave)()
 
 
 if __name__ == "__main__":

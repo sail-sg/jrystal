@@ -12,7 +12,7 @@ from jax.interpreters import mlir
 from .grid import g_vectors, r_vectors
 
 
-def u(a, cg, r):
+def u(a, cg, r, *, force_fft=False):
   r"""This is the periodic part of the bloch wave function.
   Which is denoted in u on wikipedia.
   Args:
@@ -25,6 +25,8 @@ def u(a, cg, r):
       a vector of shape (batch_dims_of_r..., d),
       here `batch_dims_of_r...` is often used for the evaluating
       on a 3d grid.
+    force_fft: whether to force fft, it should only be used when `r` is
+      created from `r_vectors(a, cg.shape[-ndim:])`.
   Returns:
     a complex tensor that is the wave function value at `r`.
     the shape of the tensor is `(batch_dims_of_cg..., batch_dims_of_r...)`.
@@ -32,7 +34,7 @@ def u(a, cg, r):
     .. math::
       \sum_{g} c_{g} \exp(\mathrm{i}G_gr)
   """
-  return u_p.bind(a, cg, r)
+  return u_p.bind(a, cg, r, force_fft=force_fft)
 
 
 u_p = core.Primitive("u")
@@ -78,7 +80,7 @@ def _u_fft(g_vec, r, cg):
   return out
 
 
-def _u_impl(a, cg, r):
+def _u_impl(a, cg, r, *, force_fft=False):
   """The implementation of the `u` primitive.
   One of `_u`, `_u_map` and `_u_fft` will be called, based on `r` passed.
   """
@@ -88,6 +90,13 @@ def _u_impl(a, cg, r):
   grid_sizes = cg.shape[-ndim:]
   g_vec = g_vectors(a, grid_sizes)
   r_vec = r_vectors(a, grid_sizes)
+
+  if force_fft:
+    if np.prod(r.shape) != np.prod(r_vec.shape):
+      raise ValueError(
+        "force_fft is True, but r is not the r_vectors of the crystal."
+      )
+    return _u_fft(g_vec, r, cg)
 
   if np.prod(r.shape) == np.prod(r_vec.shape):
     pred = jnp.array_equal(r.flatten(), r_vec.flatten())
@@ -111,7 +120,7 @@ mlir.register_lowering(u_p, mlir.lower_fun(_u_impl, False))
 
 
 @u_p.def_abstract_eval
-def _u_p_abstract_eval(a, cg, r):
+def _u_p_abstract_eval(a, cg, r, *, force_fft):
   ndim = a.shape[1]
   if r.dtype == jnp.float32:
     dtype = jnp.complex64
@@ -120,7 +129,7 @@ def _u_p_abstract_eval(a, cg, r):
   return core.ShapedArray(cg.shape[:-ndim] + r.shape[:-1], dtype=dtype)
 
 
-def _u_jvp_rule(primals, tangents):
+def _u_jvp_rule(primals, tangents, *, force_fft):
   r"""This defines the JVP rule for the `u` primitive.
   We linearize the `u` function at the `primals`, and evaluated
   the linearized function on `tangents`.
@@ -134,8 +143,9 @@ def _u_jvp_rule(primals, tangents):
   here we show the math for the linearization of `u` wrt `g_vec`:
 
   .. math::
-    u(c, r, G) = \sum_{g} c_{g} \exp(\mathrm{i}G_gr)
-    \frac{\partial{u}}{\partial{G_g}} \delta{G_g} = c_{g} \mathrm{i}\delta{G_g}r\exp(\mathrm{i}G_gr)
+    &u(c, r, G) = \sum_{g} c_{g} \exp(\mathrm{i}G_gr) \\
+    &\frac{\partial{u}}{\partial{G_g}} \delta{G_g} =
+    c_{g} \mathrm{i}\delta{G_g}r\exp(\mathrm{i}G_gr)
 
   This is equal to applying FFT on $c_{g}\mathrm{i}\delta{G_g}$,
   notice that $\delta{G_g}$ has shape `(n1, n2, n3, 3)`, so does
@@ -145,7 +155,8 @@ def _u_jvp_rule(primals, tangents):
   JVP wrt `r` is similar.
 
   .. math::
-    \frac{\partial{u}}{\partial{r}} \delta{r} = \sum_{g} c_{g} \mathrm{i}G_{g}\exp(\mathrm{i}G_gr) \delta{r}
+    \frac{\partial{u}}{\partial{r}}\delta{r} =
+    \sum_{g}c_{g}\mathrm{i}G_{g}\exp(\mathrm{i}G_gr)\delta{r}
 
   """
   a, cg, r = primals
@@ -162,21 +173,27 @@ def _u_jvp_rule(primals, tangents):
     # The second step, we linearize the `u` function wrt `g_vec`.
     cgigdot = jnp.expand_dims(cg,
                               -ndim - 1) * 1.j * jnp.moveaxis(g_vec_dot, -1, 0)
-    jvp1 = jnp.sum(u(a, cgigdot, r) * jnp.moveaxis(r, -1, 0), axis=-r.ndim)
+    jvp1 = jnp.sum(
+      u(a, cgigdot, r, force_fft=force_fft) * jnp.moveaxis(r, -1, 0),
+      axis=-r.ndim
+    )
     jvps.append(jvp1)
   if not isinstance(cg_dot, ad.Zero):
     # `u` is linear in `cg` (FFT), therefore jvp just replaces `cg` with `cg_dot`.
-    jvp2 = u(a, cg_dot, r)
+    jvp2 = u(a, cg_dot, r, force_fft=force_fft)
     jvps.append(jvp2)
   if not isinstance(r_dot, ad.Zero):
     cgig = jnp.expand_dims(cg, -ndim - 1) * 1.j * jnp.moveaxis(g_vec, -1, 0)
-    jvp3 = jnp.sum(u(a, cgig, r) * jnp.moveaxis(r_dot, -1, 0), axis=-r.ndim)
+    jvp3 = jnp.sum(
+      u(a, cgig, r, force_fft=force_fft) * jnp.moveaxis(r_dot, -1, 0),
+      axis=-r.ndim
+    )
     jvps.append(jvp3)
 
-  return u(a, cg, r), sum(jvps)
+  return u(a, cg, r, force_fft=force_fft), sum(jvps)
 
 
-def _u_transpose_rule(cotangent, a, cg, r):
+def _u_transpose_rule(cotangent, a, cg, r, *, force_fft):
   ndim = a.shape[1]
   if ad.is_undefined_primal(a) or ad.is_undefined_primal(r):
     # `u` is not linear to `a` or `r`, therefore we can't compute the transpose.
@@ -216,6 +233,14 @@ def _u_transpose_rule(cotangent, a, cg, r):
 
     g_vec = g_vectors(a, cg.aval.shape[-ndim:])
     r_vec = r_vectors(a, cg.aval.shape[-ndim:])
+
+    if force_fft:
+      if np.prod(r.shape) != np.prod(r_vec.shape):
+        raise ValueError(
+          "force_fft is True, but r is not the r_vectors of the crystal."
+        )
+      return _transpose_u_fft(cotangent)
+
     if np.prod(r.shape) == np.prod(r_vec.shape):
       pred = jnp.array_equal(r.flatten(), r_vec.flatten())
       wrt_cg = jax.lax.cond(pred, _transpose_u_fft, _transpose_u_map, cotangent)
@@ -224,7 +249,7 @@ def _u_transpose_rule(cotangent, a, cg, r):
     return (None, wrt_cg, None)
 
 
-def _u_batch_rule(batched_args, batch_dims):
+def _u_batch_rule(batched_args, batch_dims, *, force_fft):
   a, cg, r = batched_args
   ndim = a.shape[-1]
   bd_a, bd_cg, bd_r = batch_dims
@@ -234,7 +259,7 @@ def _u_batch_rule(batched_args, batch_dims):
     bdim = cg.ndim - ndim
   else:
     raise NotImplementedError
-  return u(a, cg, r), bdim
+  return u(a, cg, r, force_fft=force_fft), bdim
 
 
 jax.interpreters.ad.primitive_jvps[u_p] = _u_jvp_rule
@@ -265,7 +290,7 @@ def bloch_wave(a, cg, k_vec):
   # r_vec is used to check whether fft should be used.
   r_vec = r_vectors(a, grid_sizes)  # noqa
 
-  def wave(r):
+  def wave(r, force_fft=False):
     """
     Args:
       r: a coordinate in the real space.
@@ -274,7 +299,7 @@ def bloch_wave(a, cg, k_vec):
       a complex tensor that is the wave function value at `r`.
       the shape of the tensor is `(batch, ..., nk)`
     """
-    sum_cg_expigr = u(a, cg, r)
+    sum_cg_expigr = u(a, cg, r, force_fft=force_fft)
     kr = jnp.tensordot(k_vec, r, axes=(-1, -1))
     expikr = jnp.exp(1.j * kr)
     return sum_cg_expigr * expikr
