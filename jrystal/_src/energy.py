@@ -24,12 +24,12 @@ def hartree(
   Return:
     Hartree energy: float.
   """
-
+  d = g_vec.shape[-1]
   g_vec_square = jnp.sum(g_vec**2, axis=-1)  # [N1, N2, N3]
   output = _complex_norm_square(ng)
-  g_vec_square = g_vec_square.at[0, 0, 0].set(1e-16)
+  g_vec_square = g_vec_square.at[(0,) * d].set(1e-16)
   output /= g_vec_square
-  output = output.at[0, 0, 0].set(0)
+  output = output.at[(0,) * d].set(0)
   output = jnp.sum(output) / vol / 2 * 4 * jnp.pi
   return output
 
@@ -61,10 +61,11 @@ def external(
   Return:
     External energy.Float
   """
+  d = g_vec.shape[-1]
   g_vec_square = jnp.sum(g_vec**2, axis=-1)
-  s_i = jnp.exp(1j * jnp.matmul(g_vec, atom_coord.transpose()))
-  v_i = atom_charge[None, None, None, :] / (g_vec_square[:, :, :, None])
-  v_i = v_i.at[0, 0, 0, :].set(0)
+  s_i = jnp.exp(1j * g_vec @ atom_coord.T)  # (n1, ..., nd, na)
+  v_i = atom_charge / (g_vec_square[..., None])
+  v_i = v_i.at[(0,) * d].set(0)
   v_i *= 4 * jnp.pi
   v_ext_G = jnp.sum(s_i * v_i, axis=-1)
   output = jnp.vdot(v_ext_G.flatten(), ng.flatten())

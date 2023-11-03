@@ -291,7 +291,8 @@ def bloch_wave(a, cg, k_vec):
   r_vec = r_vectors(a, grid_sizes)  # noqa
 
   def wave(r, force_fft=False):
-    """
+    """Return the wave function value at `r`.
+
     Args:
       r: a coordinate in the real space.
         a vector of shape `(d,)`
