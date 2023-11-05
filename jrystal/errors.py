@@ -42,7 +42,7 @@ class JrystalError(Exception):
     super().__init__(message)
 
 
-class InitiateQRdecompShapeError(JrystalError):
+class InitiateQRDecompShapeError(JrystalError):
   """The QRdecomp module requires the input has a shape (..., M, K) where M>=K.
   This error is thrown when M < K.
 
@@ -58,8 +58,10 @@ class InitiateQRdecompShapeError(JrystalError):
   """
 
   def __init__(self, shape):
-    super().__init__(f"The QRdecomp module requires the input has a shape"
-                     f"(..., M, K) where M>=K. Got shape {shape}")
+    super().__init__(
+      f"The QRdecomp module requires the input has a shape"
+      f"(..., M, K) where M>=K. Got shape {shape}"
+    )
 
 
 class ApplyExpCoeffShapeError(JrystalError):
@@ -78,8 +80,10 @@ class ApplyExpCoeffShapeError(JrystalError):
   """
 
   def __init__(self, cg_shape, mask_num):
-    super().__init__(f'input coefficient has incompatible shapes ({cg_shape}) '
-                     f'with mask ({int(mask_num)} masked elements).')
+    super().__init__(
+      f'input coefficient has incompatible shapes ({cg_shape}) '
+      f'with mask ({int(mask_num)} masked elements).'
+    )
 
 
 class ApplyFFTShapeError(JrystalError):
@@ -98,9 +102,12 @@ class ApplyFFTShapeError(JrystalError):
   than fft ndim 3. Got input shape: (3, 5).
 
   """
+
   def __init__(self, fft_dim, input_shape):
-    super().__init__(f'Input array must have higher dimension than fft ndim '
-                     f'{fft_dim}. Got input shape: {input_shape}.')
+    super().__init__(
+      f'Input array must have higher dimension than fft ndim '
+      f'{fft_dim}. Got input shape: {input_shape}.'
+    )
 
 
 class WavevecOccupationMismatchError(JrystalError):
@@ -112,9 +119,12 @@ class WavevecOccupationMismatchError(JrystalError):
   Args:
       JrystalError (_type_): _description_
   """
+
   def __init__(self, wave_shape, occ_shape):
-    super().__init__(f"Wave function shape ({wave_shape}) and occupation "
-                     f"shape ({occ_shape}) mismatch.")
+    super().__init__(
+      f"Wave function shape ({wave_shape}) and occupation "
+      f"shape ({occ_shape}) mismatch."
+    )
 
 
 if __name__ == "__main__":

@@ -24,44 +24,43 @@ class Crystal:
   regarding the atoms and cells. It's a wrapper of the ASE
   (https://wiki.fysik.dtu.dk/ase/).
   
+  Attributes:
+  
+    symbols: str = None
+    scaled_positions: Float[Array, 'natom nd'] = None
+    positions: Float[Array, 'natom nd'] = None 
+    charges: Int[Array, 'natom'] = None
+    spin: int = None 
+    xyz_file: str = None
+    lattice_vectors: Float[Array, 'nd nd'] = None
+    reciprocal_vectors: Float[Array, 'nd nd'] = None
+    A: Float[Array, 'nd nd'] = None  # alias for lattice_vectors
+    B: Float[Array, 'nd nd'] = None  # alias for reciprocal_vectors
+    vol: float = None 
+    natom: int = None
+    nelec: int = None 
+    _ase_cell: ase.Atoms = None
   
   """
-  symbols: str
-  scaled_positions: Float[Array, 'natom nd']
-  positions: Float[Array, 'natom nd']
 
-  charges: Int[Array, 'natom']
-  spin: int
+  symbols: str = None
+  positions: Union[List[List], Float[ArrayLike, 'natom nd']] = None
+  lattice_vectors: Union[List[List], Float[ArrayLike, 'ndim nd']] = None
+  xyz_file: str = None
+  spin = None
 
-  xyz_file: str
-  lattice_vectors: Float[Array, 'nd nd']
-  reciprocal_vectors: Float[Array, 'nd nd']
-  A: Float[Array, 'nd nd']  # alias for lattice_vectors
-  B: Float[Array, 'nd nd']  # alias for reciprocal_vectors
-  vol: float
-
-  natom: int
-  nelec: int
-
-  _ase_cell: ase.Atoms
-
-  def __init__(
-    self,
-    symbols: str = None,
-    positions: Union[List[List], Float[ArrayLike, 'natom nd']] = None,
-    lattice_vectors: Union[List[List], Float[ArrayLike, 'ndim nd']] = None,
-    xyz_file: str = None,
-    spin=None,
-  ):
-
-    if symbols and (positions is not None) and (lattice_vectors is not None):
+  def __post_init__(self):
+    if (
+      self.symbols and (self.positions is not None) and
+      (self.lattice_vectors is not None)
+    ):
       self._ase_cell = ase.Atoms(
-        symbols, positions, cell=lattice_vectors, pbc=True
+        self.symbols, self.positions, cell=self.lattice_vectors, pbc=True
       )
 
-    elif xyz_file:
-      self._ase_cell = read(xyz_file)
-      self.xyz_file = xyz_file
+    elif self.xyz_file:
+      self._ase_cell = read(self.xyz_file)
+      self.xyz_file = self.xyz_file
 
     else:
       raise ValueError(
@@ -82,7 +81,7 @@ class Crystal:
     self.natom = self._ase_cell.get_global_number_of_atoms()
     self.nelec = jnp.sum(self.charges)
 
-    self.spin = self.nelec % 2 if spin is None else spin
+    self.spin = self.nelec % 2 if self.spin is None else self.spin
 
   def save_xyz_file(self, path=None):
     path = path if path else str(self.cell.symbols) + '.xyz'

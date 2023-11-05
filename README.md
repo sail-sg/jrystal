@@ -5,8 +5,6 @@ Plane-wave density functional theory for crystals in JAX
 ## Getting started
 
 
-
-
 ## Installation
 Get source code from github
 
@@ -31,10 +29,11 @@ This allows to modify your source code and have the changes take effect without 
 
 #### The Jrystal philosophy:
 
-- Opt for an ``nn.module`` object when defining operations:
-  - Involve trainable parameters, which necessitate persistent state across different stages of training.
-  - Require numerous internal stateless variables that must be defined at initialization and remain constant during function calls, such as `black_wave`. While it is possible to implement such behavior using custom decorators, this approach often lacks generality. Consequently, utilizing an nn.module object is a more robust and preferable solution.
-- Opt for an pure function when:
+- Opt for an ``nn.Module`` object when defining operations:
+  - Involve or may involve **trainable parameters**, which necessitate persistent state across different stages of training.
+  - Are complex but highly integrated, and can be decoupled from other operations like `black_wave`.
+
+- Opt for a pure function when:
   - the function contains no trainable parameters, and has only a few function arguments or local stateful variables.
 
 - Prefer duplicating code over a bad abstraction.

@@ -17,21 +17,24 @@ CLASSIFIERS = [
   'Programming Language :: Python :: 3',
   'Topic :: Software Development :: Libraries :: Python Modules',
   'Topic :: Scientific/Engineering',
-
 ]
 LICENSE = 'Apache License 2.0'
 
+
 def _read_requirements():
-    with open(os.path.join(_CURRENT_DIR, 'requirements.txt')) as f:
-        requirements = f.readlines()
-    return [req.strip() for req in requirements]
+  with open(os.path.join(_CURRENT_DIR, 'requirements.txt')) as f:
+    requirements = f.readlines()
+  return [req.strip() for req in requirements]
+
 
 setup(
   name=PACKAGE_NAME,
   version=VERSION,
   packages=find_packages(),
-  description=('A differentiable plane-wave density functional theory library for crystals in JAX.'),
+  description=(
+    'A differentiable plane-wave density functional theory library for crystals in JAX.'
+  ),
   classifiers=CLASSIFIERS,
   license=LICENSE,
-  install_requires = _read_requirements()
+  install_requires=_read_requirements()
 )

@@ -61,13 +61,15 @@ def vmapstack_reverse(times: int) -> Callable:
 
     def wrapper(x: jax.Array):
       x = decorator(f)(x)
-      assert x.ndim >= times, print(f"input array dim ({x.ndim}) cannot be"
-                                    f"smaller than times ({times})")
-      
+      assert x.ndim >= times, print(
+        f"input array dim ({x.ndim}) cannot be"
+        f"smaller than times ({times})"
+      )
+
       axes = np.concatenate(
         (
-          np.arange(x.ndim)[:(x.ndim - times)], 
-          np.arange(x.ndim)[-1:-1 - times:-1]
+          np.arange(x.ndim)[:(x.ndim - times)], np.arange(x.ndim
+                                                         )[-1:-1 - times:-1]
         )
       )
       return jnp.transpose(x, axes)

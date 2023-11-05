@@ -1,46 +1,11 @@
 import numpy as np
+import jax
 import jax.numpy as jnp
-
-from typing import List
+import ase
 from jaxtyping import Int, Float, Array, Complex
-
 from jrystal import errors
-from jrystal import Crystal
-from .grid import r_vectors
-from .grid import g_vectors, _grid_sizes
-from .utils import vmapstack
-
-from ase.dft.kpoints import monkhorst_pack
-
-
-def get_plane_wave_params(
-  crystal: Crystal,
-  Ecut: Float,
-  g_grid_sizes: Int | List | Float[Array, 'nd'],  # noqa: F821
-  k_grid_sizes,
-  occ: str = 'simple',
-  polarize: bool = True
-):
-
-  crystal = crystal
-  Ecut = Ecut
-  polarize = polarize
-  g_grid_sizes = _grid_sizes(g_grid_sizes)
-  k_grid_sizes = _grid_sizes(k_grid_sizes)
-  occ = occ
-  nspin = 2 if polarize else 1
-  ni = crystal.nelec
-  nk = np.prod(k_grid_sizes)
-  spin = ni // 2
-  g_mask = _get_mask_radius(crystal.A, g_grid_sizes, Ecut)
-
-  ng = jnp.sum(g_mask)
-  k_grid = monkhorst_pack(k_grid_sizes)
-  g_vec = g_vectors(crystal.A, g_grid_sizes)
-  r_vec = r_vectors(crystal.A, g_grid_sizes)
-  cg_shape = [nspin, nk, ng, ni]
-
-  return (cg_shape, g_mask, crystal.A, k_grid, spin), (r_vec, g_vec)
+from jrystal._src.grid import g_vectors
+from jrystal._src.utils import vmapstack
 
 
 def _coeff_expand(
@@ -122,9 +87,17 @@ def _complex_norm_square(x: Complex[Array, '...']) -> Float[Array, '...']:
   return jnp.abs(jnp.conj(x) * x)
 
 
+def get_cg(weights: Complex[Array, 'nspin nk ng ni'], mask: jax.Array):
+  cg = jnp.linalg.qr(weights, mode='reduced')[0]
+  cg = jnp.swapaxes(cg, -1, -2)
+  cg = _coeff_expand(cg, mask)
+  return cg
+
+
 if __name__ == "__main__":
   shape = (5, 6, 7)
   mask = np.random.randn(*shape) > 0
   ng = jnp.sum(mask)
   cg = jnp.ones([2, 3, ng])
+
   print(_coeff_expand(cg, mask).shape)

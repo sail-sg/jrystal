@@ -2,11 +2,11 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from absl.testing import absltest, parameterized
-from jrystal._src.module import QRdecomp, BatchedBlochWave
-from jrystal._src.module import BatchedInverseFFT, BatchedFFT
-from jrystal._src.module import ExpandCoeff, CompressCoeff
-from jrystal._src.module import PlaneWave, _PlaneWaveFFT
-from jrystal._src.module import PlaneWaveDensity
+from jrystal._src.modules import QRDecomp, BatchedBlochWave
+from jrystal._src.modules import BatchedInverseFFT, BatchedFFT
+from jrystal._src.modules import ExpandCoeff, CompressCoeff
+from jrystal._src.modules import PlaneWave, _PlaneWaveFFT
+from jrystal._src.modules import PlaneWaveDensity
 from jrystal._src.grid import r_vectors
 from jax.config import config
 from flax import linen as nn
@@ -47,7 +47,7 @@ class _Test_modules(parameterized.TestCase):
     params = pw.init(self.key, self.r_vec)
     x_bw = pw.apply(params, self.r_vec)
 
-    pw = _PlaneWaveFFT(shape, self.mask, self.a, self.k_grid)
+    pw = _PlaneWaveFFT(shape, self.mask, self.k_grid)
     params = pw.init(self.key)
     x_fft = pw.apply(params)
     np.testing.assert_array_almost_equal(x_fft, x_bw, decimal=10)
@@ -62,7 +62,7 @@ class _Test_modules(parameterized.TestCase):
 
   def test_qr_shape(self):
     shape = [2, 1, self.ng, 4]
-    qr = QRdecomp(shape, True)
+    qr = QRDecomp(shape, True)
     params = qr.init(self.key)
     np.testing.assert_array_equal(params['params']['w_re'].shape, shape)
     x = qr.apply(params)

@@ -5,6 +5,8 @@ from jaxtyping import Float, Array, Complex
 
 from jrystal._src.pw import _complex_norm_square
 from jrystal._src.grid import _get_ewald_lattice
+from jrystal.crystal import Crystal
+from jrystal._src.paramdict import EwaldArgs
 
 
 def hartree(
@@ -21,6 +23,11 @@ def hartree(
     g_mask (3D array): G point mask, Shape: [N1, N2, N3]
     vol: scalar
 
+      ng (3D array): the FT of density. Shape: [N1, N2, N3]
+      g_vec (4D array): G-vector. Shape: [N1, N2, N3, 3]
+      g_mask (3D array): G point mask, Shape: [N1, N2, N3]
+      vol: scalar
+      
   Return:
     Hartree energy: float.
   """
@@ -172,3 +179,29 @@ def coulomb_repulsion(
   ew_a -= jnp.sum(atom_charges)**2 * jnp.pi / ew_eta**2 / vol / 2
 
   return ew_aa + ew_a
+
+
+def total(
+  nr: jax.Array,
+  ng: jax.Array,
+  cg: jax.Array,
+  occ: jax.Array,
+  crystal: Crystal,
+  g_grid: jax.Array,
+  k_grid: jax.Array,
+  ew_args: EwaldArgs,
+):
+
+  atom_coord = crystal.positions
+  atom_charge = crystal.charges
+  vol = crystal.vol
+  a = crystal.A
+
+  e_kin = kinetic(g_grid, k_grid, cg, occ)
+  e_har = hartree(ng, g_grid, vol)
+  e_ext = external(ng, atom_coord, atom_charge, g_grid, vol)
+  e_xc = lda(nr, vol)
+  e_ew = coulomb_repulsion(atom_coord, atom_charge, a, g_grid, **ew_args)
+  e_total = e_kin + e_har + e_ext + e_xc + e_ew
+
+  return e_total, (e_kin, e_har, e_ext, e_xc, e_ew)

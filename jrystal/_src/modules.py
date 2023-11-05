@@ -4,11 +4,11 @@ import flax.linen as nn
 from jaxtyping import Int, Float, Array
 from jrystal._src.bloch import bloch_wave
 from jrystal._src.utils import vmapstack
-from jrystal._src.pw import _coeff_compress, _coeff_expand
+from jrystal._src.pw import _coeff_compress, _coeff_expand, get_cg
 from jrystal._src.pw import _complex_norm_square
 from jrystal._src.initializer import normal
 from jrystal import errors
-from jrystal.occupations import OccSimple
+from jrystal._src.occupations import OccSimple, OccUniform
 
 
 class PlaneWave(nn.Module):
@@ -19,29 +19,28 @@ class PlaneWave(nn.Module):
   Returns:
       _type_: _description_
   """
-  shape: Int    
+  shape: Int[Array, 'nspin nk ng ni']
   mask: jax.Array
-  a: jax.Array
+  A: jax.Array
   k_grid: jax.Array
 
   @nn.compact
   def __call__(self, r) -> jax.Array:
-    cg = QRdecomp(self.shape)()
+    cg = QRDecomp(self.shape)()
     cg = jnp.swapaxes(cg, -1, -2)
-    cg = ExpandCoeff(self.mask)(cg)
-    wave = BatchedBlochWave(self.a, self.k_grid)(r, cg)
-    return wave 
+    cg = _coeff_expand(cg, self.mask)
+    wave = BatchedBlochWave(self.A, self.k_grid)(r, cg)
+    return wave
 
 
 class _PlaneWaveFFT(nn.Module):
   shape: Int  # [nspin, nk, ng, ni]
   mask: jax.Array
-  a: jax.Array
   k_grid: jax.Array
 
   @nn.compact
   def __call__(self):
-    cg = QRdecomp(self.shape)()
+    cg = QRDecomp(self.shape)()
     cg = jnp.swapaxes(cg, -1, -2)
     cg = ExpandCoeff(self.mask)(cg)
     dim = self.k_grid.shape[-1]
@@ -51,36 +50,56 @@ class _PlaneWaveFFT(nn.Module):
 
 
 class PlaneWaveDensity(nn.Module):
-  shape: Int        # [nspin, nk, ng, ni]
-  mask: jax.Array   
-  a: jax.Array
+  shape: Int  # [nspin, nk, ng, ni]
+  mask: jax.Array
+  A: jax.Array
   k_grid: jax.Array
   spin: Int
-  
+  occ: str = 'simple'
+
+  def setup(self):
+    self.pw = PlaneWave(self.shape, self.mask, self.A, self.k_grid)
+    _, nk, _, ni = self.shape
+
+    if self.occ == 'simple':
+      self.occ_mask = OccSimple(nk, ni, self.spin)
+    elif self.occ == 'uniform':
+      self.occ_mask = OccUniform(nk, ni, self.spin)
+
   @nn.compact
   def __call__(self, r, reduce=True) -> jax.Array:
-    w = PlaneWave(self.shape, self.mask, self.a, self.k_grid)(r)
-    _, nk, _, ni = self.shape
-    dim = self.a.shape[0]
-    occ = OccSimple(nk, ni, self.spin)()
+    w = self.pw(r)
+    dim = self.A.shape[0]
+    occ = self.occ_mask()
+
     if (w.ndim < occ.ndim or w.shape[:occ.ndim] != occ.shape):
       raise errors.WavevecOccupationMismatchError(w.shape, occ.shape)
-    
+
     w = _complex_norm_square(w)
     occ = jnp.expand_dims(occ, range(occ.ndim, w.ndim))
     N = jnp.prod(jnp.array(self.mask.shape))
-    
+
     if reduce:
       density = jnp.sum(occ * w, axis=(1, 2))  # reduce over k, i
-      dim = density.ndim-1
+      dim = density.ndim - 1
       density_fft = BatchedFFT(dim)(density) * N
     else:
       density = occ * w
-      dim = density.ndim-3
+      dim = density.ndim - 3
       density_fft = BatchedFFT(dim)(density) * N
-    
+
     return density, density_fft
-    
+
+  def get_cg(self, params):
+    w_re = params['params']['pw']['QRDecomp_0']['w_re']
+    w_im = params['params']['pw']['QRDecomp_0']['w_im']
+    w = w_re + 1.j * w_im
+    return get_cg(w, self.mask)
+
+  def get_occ(self, params):
+    m = self.bind(params)
+    return m.occ_mask()
+
 
 class BatchedBlochWave(nn.Module):
   """Bloch Wave function with fixed lattice vector, and kmesh
@@ -90,11 +109,11 @@ class BatchedBlochWave(nn.Module):
       Example:
       bw = BatchedBlochWave(a, k_grid, cg)
       
-      bw: [n1, n2, n3, 3] -> [2, ni, nk, n1, n2, n3]
+      bw: [n1, n2, n3, 3] -> [2, nk, ni, n1, n2, n3]
       
   """
 
-  a: Float[Array, "dim1 dim2"]
+  A: Float[Array, "dim1 dim2"]
   k_grid: Float[Array, "nk 3"]
   cg: Float = None
 
@@ -102,13 +121,13 @@ class BatchedBlochWave(nn.Module):
   def __call__(self, r: Float[Array, '*batches r'], cg=None) -> jax.Array:
     cg = nn.merge_param('cg', self.cg, cg)
     rd = r.ndim - 1  # （N1, N2, N3, 3)
-    wave = bloch_wave(self.a, cg, self.k_grid)  #
+    wave = bloch_wave(self.A, cg, self.k_grid)  #
     wave = vmapstack(rd)(wave)(r)  # [n1, n2, n3, 2, ni, nk]
     wave = jnp.moveaxis(wave, jnp.arange(rd), jnp.arange(rd) - rd)
     return wave
 
 
-class QRdecomp(nn.Module):
+class QRDecomp(nn.Module):
   """the QR decomposition will map over the first to last two dimension. 
   The input is a batched tall and skinny matrix with shape (..., M, K). 
   Returns: a batch of matrices with orthonormal columns (..., M, K) 
@@ -118,23 +137,22 @@ class QRdecomp(nn.Module):
   
   >>> key = jax.random.PRNGKey(123)
   >>> shape = [2, 6, 4]
-  >>> qr = QRdecomp(shape)
+  >>> qr = QRDecomp(shape)
   >>> params = qr.init(key)
-  
   >>> cg = qr.apply(params)
   
   cg is the orthogonal coeffiencts which has the same shape of input arg shape.
   
   """
-  
+
   shape: Int[Array, '*batch ng ni']
   polarize: bool = True
   complex_weights: bool = True
-  
+
   def __post_init__(self):
     super().__post_init__()
     if self.shape[-1] > self.shape[-2]:
-      raise errors.InitiateQRdecompShapeError(self.shape)
+      raise errors.InitiateQRDecompShapeError(self.shape)
 
   @nn.compact
   def __call__(self, *args) -> jax.Array:
