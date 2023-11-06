@@ -2,7 +2,7 @@ __version__ = '0.0.1'
 
 from jrystal.crystal import Crystal
 from jrystal._src import occupations
-from projects.jrystal.jrystal import train
+from jrystal import train
 from jrystal import errors
 from jrystal import wave
 from jrystal import config
