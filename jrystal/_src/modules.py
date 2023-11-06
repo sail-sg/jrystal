@@ -50,6 +50,8 @@ class _PlaneWaveFFT(nn.Module):
   def __call__(self):
     cg = QRDecomp(self.shape)()
     cg = jnp.swapaxes(cg, -1, -2)
+    # TODO: This is no easier than calling _expand_coeff(cg, self.mask).
+    # so we don't need the extra ExpandCoeff module.
     cg = ExpandCoeff(self.mask)(cg)
     dim = self.k_grid.shape[-1]
     N = jnp.prod(jnp.array(cg.shape[-dim:]))
@@ -127,6 +129,11 @@ class BatchedBlochWave(nn.Module):
 
   @nn.compact
   def __call__(self, r: Float[Array, '*batches r'], cg=None) -> jax.Array:
+    # TODO: if cg is passed as an argument,
+    # then we don't need this module at all, we just need to call the original
+    # bloch_wave function.
+    # To make sense of this module, we should make this module initialize
+    # cg by itself instead of passing it as an argument.
     cg = nn.merge_param('cg', self.cg, cg)
     rd = r.ndim - 1  # （N1, N2, N3, 3)
     wave = bloch_wave(self.A, cg, self.k_grid)  #
@@ -163,7 +170,7 @@ class QRDecomp(nn.Module):
       raise errors.InitiateQRDecompShapeError(self.shape)
 
   @nn.compact
-  def __call__(self, *args) -> jax.Array:
+  def __call__(self) -> jax.Array:
     shape = self.shape  # [*batch, self.ng, self.ni]
     weights_re = self.param('w_re', normal(), shape)
     if self.complex_weights:
@@ -207,6 +214,7 @@ class BatchedFFT(nn.Module):
 
 
 class ExpandCoeff(nn.Module):
+  # TODO: remove this module since it doesn't manage any parameters.
   mask: Int[Array, "*nd"]
 
   def __call__(self, x):
@@ -214,6 +222,7 @@ class ExpandCoeff(nn.Module):
 
 
 class CompressCoeff(nn.Module):
+  # TODO: remove this module since it doesn't manage any parameters.
   mask: Int[Array, "*nd"]
 
   def __call__(self, x):
