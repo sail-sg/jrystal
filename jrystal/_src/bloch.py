@@ -15,6 +15,7 @@ from .grid import g_vectors, r_vectors
 def u(a, cg, r, *, force_fft=False):
   r"""This is the periodic part of the bloch wave function.
   Which is denoted in u on wikipedia.
+
   Args:
     a: the lattice vectors in the real space, which has shape `(nd, nd)`.
     cg: a tensor of shape `(batch_dims_of_cg..., n1, n2, ..., nd)`
@@ -130,7 +131,8 @@ def _u_p_abstract_eval(a, cg, r, *, force_fft):
 
 
 def _u_jvp_rule(primals, tangents, *, force_fft):
-  r"""This defines the JVP rule for the `u` primitive.
+  r"""JVP rule for the `u` primitive.
+
   We linearize the `u` function at the `primals`, and evaluated
   the linearized function on `tangents`.
 

@@ -8,6 +8,9 @@ from jrystal._src.grid import _get_ewald_lattice
 from jrystal.crystal import Crystal
 from jrystal._src.paramdict import EwaldArgs
 
+# TODO: all docstrings needs to follow the google convention.
+# this can be checked with pydocstyle --convention=google
+
 
 def hartree(
   ng: Complex[Array, '*nd'], g_vec: Float[Array, '*nd d'], vol: Float[Array, '']
@@ -23,11 +26,11 @@ def hartree(
     g_mask (3D array): G point mask, Shape: [N1, N2, N3]
     vol: scalar
 
-      ng (3D array): the FT of density. Shape: [N1, N2, N3]
-      g_vec (4D array): G-vector. Shape: [N1, N2, N3, 3]
-      g_mask (3D array): G point mask, Shape: [N1, N2, N3]
-      vol: scalar
-      
+    ng (3D array): the FT of density. Shape: [N1, N2, N3]
+    g_vec (4D array): G-vector. Shape: [N1, N2, N3, 3]
+    g_mask (3D array): G point mask, Shape: [N1, N2, N3]
+    vol: scalar
+
   Return:
     Hartree energy: float.
   """
@@ -127,16 +130,20 @@ def lda_x_raw(r0: Float[Array, "*nd"]):
   return res
 
 
-def coulomb_repulsion(
-  atom_coords, atom_charges, a, gvec, vol, ew_eta, ew_cut=None, lattice=None
+def ewald_coulomb_repulsion(
+  coords, charges, a, gvec, vol, ew_eta, ew_cut=None, lattice=None
 ):
   """Ewald summation
+
+  TODO: I've removed `atom_` prefix from the arguments. because generally speaking
+  this function can be used for any charged particles.
+  TODO: a is never used here.
 
   Args:
     ew_cut (): _description_
     ew_eta (_type_): _description_
-    atom_coords (ndarray): 2d array. shape: [na, 3]
-    atom_charges (array): 1d array
+    coords (ndarray): 2d array. shape: [na, 3]
+    charges (array): 1d array
     a (ndarray): crystal lattice vectors.
     gvec (_type_): _description_
     vol (_type_): _description_
@@ -146,8 +153,8 @@ def coulomb_repulsion(
   elif ew_cut:
     translation = _get_ewald_lattice(a, ew_cut)
 
-  tau = atom_coords[None, :, :] - atom_coords[:, None, :]  # [na, na, 3]
-  # tau += jnp.expand_dims(jnp.eye(len(atom_charges))*1e12, -1)
+  tau = coords[None, :, :] - coords[:, None, :]  # [na, na, 3]
+  # tau += jnp.expand_dims(jnp.eye(len(charges))*1e12, -1)
   tau_t = tau[:, :, None, :] - translation[None, None, :, :]  # [na, na, nt, 3]
   tau_t_norm = jnp.sqrt(jnp.sum(tau_t**2, axis=-1) + 1e-20)  # [na, na, nt]
   tau_t_norm = jnp.where(tau_t_norm <= 1e-9, 1e20, tau_t_norm)
@@ -171,12 +178,12 @@ def coulomb_repulsion(
     ew_rprcl.at[0, 0, 0, :, :].set(0), axis=(0, 1, 2)
   )  # [na, na]
   ew_rprcl = ew_rprcl * 4 * jnp.pi / vol
-  ew_aa = jnp.einsum('i,ij->j', atom_charges, ew_ovlp + ew_rprcl)
-  ew_aa = jnp.dot(ew_aa, atom_charges) / 2
+  ew_aa = jnp.einsum('i,ij->j', charges, ew_ovlp + ew_rprcl)
+  ew_aa = jnp.dot(ew_aa, charges) / 2
 
   # single atom part
-  ew_a = -jnp.sum(atom_charges**2) * 2 * ew_eta / jnp.sqrt(jnp.pi) / 2
-  ew_a -= jnp.sum(atom_charges)**2 * jnp.pi / ew_eta**2 / vol / 2
+  ew_a = -jnp.sum(charges**2) * 2 * ew_eta / jnp.sqrt(jnp.pi) / 2
+  ew_a -= jnp.sum(charges)**2 * jnp.pi / ew_eta**2 / vol / 2
 
   return ew_aa + ew_a
 
@@ -191,7 +198,11 @@ def total(
   k_grid: jax.Array,
   ew_args: EwaldArgs,
 ):
-
+  # TODO: The arguments of this function are highly redundant.
+  # I think all we need is a, cg, occ, and crystal.
+  # Also, we usually don't use a class from the parent module.
+  # i.e. the Crystal here is not under _src, this could cause
+  # circular import in the future.
   atom_coord = crystal.positions
   atom_charge = crystal.charges
   vol = crystal.vol
