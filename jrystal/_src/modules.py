@@ -4,7 +4,15 @@ import flax.linen as nn
 from jaxtyping import Int, Float, Array
 from jrystal._src.bloch import bloch_wave
 from jrystal._src.utils import vmapstack
+
+# TODO: we don't use functions like `_coeff_compress` from another python file.
+# functions with underscore prefix are private to the file it is defined.
+# if this function has some generality and should be part of our open API,
+# consider remove the underscore prefix and document it well.
+
 from jrystal._src.pw import _coeff_compress, _coeff_expand, get_cg
+# TODO: _complex_norm_square should be defined without underscore prefix.
+# and moved to files like utils.py than pw.py, as it is general.
 from jrystal._src.pw import _complex_norm_square
 from jrystal._src.initializer import normal
 from jrystal import errors
@@ -13,7 +21,7 @@ from jrystal._src.occupations import OccSimple, OccUniform
 
 class PlaneWave(nn.Module):
   """The plane wave module.
-  
+
   it maps r with shape [..., d] to [nspin, nk, ni, ...]
 
   Returns:
@@ -103,14 +111,14 @@ class PlaneWaveDensity(nn.Module):
 
 class BatchedBlochWave(nn.Module):
   """Bloch Wave function with fixed lattice vector, and kmesh
-      The input cg is an expanded form (in 3D with a shape 
+      The input cg is an expanded form (in 3D with a shape
       [*batches, n1, n2, n3, 3])
-      
+
       Example:
       bw = BatchedBlochWave(a, k_grid, cg)
-      
+
       bw: [n1, n2, n3, 3] -> [2, nk, ni, n1, n2, n3]
-      
+
   """
 
   A: Float[Array, "dim1 dim2"]
@@ -128,21 +136,21 @@ class BatchedBlochWave(nn.Module):
 
 
 class QRDecomp(nn.Module):
-  """the QR decomposition will map over the first to last two dimension. 
-  The input is a batched tall and skinny matrix with shape (..., M, K). 
-  Returns: a batch of matrices with orthonormal columns (..., M, K) 
-  where M >= K. 
-  
+  """the QR decomposition will map over the first to last two dimension.
+  The input is a batched tall and skinny matrix with shape (..., M, K).
+  Returns: a batch of matrices with orthonormal columns (..., M, K)
+  where M >= K.
+
   Example:
-  
+
   >>> key = jax.random.PRNGKey(123)
   >>> shape = [2, 6, 4]
   >>> qr = QRDecomp(shape)
   >>> params = qr.init(key)
   >>> cg = qr.apply(params)
-  
+
   cg is the orthogonal coeffiencts which has the same shape of input arg shape.
-  
+
   """
 
   shape: Int[Array, '*batch ng ni']
@@ -169,6 +177,7 @@ class QRDecomp(nn.Module):
 
 
 class BatchedInverseFFT(nn.Module):
+  # TODO: prefer using ifftn directly, this class is not necessary.
   """Batched inverse Fourier transform module"""
   fft_dim: Int = 3
 
@@ -183,6 +192,7 @@ class BatchedInverseFFT(nn.Module):
 
 
 class BatchedFFT(nn.Module):
+  # TODO: prefer using fftn directly, this class is not necessary.
   """Batched fourier transform module"""
   fft_dim: Int = 3
 

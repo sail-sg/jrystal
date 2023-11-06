@@ -5,9 +5,10 @@ from absl import logging
 import numpy as np
 
 
+# TODO: the name doesn't reflect what the function does.
 def vmapstack(times: int, args: List[Dict] = None) -> Callable:
   """mutiple times vmap over f, from the front to the end.
-  
+
   Example:
     if f maps (3) -> (2)
     then vmapstack(f): (*batches, 3) -> (*batches, 2)
@@ -41,15 +42,15 @@ def vmapstack(times: int, args: List[Dict] = None) -> Callable:
 
 def vmapstack_reverse(times: int) -> Callable:
   """Keep the vmap out axes at the end of the output
-  arranged in 3d and the same order as the input. 
-  
+  arranged in 3d and the same order as the input.
+
   Example:
   if the original f maps `(3,) -> (2,)` and times = 3
   then output has `(n1, n2, n3, 3) -> (2, n1, n2, n3)`.
-  
+
   Args:
       times (int): number of vmap times.
-      
+
   Returns:
       Callable: _description_
   """

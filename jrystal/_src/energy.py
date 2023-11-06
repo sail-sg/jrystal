@@ -11,6 +11,10 @@ from jrystal._src.paramdict import EwaldArgs
 # TODO: all docstrings needs to follow the google convention.
 # this can be checked with pydocstyle --convention=google
 
+# TODO: "*nd" is only supported in python3.11, I think we don't need
+# to annotation to this level of accuracy as long as the docstring covers
+# the shapes and dtypes.
+
 
 def hartree(
   ng: Complex[Array, '*nd'], g_vec: Float[Array, '*nd d'], vol: Float[Array, '']

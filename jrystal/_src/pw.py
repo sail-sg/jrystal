@@ -7,6 +7,9 @@ from jrystal import errors
 from jrystal._src.grid import g_vectors
 from jrystal._src.utils import vmapstack
 
+# TODO: It is unclear why this file exists
+# maybe we should create a set of pure functional API for wave functions here?
+
 
 def _coeff_expand(
   cg: Complex[Array, "*batch ng"],
