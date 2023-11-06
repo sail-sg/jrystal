@@ -2,7 +2,7 @@ __version__ = '0.0.1'
 
 from jrystal.crystal import Crystal
 from jrystal._src import occupations
-from jrystal import optim
+from projects.jrystal.jrystal import train
 from jrystal import errors
 from jrystal import wave
 from jrystal import config
@@ -21,7 +21,7 @@ __all__ = [
   '__version__',
   'Crystal',
   'occupations',
-  'optim',
+  'train',
   'errors',
   'bloch_wave',
   'g_vectors',

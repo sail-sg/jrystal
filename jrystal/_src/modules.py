@@ -36,7 +36,7 @@ class PlaneWave(nn.Module):
   def __call__(self, r) -> jax.Array:
     cg = QRDecomp(self.shape)()
     cg = jnp.swapaxes(cg, -1, -2)
-    cg = _coeff_expand(cg, self.mask)
+    cg = ExpandCoeff(self.mask)(cg)
     wave = BatchedBlochWave(self.A, self.k_grid)(r, cg)
     return wave
 
@@ -65,6 +65,7 @@ class PlaneWaveDensity(nn.Module):
   A: jax.Array
   k_grid: jax.Array
   spin: Int
+  vol: float
   occ: str = 'simple'
 
   def setup(self):
@@ -89,20 +90,20 @@ class PlaneWaveDensity(nn.Module):
     occ = jnp.expand_dims(occ, range(occ.ndim, w.ndim))
     N = jnp.prod(jnp.array(self.mask.shape))
 
-    if reduce:
-      density = jnp.sum(occ * w, axis=(1, 2))  # reduce over k, i
+    if reduce:  # reduce over k, i
+      density = jnp.sum(occ * w, axis=(1, 2)) / self.vol
       dim = density.ndim - 1
-      density_fft = BatchedFFT(dim)(density) * N
+      density_fft = BatchedFFT(dim)(density) / N * self.vol
     else:
-      density = occ * w
+      density = occ * w / self.vol
       dim = density.ndim - 3
-      density_fft = BatchedFFT(dim)(density) * N
+      density_fft = BatchedFFT(dim)(density) / N * self.vol
 
     return density, density_fft
 
   def get_cg(self, params):
-    w_re = params['params']['pw']['QRDecomp_0']['w_re']
-    w_im = params['params']['pw']['QRDecomp_0']['w_im']
+    w_re = params['pw']['QRDecomp_0']['w_re']
+    w_im = params['pw']['QRDecomp_0']['w_im']
     w = w_re + 1.j * w_im
     return get_cg(w, self.mask)
 
@@ -126,6 +127,7 @@ class BatchedBlochWave(nn.Module):
   A: Float[Array, "dim1 dim2"]
   k_grid: Float[Array, "nk 3"]
   cg: Float = None
+  rd: int = 3
 
   @nn.compact
   def __call__(self, r: Float[Array, '*batches r'], cg=None) -> jax.Array:
@@ -135,10 +137,9 @@ class BatchedBlochWave(nn.Module):
     # To make sense of this module, we should make this module initialize
     # cg by itself instead of passing it as an argument.
     cg = nn.merge_param('cg', self.cg, cg)
-    rd = r.ndim - 1  # （N1, N2, N3, 3)
     wave = bloch_wave(self.A, cg, self.k_grid)  #
-    wave = vmapstack(rd)(wave)(r)  # [n1, n2, n3, 2, ni, nk]
-    wave = jnp.moveaxis(wave, jnp.arange(rd), jnp.arange(rd) - rd)
+    wave = vmapstack(self.rd)(wave)(r)  # [n1, n2, n3, 2, ni, nk]
+    wave = jnp.moveaxis(wave, range(3), range(-3, 0))
     return wave
 
 
@@ -164,10 +165,10 @@ class QRDecomp(nn.Module):
   polarize: bool = True
   complex_weights: bool = True
 
-  def __post_init__(self):
-    super().__post_init__()
-    if self.shape[-1] > self.shape[-2]:
-      raise errors.InitiateQRDecompShapeError(self.shape)
+  # def __post_init__(self):
+  #   super().__post_init__()
+  #   if self.shape[-1] > self.shape[-2]:
+  #     raise errors.InitiateQRDecompShapeError(self.shape)
 
   @nn.compact
   def __call__(self) -> jax.Array:

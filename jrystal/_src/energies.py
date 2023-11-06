@@ -5,58 +5,45 @@ from jaxtyping import Float, Array, Complex
 
 from jrystal._src.pw import _complex_norm_square
 from jrystal._src.grid import _get_ewald_lattice
-from jrystal.crystal import Crystal
+from jrystal import Crystal
 from jrystal._src.paramdict import EwaldArgs
 
-# TODO: all docstrings needs to follow the google convention.
-# this can be checked with pydocstyle --convention=google
 
-# TODO: "*nd" is only supported in python3.11, I think we don't need
-# to annotation to this level of accuracy as long as the docstring covers
-# the shapes and dtypes.
-
-
-def hartree(
+def energy_hartree(
   ng: Complex[Array, '*nd'], g_vec: Float[Array, '*nd d'], vol: Float[Array, '']
 ) -> Float[Array, '']:
-  r"""Hartree energy for plane wave orbitals on reciprocal space.
+  """Hartree energy for plane wave orbitals on reciprocal space.
 
   .. math::
-    E = 2\pi \sum_i \sum_k \sum_G \dfrac{n(G)^2}{\|G\|^2}
+    E = 2\pi \sum_i \sum_k \sum_G \dfrac{|n(G)|^2}{|G|^2}
 
   Args:
-    density_vec_ft (3D array): the FT of density. Shape: [N1, N2, N3]
-    gvec (4D array): G-vector. Shape: [N1, N2, N3, 3]
-    g_mask (3D array): G point mask, Shape: [N1, N2, N3]
-    vol: scalar
-
-    ng (3D array): the FT of density. Shape: [N1, N2, N3]
-    g_vec (4D array): G-vector. Shape: [N1, N2, N3, 3]
-    g_mask (3D array): G point mask, Shape: [N1, N2, N3]
-    vol: scalar
-
+      ng (3D array): the FT of density. Shape: [N1, N2, N3]
+      g_vec (4D array): G-vector. Shape: [N1, N2, N3, 3]
+      g_mask (3D array): G point mask, Shape: [N1, N2, N3]
+      vol: scalar
+      
   Return:
     Hartree energy: float.
   """
-  ng = jnp.sum(ng, axis=0)
-  d = g_vec.shape[-1]
+
   g_vec_square = jnp.sum(g_vec**2, axis=-1)  # [N1, N2, N3]
   output = _complex_norm_square(ng)
-  g_vec_square = g_vec_square.at[(0,) * d].set(1e-16)
+  g_vec_square = g_vec_square.at[0, 0, 0].set(1e-16)
   output /= g_vec_square
-  output = output.at[(0,) * d].set(0)
+  output = output.at[0, 0, 0].set(0)
   output = jnp.sum(output) / vol / 2 * 4 * jnp.pi
   return output
 
 
-def external(
-  ng: Complex[Array, '2 *nd'],
+def energy_external(
+  ng: Complex[Array, '*nd'],
   atom_coord: Float[Array, 'ni nd'],
   atom_charge: Float[Array, 'ni'],
   g_vec: Float[Array, '*nd d'],
   vol: Float[Array, ''],
 ) -> Float[Array, '']:
-  r"""Externel energy for plane wave orbitals.
+  """Externel energy for plane wave orbitals.
 
   .. math::
     E = \sum_G \vert \sum_i s_i(G) v_i(G) \vert n(G)
@@ -64,8 +51,8 @@ def external(
   where
 
   .. math::
-    s_i(G) = \exp(\mathrm{i}G\tau_i)
-    v_i(G) = -4\pi \frac{q_i}{\|G\|^2}
+    S_i(G) = exp(jG\tau_i)
+    v_i(G) = -4 pi q_i / \Vert G \Vert^2
 
   Args:
     density_vec_ft (6d array): the FT of density. Shape: [N1, N2, N3]
@@ -76,12 +63,10 @@ def external(
   Return:
     External energy.Float
   """
-  ng = jnp.sum(ng, axis=0)
-  d = g_vec.shape[-1]
   g_vec_square = jnp.sum(g_vec**2, axis=-1)
-  s_i = jnp.exp(1j * g_vec @ atom_coord.T)  # (n1, ..., nd, na)
-  v_i = atom_charge / (g_vec_square[..., None])
-  v_i = v_i.at[(0,) * d].set(0)
+  s_i = jnp.exp(1j * jnp.matmul(g_vec, atom_coord.transpose()))
+  v_i = atom_charge[None, None, None, :] / (g_vec_square[:, :, :, None])
+  v_i = v_i.at[0, 0, 0, :].set(0)
   v_i *= 4 * jnp.pi
   v_ext_G = jnp.sum(s_i * v_i, axis=-1)
   output = jnp.vdot(v_ext_G.flatten(), ng.flatten())
@@ -89,21 +74,19 @@ def external(
   return -jnp.real(output)
 
 
-def kinetic(
+def energy_kin(
   g_vec: Float[Array, '*nd d'],
   k_vec: Float[Array, 'nk d'],
-  coeff: Float[Array, '2 nk ni *nd'],
+  cg: Float[Array, '2 nk ni *nd'],
   occ: Float[Array, '2 nk ni'],
 ) -> Float[Array, '']:
-  r"""Kinetic energy
-
-  .. math::
+  """Kinetic energy
       E = 1/2 \sum_{G} |k + G|^2 c_{i,k,G}^2
   Args:
-      gvec (4D array): G-vector. Shape: [N1, N2, N3, 3]
-      kpts (2D array): k-points. Shape: [nk, 3]
-      _params_w (6D array): pw coefficient. Shape: [2, ni, nk, N1, N2, N3]
-      nocc (3D array): occupation mask. Shape: [2, ni, nk]
+      g_vec (4D array): G-vector. Shape: [N1, N2, N3, 3]
+      k_vec (2D array): k-points. Shape: [nk, 3]
+      cg (6D array): pw coefficient. Shape: [2, nk, ni, N1, N2, N3]
+      nocc (3D array): occupation mask. Shape: [2, nk, ni]
   Returns:
       scalar
   """
@@ -111,12 +94,11 @@ def kinetic(
   _g = jnp.expand_dims(g_vec, axis=[0, 1, 2])
   _k = jnp.expand_dims(k_vec, axis=[0] + [i + 2 for i in range(dim + 1)])
   e_kin = jnp.sum((_g + _k)**2, axis=-1)  # [1, nk, ni, N1, N2, N3]
-  e_kin = jnp.sum(e_kin * _complex_norm_square(coeff), axis=range(3, dim + 3))
-
+  e_kin = jnp.sum(e_kin * _complex_norm_square(cg), axis=range(3, dim + 3))
   return jnp.sum(e_kin * occ) / 2
 
 
-def lda(nr: Float[Array, '2 *nd'], vol: Float[Array, '']):
+def energy_lda(nr: Float[Array, '2 *nd'], vol: Float[Array, '']):
   nr = jnp.sum(nr, axis=0)
   ngrid = jnp.prod(jnp.array(nr.shape))
   e_lda = jnp.sum(lda_x_raw(nr) * nr)
@@ -134,31 +116,26 @@ def lda_x_raw(r0: Float[Array, "*nd"]):
   return res
 
 
-def ewald_coulomb_repulsion(
-  coords, charges, a, gvec, vol, ew_eta, ew_cut=None, ewald_grid=None
+def energy_ewald(
+  atom_coords, atom_charges, a, g_vec, vol, ew_eta, ew_cut=None, lattice=None
 ):
   """Ewald summation
 
-  TODO: I've removed `atom_` prefix from the arguments. because generally speaking
-  this function can be used for any charged particles.
-  TODO: a is never used here.
-
-  Args:
-    ew_cut (): _description_
-    ew_eta (_type_): _description_
-    coords (ndarray): 2d array. shape: [na, 3]
-    charges (array): 1d array
-    a (ndarray): crystal lattice vectors.
-    gvec (_type_): _description_
-    vol (_type_): _description_
+    Args:
+      ew_cut (): _description_
+      ew_eta (_type_): _description_
+      atom_coords (ndarray): 2d array. shape: [na, 3]
+      atom_charges (array): 1d array
+      a (ndarray): crystal lattice vectors.
+      gvec (_type_): _description_
+      vol (_type_): _description_
   """
-  if ewald_grid is not None:
-    translation = ewald_grid
+  if lattice is not None:
+    translation = lattice
   elif ew_cut:
     translation = _get_ewald_lattice(a, ew_cut)
 
-  tau = coords[None, :, :] - coords[:, None, :]  # [na, na, 3]
-  # tau += jnp.expand_dims(jnp.eye(len(charges))*1e12, -1)
+  tau = atom_coords[None, :, :] - atom_coords[:, None, :]  # [na, na, 3]
   tau_t = tau[:, :, None, :] - translation[None, None, :, :]  # [na, na, nt, 3]
   tau_t_norm = jnp.sqrt(jnp.sum(tau_t**2, axis=-1) + 1e-20)  # [na, na, nt]
   tau_t_norm = jnp.where(tau_t_norm <= 1e-9, 1e20, tau_t_norm)
@@ -168,31 +145,31 @@ def ewald_coulomb_repulsion(
   )
 
   # the reciprocal space part:
-  gvec_norm_sq = jnp.sum(gvec**2, axis=3)  # [N1, N2, N3]
+  gvec_norm_sq = jnp.sum(g_vec**2, axis=3)  # [N1, N2, N3]
   gvec_norm_sq = gvec_norm_sq.at[0, 0, 0].set(1e16)
   ew_rprcl = jnp.exp(
     -gvec_norm_sq / 4 / ew_eta**2
   ) / gvec_norm_sq  # [N1, N2, N3]
   ew_rprcl = jnp.sum(
     ew_rprcl[:, :, :, None, None, None] *
-    jnp.cos(gvec[:, :, :, None, None, :] * tau[None, None, None, :, :, :]),
+    jnp.cos(g_vec[:, :, :, None, None, :] * tau[None, None, None, :, :, :]),
     axis=-1
   )  # [N1, N2, N3, na, na]
   ew_rprcl = jnp.sum(
     ew_rprcl.at[0, 0, 0, :, :].set(0), axis=(0, 1, 2)
   )  # [na, na]
   ew_rprcl = ew_rprcl * 4 * jnp.pi / vol
-  ew_aa = jnp.einsum('i,ij->j', charges, ew_ovlp + ew_rprcl)
-  ew_aa = jnp.dot(ew_aa, charges) / 2
+  ew_aa = jnp.einsum('i,ij->j', atom_charges, ew_ovlp + ew_rprcl)
+  ew_aa = jnp.dot(ew_aa, atom_charges) / 2
 
   # single atom part
-  ew_a = -jnp.sum(charges**2) * 2 * ew_eta / jnp.sqrt(jnp.pi) / 2
-  ew_a -= jnp.sum(charges)**2 * jnp.pi / ew_eta**2 / vol / 2
+  ew_a = -jnp.sum(atom_charges**2) * 2 * ew_eta / jnp.sqrt(jnp.pi) / 2
+  ew_a -= jnp.sum(atom_charges)**2 * jnp.pi / ew_eta**2 / vol / 2
 
   return ew_aa + ew_a
 
 
-def total(
+def energy_total(
   nr: jax.Array,
   ng: jax.Array,
   cg: jax.Array,
@@ -202,23 +179,17 @@ def total(
   k_grid: jax.Array,
   ew_args: EwaldArgs,
 ):
-  # TODO: The arguments of this function are highly redundant.
-  # I think all we need is a, cg, occ, and crystal.
-  # Also, we usually don't use a class from the parent module.
-  # i.e. the Crystal here is not under _src, this could cause
-  # circular import in the future.
+
   atom_coord = crystal.positions
   atom_charge = crystal.charges
   vol = crystal.vol
   a = crystal.A
 
-  e_kin = kinetic(g_grid, k_grid, cg, occ)
-  e_har = hartree(ng, g_grid, vol)
-  e_ext = external(ng, atom_coord, atom_charge, g_grid, vol)
-  e_xc = lda(nr, vol)
-  e_ew = ewald_coulomb_repulsion(
-    atom_coord, atom_charge, a, g_grid, vol, **ew_args
-  )
+  e_kin = energy_kin(g_grid, k_grid, cg, occ)
+  e_har = energy_hartree(ng, g_grid, vol)
+  e_ext = energy_external(ng, atom_coord, atom_charge, g_grid, vol)
+  e_xc = energy_lda(nr, vol)
+  e_ew = energy_ewald(atom_coord, atom_charge, a, g_grid, **ew_args)
   e_total = e_kin + e_har + e_ext + e_xc + e_ew
 
   return e_total, (e_kin, e_har, e_ext, e_xc, e_ew)

@@ -114,7 +114,7 @@ def _get_ewald_lattice(b: Float[Array, 'd d'],
   Returns:
       the translation lattice; shape: [nt, 3]
   """
-  n = jnp.ceil(ew_cut / jnp.linalg.norm(jnp.sum(b, axis=0))**b.shape[0])
-  grid = _vector_grid(b, [int(n) for i in range(b.shape[0])])
+  n = int(np.ceil(ew_cut / np.linalg.norm(np.sum(b, axis=0))**b.shape[0]))
+  grid = _vector_grid(b, [n for i in range(b.shape[0])])
 
   return jnp.reshape(grid, [-1, b.shape[0]])

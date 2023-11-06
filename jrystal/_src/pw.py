@@ -32,14 +32,14 @@ def _coeff_expand(
   Returns:
       expanded coeff: shape (*batch, *nd)
   """
-  n_sum = jnp.sum(mask)
-  if not jnp.array_equal(cg.shape[-1], n_sum):
-    raise errors.ApplyExpCoeffShapeError(cg.shape, n_sum)
+  # n_sum = jnp.sum(mask)
+  # if not jnp.array_equal(cg.shape[-1], n_sum):
+  #   raise errors.ApplyExpCoeffShapeError(cg.shape, n_sum)
 
   @vmapstack(times=cg.ndim - 1)
   def set_mask(c):
     o = jnp.zeros_like(mask, dtype=c.dtype)
-    return o.at[mask == 1].set(c)
+    return o.at[mask].set(c)
 
   return set_mask(cg)
 
@@ -52,7 +52,7 @@ def _coeff_compress(
 
   @vmapstack(times=cg.ndim - mask.ndim)
   def _get_value(c):
-    return c.at[mask == 1].get()
+    return c.at[mask].get()
 
   return _get_value(cg)
 

@@ -20,6 +20,7 @@ class PWDArgs:
   A: jax.Array
   k_grid: jax.Array
   spin: Int
+  vol: float
 
   @staticmethod
   def get_PWD_args(
@@ -40,17 +41,22 @@ class PWDArgs:
     nspin = 2 if polarize else 1
     ni = crystal.nelec
     nk = np.prod(k_grid_sizes)
-    spin = ni % 2
+    spin = int(ni % 2)
     mask = _get_mask_radius(crystal.A, g_grid_sizes, Ecut)
 
     ng = np.sum(mask)
     k_grid = monkhorst_pack(k_grid_sizes)
     g_grid = g_vectors(crystal.A, g_grid_sizes)
     r_grid = r_vectors(crystal.A, g_grid_sizes)
-    cg_shape = [nspin, nk, ng, ni]
+    cg_shape = [nspin, nk, ng, ni.item()]
 
     pwd_args = PWDArgs(
-      shape=cg_shape, mask=mask, A=crystal.A, k_grid=k_grid, spin=spin
+      shape=cg_shape,
+      mask=mask,
+      A=crystal.A,
+      k_grid=k_grid,
+      spin=spin,
+      vol=crystal.vol
     )
 
     return pwd_args, (r_grid, g_grid)

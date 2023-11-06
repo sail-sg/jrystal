@@ -8,7 +8,7 @@ in angstrom.
 import ase
 from ase.io import read
 import jax.numpy as jnp
-from jaxtyping import Float, Int, Array, ArrayLike
+from jaxtyping import Float, ArrayLike
 from typing import Union, List
 import chex
 

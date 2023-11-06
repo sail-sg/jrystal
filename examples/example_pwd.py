@@ -3,7 +3,7 @@ import jrystal
 from jrystal import Crystal
 from jrystal._src.modules import PlaneWaveDensity
 from jrystal._src.pw import get_cg
-from jrystal._src.argsdicts import PWDArgs
+from jrystal._src.paramdict import PWDArgs
 
 # Define by lattice vectors
 a = 3.5667  # angstrom

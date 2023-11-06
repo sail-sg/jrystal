@@ -2,8 +2,10 @@
 """
 import jax
 import jax.numpy as jnp
+import numpy as np
 import flax.linen as nn
 from jaxtyping import Int, Array
+from functools import partial
 
 # TODO: the name simple is not informative.
 # maybe something like topk ?
@@ -32,7 +34,6 @@ class OccSimple(nn.Module):
   ni: Int
   spin: Int
 
-  @nn.compact
   def __call__(self) -> Int[Array, '2 nk ni']:
 
     # TODO: currently only support polarized system.
