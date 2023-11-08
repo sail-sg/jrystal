@@ -19,5 +19,3 @@ RealGrid: TypeAlias = Float[Array, "... n1 n2 n3"]
 
 ComplexVecterGrid: TypeAlias = Complex[Array, "... n1 n2 n3 3"]
 ComplexGrid: TypeAlias = Complex[Array, "... n1 n2 n3"]
-
-RealScalar: TypeAlias = Float[Array, " "]
