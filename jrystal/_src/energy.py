@@ -1,12 +1,17 @@
 """Energy functions. """
 import jax
 import jax.numpy as jnp
-from jaxtyping import Float, Array, Complex
+from jaxtyping import Float, Array
 
-from jrystal._src.pw import _complex_norm_square
-from jrystal._src.grid import _get_ewald_lattice
+from jrystal._src.pw import complex_norm_square
+from jrystal._src.grid import get_ewald_lattice
 from jrystal.crystal import Crystal
 from jrystal._src.paramdict import EwaldArgs
+from jrystal._src import potential
+from jrystal._src import xc_density
+
+from jrystal._src.typing import ComplexGrid, RealVecterGrid, RealScalar
+from jrystal._src.typing import OccupationArray, RealGrid
 
 # TODO: all docstrings needs to follow the google convention.
 # this can be checked with pydocstyle --convention=google
@@ -17,177 +22,201 @@ from jrystal._src.paramdict import EwaldArgs
 
 
 def hartree(
-  ng: Complex[Array, '*nd'], g_vec: Float[Array, '*nd d'], vol: Float[Array, '']
-) -> Float[Array, '']:
+  reciprocal_density_grid: ComplexGrid, g_vector_grid: RealVecterGrid,
+  vol: RealScalar
+) -> RealScalar:
   r"""Hartree energy for plane wave orbitals on reciprocal space.
 
   .. math::
     E = 2\pi \sum_i \sum_k \sum_G \dfrac{n(G)^2}{\|G\|^2}
 
   Args:
-    density_vec_ft (3D array): the FT of density. Shape: [N1, N2, N3]
-    gvec (4D array): G-vector. Shape: [N1, N2, N3, 3]
-    g_mask (3D array): G point mask, Shape: [N1, N2, N3]
-    vol: scalar
-
-    ng (3D array): the FT of density. Shape: [N1, N2, N3]
-    g_vec (4D array): G-vector. Shape: [N1, N2, N3, 3]
-    g_mask (3D array): G point mask, Shape: [N1, N2, N3]
+    reciprocal_density_grid (nd-array): the density of grid points in 
+      reciprocal space. Shape: [_, N1, N2, N3]
+    g_vector_grid (4D array): g vector grid. Shape: [N1, N2, N3, 3]
     vol: scalar
 
   Return:
     Hartree energy: float.
   """
-  ng = jnp.sum(ng, axis=0)
-  d = g_vec.shape[-1]
-  g_vec_square = jnp.sum(g_vec**2, axis=-1)  # [N1, N2, N3]
-  output = _complex_norm_square(ng)
-  g_vec_square = g_vec_square.at[(0,) * d].set(1e-16)
-  output /= g_vec_square
-  output = output.at[(0,) * d].set(0)
-  output = jnp.sum(output) / vol / 2 * 4 * jnp.pi
-  return output
+  dim = g_vector_grid.shape[-1]
+
+  if reciprocal_density_grid.ndim == dim + 1:
+    reciprocal_density_grid = jnp.sum(reciprocal_density_grid, axis=0)
+
+  v_hartree_reciprocal = potential.hartree_reciprocal(
+    reciprocal_density_grid, g_vector_grid, vol
+  )
+  output = jnp.sum(v_hartree_reciprocal * reciprocal_density_grid) / 2
+  return output.real
 
 
 def external(
-  ng: Complex[Array, '2 *nd'],
-  atom_coord: Float[Array, 'ni nd'],
-  atom_charge: Float[Array, 'ni'],
-  g_vec: Float[Array, '*nd d'],
-  vol: Float[Array, ''],
-) -> Float[Array, '']:
-  r"""Externel energy for plane wave orbitals.
+  reciprocal_density_grid: ComplexGrid, positions: Float[Array, 'num_atoms d'],
+  charges: Float[Array, 'num_atoms'], g_vector_grid: RealVecterGrid, 
+  vol: RealScalar
+) -> RealScalar:
+  r"""
+  
+    Externel energy for plane waves
 
-  .. math::
-    E = \sum_G \vert \sum_i s_i(G) v_i(G) \vert n(G)
+    .. math::
+        V = \sum_G \sum_i s_i(G) v_i(G)
+        E = \int V(r) \rho(r) dr
+    
+    where
 
-  where
+    .. math::
+        s_i(G) = exp(jG\tau_i)
+        v_i(G) = -4 \pi z_i / \Vert G \Vert^2
 
-  .. math::
-    s_i(G) = \exp(\mathrm{i}G\tau_i)
-    v_i(G) = -4\pi \frac{q_i}{\|G\|^2}
+    Args:
+      reciprocal_density_grid (ComplexGrid): the density of grid points in 
+        reciprocal space.
+      positions (Array): Coordinates of atoms in a unit cell. 
+        Shape: [num_atoms d].
+      charges (Array): Charges of atoms. Shape: [num_atoms].
+      g_vector_grid (RealVecterGrid): G vector grid.
 
-  Args:
-    density_vec_ft (6d array): the FT of density. Shape: [N1, N2, N3]
-    atom_coord (2D array): coordinate of atoms in unit cell. Shape: [na, 3]
-    atom_charge (1D array): charge of atoms in a unit cell. Shape: [na]
-    nocc (3D array): occupation mask. Shape: [2, ni, nk]
-    gvec (4D array): G-vector. Shape: [N1, N2, N3, 3]
-  Return:
-    External energy.Float
+    Return:
+      RealScalar: External energy.
+
   """
-  ng = jnp.sum(ng, axis=0)
-  d = g_vec.shape[-1]
-  g_vec_square = jnp.sum(g_vec**2, axis=-1)
-  s_i = jnp.exp(1j * g_vec @ atom_coord.T)  # (n1, ..., nd, na)
-  v_i = atom_charge / (g_vec_square[..., None])
-  v_i = v_i.at[(0,) * d].set(0)
-  v_i *= 4 * jnp.pi
-  v_ext_G = jnp.sum(s_i * v_i, axis=-1)
-  output = jnp.vdot(v_ext_G.flatten(), ng.flatten())
-  output /= vol
-  return -jnp.real(output)
+
+  v_externel_reciprocal = potential.externel_reciprocal(
+    positions, charges, g_vector_grid, vol
+  )
+  externel_energy = jnp.sum(v_externel_reciprocal * reciprocal_density_grid)
+
+  return externel_energy.real
 
 
 def kinetic(
-  g_vec: Float[Array, '*nd d'],
-  k_vec: Float[Array, 'nk d'],
-  coeff: Float[Array, '2 nk ni *nd'],
-  occ: Float[Array, '2 nk ni'],
-) -> Float[Array, '']:
-  r"""Kinetic energy
+  g_vector_grid: RealVecterGrid, k_vector_grid: RealVecterGrid,
+  coeff_grid: ComplexGrid, occupation: OccupationArray
+) -> RealScalar:
+  r"""Kinetic energy.
 
   .. math::
       E = 1/2 \sum_{G} |k + G|^2 c_{i,k,G}^2
+
   Args:
-      gvec (4D array): G-vector. Shape: [N1, N2, N3, 3]
-      kpts (2D array): k-points. Shape: [nk, 3]
-      _params_w (6D array): pw coefficient. Shape: [2, ni, nk, N1, N2, N3]
-      nocc (3D array): occupation mask. Shape: [2, ni, nk]
+      g_vector_grid (RealVecterGrid):  G vector grid.
+      k_vector_grid (RealVecterGrid):  k vector grid.
+      coeff_grid (ComplexGrid): Plane wave coefficient. 
+      occupation (Array): occupation array.
+
   Returns:
-      scalar
+      RealScalar: kinetic energy.
+
   """
-  dim = g_vec.shape[-1]
-  _g = jnp.expand_dims(g_vec, axis=[0, 1, 2])
-  _k = jnp.expand_dims(k_vec, axis=[0] + [i + 2 for i in range(dim + 1)])
+  
+  dim = g_vector_grid.shape[-1]
+
+  _g = jnp.expand_dims(g_vector_grid, axis=range(3))
+  _k = jnp.expand_dims(
+    k_vector_grid, axis=[0] + [i + 2 for i in range(dim+1)]
+  )
   e_kin = jnp.sum((_g + _k)**2, axis=-1)  # [1, nk, ni, N1, N2, N3]
-  e_kin = jnp.sum(e_kin * _complex_norm_square(coeff), axis=range(3, dim + 3))
+  e_kin = jnp.sum(
+    e_kin * complex_norm_square(coeff_grid), axis=range(3, dim + 3)
+  )
 
-  return jnp.sum(e_kin * occ) / 2
-
-
-def lda(nr: Float[Array, '2 *nd'], vol: Float[Array, '']):
-  nr = jnp.sum(nr, axis=0)
-  ngrid = jnp.prod(jnp.array(nr.shape))
-  e_lda = jnp.sum(lda_x_raw(nr) * nr)
-  return e_lda * vol / ngrid
+  return jnp.sum(e_kin * occupation) / 2
 
 
-def lda_x_raw(r0: Float[Array, "*nd"]):
-  t3 = 3**(0.1e1 / 0.3e1)
-  t4 = jnp.pi**(0.1e1 / 0.3e1)
-  t8 = 2.220446049250313e-16**(0.1e1 / 0.3e1)
-  t10 = jnp.where(0.1e1 <= 2.22044604925e-16, t8 * 2.22044604925e-16, 1)
-  t11 = r0**(0.1e1 / 0.3e1)
-  t15 = jnp.where(r0 / 0.2e1 <= 1e-15, 0, -0.3e1 / 0.8e1 * t3 / t4 * t10 * t11)
-  res = 0.2e1 * 1. * t15
-  return res
+def xc_lda(density_grid: RealGrid, vol: RealScalar):
+  r"""local density approximation potential. 
+
+  NOTE: this is a non-polarized lda potential
+
+  .. math::
+      E_{\rm x}^{\mathrm{LDA}}[\rho] = - \frac{3}{4}\left( \frac{3}{\pi} \right)^{1/3}\int\rho(\mathbf{r})^{4/3}  # noqa: E501
+
+  Args:
+      density_grid (RealGrid): the density of grid points in 
+        real space.
+      vol (RealScalar): the volume of unit cell.
+
+  Returns:
+      RealGrid: the variation of the lda energy with respect to the density.
+      
+  """
+
+  if density_grid.ndim == 4:  # have spin channel
+    density_grid = jnp.sum(density_grid, axis=0)
+
+  num_grid = jnp.prod(jnp.array(density_grid.shape))
+  e_lda = jnp.sum(xc_density.lda_x(density_grid) * density_grid)
+
+  return e_lda * vol / num_grid
 
 
 def ewald_coulomb_repulsion(
-  coords, charges, a, gvec, vol, ew_eta, ew_cut=None, ewald_grid=None
-):
-  """Ewald summation
+  positions: Float[Array, 'num_atoms d'],
+  charges: Float[Array, 'num_atoms'],
+  reciprocal_density_grid: ComplexGrid,
+  vol: RealScalar,
+  ewald_eta: float,
+  ewald_grid: Float[Array, 'num_translation d']
+) -> RealScalar:
+  
+  """
+  Ewald summation.
 
-  TODO: I've removed `atom_` prefix from the arguments. because generally speaking
-  this function can be used for any charged particles.
-  TODO: a is never used here.
+  Ref: Martin, R. M. (2020). Electronic structure: basic theory and practical 
+  methods. Cambridge university press. (Appendix F.2)
+
 
   Args:
-    ew_cut (): _description_
-    ew_eta (_type_): _description_
-    coords (ndarray): 2d array. shape: [na, 3]
-    charges (array): 1d array
-    a (ndarray): crystal lattice vectors.
-    gvec (_type_): _description_
-    vol (_type_): _description_
-  """
-  if ewald_grid is not None:
-    translation = ewald_grid
-  elif ew_cut:
-    translation = _get_ewald_lattice(a, ew_cut)
+      positions (Float[Array, &#39;num_atoms d&#39;]): _description_
+      charges (Float[Array, &#39;num_atoms&#39;]): _description_
+      cell_vector (Float[Array, &#39;d d&#39;]): _description_
+      reciprocal_density_grid (ComplexGrid): _description_
+      vol (RealScalar): _description_
+      ewald_eta (float): _description_
+      ewald_grid (RealGrid): a grid for ewald sum. 
+        Can be generated by jrystal._src.grid.get_ewald_lattice
 
-  tau = coords[None, :, :] - coords[:, None, :]  # [na, na, 3]
-  # tau += jnp.expand_dims(jnp.eye(len(charges))*1e12, -1)
-  tau_t = tau[:, :, None, :] - translation[None, None, :, :]  # [na, na, nt, 3]
+  Returns:
+      RealScalar: ewald sum of coulomb repulsion energy.
+
+  """
+  dim = positions.shape[-1]
+
+  tau = jnp.expand_dims(positions, 0) - jnp.expand_dims(positions, 1)
+  tau_t = jnp.expand_dims(tau, 2) - jnp.expand_dims(ewald_grid, axis=(0, 1))  
+  # [na, na, nt, 3]
   tau_t_norm = jnp.sqrt(jnp.sum(tau_t**2, axis=-1) + 1e-20)  # [na, na, nt]
   tau_t_norm = jnp.where(tau_t_norm <= 1e-9, 1e20, tau_t_norm)
+
   #  atom-atom part:
   ew_ovlp = jnp.sum(
-    jax.scipy.special.erfc(ew_eta * tau_t_norm) / tau_t_norm, axis=2
+    jax.scipy.special.erfc(ewald_eta * tau_t_norm) / tau_t_norm, axis=2
   )
 
   # the reciprocal space part:
-  gvec_norm_sq = jnp.sum(gvec**2, axis=3)  # [N1, N2, N3]
-  gvec_norm_sq = gvec_norm_sq.at[0, 0, 0].set(1e16)
-  ew_rprcl = jnp.exp(
-    -gvec_norm_sq / 4 / ew_eta**2
-  ) / gvec_norm_sq  # [N1, N2, N3]
+  gvec_norm_sq = jnp.sum(reciprocal_density_grid**2, axis=3)  # [N1, N2, N3]
+  gvec_norm_sq = gvec_norm_sq.at[(0, ) * dim].set(1e16)
+
+  ew_rprcl = jnp.exp(-gvec_norm_sq / 4 / ewald_eta**2) / gvec_norm_sq  
+  ew_rprcl1 = jnp.expand_dims(ew_rprcl, range(3, 3 + dim))
+  ew_rprcl2 = jnp.cos(
+    jnp.expand_dims(reciprocal_density_grid, axis=(-2, -3)) * 
+    jnp.expand_dims(tau, range(dim))
+  )
+  ew_rprcl = jnp.sum(ew_rprcl1 * ew_rprcl2, axis=-1)  # [N1, N2, N3, na, na]
+
   ew_rprcl = jnp.sum(
-    ew_rprcl[:, :, :, None, None, None] *
-    jnp.cos(gvec[:, :, :, None, None, :] * tau[None, None, None, :, :, :]),
-    axis=-1
-  )  # [N1, N2, N3, na, na]
-  ew_rprcl = jnp.sum(
-    ew_rprcl.at[0, 0, 0, :, :].set(0), axis=(0, 1, 2)
+    ew_rprcl.at[(0, )*dim, :, :].set(0), axis=range(dim)
   )  # [na, na]
   ew_rprcl = ew_rprcl * 4 * jnp.pi / vol
   ew_aa = jnp.einsum('i,ij->j', charges, ew_ovlp + ew_rprcl)
   ew_aa = jnp.dot(ew_aa, charges) / 2
 
   # single atom part
-  ew_a = -jnp.sum(charges**2) * 2 * ew_eta / jnp.sqrt(jnp.pi) / 2
-  ew_a -= jnp.sum(charges)**2 * jnp.pi / ew_eta**2 / vol / 2
+  ew_a = -jnp.sum(charges**2) * 2 * ewald_eta / jnp.sqrt(jnp.pi) / 2
+  ew_a -= jnp.sum(charges)**2 * jnp.pi / ewald_eta**2 / vol / 2
 
   return ew_aa + ew_a
 
@@ -210,14 +239,15 @@ def total(
   atom_coord = crystal.positions
   atom_charge = crystal.charges
   vol = crystal.vol
-  a = crystal.A
 
   e_kin = kinetic(g_grid, k_grid, cg, occ)
   e_har = hartree(ng, g_grid, vol)
   e_ext = external(ng, atom_coord, atom_charge, g_grid, vol)
-  e_xc = lda(nr, vol)
+  e_xc = xc_lda(nr, vol)
+  ewald_grid = get_ewald_lattice(crystal.A, ew_args['ewald_cut'])
   e_ew = ewald_coulomb_repulsion(
-    atom_coord, atom_charge, a, g_grid, vol, **ew_args
+    atom_coord, atom_charge, g_grid, vol, ewald_eta=ew_args['ewald_eta'],
+    ewald_grid=ewald_grid
   )
   e_total = e_kin + e_har + e_ext + e_xc + e_ew
 

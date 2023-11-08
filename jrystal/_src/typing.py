@@ -23,4 +23,4 @@ ComplexGrid: TypeAlias = Complex[Array, "... n1 n2 n3"]
 
 RealScalar: TypeAlias = Float[Array, " "]
 
-OccupationArray: TypeAlias = Float[Array, "2 num_k num_band"]
+OccupationArray: TypeAlias = Float[Array, "2 num_k num_bands"]
