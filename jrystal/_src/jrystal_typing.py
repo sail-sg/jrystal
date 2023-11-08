@@ -11,7 +11,6 @@ Variable type and associated typings:
 Ref. /jrystal/docs/symbol.md
 
 """
-from __future__ import absolute_import
 from jaxtyping import Array, Float, Complex
 from typing_extensions import TypeAlias
 
