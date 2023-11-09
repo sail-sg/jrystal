@@ -6,9 +6,9 @@ import numpy as np
 
 from jaxtyping import Int, Float
 from typing import List
-from jrystal import Crystal
-from jrystal._src.grid import _grid_sizes, g_vectors, r_vectors
-from jrystal._src.pw import _get_mask_radius
+from jrystal._src.crystal import Crystal
+from jrystal._src.grid import grid_sizes, g_vectors, r_vectors
+from jrystal._src.pw import get_mask_radius
 
 from ase.dft.kpoints import monkhorst_pack
 
@@ -35,14 +35,14 @@ class PWDArgs:
     crystal = crystal
     Ecut = Ecut
     polarize = polarize
-    g_grid_sizes = _grid_sizes(g_grid_sizes)
-    k_grid_sizes = _grid_sizes(k_grid_sizes)
+    g_grid_sizes = grid_sizes(g_grid_sizes)
+    k_grid_sizes = grid_sizes(k_grid_sizes)
     occ = occ
     nspin = 2 if polarize else 1
     ni = crystal.nelec
     nk = np.prod(k_grid_sizes)
     spin = int(ni % 2)
-    mask = _get_mask_radius(crystal.A, g_grid_sizes, Ecut)
+    mask = get_mask_radius(crystal.A, g_grid_sizes, Ecut)
 
     ng = np.sum(mask)
     k_grid = monkhorst_pack(k_grid_sizes)
@@ -64,9 +64,8 @@ class PWDArgs:
 
 @chex.dataclass
 class EwaldArgs:
-  ew_eta: Float
-  ew_cut: Float
-  ewald_grid: jax.Array = None
+  ewald_eta: Float
+  ewald_cut: Float
 
 
 @chex.dataclass

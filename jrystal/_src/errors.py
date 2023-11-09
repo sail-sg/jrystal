@@ -38,10 +38,10 @@ class Template(JrystalError):
 # TODO: If this file is used by files under _src, this file should be moved
 # to _src as well.
 # Files directly under jrystal are considered public API
-# We only import functions/classes from _src in these files to make them visible
-# to our users. Avoid defining functions/classes directly under jrystal and
-# import them from _src. Because this causes a import from parent, and could lead
-# to circular import.
+# We only import functions/classes from _src in these files to make them
+# visible to our users. Avoid defining functions/classes directly under jrystal
+# and import them from _src. Because this causes a import from parent, and
+# could lead to circular import.
 
 
 class JrystalError(Exception):

@@ -5,7 +5,7 @@ from jaxtyping import Float, Array
 
 from jrystal._src.pw import complex_norm_square
 from jrystal._src.grid import get_ewald_vector_grid
-from jrystal.crystal import Crystal
+from jrystal._src.crystal import Crystal
 from jrystal._src.paramdict import EwaldArgs
 from jrystal._src import potential
 from jrystal._src import xc_density

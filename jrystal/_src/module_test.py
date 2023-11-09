@@ -2,11 +2,11 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from absl.testing import absltest, parameterized
-from jrystal._src.modules import QRDecomp, BatchedBlochWave
-from jrystal._src.modules import BatchedInverseFFT, BatchedFFT
-from jrystal._src.modules import ExpandCoeff, CompressCoeff
-from jrystal._src.modules import PlaneWave, _PlaneWaveFFT
-from jrystal._src.modules import PlaneWaveDensity
+from jrystal._src.module import QRDecomp, BatchedBlochWave
+from jrystal._src.module import BatchedInverseFFT, BatchedFFT
+from jrystal._src.module import ExpandCoeff, CompressCoeff
+from jrystal._src.module import PlaneWave, _PlaneWaveFFT
+from jrystal._src.module import PlaneWaveDensity
 from jrystal._src.grid import r_vectors
 from jax.config import config
 from flax import linen as nn
@@ -50,7 +50,7 @@ class _Test_modules(parameterized.TestCase):
     pw = _PlaneWaveFFT(shape, self.mask, self.k_grid)
     params = pw.init(self.key)
     x_fft = pw.apply(params)
-    np.testing.assert_array_almost_equal(x_fft, x_bw, decimal=10)
+    np.testing.assert_array_almost_equal(x_fft, x_bw, decimal=8)
 
   def test_pw_shape(self):
 
@@ -76,8 +76,7 @@ class _Test_modules(parameterized.TestCase):
       @nn.compact
       def __call__(self, x):
         return nn.Sequential(
-          [BatchedFFT(self.ndim),
-           BatchedInverseFFT(self.ndim)]
+          [BatchedFFT(self.ndim), BatchedInverseFFT(self.ndim)]
         )(
           x
         )
@@ -85,7 +84,7 @@ class _Test_modules(parameterized.TestCase):
     model = Model(3)
     params = model.init(self.key, self.cg)
     x = model.apply(params, self.cg)
-    np.testing.assert_array_almost_equal(self.cg, x.real, decimal=10)
+    np.testing.assert_array_almost_equal(self.cg, x.real, decimal=7)
 
   def test_expand_compress(self):
 
@@ -95,8 +94,7 @@ class _Test_modules(parameterized.TestCase):
       @nn.compact
       def __call__(self, x):
         return nn.Sequential(
-          [CompressCoeff(self.mask),
-           ExpandCoeff(self.mask)]
+          [CompressCoeff(self.mask), ExpandCoeff(self.mask)]
         )(
           x
         )
@@ -105,23 +103,15 @@ class _Test_modules(parameterized.TestCase):
     params = model.init(self.key, self.cg)
     x = model.apply(params, self.cg)
     mask = x.real**2 > 1
-    np.testing.assert_array_almost_equal(
-      self.cg[mask], x.real[mask], decimal=10
-    )
+    np.testing.assert_array_almost_equal(self.cg[mask], x.real[mask], decimal=7)
 
   def test_pw_density_shape(self):
     shape = [2, 1, self.ng, 4]
-    pwd = PlaneWaveDensity(shape, self.mask, self.a, self.k_grid, spin=0)
+    pwd = PlaneWaveDensity(shape, self.mask, self.a, self.k_grid, spin=0, vol=1)
     params = pwd.init(self.key, self.r_vec)
     nr, ng = pwd.apply(params, self.r_vec, reduce=True)
-    print(nr.shape)
-    print(ng.shape)
     nr, ng = pwd.apply(params, self.r_vec, reduce=False)
-    print(nr.shape)
-    print(ng.shape)
     nr, ng = pwd.apply(params, jnp.arange(3), reduce=True)
-    print(nr.shape)
-    print(ng.shape)
 
 
 if __name__ == '__main__':

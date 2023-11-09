@@ -13,9 +13,7 @@
 
 """
 
-# TODO: this extra wrapping is not necessary.
-# consider remove this file
-# We should just import from flax wherever the initializer is used.
+# TODO: initialize parameters by solving atomic systems.
 
 from flax.linen.initializers import normal as normal
 from flax.linen.initializers import orthogonal as orthogonal
@@ -32,5 +30,3 @@ __all__ = (
   'xavier_normal',
   'xavier_uniform',
 )
-
-# TODO: initialize parameters by solving atomic systems.

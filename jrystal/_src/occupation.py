@@ -1,14 +1,9 @@
 """Occupation Modules
 """
-import jax
 import jax.numpy as jnp
-import numpy as np
 import flax.linen as nn
 from jaxtyping import Int, Array
-from functools import partial
 
-# TODO: the name simple is not informative.
-# maybe something like topk ?
 # TODO: since we already has this file named occupations.py,
 # (maybe change to singular occupation.py). We don't need to prefix
 # the class name with Occ anymore.
@@ -17,8 +12,8 @@ from functools import partial
 # occ = jrystal.occupations.OccUniform(ni, nk, spin)()
 
 
-class OccSimple(nn.Module):
-  """ Simple Occupation module. Only valid for single k point calculation.
+class OccGamma(nn.Module):
+  """Occupation module with just Gamma point. 
   Return a mask like this:
 
         ni
@@ -47,7 +42,8 @@ class OccSimple(nn.Module):
 
 
 class OccUniform(nn.Module):
-  """Uniform occupation number over k points. Returns a mask like:
+  """Uniform occupation number over k points. 
+  Returns a mask like:
 
                 ni
         __________          \n
@@ -72,15 +68,3 @@ class OccUniform(nn.Module):
     occ = occ.at[1, :, :(self.ni - self.spin) // 2].set(1 / self.nk)
 
     return occ
-
-
-# TODO: remove these lines. Introduce a occupation_test.py file for the testings.
-if __name__ == '__main__':
-  import jrystal
-  str = 'OccSimple'
-  occ = getattr(jrystal.occupations, str)(1, 4, 0)
-  key = jax.random.PRNGKey(123)
-  params = occ.init(key)
-  print(occ.apply(params))
-
-  print(type(occ))

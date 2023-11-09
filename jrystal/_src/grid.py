@@ -91,7 +91,7 @@ def r_vectors(a, grid_sizes):
   return _vector_grid(a, grid_sizes, normalize=True)
 
 
-def _grid_sizes(grid_sizes: Int | Int[Array, 'd']):
+def grid_sizes(grid_sizes: Int | Int[Array, 'd']):
   if hasattr(grid_sizes, "__len__"):
     grid_sizes = np.array(grid_sizes)
   else:
@@ -103,8 +103,10 @@ def _grid_sizes(grid_sizes: Int | Int[Array, 'd']):
   return grid_sizes
 
 
-def _get_ewald_lattice(b: Float[Array, 'd d'],
-                       ew_cut: Float[Array, 'd'] = 1e4) -> Float[Array, 'n d']:
+def get_ewald_vector_grid(
+  b: Float[Array, 'd d'],
+  ewald_cut: Float[Array, 'd'] = 1e4
+) -> Float[Array, 'n d']:
   """get translation lattice for ewald sum
 
   Args:
@@ -114,7 +116,7 @@ def _get_ewald_lattice(b: Float[Array, 'd d'],
   Returns:
       the translation lattice; shape: [nt, 3]
   """
-  n = int(np.ceil(ew_cut / np.linalg.norm(np.sum(b, axis=0))**b.shape[0]))
+  n = int(np.ceil(ewald_cut / np.linalg.norm(np.sum(b, axis=0))**b.shape[0]))
   grid = _vector_grid(b, [n for i in range(b.shape[0])])
 
-  return jnp.reshape(grid, [-1, b.shape[0]])
+  return np.reshape(grid, [-1, b.shape[0]])

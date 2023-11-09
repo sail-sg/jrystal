@@ -10,13 +10,13 @@ from jrystal._src.utils import vmapstack
 # if this function has some generality and should be part of our open API,
 # consider remove the underscore prefix and document it well.
 
-from jrystal._src.pw import _coeff_compress, _coeff_expand, get_cg
+from jrystal._src.pw import coeff_compress, coeff_expand, get_cg
 # TODO: _complex_norm_square should be defined without underscore prefix.
 # and moved to files like utils.py than pw.py, as it is general.
-from jrystal._src.pw import _complex_norm_square
+from jrystal._src.pw import complex_norm_square
 from jrystal._src.initializer import normal
-from jrystal import errors
-from jrystal._src.occupations import OccSimple, OccUniform
+from jrystal._src import errors
+from jrystal._src.occupation import OccGamma, OccUniform
 
 
 class PlaneWave(nn.Module):
@@ -66,14 +66,14 @@ class PlaneWaveDensity(nn.Module):
   k_grid: jax.Array
   spin: Int
   vol: float
-  occ: str = 'simple'
+  occ: str = 'gamma'
 
   def setup(self):
     self.pw = PlaneWave(self.shape, self.mask, self.A, self.k_grid)
     _, nk, _, ni = self.shape
 
-    if self.occ == 'simple':
-      self.occ_mask = OccSimple(nk, ni, self.spin)
+    if self.occ == 'gamma':
+      self.occ_mask = OccGamma(nk, ni, self.spin)
     elif self.occ == 'uniform':
       self.occ_mask = OccUniform(nk, ni, self.spin)
 
@@ -86,7 +86,7 @@ class PlaneWaveDensity(nn.Module):
     if (w.ndim < occ.ndim or w.shape[:occ.ndim] != occ.shape):
       raise errors.WavevecOccupationMismatchError(w.shape, occ.shape)
 
-    w = _complex_norm_square(w)
+    w = complex_norm_square(w)
     occ = jnp.expand_dims(occ, range(occ.ndim, w.ndim))
     N = jnp.prod(jnp.array(self.mask.shape))
 
@@ -219,7 +219,7 @@ class ExpandCoeff(nn.Module):
   mask: Int[Array, "*nd"]
 
   def __call__(self, x):
-    return _coeff_expand(x, self.mask)
+    return coeff_expand(x, self.mask)
 
 
 class CompressCoeff(nn.Module):
@@ -227,4 +227,4 @@ class CompressCoeff(nn.Module):
   mask: Int[Array, "*nd"]
 
   def __call__(self, x):
-    return _coeff_compress(x, self.mask)
+    return coeff_compress(x, self.mask)

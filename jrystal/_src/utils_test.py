@@ -27,11 +27,9 @@ class _Test_utils(parameterized.TestCase):
 
   @parameterized.parameters(
     {
-      'shape': [3, 4, 5, 6, 7],
-      'results': [3, 4, 5]
+      'shape': [3, 4, 5, 6, 7], 'results': [3, 4, 5]
     }, {
-      'shape': [2, 3, 4, 5],
-      'results': [2, 3, 4]
+      'shape': [2, 3, 4, 5], 'results': [2, 3, 4]
     }
   )
   def test_vmapstack_reverse_mean(self, shape, results):
@@ -41,11 +39,9 @@ class _Test_utils(parameterized.TestCase):
 
   @parameterized.parameters(
     {
-      'shape': [3, 4, 5, 6, 7],
-      'results': [5, 6, 7, 3, 4]
+      'shape': [3, 4, 5, 6, 7], 'results': [5, 6, 7, 3, 4]
     }, {
-      'shape': [2, 3, 4, 5],
-      'results': [4, 5, 2, 3]
+      'shape': [2, 3, 4, 5], 'results': [4, 5, 2, 3]
     }
   )
   def test_vmapstack_reverse_sin(self, shape, results):

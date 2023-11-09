@@ -13,18 +13,19 @@ from jrystal.config import get_config
 from jrystal.wave import PlaneWaveDensity
 from jrystal._src.energy import total
 from jrystal._src.paramdict import PWDArgs, EwaldArgs
-
+from jrystal._src.crystal import Crystal
 import time
 from tqdm import tqdm
 from absl import logging
 
 logging.set_verbosity(logging.INFO)
+jax.config.update("jax_enable_x64", False)
 
 
 def create_crystal(config):
   _pkg_path = jrystal.get_pkg_path()
   path = _pkg_path + '/geometries/' + config.crystal + '.xyz'
-  crystal = jrystal.Crystal(xyz_file=path)
+  crystal = Crystal(xyz_file=path)
   return crystal
 
 
@@ -60,7 +61,7 @@ def create_train_state(rng, config):
   return state, density, variable_dict
 
 
-def train(config: ml_collections.ConfigDict, seed: int = 123):
+def train(config: ml_collections.ConfigDict):
   """_summary_
 
   Args:
@@ -70,7 +71,7 @@ def train(config: ml_collections.ConfigDict, seed: int = 123):
   Returns:
       train_state.TrainState: the train state
   """
-  rng = jax.random.key(seed)
+  rng = jax.random.key(config.seed)
   rng, init_rng = jax.random.split(rng)
   state, density, variable_dict = create_train_state(init_rng, config)
   ew_args = variable_dict['ew_args']
@@ -100,9 +101,7 @@ def train(config: ml_collections.ConfigDict, seed: int = 123):
       )
       return e_tot
 
-    (e_total, e_splits), grads = jax.value_and_grad(
-      loss, has_aux=True
-    )(
+    (e_total, e_splits), grads = jax.value_and_grad(loss, has_aux=True)(
       state.params
     )
     return state.apply_gradients(grads=grads), (e_total, *e_splits)

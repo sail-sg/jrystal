@@ -227,9 +227,7 @@ def _u_transpose_rule(cotangent, a, cg, r, *, force_fft):
         lambda carry, r_ctg: (
           carry + jax.linear_transpose(partial(_u, g_vec, r_ctg[0]), cg.aval)
           (r_ctg[1])[0], 0.
-        ),
-        init=jnp.zeros_like(cg.aval),
-        xs=(r_flat, ctg_flat)
+        ), init=jnp.zeros_like(cg.aval), xs=(r_flat, ctg_flat)
       )
       return carry
 

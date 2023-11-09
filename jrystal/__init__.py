@@ -1,16 +1,11 @@
 __version__ = '0.0.1'
 
-from jrystal.crystal import Crystal
-from jrystal._src import occupations
+from jrystal import crystal
+from jrystal import occupation
 from jrystal import train
-from jrystal import errors
 from jrystal import wave
 from jrystal import config
 from pathlib import Path
-
-from jrystal._src.bloch import bloch_wave
-from jrystal._src.grid import g_vectors, r_vectors
-from jrystal._src import energy
 
 
 def get_pkg_path():
@@ -19,11 +14,9 @@ def get_pkg_path():
 
 __all__ = [
   '__version__',
-  'Crystal',
-  'occupations',
+  'crystal',
+  'occupation',
   'train',
-  'errors',
-  'bloch_wave',
-  'g_vectors',
-  'r_vectors',
+  'wave',
+  'config',
 ]
