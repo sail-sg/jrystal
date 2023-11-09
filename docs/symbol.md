@@ -59,5 +59,3 @@ Anything that ends with ``_grid`` has shape ``(n1, n2, n3)``.
 | ``num_g``    | number of $g$ points | 
 | ``vol``    | the volume of unit cell|
 | ``spin``    | the number of unpaired electrons. Can be 0 or 1.|
-
-

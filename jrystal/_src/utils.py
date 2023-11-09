@@ -1,6 +1,7 @@
 import jax
 import jax.numpy as jnp
 from typing import Callable, List, Dict
+from jaxtyping import Complex, Float, Array
 from absl import logging
 import numpy as np
 
@@ -80,12 +81,17 @@ def vmapstack_reverse(times: int) -> Callable:
   return _decorator
 
 
-def get_fftw_factor(n: int):
-  """ good fftw factor n = 2^a * 3^b * 5^c *7 ^d * 11^e * 13^f   and  e/f = 0/1
-  prime_factor_list = [2, 3, 5, 7, 11, 13]
-  all good fftw factor smaller than 2049
+def complex_norm_square(x: Complex[Array, '...']) -> Float[Array, '...']:
+  """Compute the Square of the norm of a complex number
   """
-  good_factor_list = [
+  return jnp.abs(jnp.conj(x) * x)
+
+
+def get_fftw_factor(n: int):
+  """ get fftw factor n = 2^a * 3^b * 5^c *7 ^d * 11^e * 13^f   and  e/f = 0/1
+  prime_factor_list = [2, 3, 5, 7, 11, 13] smaller than 2049.
+  """
+  factor_list = [
     1,
     2,
     3,
@@ -411,10 +417,11 @@ def get_fftw_factor(n: int):
     2048
   ]
 
-  good_factor_list = np.array(good_factor_list)
-  assert n < 2048, print(
-    "The grid number %d is too large, can't proceed calculation!" % (n)
-  )
-  delta_n = (good_factor_list - n) >= 0
-  good_n = good_factor_list[delta_n][0]
-  return (good_n)
+  factor_list = np.array(factor_list)
+  if n > 2048:
+    raise ValueError(
+      f"The grid number {n} is too large, can't proceed calculation!"
+    )
+  delta_n = (factor_list - n) >= 0
+  output = factor_list[delta_n][0]
+  return output

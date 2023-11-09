@@ -4,7 +4,7 @@ from absl.testing import absltest, parameterized
 
 import numpy as np
 from jrystal._src import QRDecomp, BatchedFFT, BatchedInverseFFT
-from jrystal._src.pw import _coeff_compress, _coeff_expand
+from jrystal._src.functional import _coeff_compress, _coeff_expand
 from jax.config import config
 
 config.update("jax_enable_x64", True)

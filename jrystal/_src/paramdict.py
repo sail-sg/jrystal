@@ -4,23 +4,27 @@ import jax
 import chex
 import numpy as np
 
-from jaxtyping import Int, Float
-from typing import List
 from jrystal._src.crystal import Crystal
 from jrystal._src.grid import grid_sizes, g_vectors, r_vectors
-from jrystal._src.pw import get_mask_radius
+from jrystal._src.functional import get_mask_radius
 
 from ase.dft.kpoints import monkhorst_pack
+
+from typing import Union, List
+from jaxtyping import Int, Float, Array
+from jrystal._src.jrystal_typing import MaskGrid, CellVector
+from jrystal._src.jrystal_typing import RealVecterGrid
 
 
 @chex.dataclass
 class PWDArgs:
-  shape: jax.Array
-  mask: jax.Array
-  A: jax.Array
-  k_grid: jax.Array
+  shape: Union[Int[Array, "..."], List]  # [nspin, nk, ng, ni]
+  mask: MaskGrid
+  cell_vectors: CellVector
+  k_vector_grid: RealVecterGrid
   spin: Int
   vol: float
+  occupation_method: str = 'gamma'
 
   @staticmethod
   def get_PWD_args(
@@ -39,7 +43,7 @@ class PWDArgs:
     k_grid_sizes = grid_sizes(k_grid_sizes)
     occ = occ
     nspin = 2 if polarize else 1
-    ni = crystal.nelec
+    ni = crystal.num_electrons
     nk = np.prod(k_grid_sizes)
     spin = int(ni % 2)
     mask = get_mask_radius(crystal.A, g_grid_sizes, Ecut)
@@ -53,8 +57,8 @@ class PWDArgs:
     pwd_args = PWDArgs(
       shape=cg_shape,
       mask=mask,
-      A=crystal.A,
-      k_grid=k_grid,
+      cell_vectors=crystal.A,
+      k_vector_grid=k_grid,
       spin=spin,
       vol=crystal.vol
     )

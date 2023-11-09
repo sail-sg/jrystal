@@ -4,7 +4,8 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Int, Array, Float
 import numpy as np
-from .utils import get_fftw_factor
+from jrystal._src.utils import get_fftw_factor
+from jrystal._src.jrystal_typing import RealVecterGrid
 
 
 # TODO(linmin): retire this function
@@ -104,19 +105,22 @@ def grid_sizes(grid_sizes: Int | Int[Array, 'd']):
 
 
 def get_ewald_vector_grid(
-  b: Float[Array, 'd d'],
+  cell_vectors: Float[Array, 'd d'],
   ewald_cut: Float[Array, 'd'] = 1e4
-) -> Float[Array, 'n d']:
-  """get translation lattice for ewald sum
+) -> RealVecterGrid:
+  """Construct the translation grid lattice for ewald sum.
 
   Args:
-    b (ndarray): the reciprocal vectors
-    ew_cut (_type_): the real space cutoff. 1/ew_cut -> 0
+    cell_vectors (ndarray): the reciprocal vectors
+    ewald_cut (ndarray): the real space cutoff such that 1/ewald_cut ~ 0.  
+          The larger the more precise of ewald sum.
 
   Returns:
-      the translation lattice; shape: [nt, 3]
+      RealVecterGrid: the translation grid lattice; shape: [nt, 3]
   """
-  n = int(np.ceil(ewald_cut / np.linalg.norm(np.sum(b, axis=0))**b.shape[0]))
-  grid = _vector_grid(b, [n for i in range(b.shape[0])])
 
-  return np.reshape(grid, [-1, b.shape[0]])
+  dim = cell_vectors.shape[0]
+  n = int(np.ceil(ewald_cut / np.linalg.norm(np.sum(cell_vectors, axis=0))**2))
+  grid = _vector_grid(cell_vectors, [n for i in range(dim)])
+
+  return np.reshape(grid, [-1, cell_vectors.shape[0]])

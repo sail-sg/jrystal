@@ -3,7 +3,7 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Float, Array
 
-from jrystal._src.pw import complex_norm_square
+from jrystal._src.utils import complex_norm_square
 from jrystal._src.grid import get_ewald_vector_grid
 from jrystal._src.crystal import Crystal
 from jrystal._src.paramdict import EwaldArgs
@@ -153,7 +153,7 @@ def xc_lda(density_grid: RealGrid, vol: RealScalar):
 def ewald_coulomb_repulsion(
   positions: Float[Array, 'num_atoms d'],
   charges: Float[Array, 'num_atoms'],
-  reciprocal_density_grid: ComplexGrid,
+  g_vector_grid: RealVecterGrid,
   vol: RealScalar,
   ewald_eta: float,
   ewald_grid: Float[Array, 'num_translations d']
@@ -193,13 +193,13 @@ def ewald_coulomb_repulsion(
   )
 
   # the reciprocal space part:
-  gvec_norm_sq = jnp.sum(reciprocal_density_grid**2, axis=3)  # [N1, N2, N3]
+  gvec_norm_sq = jnp.sum(g_vector_grid**2, axis=3)  # [N1, N2, N3]
   gvec_norm_sq = gvec_norm_sq.at[(0,) * dim].set(1e16)
 
   ew_rprcl = jnp.exp(-gvec_norm_sq / 4 / ewald_eta**2) / gvec_norm_sq
   ew_rprcl1 = jnp.expand_dims(ew_rprcl, range(3, 3 + dim))
   ew_rprcl2 = jnp.cos(
-    jnp.expand_dims(reciprocal_density_grid, axis=(-2, -3)) *
+    jnp.expand_dims(g_vector_grid, axis=(-2, -3)) *
     jnp.expand_dims(tau, range(dim))
   )
   ew_rprcl = jnp.sum(ew_rprcl1 * ew_rprcl2, axis=-1)  # [N1, N2, N3, na, na]

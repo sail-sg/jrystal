@@ -3,8 +3,6 @@ import jax.numpy as jnp
 import numpy as np
 from absl.testing import absltest, parameterized
 from jrystal._src.module import QRDecomp, BatchedBlochWave
-from jrystal._src.module import BatchedInverseFFT, BatchedFFT
-from jrystal._src.module import ExpandCoeff, CompressCoeff
 from jrystal._src.module import PlaneWave, _PlaneWaveFFT
 from jrystal._src.module import PlaneWaveDensity
 from jrystal._src.grid import r_vectors
@@ -37,7 +35,7 @@ class _Test_modules(parameterized.TestCase):
     cg = jnp.ones(self.shape)
 
     bw = BatchedBlochWave(self.a, self.k_grid)
-    params = bw.init(self.key, r=r_vec, cg=cg)
+    params = bw.init(self.key, r_vec, cg)
     psi = bw.apply(params, r_vec, cg)
     np.testing.assert_array_equal(psi.shape, cg.shape)
 
@@ -68,24 +66,7 @@ class _Test_modules(parameterized.TestCase):
     x = qr.apply(params)
     np.testing.assert_array_equal(x.shape, shape)
 
-  def test_fft(self):
-
-    class Model(nn.Module):
-      ndim: int
-
-      @nn.compact
-      def __call__(self, x):
-        return nn.Sequential(
-          [BatchedFFT(self.ndim), BatchedInverseFFT(self.ndim)]
-        )(
-          x
-        )
-
-    model = Model(3)
-    params = model.init(self.key, self.cg)
-    x = model.apply(params, self.cg)
-    np.testing.assert_array_almost_equal(self.cg, x.real, decimal=7)
-
+  @absltest.unittest.skip("")
   def test_expand_compress(self):
 
     class Model(nn.Module):

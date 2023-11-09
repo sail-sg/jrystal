@@ -1,11 +1,12 @@
+"""Pure functional API of wave function that will be used for constructing 
+  flax.linen.modules. """
 import jax
 import jax.numpy as jnp
+from typing import Union
 from jaxtyping import Int, Float, Array, Complex
 from jrystal._src.grid import g_vectors
 from jrystal._src.utils import vmapstack
-
-# TODO: It is unclear why this file exists
-# maybe we should create a set of pure functional API for wave functions here?
+from jrystal._src import errors
 
 
 def coeff_expand(
@@ -45,7 +46,7 @@ def coeff_compress(
   cg: Complex[Array, "*batch_nd"],
   mask: Int[Array, "*nd"],
 ) -> Complex[Array, "*batch ng"]:
-  """The inverse operation of ` _coeff_expand` """
+  """The inverse operation of ``coeff_expand`` """
 
   @vmapstack(times=cg.ndim - mask.ndim)
   def _get_value(c):
@@ -81,14 +82,50 @@ def get_grid_sizes_radius(a: Float[Array, 'd d'], e_cut: Float):
   pass
 
 
-def complex_norm_square(x: Complex[Array, '...']) -> Float[Array, '...']:
-  """Compute the Square of the norm of a complex number
-  """
-  return jnp.abs(jnp.conj(x) * x)
-
-
 def get_cg(weights: Complex[Array, 'nspin nk ng ni'], mask: jax.Array):
   cg = jnp.linalg.qr(weights, mode='reduced')[0]
   cg = jnp.swapaxes(cg, -1, -2)
   cg = coeff_expand(cg, mask)
   return cg
+
+
+def batched_fft(
+  x: Union[Complex[Array, '...'], Float[Array, '...']], fft_dim: Int
+) -> Complex[Array, '...']:
+  """batched fast Fourier transform. FFT will perform over the last ``fft_dim``
+    axes, and other axes are mapped. 
+
+  Args:
+      x (array): an array. 
+      fft_dim (int): fft dimension.
+
+  Returns:
+      array: has the same shape as input.
+
+  """
+  if x.ndim < fft_dim:
+    raise errors.ApplyFFTShapeError(fft_dim, x.shape)
+
+  fft = vmapstack(x.ndim - fft_dim)(jnp.fft.fftn)
+  return fft(x)
+
+
+def batched_ifft(
+  x: Union[Complex[Array, '...'], Float[Array, '...']], ifft_dim: Int
+) -> Complex[Array, '...']:
+  """batched invser fast Fourier transform. IFFT will perform over the last 
+    ``ifft_dim`` axes, and other axes are mapped. 
+
+  Args:
+      x (array): an array. 
+      ifft_dim (int): ifft dimension.
+
+  Returns:
+      array: has the same shape as input.
+
+  """
+  if x.ndim < ifft_dim:
+    raise errors.ApplyFFTShapeError(ifft_dim, x.shape)
+
+  ifft = vmapstack(x.ndim - ifft_dim)(jnp.fft.ifftn)
+  return ifft(x)

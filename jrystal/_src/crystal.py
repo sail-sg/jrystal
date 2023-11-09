@@ -12,7 +12,7 @@ from jaxtyping import Float, ArrayLike
 from typing import Union, List
 
 import chex
-from jrystal.const import ANGSTROM2BOHR
+from jrystal._src.const import ANGSTROM2BOHR
 
 
 @chex.dataclass

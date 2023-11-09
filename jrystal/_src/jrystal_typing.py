@@ -11,15 +11,16 @@ Variable type and associated typings:
 Ref. /jrystal/docs/symbol.md
 
 """
-from jaxtyping import Array, Float, Complex
+from jaxtyping import Array, Float, Complex, Bool
 from typing_extensions import TypeAlias
 
 RealVecterGrid: TypeAlias = Float[Array, "... n1 n2 n3 3"]
 RealGrid: TypeAlias = Float[Array, "... n1 n2 n3"]
+RealScalar: TypeAlias = Float[Array, " "]
 
 ComplexVecterGrid: TypeAlias = Complex[Array, "... n1 n2 n3 3"]
 ComplexGrid: TypeAlias = Complex[Array, "... n1 n2 n3"]
 
-RealScalar: TypeAlias = Float[Array, " "]
-
+MaskGrid: TypeAlias = Bool[Array, "... n1 n2 n3"]
 OccupationArray: TypeAlias = Float[Array, "2 num_k num_bands"]
+CellVector: TypeAlias = Float[Array, "d d"]

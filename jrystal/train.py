@@ -11,9 +11,10 @@ import ml_collections
 import jrystal
 from jrystal.config import get_config
 from jrystal.wave import PlaneWaveDensity
-from jrystal._src.energy import total
+from jrystal._src.energy import ewald_coulomb_repulsion
 from jrystal._src.paramdict import PWDArgs, EwaldArgs
-from jrystal._src.crystal import Crystal
+from jrystal._src.grid import get_ewald_vector_grid
+from jrystal.crystal import Crystal
 import time
 from tqdm import tqdm
 from absl import logging
@@ -80,26 +81,27 @@ def train(config: ml_collections.ConfigDict):
 
   start_time = time.time()
   iters = tqdm(range(config.epoch))
+  r_grid, g_grid = grids
+  ewald_grid = get_ewald_vector_grid(crystal.A, ew_args['ewald_cut'])
+  ew = ewald_coulomb_repulsion(
+    crystal.positions,
+    crystal.charges,
+    g_grid,
+    crystal.vol,
+    ew_args['ewald_eta'],
+    ewald_grid
+  )
 
   @jax.jit
   def update(state: train_state.TrainState, grids) -> train_state.TrainState:
-    r_grid, g_grid = grids
 
     def loss(params):
-      nr, ng = state.apply_fn({'params': params}, r_grid)
-      cg = density.get_cg(params)
-      occ = density.get_occ(params)
-      e_tot = total(
-        nr,
-        ng,
-        cg,
-        occ,
-        crystal,
-        g_grid,
-        density.k_grid,
-        ew_args,
-      )
-      return e_tot
+      e_har = state.apply_fn({'params': params}, method='hartree')
+      e_ext = state.apply_fn({'params': params}, crystal, method='external')
+      e_kin = state.apply_fn({'params': params}, method='kinetic')
+      e_xc = state.apply_fn({'params': params}, method='xc')
+      e_tot = e_kin + e_har + e_ext + e_xc + ew
+      return e_tot, (e_kin, e_har, e_ext, e_xc, ew)
 
     (e_total, e_splits), grads = jax.value_and_grad(loss, has_aux=True)(
       state.params
@@ -108,8 +110,8 @@ def train(config: ml_collections.ConfigDict):
 
   for i in iters:
     state, es = update(state, grids)
-    e_tol, e_kin, e_har, e_ext, e_xc, e_ew = es
-    iters.set_description(f"Total energy: {e_tol:.3f}")
+    e_tot, e_kin, e_har, e_ext, e_xc, e_ew = es
+    iters.set_description(f"Total energy: {e_tot:.3f}")
 
   converged = True
   # TODO(tianbo): include a convergence check module.
@@ -120,7 +122,7 @@ def train(config: ml_collections.ConfigDict):
     f"Training Time: {(time.time() - start_time):.3f}s. \n"
   )
   logging.info("Energy:")
-  logging.info(f" Ground State: {e_tol}")
+  logging.info(f" Ground State: {e_tot}")
   logging.info(f" Kinetic: {e_kin}")
   logging.info(f" External: {e_ext}")
   logging.info(f" Exchange-Correlation: {e_xc}")
