@@ -4,25 +4,19 @@ import jax.numpy as jnp
 from jaxtyping import Float, Array
 
 from jrystal._src.pw import complex_norm_square
-from jrystal._src.grid import get_ewald_lattice
+from jrystal._src.grid import get_ewald_vector_grid
 from jrystal.crystal import Crystal
 from jrystal._src.paramdict import EwaldArgs
 from jrystal._src import potential
 from jrystal._src import xc_density
 
-from jrystal._src.typing import ComplexGrid, RealVecterGrid, RealScalar
-from jrystal._src.typing import OccupationArray, RealGrid
-
-# TODO: all docstrings needs to follow the google convention.
-# this can be checked with pydocstyle --convention=google
-
-# TODO: "*nd" is only supported in python3.11, I think we don't need
-# to annotation to this level of accuracy as long as the docstring covers
-# the shapes and dtypes.
+from jrystal._src.jrystal_typing import ComplexGrid, RealVecterGrid, RealScalar
+from jrystal._src.jrystal_typing import OccupationArray, RealGrid
 
 
 def hartree(
-  reciprocal_density_grid: ComplexGrid, g_vector_grid: RealVecterGrid,
+  reciprocal_density_grid: ComplexGrid,
+  g_vector_grid: RealVecterGrid,
   vol: RealScalar
 ) -> RealScalar:
   r"""Hartree energy for plane wave orbitals on reciprocal space.
@@ -52,8 +46,10 @@ def hartree(
 
 
 def external(
-  reciprocal_density_grid: ComplexGrid, positions: Float[Array, 'num_atoms d'],
-  charges: Float[Array, 'num_atoms'], g_vector_grid: RealVecterGrid, 
+  reciprocal_density_grid: ComplexGrid,
+  positions: Float[Array, 'num_atoms d'],
+  charges: Float[Array, 'num_atoms'],
+  g_vector_grid: RealVecterGrid,
   vol: RealScalar
 ) -> RealScalar:
   r"""
@@ -92,8 +88,10 @@ def external(
 
 
 def kinetic(
-  g_vector_grid: RealVecterGrid, k_vector_grid: RealVecterGrid,
-  coeff_grid: ComplexGrid, occupation: OccupationArray
+  g_vector_grid: RealVecterGrid,
+  k_vector_grid: RealVecterGrid,
+  coeff_grid: ComplexGrid,
+  occupation: OccupationArray
 ) -> RealScalar:
   r"""Kinetic energy.
 
@@ -110,12 +108,12 @@ def kinetic(
       RealScalar: kinetic energy.
 
   """
-  
+
   dim = g_vector_grid.shape[-1]
 
   _g = jnp.expand_dims(g_vector_grid, axis=range(3))
   _k = jnp.expand_dims(
-    k_vector_grid, axis=[0] + [i + 2 for i in range(dim+1)]
+    k_vector_grid, axis=[0] + [i + 2 for i in range(dim + 1)]
   )
   e_kin = jnp.sum((_g + _k)**2, axis=-1)  # [1, nk, ni, N1, N2, N3]
   e_kin = jnp.sum(
@@ -158,9 +156,8 @@ def ewald_coulomb_repulsion(
   reciprocal_density_grid: ComplexGrid,
   vol: RealScalar,
   ewald_eta: float,
-  ewald_grid: Float[Array, 'num_translation d']
+  ewald_grid: Float[Array, 'num_translations d']
 ) -> RealScalar:
-  
   """
   Ewald summation.
 
@@ -185,7 +182,7 @@ def ewald_coulomb_repulsion(
   dim = positions.shape[-1]
 
   tau = jnp.expand_dims(positions, 0) - jnp.expand_dims(positions, 1)
-  tau_t = jnp.expand_dims(tau, 2) - jnp.expand_dims(ewald_grid, axis=(0, 1))  
+  tau_t = jnp.expand_dims(tau, 2) - jnp.expand_dims(ewald_grid, axis=(0, 1))
   # [na, na, nt, 3]
   tau_t_norm = jnp.sqrt(jnp.sum(tau_t**2, axis=-1) + 1e-20)  # [na, na, nt]
   tau_t_norm = jnp.where(tau_t_norm <= 1e-9, 1e20, tau_t_norm)
@@ -197,18 +194,18 @@ def ewald_coulomb_repulsion(
 
   # the reciprocal space part:
   gvec_norm_sq = jnp.sum(reciprocal_density_grid**2, axis=3)  # [N1, N2, N3]
-  gvec_norm_sq = gvec_norm_sq.at[(0, ) * dim].set(1e16)
+  gvec_norm_sq = gvec_norm_sq.at[(0,) * dim].set(1e16)
 
-  ew_rprcl = jnp.exp(-gvec_norm_sq / 4 / ewald_eta**2) / gvec_norm_sq  
+  ew_rprcl = jnp.exp(-gvec_norm_sq / 4 / ewald_eta**2) / gvec_norm_sq
   ew_rprcl1 = jnp.expand_dims(ew_rprcl, range(3, 3 + dim))
   ew_rprcl2 = jnp.cos(
-    jnp.expand_dims(reciprocal_density_grid, axis=(-2, -3)) * 
+    jnp.expand_dims(reciprocal_density_grid, axis=(-2, -3)) *
     jnp.expand_dims(tau, range(dim))
   )
   ew_rprcl = jnp.sum(ew_rprcl1 * ew_rprcl2, axis=-1)  # [N1, N2, N3, na, na]
 
   ew_rprcl = jnp.sum(
-    ew_rprcl.at[(0, )*dim, :, :].set(0), axis=range(dim)
+    ew_rprcl.at[(0,) * dim].set(0), axis=range(dim)
   )  # [na, na]
   ew_rprcl = ew_rprcl * 4 * jnp.pi / vol
   ew_aa = jnp.einsum('i,ij->j', charges, ew_ovlp + ew_rprcl)
@@ -244,9 +241,13 @@ def total(
   e_har = hartree(ng, g_grid, vol)
   e_ext = external(ng, atom_coord, atom_charge, g_grid, vol)
   e_xc = xc_lda(nr, vol)
-  ewald_grid = get_ewald_lattice(crystal.A, ew_args['ewald_cut'])
+  ewald_grid = get_ewald_vector_grid(crystal.A, ew_args['ewald_cut'])
   e_ew = ewald_coulomb_repulsion(
-    atom_coord, atom_charge, g_grid, vol, ewald_eta=ew_args['ewald_eta'],
+    atom_coord,
+    atom_charge,
+    g_grid,
+    vol,
+    ewald_eta=ew_args['ewald_eta'],
     ewald_grid=ewald_grid
   )
   e_total = e_kin + e_har + e_ext + e_xc + e_ew

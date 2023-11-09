@@ -3,13 +3,14 @@
 import jax.numpy as jnp
 from jaxtyping import Float, Array
 
-from jrystal._src.typing import ComplexGrid, RealGrid, RealVecterGrid
-from jrystal._src.typing import RealScalar
+from jrystal._src.jrystal_typing import ComplexGrid, RealGrid, RealVecterGrid
+from jrystal._src.jrystal_typing import RealScalar
 
 
 def hartree_reciprocal(
   reciprocal_density_grid: ComplexGrid,
-  g_vector_grid: RealVecterGrid, vol: RealScalar
+  g_vector_grid: RealVecterGrid,
+  vol: RealScalar
 ) -> ComplexGrid:
   r"""Hartree potential for planewaves on reciprocal space.
 
@@ -71,22 +72,21 @@ def externel_reciprocal(
   dim = positions.shape[-1]
 
   g_norm_square_grid = jnp.sum(g_vector_grid**2, axis=-1)
-  si = jnp.exp(1j * jnp.matmul(g_vector_grid, positions.transpose()))
-  
+  si = jnp.exp(1.j * jnp.matmul(g_vector_grid, positions.transpose()))
+
   charges = jnp.expand_dims(charges, range(3))
   g_norm_square_grid = jnp.expand_dims(g_norm_square_grid, -1)
   vi = charges / g_norm_square_grid
-  vi = vi.at[(0,)*dim].set(0)
+  vi = vi.at[(0,) * dim].set(0)
   vi *= 4 * jnp.pi
 
-  output = jnp.sum(vi * si, axis=-1)
-  output = output / vol
+  output = jnp.sum(vi * si, axis=-1) / vol
   return -output
 
 
 def xc_lda(
-    density_grid: RealGrid, 
-    vol: RealScalar,
+  density_grid: RealGrid,
+  vol: RealScalar,
 ) -> RealGrid:
   r"""local density approximation potential. 
 
@@ -104,15 +104,15 @@ def xc_lda(
       RealGrid: the variation of the lda energy with respect to the density.
 
   """
-  
+
   if density_grid.ndim == 4:
     density_grid = jnp.sum(density_grid, axis=0)
-  
+
   n1, n2, n3 = density_grid.shape
   num_grid = n1 * n2 * n3
   output = -(density_grid * 3. / jnp.pi)**(1 / 3)
-  
+
   if density_grid.ndim == 4:
-    output = jnp.expand_dims(output/2, axis=0)
+    output = jnp.expand_dims(output / 2, axis=0)
 
   return output * vol / num_grid
