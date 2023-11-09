@@ -27,35 +27,35 @@ class Crystal:
   Attributes:
   
     symbols: str = None
-    scaled_positions: Float[Array, 'natom nd'] = None
-    positions: Float[Array, 'natom nd'] = None 
-    charges: Int[Array, 'natom'] = None
+    scaled_positions: Float[Array, 'num_atoms d'] = None
+    positions: Float[Array, 'num_atoms d'] = None 
+    charges: Int[Array, 'num_atoms'] = None
     spin: int = None 
     xyz_file: str = None
-    lattice_vectors: Float[Array, 'nd nd'] = None
-    reciprocal_vectors: Float[Array, 'nd nd'] = None
-    A: Float[Array, 'nd nd'] = None  # alias for lattice_vectors
-    B: Float[Array, 'nd nd'] = None  # alias for reciprocal_vectors
+    cell_vectors: Float[Array, 'd d'] = None
+    reciprocal_vectors: Float[Array, 'd d'] = None
+    A: Float[Array, 'd d'] = None  # alias for lattice_vectors
+    B: Float[Array, 'd d'] = None  # alias for reciprocal_vectors
     vol: float = None 
-    natom: int = None
-    nelec: int = None 
+    num_atoms: int = None
+    num_electrons: int = None 
     _ase_cell: ase.Atoms = None
   
   """
 
   symbols: str = None
-  positions: Union[List[List], Float[ArrayLike, 'natom nd']] = None
-  lattice_vectors: Union[List[List], Float[ArrayLike, 'ndim nd']] = None
+  positions: Union[List[List], Float[ArrayLike, 'num_atoms d']] = None
+  cell_vectors: Union[List[List], Float[ArrayLike, 'd d']] = None
   xyz_file: str = None
   spin = None
 
   def __post_init__(self):
     if (
       self.symbols and (self.positions is not None) and
-      (self.lattice_vectors is not None)
+      (self.cell_vectors is not None)
     ):
       self._ase_cell = ase.Atoms(
-        self.symbols, self.positions, cell=self.lattice_vectors, pbc=True
+        self.symbols, self.positions, cell=self.cell_vectors, pbc=True
       )
 
     elif self.xyz_file:
@@ -72,16 +72,16 @@ class Crystal:
     self.scaled_positions = jnp.array(self._ase_cell.get_scaled_positions())
     self.charges = jnp.array(self._ase_cell.get_atomic_numbers())
 
-    self.lattice_vectors = self._ase_cell.get_cell() * ANGSTROM2BOHR
-    self.A = self.lattice_vectors
+    self.cell_vectors = self._ase_cell.get_cell() * ANGSTROM2BOHR
+    self.A = self.cell_vectors
     self.reciprocal_vectors = jnp.linalg.inv(self.A).T * 2 * jnp.pi
     self.B = self.reciprocal_vectors
 
     self.vol = self._ase_cell.get_volume() * ANGSTROM2BOHR**3
-    self.natom = self._ase_cell.get_global_number_of_atoms()
-    self.nelec = jnp.sum(self.charges)
+    self.num_atoms = self._ase_cell.get_global_number_of_atoms()
+    self.num_electrons = jnp.sum(self.charges)
 
-    self.spin = self.nelec % 2 if self.spin is None else self.spin
+    self.spin = self.num_electrons % 2 if self.spin is None else self.spin
 
   def save_xyz_file(self, path=None):
     path = path if path else str(self.cell.symbols) + '.xyz'
