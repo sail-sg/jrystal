@@ -1,15 +1,14 @@
 """Energy functions. """
 import jax
 import jax.numpy as jnp
-from jaxtyping import Float, Array
+import jax_xc
 
-from jrystal._src.utils import complex_norm_square
-from jrystal._src.grid import get_ewald_vector_grid
-from jrystal._src.crystal import Crystal
-from jrystal._src.paramdict import EwaldArgs
+from jrystal._src.utils import complex_norm_square, vmapstack
 from jrystal._src import potential
 from jrystal._src import xc_density
 
+from typing import Callable
+from jaxtyping import Float, Array
 from jrystal._src.jrystal_typing import ComplexGrid, RealVecterGrid, RealScalar
 from jrystal._src.jrystal_typing import OccupationArray, RealGrid
 
@@ -123,6 +122,26 @@ def kinetic(
   return jnp.sum(e_kin * occupation) / 2
 
 
+def xc(
+  density_fn: Callable,
+  r_vector_grid: RealVecterGrid,
+  vol: RealScalar,
+  xc: str = 'lda_x'
+) -> Float:
+  epsilon_xc = getattr(jax_xc, xc, None)
+  if epsilon_xc:
+    epsilon_xc = epsilon_xc(polarized=True)
+
+  num_grid = jnp.prod(jnp.array(r_vector_grid.shape))
+  map_dim = r_vector_grid.ndim - 1
+
+  def _integrad(r):
+    return epsilon_xc(density_fn, r) * density_fn(r)
+
+  _eps_den_grid = vmapstack(map_dim)(_integrad)(r_vector_grid)
+  return jnp.sum(_eps_den_grid) * vol / num_grid
+
+
 def xc_lda(density_grid: RealGrid, vol: RealScalar):
   r"""local density approximation potential. 
 
@@ -216,40 +235,3 @@ def ewald_coulomb_repulsion(
   ew_a -= jnp.sum(charges)**2 * jnp.pi / ewald_eta**2 / vol / 2
 
   return ew_aa + ew_a
-
-
-def total(
-  nr: jax.Array,
-  ng: jax.Array,
-  cg: jax.Array,
-  occ: jax.Array,
-  crystal: Crystal,
-  g_grid: jax.Array,
-  k_grid: jax.Array,
-  ew_args: EwaldArgs,
-):
-  # TODO: The arguments of this function are highly redundant.
-  # I think all we need is a, cg, occ, and crystal.
-  # Also, we usually don't use a class from the parent module.
-  # i.e. the Crystal here is not under _src, this could cause
-  # circular import in the future.
-  atom_coord = crystal.positions
-  atom_charge = crystal.charges
-  vol = crystal.vol
-
-  e_kin = kinetic(g_grid, k_grid, cg, occ)
-  e_har = hartree(ng, g_grid, vol)
-  e_ext = external(ng, atom_coord, atom_charge, g_grid, vol)
-  e_xc = xc_lda(nr, vol)
-  ewald_grid = get_ewald_vector_grid(crystal.A, ew_args['ewald_cut'])
-  e_ew = ewald_coulomb_repulsion(
-    atom_coord,
-    atom_charge,
-    g_grid,
-    vol,
-    ewald_eta=ew_args['ewald_eta'],
-    ewald_grid=ewald_grid
-  )
-  e_total = e_kin + e_har + e_ext + e_xc + e_ew
-
-  return e_total, (e_kin, e_har, e_ext, e_xc, e_ew)

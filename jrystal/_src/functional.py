@@ -2,17 +2,19 @@
   flax.linen.modules. """
 import jax
 import jax.numpy as jnp
-from typing import Union
 from jaxtyping import Int, Float, Array, Complex
 from jrystal._src.grid import g_vectors
 from jrystal._src.utils import vmapstack
 from jrystal._src import errors
 
+from typing import Union, List
+from jrystal._src.jrystal_typing import ComplexGrid, MaskGrid, CellVector
+
 
 def coeff_expand(
-  cg: Complex[Array, "*batch ng"],
-  mask: Int[Array, "*nd"],
-) -> Complex[Array, "*batch_nd"]:
+  coeff_dense: Complex[Array, "*batch ng"],
+  mask: MaskGrid,
+) -> ComplexGrid:
   """
   Expand coeffcients.
   The sum of masks should equals to the last dimension of cg.
@@ -34,30 +36,32 @@ def coeff_expand(
   # if not jnp.array_equal(cg.shape[-1], n_sum):
   #   raise errors.ApplyExpCoeffShapeError(cg.shape, n_sum)
 
-  @vmapstack(times=cg.ndim - 1)
+  @vmapstack(times=coeff_dense.ndim - 1)
   def set_mask(c):
     o = jnp.zeros_like(mask, dtype=c.dtype)
     return o.at[mask].set(c)
 
-  return set_mask(cg)
+  return set_mask(coeff_dense)
 
 
 def coeff_compress(
-  cg: Complex[Array, "*batch_nd"],
-  mask: Int[Array, "*nd"],
+  coeff_grid: ComplexGrid,
+  mask: MaskGrid,
 ) -> Complex[Array, "*batch ng"]:
   """The inverse operation of ``coeff_expand`` """
 
-  @vmapstack(times=cg.ndim - mask.ndim)
+  @vmapstack(times=coeff_grid.ndim - mask.ndim)
   def _get_value(c):
     return c.at[mask].get()
 
-  return _get_value(cg)
+  return _get_value(coeff_grid)
 
 
-def get_mask_radius(a, grid_sizes, e_cut):
-  g_vec = g_vectors(a, grid_sizes)
-  g_norm = jnp.linalg.norm(g_vec, axis=-1, keepdims=False)
+def get_mask_radius(
+  cell_vectors: CellVector, grid_sizes: Union[List, jax.Array], e_cut: float
+) -> MaskGrid:
+  g_vector_grid = g_vectors(cell_vectors, grid_sizes)
+  g_norm = jnp.linalg.norm(g_vector_grid, axis=-1, keepdims=False)
   return g_norm**2 <= e_cut * 2
 
 
@@ -80,13 +84,6 @@ def get_grid_sizes_radius(a: Float[Array, 'd d'], e_cut: Float):
       _type_: _description_
   """
   pass
-
-
-def get_cg(weights: Complex[Array, 'nspin nk ng ni'], mask: jax.Array):
-  cg = jnp.linalg.qr(weights, mode='reduced')[0]
-  cg = jnp.swapaxes(cg, -1, -2)
-  cg = coeff_expand(cg, mask)
-  return cg
 
 
 def batched_fft(

@@ -2,6 +2,8 @@ import jax
 import jax.numpy as jnp
 import flax.linen as nn
 
+import jax_xc
+
 from jrystal._src.bloch import bloch_wave
 from jrystal._src.utils import vmapstack
 from jrystal._src.functional import coeff_expand, batched_fft, batched_ifft
@@ -84,6 +86,7 @@ class PlaneWaveDensity(nn.Module):
   spin: Int
   vol: float
   occupation_method: str = 'gamma'
+  xc_method: str = 'lda_x'
 
   def setup(self):
     _, nk, _, ni = self.shape
@@ -95,6 +98,15 @@ class PlaneWaveDensity(nn.Module):
 
     elif self.occupation_method == 'uniform':
       self.occupation = OccUniform(nk, ni, self.spin)
+
+    self.xc_density = getattr(jax_xc.functionals, self.xc_method, None)
+    if self.xc_density:
+      self.xc_density = self.xc_density(polarized=True)
+    else:
+      raise NotImplementedError(
+        f"{self.xc_method} is not included in jax-xc. "
+        "See https://jax-xc.readthedocs.io/en/latest/index.html#"
+      )
 
   def __call__(self, r) -> jax.Array:
     return self.density(r, reduce=True)
@@ -119,8 +131,8 @@ class PlaneWaveDensity(nn.Module):
 
     return density
 
-  def density_reciprocal(self, r, reduce=True):
-    density = self.density(r, reduce=reduce)
+  def density_reciprocal(self, r_vector_grid: RealVecterGrid, reduce=True):
+    density = self.density(r_vector_grid, reduce=reduce)
     num_grids = jnp.prod(jnp.array(self.mask.shape))
     dim = self.cell_vectors.shape[0]
 
@@ -170,10 +182,9 @@ class PlaneWaveDensity(nn.Module):
       g_vector_grid, self.k_vector_grid, coeff_grid, occupation
     )
 
-  def xc(self, xc='lda_x'):
+  def xc(self):
     r_vector_grid = r_vectors(self.cell_vectors, self.mask.shape)
-    density = self.density(r_vector_grid, True)
-    return energy.xc_lda(density, self.vol)
+    return energy.xc(self.density, r_vector_grid, self.vol, self.xc_method)
 
 
 class BatchedBlochWave(nn.Module):
@@ -223,8 +234,11 @@ class BatchedBlochWave(nn.Module):
   ) -> ComplexVecterGrid:
     dim = r.shape[-1]
     wavefun = bloch_wave(self.cell_vectors, coeff_grid, self.k_vector_grid)  #
-    wave = vmapstack(coeff_grid.ndim - dim)(wavefun)(r)
-    wave = jnp.moveaxis(wave, range(dim), range(-dim, 0))
+    if r.ndim == 1:
+      wave = wavefun(r)
+    else:
+      wave = vmapstack(coeff_grid.ndim - dim)(wavefun)(r)
+      wave = jnp.moveaxis(wave, range(dim), range(-dim, 0))
     return wave
 
 

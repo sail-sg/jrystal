@@ -66,7 +66,7 @@ class _Test_modules(parameterized.TestCase):
     x = qr.apply(params)
     np.testing.assert_array_equal(x.shape, shape)
 
-  @absltest.unittest.skip("")
+  @absltest.unittest.skip("deprecated modules.")
   def test_expand_compress(self):
 
     class Model(nn.Module):
@@ -90,9 +90,12 @@ class _Test_modules(parameterized.TestCase):
     shape = [2, 1, self.ng, 4]
     pwd = PlaneWaveDensity(shape, self.mask, self.a, self.k_grid, spin=0, vol=1)
     params = pwd.init(self.key, self.r_vec)
-    nr, ng = pwd.apply(params, self.r_vec, reduce=True)
-    nr, ng = pwd.apply(params, self.r_vec, reduce=False)
-    nr, ng = pwd.apply(params, jnp.arange(3), reduce=True)
+    nr = pwd.apply(params, self.r_vec, reduce=True, method='density')
+    np.testing.assert_array_equal(nr.shape, [2, 7, 8, 9])
+    nr = pwd.apply(params, self.r_vec, reduce=False, method='density')
+    np.testing.assert_array_equal(nr.shape, self.shape)
+    nr = pwd.apply(params, jnp.arange(3))
+    np.testing.assert_array_equal(nr.shape, (2,))
 
 
 if __name__ == '__main__':

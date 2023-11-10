@@ -2,25 +2,28 @@
   
   This module is for optimizing the parameters.
 """
+import os
 import jax
+import numpy as np
 import jax.numpy as jnp
 from optax._src import alias
 from flax.training import train_state
 import ml_collections
+from ase.dft.kpoints import monkhorst_pack
 
 import jrystal
 from jrystal.config import get_config
 from jrystal.wave import PlaneWaveDensity
 from jrystal._src.energy import ewald_coulomb_repulsion
-from jrystal._src.paramdict import PWDArgs, EwaldArgs
-from jrystal._src.grid import get_ewald_vector_grid
+from jrystal._src.grid import get_ewald_vector_grid, get_grid_sizes
+from jrystal._src.grid import g_vectors, r_vectors
+from jrystal._src.functional import get_mask_radius
 from jrystal.crystal import Crystal
 import time
 from tqdm import tqdm
 from absl import logging
 
 logging.set_verbosity(logging.INFO)
-jax.config.update("jax_enable_x64", False)
 
 
 def create_crystal(config):
@@ -30,13 +33,51 @@ def create_crystal(config):
   return crystal
 
 
+def create_density_module(config):
+  crystal = create_crystal(config)
+  cutoff_energy = config.cutoff_energy
+  g_grid_sizes = get_grid_sizes(config.grid_sizes)
+  occupation_method = config.occupation
+  xc_method = config.xc
+  nspin = 2
+  ni = crystal.num_electrons
+  k_grid_sizes = get_grid_sizes(config.k_grid_sizes)
+  nk = np.prod(k_grid_sizes)
+  spin = int(ni % 2)
+  mask = get_mask_radius(crystal.A, g_grid_sizes, cutoff_energy)
+
+  ng = np.sum(mask)
+  k_vector_grid = monkhorst_pack(k_grid_sizes)
+  shape = [nspin, nk, ng, ni.item()]
+
+  density_module = PlaneWaveDensity(
+    shape,
+    mask,
+    crystal.cell_vectors,
+    k_vector_grid,
+    spin,
+    crystal.vol,
+    occupation_method,
+    xc_method=xc_method
+  )
+
+  return density_module
+
+
+def create_grids(config):
+  crystal = create_crystal(config)
+  grid_sizes = get_grid_sizes(config.grid_sizes)
+  k_grid_sizes = get_grid_sizes(config.k_grid_sizes)
+  g_vector_grid = g_vectors(crystal.cell_vectors, grid_sizes)
+  r_vector_grid = r_vectors(crystal.cell_vectors, grid_sizes)
+  k_vector_grid = monkhorst_pack(k_grid_sizes)
+  return g_vector_grid, r_vector_grid, k_vector_grid
+
+
 def create_train_state(rng, config):
   """Creates initial `TrainState`."""
-  crystal = create_crystal(config)
-  pwd_args, grids = PWDArgs.get_PWD_args(
-    crystal, config.ecut, config.grid_size, config.k_grid_size
-  )
-  r_grid, _ = grids
+  density = create_density_module(config)
+  _, r_vector_grid, _ = create_grids(config)
 
   opt = getattr(alias, config.optimizer, None)
   if opt:
@@ -44,56 +85,57 @@ def create_train_state(rng, config):
   else:
     raise NotImplementedError(f'"{config.optimizer}" is not included in optax')
 
-  grid_point_num = jnp.prod(jnp.array(pwd_args.mask.shape))
-  mask_ratio = jnp.sum(pwd_args.mask) / grid_point_num
+  grid_point_num = jnp.prod(jnp.array(density.mask.shape))
+  mask_ratio = jnp.sum(density.mask) / grid_point_num
 
-  logging.info(f'{jnp.sum(pwd_args.mask)} G points selected.')
+  logging.info(f'{jnp.sum(density.mask)} G points selected.')
   logging.info(f'{mask_ratio*100:.2f}% frequency masked.')
-  logging.info(f'the mesh of G grid: {pwd_args.mask.shape}')
+  logging.info(f'the mesh of G grid: {density.mask.shape}')
 
-  density = PlaneWaveDensity(**pwd_args)
-  params = density.init(rng, r_grid)['params']
+  params = density.init(rng, r_vector_grid)['params']
   state = train_state.TrainState.create(
     apply_fn=density.apply, params=params, tx=optimizer
   )
-
-  ew_args = EwaldArgs(**config.ewald_args)
-  variable_dict = {'grids': grids, 'ew_args': ew_args, 'crystal': crystal}
-  return state, density, variable_dict
+  return state
 
 
-def train(config: ml_collections.ConfigDict):
-  """_summary_
+def get_ewald_coulomb_repulsion(config):
+  crystal = create_crystal(config)
 
-  Args:
-      config (ml_collections.ConfigDict): Hyperparameter configuration for 
-      training and evaluation.
+  ewald_grid = get_ewald_vector_grid(
+    crystal.cell_vectors, config.ewald_args['ewald_cut']
+  )
 
-  Returns:
-      train_state.TrainState: the train state
-  """
-  rng = jax.random.key(config.seed)
-  rng, init_rng = jax.random.split(rng)
-  state, density, variable_dict = create_train_state(init_rng, config)
-  ew_args = variable_dict['ew_args']
-  grids = variable_dict['grids']
-  crystal = variable_dict['crystal']
+  g_vector_grid, _, _ = create_grids(config)
 
-  start_time = time.time()
-  iters = tqdm(range(config.epoch))
-  r_grid, g_grid = grids
-  ewald_grid = get_ewald_vector_grid(crystal.A, ew_args['ewald_cut'])
   ew = ewald_coulomb_repulsion(
     crystal.positions,
     crystal.charges,
-    g_grid,
+    g_vector_grid,
     crystal.vol,
-    ew_args['ewald_eta'],
-    ewald_grid
+    ewald_eta=config.ewald_args['ewald_eta'],
+    ewald_grid=ewald_grid
   )
 
+  return ew
+
+
+def train(config: ml_collections.ConfigDict):
+
+  jax.config.update("jax_enable_x64", config.jax_enable_x64)
+  if config.xla_preallocate is False:
+    os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
+
+  rng = jax.random.key(config.seed)
+  rng, init_rng = jax.random.split(rng)
+  state = create_train_state(init_rng, config)
+  crystal = create_crystal(config)
+  start_time = time.time()
+  iters = tqdm(range(config.epoch))
+  ew = get_ewald_coulomb_repulsion(config)
+
   @jax.jit
-  def update(state: train_state.TrainState, grids) -> train_state.TrainState:
+  def update(state: train_state.TrainState) -> train_state.TrainState:
 
     def loss(params):
       e_har = state.apply_fn({'params': params}, method='hartree')
@@ -109,7 +151,7 @@ def train(config: ml_collections.ConfigDict):
     return state.apply_gradients(grads=grads), (e_total, *e_splits)
 
   for i in iters:
-    state, es = update(state, grids)
+    state, es = update(state)
     e_tot, e_kin, e_har, e_ext, e_xc, e_ew = es
     iters.set_description(f"Total energy: {e_tot:.3f}")
 
@@ -132,5 +174,4 @@ def train(config: ml_collections.ConfigDict):
 
 if __name__ == '__main__':
   config = get_config()
-
   train(config)

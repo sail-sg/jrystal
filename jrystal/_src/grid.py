@@ -92,7 +92,7 @@ def r_vectors(a, grid_sizes):
   return _vector_grid(a, grid_sizes, normalize=True)
 
 
-def grid_sizes(grid_sizes: Int | Int[Array, 'd']):
+def get_grid_sizes(grid_sizes: Int | Int[Array, 'd']):
   if hasattr(grid_sizes, "__len__"):
     grid_sizes = np.array(grid_sizes)
   else:
