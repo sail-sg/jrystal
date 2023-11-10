@@ -1,10 +1,12 @@
-jax[cuda]>=0.4.14
+jax>=0.4.14
 jaxlib>=0.4.14
 optax>=0.1.4
 
 flax
 chex
 jaxtyping
+
+jax_xc
 
 matplotlib>=3.6.2
 tqdm
