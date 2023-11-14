@@ -15,7 +15,7 @@ import jrystal
 from jrystal.config import get_config
 from jrystal.wave import PlaneWaveDensity
 from jrystal._src.energy import ewald_coulomb_repulsion
-from jrystal._src.grid import get_ewald_vector_grid, get_grid_sizes
+from jrystal._src.grid import translation_vectors, get_grid_sizes
 from jrystal._src.grid import g_vectors, r_vectors
 from jrystal._src.functional import get_mask_radius
 from jrystal.crystal import Crystal
@@ -102,7 +102,7 @@ def create_train_state(rng, config):
 def get_ewald_coulomb_repulsion(config):
   crystal = create_crystal(config)
 
-  ewald_grid = get_ewald_vector_grid(
+  ewald_grid = translation_vectors(
     crystal.cell_vectors, config.ewald_args['ewald_cut']
   )
 

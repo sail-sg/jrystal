@@ -104,15 +104,15 @@ def get_grid_sizes(grid_sizes: Int | Int[Array, 'd']):
   return grid_sizes
 
 
-def get_ewald_vector_grid(
+def translation_vectors(
   cell_vectors: Float[Array, 'd d'],
-  ewald_cut: Float[Array, 'd'] = 1e4
+  cutoff: Float[Array, 'd'] = 1e4
 ) -> RealVecterGrid:
   """Construct the translation grid lattice for ewald sum.
 
   Args:
     cell_vectors (ndarray): the reciprocal vectors
-    ewald_cut (ndarray): the real space cutoff such that 1/ewald_cut ~ 0.  
+    cutoff (ndarray): the real space cutoff such that 1/cutoff ~ 0.  
           The larger the more precise of ewald sum.
 
   Returns:
@@ -120,7 +120,7 @@ def get_ewald_vector_grid(
   """
 
   dim = cell_vectors.shape[0]
-  n = int(np.ceil(ewald_cut / np.linalg.norm(np.sum(cell_vectors, axis=0))**2))
+  n = int(np.ceil(cutoff / np.linalg.norm(np.sum(cell_vectors, axis=0))**2))
   grid = _vector_grid(cell_vectors, [n for i in range(dim)])
 
   return np.reshape(grid, [-1, cell_vectors.shape[0]])

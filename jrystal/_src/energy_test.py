@@ -4,7 +4,7 @@ import numpy as np
 from absl.testing import absltest, parameterized
 from jax.config import config
 from jrystal._src import energy
-from jrystal._src.grid import get_ewald_vector_grid
+from jrystal._src.grid import translation_vectors
 
 config.update("jax_enable_x64", False)
 
@@ -49,7 +49,7 @@ class _Test_energy(parameterized.TestCase):
     np.testing.assert_almost_equal(ex, -0.38135464743073577, 5)
 
   def test_ewald(self):
-    ew_grid = get_ewald_vector_grid(jnp.eye(3), 1e2)
+    ew_grid = translation_vectors(jnp.eye(3), 1e2)
     ew = energy.ewald_coulomb_repulsion(
       self.positions, self.charges, self.gvec, self.vol, 0.1, ew_grid
     )

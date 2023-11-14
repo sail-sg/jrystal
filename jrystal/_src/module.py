@@ -131,7 +131,9 @@ class PlaneWaveDensity(nn.Module):
 
     return density
 
-  def density_reciprocal(self, r_vector_grid: RealVecterGrid, reduce=True):
+  def reciprocal_density(
+    self, r_vector_grid: RealVecterGrid, reduce=True
+  ) -> ComplexVecterGrid:
     density = self.density(r_vector_grid, reduce=reduce)
     num_grids = jnp.prod(jnp.array(self.mask.shape))
     dim = self.cell_vectors.shape[0]
@@ -157,7 +159,7 @@ class PlaneWaveDensity(nn.Module):
   def hartree(self):
     r_vector_grid = r_vectors(self.cell_vectors, self.mask.shape)
     g_vector_grid = g_vectors(self.cell_vectors, self.mask.shape)
-    reciprocal_density_grid = self.density_reciprocal(
+    reciprocal_density_grid = self.reciprocal_density(
       r_vector_grid, reduce=True
     )
     return energy.hartree(reciprocal_density_grid, g_vector_grid, self.vol)
@@ -165,7 +167,7 @@ class PlaneWaveDensity(nn.Module):
   def external(self, crystal: Crystal):
     r_vector_grid = r_vectors(self.cell_vectors, self.mask.shape)
     g_vector_grid = g_vectors(self.cell_vectors, self.mask.shape)
-    reciprocal_density_grid = self.density_reciprocal(
+    reciprocal_density_grid = self.reciprocal_density(
       r_vector_grid, reduce=True
     )
     positions = crystal.positions

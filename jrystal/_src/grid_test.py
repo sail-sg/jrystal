@@ -2,14 +2,14 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from absl.testing import absltest, parameterized
-from jrystal._src.grid import get_ewald_vector_grid, grid_1d
+from jrystal._src.grid import translation_vectors, grid_1d
 
 
 class _Test_grid(parameterized.TestCase):
 
   def setUp(self):
 
-    def get_ewald_vector_grid(a, ew_cut=1e4):
+    def translation_vectors(a, ew_cut=1e4):
       n = jnp.ceil(ew_cut / jnp.linalg.norm(jnp.sum(a, axis=0))**2)
       n = jnp.arange(n) - n // 2
       n = n[:, None, None, None] * a[None, None, None, 0] + \
@@ -17,14 +17,14 @@ class _Test_grid(parameterized.TestCase):
         n[None, None, :, None] * a[None, None, None, 2]
       return jnp.reshape(n, [-1, 3])
 
-    self.get_ewald_vector_grid = get_ewald_vector_grid
+    self.translation_vectors = translation_vectors
 
   def test_grid(self):
     key = jax.random.PRNGKey(123)
     a = jax.random.uniform(key, [3, 3])
     ec = 1e2
-    l1 = self.get_ewald_vector_grid(a, ec)
-    l2 = get_ewald_vector_grid(a, ec)
+    l1 = self.translation_vectors(a, ec)
+    l2 = translation_vectors(a, ec)
 
     np.testing.assert_allclose(l1.shape, l2.shape, 1e-8)
 
