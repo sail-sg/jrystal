@@ -79,7 +79,7 @@ class Crystal:
 
     self.vol = self._ase_cell.get_volume() * ANGSTROM2BOHR**3
     self.num_atoms = self._ase_cell.get_global_number_of_atoms()
-    self.num_electrons = jnp.sum(self.charges)
+    self.num_electrons = jnp.sum(self.charges).item()
 
     self.spin = self.num_electrons % 2 if self.spin is None else self.spin
 

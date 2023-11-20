@@ -1,18 +1,8 @@
 import jax
 import jrystal
-from jrystal import Crystal
-from jrystal._src.modules import PlaneWaveDensity
-from jrystal._src.pw import get_cg
+from jrystal.crystal import Crystal
+from jrystal.wave import PlaneWaveDensity
 from jrystal._src.paramdict import PWDArgs
-
-# Define by lattice vectors
-a = 3.5667  # angstrom
-lattice_vectors = [(0, a / 2, a / 2), (a / 2, 0, a / 2), (a / 2, a / 2, 0)]
-symbols = 'C2'
-positions = [(0, 0, 0), (a / 2, a / 2, a / 2)]
-diamond = Crystal(
-  symbols=symbols, positions=positions, lattice_vectors=lattice_vectors
-)
 
 # alternatively,
 _pkg_path = jrystal.get_pkg_path()

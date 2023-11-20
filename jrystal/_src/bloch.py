@@ -181,7 +181,8 @@ def _u_jvp_rule(primals, tangents, *, force_fft):
     )
     jvps.append(jvp1)
   if not isinstance(cg_dot, ad.Zero):
-    # `u` is linear in `cg` (FFT), therefore jvp just replaces `cg` with `cg_dot`.
+    # `u` is linear in `cg` (FFT), therefore jvp just replaces `cg` with
+    # `cg_dot`.
     jvp2 = u(a, cg_dot, r, force_fft=force_fft)
     jvps.append(jvp2)
   if not isinstance(r_dot, ad.Zero):
@@ -298,11 +299,11 @@ def bloch_wave(a, cg, k_vec):
         a vector of shape `(d,)`
     Returns:
       a complex tensor that is the wave function value at `r`.
-      the shape of the tensor is `(batch, ..., nk)`
+      the shape of the tensor is `(batch, ..., nk, ...)`
     """
     sum_cg_expigr = u(a, cg, r, force_fft=force_fft)
     kr = jnp.tensordot(k_vec, r, axes=(-1, -1))
-    expikr = jnp.exp(1.j * kr)
+    expikr = jnp.expand_dims(jnp.exp(1.j * kr), -1)
     return sum_cg_expigr * expikr
 
   return wave

@@ -55,8 +55,8 @@ class Uniform(nn.Module):
 
   """
 
-  ni: Int
   nk: Int
+  ni: Int
   spin: Int
 
   @nn.compact
@@ -84,12 +84,19 @@ class Orthogonal(nn.Module):
   
     where \sum_i o_ij^2 = 1
   """
-  ni: Int
   nk: Int
+  ni: Int
   spin: Int
 
   @nn.compact
   def __call__(self) -> Int[Array, '2 nk ni']:
+    if self.nk < (self.ni - self.spin) // 2:
+      raise ValueError(
+        'orthogonal occupation only support when the number of ',
+        f'k points (now is {self.nk}) larger than number of ',
+        f'orbitals (now is {(self.ni - self.spin) // 2})'
+      )
+
     occ = jnp.zeros([2, self.nk, self.ni])
     shape = [1, self.nk, (self.ni + self.spin) // 2]
     qr1 = QRDecomp(shape, False, False)()

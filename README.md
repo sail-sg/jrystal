@@ -25,9 +25,9 @@ pip install --editable .
 This allows to modify your source code and have the changes take effect without you having to rebuild and reinstall.
 
 
-## Developer notes:
+## Developer notes
 
-#### The Jrystal philosophy:
+#### The Jrystal philosophy
 
 - Opt for an ``nn.Module`` object when defining operations:
   - Involve or may involve **trainable parameters**, which necessitate persistent state across different stages of training.
@@ -41,3 +41,5 @@ This allows to modify your source code and have the changes take effect without 
 - A helpful error message is crucial.
 
 - It's better for an abstraction to be small and specific than to be large and general.
+
+- Instead of being big and general, we prefer small and concreate.

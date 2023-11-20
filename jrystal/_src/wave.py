@@ -4,6 +4,7 @@
 import jax
 import jax.numpy as jnp
 import flax.linen as nn
+import numpy as np
 
 import jax_xc
 
@@ -14,8 +15,7 @@ from jrystal._src import energy
 from jrystal._src.grid import r_vectors, g_vectors
 from jrystal._src.crystal import Crystal
 
-from typing import Union, List
-from jaxtyping import Int, Array
+from jaxtyping import Int, Array, Float
 from jrystal._src.jrystal_typing import MaskGrid, CellVector
 from jrystal._src.jrystal_typing import ComplexVecterGrid, RealVecterGrid
 from jrystal._src import errors
@@ -23,18 +23,20 @@ from jrystal._src.module import QRDecomp, BatchedBlochWave
 
 
 class PlaneWaveDensity(nn.Module):
-  shape: Union[Int[Array, "..."], List]  # [nspin, nk, ng, ni]
+  num_elec: Int
   mask: MaskGrid
   cell_vectors: CellVector
-  k_vector_grid: RealVecterGrid
+  k_vector_grid: Float[Array, '... 3']
   spin: Int
   vol: float
   occupation_method: str = 'gamma'
   xc_method: str = 'lda_x'
 
   def setup(self):
-    _, nk, _, ni = self.shape
-    self.qr = QRDecomp(self.shape)
+    num_k = np.prod(np.array(self.k_vector_grid.shape)[:-1]).item()
+    num_g = np.sum(np.array(self.mask)).item()
+    shape = [2, num_k, num_g, self.num_elec]
+    self.qr = QRDecomp(shape)
     self.bloch = BatchedBlochWave(self.cell_vectors, self.k_vector_grid)
 
     self.occupation = getattr(
@@ -42,7 +44,7 @@ class PlaneWaveDensity(nn.Module):
     )
 
     if self.occupation:
-      self.occupation = self.occupation(nk, ni, self.spin)
+      self.occupation = self.occupation(num_k, self.num_elec, self.spin)
     else:
       raise NotImplementedError(
         f"{self.occupation_method} is not included in jax-xc. "

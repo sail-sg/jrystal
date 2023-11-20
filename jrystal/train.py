@@ -4,7 +4,6 @@
 """
 import os
 import jax
-import numpy as np
 import jax.numpy as jnp
 from optax._src import alias
 from flax.training import train_state
@@ -39,19 +38,14 @@ def create_density_module(config):
   g_grid_sizes = get_grid_sizes(config.grid_sizes)
   occupation_method = config.occupation
   xc_method = config.xc
-  nspin = 2
   ni = crystal.num_electrons
   k_grid_sizes = get_grid_sizes(config.k_grid_sizes)
-  nk = np.prod(k_grid_sizes)
   spin = int(ni % 2)
   mask = get_mask_radius(crystal.A, g_grid_sizes, cutoff_energy)
-
-  ng = np.sum(mask)
   k_vector_grid = monkhorst_pack(k_grid_sizes)
-  shape = [nspin, nk, ng, ni.item()]
 
   density_module = PlaneWaveDensity(
-    shape,
+    crystal.num_electrons,
     mask,
     crystal.cell_vectors,
     k_vector_grid,
