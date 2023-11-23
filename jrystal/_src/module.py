@@ -32,6 +32,7 @@ class PlaneWave(nn.Module):
 
   Returns:
     ComplexVecterGrid: planewaves evaluated at r. 
+      Shape[nspin, num_k, num_band, ..., 3]
 
   Ref. https://en.wikipedia.org/wiki/Bloch%27s_theorem
 

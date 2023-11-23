@@ -2,7 +2,7 @@ __version__ = '0.0.2'
 
 from jrystal import crystal
 from jrystal import occupation
-from jrystal import train
+from jrystal import total_energy
 from jrystal import wave
 from jrystal import config
 from pathlib import Path
@@ -16,7 +16,7 @@ __all__ = [
   '__version__',
   'crystal',
   'occupation',
-  'train',
+  'total_energy',
   'wave',
   'config',
 ]

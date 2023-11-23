@@ -4,8 +4,17 @@ Plane-wave density functional theory for crystals in JAX
 
 ## Getting started
 
+### Why ``jrystal``?
 
-## Installation
+- **Differentiability**. It's fully differentiable!  Easy to get the gradients!
+- **GPU acceleration**. It's written in ``JAX``, therefore can be easily run on GPU/TPU devices.
+- **Direct optimization**.
+
+### Jrystal design diagram
+<img title="Jrystal design diagram" alt="Alt text" src="/docs/Jrystal-diagram.png" width="600"/>
+
+
+### Installation
 Get source code from github
 
 ```sh
@@ -42,4 +51,5 @@ This allows to modify your source code and have the changes take effect without 
 
 - It's better for an abstraction to be small and specific than to be large and general.
 
-- Instead of being big and general, we prefer small and concreate.
+- Wave functions are always coupled with its integrals. Thus we recommend to define the integral method within the wave function object.
+

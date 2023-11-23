@@ -6,6 +6,7 @@ from jaxtyping import Int, Array, Float
 import numpy as np
 from jrystal._src.utils import get_fftw_factor
 from jrystal._src.jrystal_typing import RealVecterGrid
+from ase.dft.kpoints import monkhorst_pack
 
 
 # TODO(linmin): retire this function
@@ -48,7 +49,7 @@ def _vector_grid(basis: jax.Array, grid_sizes, normalize=False):
   return sum(components)
 
 
-def g_vectors(a, grid_sizes):
+def g_vectors(a, grid_sizes) -> RealVecterGrid:
   r"""Given the lattice vector of the unit cell,
   and grid size on each axis, return the G vectors
   in the recirpocal space.
@@ -70,7 +71,7 @@ def g_vectors(a, grid_sizes):
   return _vector_grid(b, grid_sizes)
 
 
-def r_vectors(a, grid_sizes):
+def r_vectors(a, grid_sizes) -> RealVecterGrid:
   r"""Given the lattice vector of the unit cell,
   and grid size on each axis, return the R vectors
   in the real space.
@@ -124,3 +125,9 @@ def translation_vectors(
   grid = _vector_grid(cell_vectors, [n for i in range(dim)])
 
   return np.reshape(grid, [-1, cell_vectors.shape[0]])
+
+
+def k_vectors(cell_vectors: Float[Array, 'd d'],
+              grid_sizes: Int[Array, '...']) -> Float[Array, 'num_k d']:
+  b = 2 * jnp.pi * jnp.linalg.inv(cell_vectors).T
+  return monkhorst_pack(grid_sizes) @ b

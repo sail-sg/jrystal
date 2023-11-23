@@ -6,16 +6,16 @@ import os
 import jax
 import jax.numpy as jnp
 from optax._src import alias
+import flax
 from flax.training import train_state
 import ml_collections
-from ase.dft.kpoints import monkhorst_pack
 
 import jrystal
 from jrystal.config import get_config
-from jrystal.wave import PlaneWaveDensity
+from jrystal.wave import PlaneWaveDensity, PlaneWaveFermiDirac
 from jrystal._src.energy import ewald_coulomb_repulsion
 from jrystal._src.grid import translation_vectors, get_grid_sizes
-from jrystal._src.grid import g_vectors, r_vectors
+from jrystal._src.grid import g_vectors, r_vectors, k_vectors
 from jrystal._src.functional import get_mask_radius
 from jrystal.crystal import Crystal
 import time
@@ -36,22 +36,20 @@ def create_density_module(config):
   crystal = create_crystal(config)
   cutoff_energy = config.cutoff_energy
   g_grid_sizes = get_grid_sizes(config.grid_sizes)
-  occupation_method = config.occupation
   xc_method = config.xc
   ni = crystal.num_electrons
   k_grid_sizes = get_grid_sizes(config.k_grid_sizes)
   spin = int(ni % 2)
-  mask = get_mask_radius(crystal.A, g_grid_sizes, cutoff_energy)
-  k_vector_grid = monkhorst_pack(k_grid_sizes)
+  mask = get_mask_radius(crystal.cell_vectors, g_grid_sizes, cutoff_energy)
+  k_vector_grid = k_vectors(crystal.cell_vectors, k_grid_sizes)
 
-  density_module = PlaneWaveDensity(
+  density_module = PlaneWaveFermiDirac(
     crystal.num_electrons,
     mask,
     crystal.cell_vectors,
     k_vector_grid,
     spin,
     crystal.vol,
-    occupation_method,
     xc_method=xc_method
   )
 
@@ -64,14 +62,15 @@ def create_grids(config):
   k_grid_sizes = get_grid_sizes(config.k_grid_sizes)
   g_vector_grid = g_vectors(crystal.cell_vectors, grid_sizes)
   r_vector_grid = r_vectors(crystal.cell_vectors, grid_sizes)
-  k_vector_grid = monkhorst_pack(k_grid_sizes)
+  k_vector_grid = k_vectors(crystal.cell_vectors, k_grid_sizes)
   return g_vector_grid, r_vector_grid, k_vector_grid
 
 
 def create_train_state(rng, config):
   """Creates initial `TrainState`."""
   density = create_density_module(config)
-  _, r_vector_grid, _ = create_grids(config)
+  # _, r_vector_grid, _ = create_grids(config)
+  crystal = create_crystal(config)
 
   opt = getattr(alias, config.optimizer, None)
   if opt:
@@ -86,11 +85,11 @@ def create_train_state(rng, config):
   logging.info(f'{mask_ratio*100:.2f}% frequency masked.')
   logging.info(f'the mesh of G grid: {density.mask.shape}')
 
-  params = density.init(rng, r_vector_grid)['params']
+  variables, params = flax.core.pop(density.init(rng, crystal), 'params')
   state = train_state.TrainState.create(
     apply_fn=density.apply, params=params, tx=optimizer
   )
-  return state
+  return state, variables
 
 
 def get_ewald_coulomb_repulsion(config):
@@ -122,33 +121,48 @@ def train(config: ml_collections.ConfigDict):
 
   rng = jax.random.key(config.seed)
   rng, init_rng = jax.random.split(rng)
-  state = create_train_state(init_rng, config)
+  state, variables = create_train_state(init_rng, config)
   crystal = create_crystal(config)
   start_time = time.time()
   iters = tqdm(range(config.epoch))
   ew = get_ewald_coulomb_repulsion(config)
 
   @jax.jit
-  def update(state: train_state.TrainState) -> train_state.TrainState:
+  def update(
+    state: train_state.TrainState, variables
+  ) -> train_state.TrainState:
 
     def loss(params):
-      e_har = state.apply_fn({'params': params}, method='hartree')
-      e_ext = state.apply_fn({'params': params}, crystal, method='external')
-      e_kin = state.apply_fn({'params': params}, method='kinetic')
-      e_xc = state.apply_fn({'params': params}, method='xc')
-      e_tot = e_kin + e_har + e_ext + e_xc + ew
-      return e_tot, (e_kin, e_har, e_ext, e_xc, ew)
+      # e_har = state.apply_fn({'params': params}, method='hartree')
+      # e_ext = state.apply_fn({'params': params}, crystal, method='external')
+      # e_kin = state.apply_fn({'params': params}, method='kinetic')
+      # e_xc = state.apply_fn({'params': params}, method='xc')
+      energy, new_variables = state.apply_fn(
+        {'params': params, **variables}, crystal,
+        method='total_energy', mutable=list(variables.keys())
+      )
+      total_energy, energies = energy
+      # e_tot = e_kin + e_har + e_ext + e_xc + ew
+      return total_energy, (energies, new_variables)
 
-    (e_total, e_splits), grads = jax.value_and_grad(loss, has_aux=True)(
+    (e_total, energies), grads = jax.value_and_grad(loss, has_aux=True)(
       state.params
     )
-    return state.apply_gradients(grads=grads), (e_total, *e_splits)
+    energies, variables = energies
+    return state.apply_gradients(grads=grads), (e_total, energies, variables)
 
   for i in iters:
-    state, es = update(state)
-    e_tot, e_kin, e_har, e_ext, e_xc, e_ew = es
+    state, es = update(state, variables)
+    # e_tot, e_kin, e_har, e_ext, e_xc, e_ew = es
+    e_tot, energies, variables = es
+    e_ew = ew
+    e_tot += ew
     iters.set_description(f"Total energy: {e_tot:.3f}")
 
+  e_kin = energies["kinetic"]
+  e_ext = energies["external"]
+  e_xc = energies["xc"]
+  e_har = energies["hartree"]
   converged = True
   # TODO(tianbo): include a convergence check module.
 
@@ -164,6 +178,8 @@ def train(config: ml_collections.ConfigDict):
   logging.info(f" Exchange-Correlation: {e_xc}")
   logging.info(f" Hartree: {e_har}")
   logging.info(f" Nucleus Repulsion: {e_ew}")
+
+  print(variables["variable"]["occupation"])
 
 
 if __name__ == '__main__':

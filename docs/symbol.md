@@ -4,6 +4,7 @@
 ## Variable names and meaning
 To consolidate variable names and terminology for developers.
 
+
 #### Physical variables 
 | math_symbol |   variable_name   |           meaning        |
 |:-----------:|:------------------|:-------------------------|
@@ -45,11 +46,13 @@ Anything that ends with ``_grid`` has shape ``(n1, n2, n3)``.
 | ``positions``   | real-space coordiates |
 | ``charges``     | the charges vector |
 
+
 #### Ewald summation variables
 |  variable_name  |  meaning     |
 |:----------------|--------------|
 | ``ewald_eta``      |the hyperparameter $\eta$|
 | ``ewwald_cut``      |cut-off for ewald lattice|
+
 
 #### Intermediate variables
 | vriable_name    | meaning      |
