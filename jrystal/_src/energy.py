@@ -7,10 +7,10 @@ from jrystal._src.utils import complex_norm_square, vmapstack
 from jrystal._src import potential
 from jrystal._src import xc_density
 
-from typing import Callable
+from typing import Callable, Union
 from jaxtyping import Float, Array
 from jrystal._src.jrystal_typing import ComplexGrid, RealVecterGrid, RealScalar
-from jrystal._src.jrystal_typing import OccupationArray, RealGrid
+from jrystal._src.jrystal_typing import RealGrid
 
 
 def hartree(
@@ -90,8 +90,8 @@ def kinetic(
   g_vector_grid: RealVecterGrid,
   k_vector_grid: RealVecterGrid,
   coeff_grid: ComplexGrid,
-  occupation: OccupationArray
-) -> RealScalar:
+  occupation=None
+) -> Union[RealScalar, Float[Array, "num_spin num_k num_bands"]]:
   r"""Kinetic energy.
 
   .. math::
@@ -101,10 +101,12 @@ def kinetic(
       g_vector_grid (RealVecterGrid):  G vector grid.
       k_vector_grid (RealVecterGrid):  k vector grid.
       coeff_grid (ComplexGrid): Plane wave coefficient. 
-      occupation (Array): occupation array.
+      occupation (Array, optional): occupation array. If provided, then the 
+        function will be reduced by applying occupation number. If not provided,
+        then the function will return the kinetic energy of all the orbitals.
 
   Returns:
-      RealScalar: kinetic energy.
+      RealScalar or Float[Array, "num_spin num_k num_bands"]]: kinetic energy.
 
   """
 
@@ -119,7 +121,12 @@ def kinetic(
     e_kin * complex_norm_square(coeff_grid), axis=range(3, dim + 3)
   )
 
-  return jnp.sum(e_kin * occupation) / 2
+  if occupation:
+    e_kin = jnp.sum(e_kin * occupation) / 2
+  else:
+    e_kin /= 2
+
+  return e_kin
 
 
 def xc(

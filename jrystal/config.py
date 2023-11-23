@@ -15,7 +15,7 @@ def get_config() -> ml_collections.ConfigDict:
   # Planewave hyperparameters
   config.cutoff_energy: float = 100
   config.grid_sizes: Union[int, List[int], Tuple[int]] = 32
-  config.k_grid_sizes: Union[int, List[int], Tuple[int]] = 1
+  config.k_grid_sizes: Union[int, List[int], Tuple[int]] = 2
   config.occupation: str = 'gamma'
 
   # functional hyperparameters.

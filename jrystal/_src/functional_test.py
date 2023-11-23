@@ -3,8 +3,8 @@ import jax.numpy as jnp
 from absl.testing import absltest, parameterized
 
 import numpy as np
-from jrystal._src import QRDecomp, BatchedFFT, BatchedInverseFFT
-from jrystal._src.functional import _coeff_compress, _coeff_expand
+from jrystal._src.module import QRDecomp
+from jrystal._src.functional import coeff_compress, coeff_expand
 from jax.config import config
 
 config.update("jax_enable_x64", True)
@@ -48,15 +48,15 @@ class _Test_pw(parameterized.TestCase):
   # @absltest.skip("skip")
   def test_coeff_compress_expand(self):
     coeff = jnp.zeros(self.shape)
-    coeff = _coeff_compress(coeff, self.mask)
-    coeff = _coeff_expand(coeff, self.mask)
+    coeff = coeff_compress(coeff, self.mask)
+    coeff = coeff_expand(coeff, self.mask)
     np.testing.assert_array_equal(self.shape, coeff.shape)
 
   @parameterized.named_parameters(('shape', [2, 35]))
   def test_coeff_expand_compress(self, shape):
     coeff = jnp.zeros(shape)
-    coeff = _coeff_expand(coeff, self.mask)
-    coeff = _coeff_compress(coeff, self.mask)
+    coeff = coeff_expand(coeff, self.mask)
+    coeff = coeff_compress(coeff, self.mask)
     np.testing.assert_array_equal(shape, coeff.shape)
 
 

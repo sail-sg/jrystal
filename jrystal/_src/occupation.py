@@ -3,14 +3,23 @@
 import jax.numpy as jnp
 import flax.linen as nn
 from jrystal._src.module import QRDecomp
-from jaxtyping import Int, Array
+from typing import Union
+from jaxtyping import Int, Array, Float
 from jrystal._src.utils import vmapstack
+from jrystal._src.jrystal_typing import OccupationArray
 # TODO: since we already has this file named occupations.py,
 # (maybe change to singular occupation.py). We don't need to prefix
 # the class name with Occ anymore.
 # TODO: I prefer defining functions than classes for simple modules like this.
 # e.g. occ = jrystal.occupation.uniform(ni, nk, spin) seems more natural than
 # occ = jrystal.occupations.OccUniform(ni, nk, spin)()
+
+
+def occupation_gamma(nk: int, ni: int, spin: int):
+  occ = jnp.zeros([2, nk, ni])
+  occ = occ.at[0, 0, :(ni + spin) // 2].set(1)
+  occ = occ.at[1, 0, :(ni - spin) // 2].set(1)
+  return occ
 
 
 class Gamma(nn.Module):
@@ -26,19 +35,12 @@ class Gamma(nn.Module):
 
   """
 
-  nk: Int
-  ni: Int
-  spin: Int
+  num_k: Int
+  num_i: Int
+  nspin: Int
 
-  def __call__(self) -> Int[Array, '2 nk ni']:
-
-    # TODO: currently only support polarized system.
-
-    occ = jnp.zeros([2, self.nk, self.ni])
-    occ = occ.at[0, 0, :(self.ni + self.spin) // 2].set(1)
-    occ = occ.at[1, 0, :(self.ni - self.spin) // 2].set(1)
-
-    return occ
+  def __call__(self, *args, **kwargs) -> OccupationArray:
+    return occupation_gamma(self.num_k, self.num_i, self.nspin)
 
 
 class Uniform(nn.Module):
@@ -60,7 +62,7 @@ class Uniform(nn.Module):
   spin: Int
 
   @nn.compact
-  def __call__(self) -> Int[Array, '2 nk ni']:
+  def __call__(self, *args, **kwargs) -> OccupationArray:
 
     # TODO: currently only support polarized system.
     occ = jnp.zeros([2, self.nk, self.ni])
@@ -75,7 +77,7 @@ class Orthogonal(nn.Module):
     Returns a mask like:
 
                 ni
-        __________          \n
+        __________        \n
         |o_11 o_12  0     \n
         |o_21 o_22  0     \n
     nk  |o_31 o_32  0     \n
@@ -83,13 +85,14 @@ class Orthogonal(nn.Module):
         |o_51 o_52  0     \n
   
     where \sum_i o_ij^2 = 1
+
   """
   nk: Int
   ni: Int
   spin: Int
 
   @nn.compact
-  def __call__(self) -> Int[Array, '2 nk ni']:
+  def __call__(self, *args, **kwargs) -> OccupationArray:
     if self.nk < (self.ni - self.spin) // 2:
       raise ValueError(
         'orthogonal occupation only support when the number of ',
@@ -109,3 +112,68 @@ class Orthogonal(nn.Module):
     qr2 = pad(qr2)
     occ = jnp.vstack((qr1, qr2))
     return occ**2
+
+
+def fermi_dirac(
+  eigenvalues: Float[Array, '...'],
+  fermi_level: Union[float, Float[Array, '']],
+  width: float
+) -> OccupationArray:
+  """Fermi-Dirac distribution function.
+
+    .. math::
+      o_i = 1 / (exp^((eigenvalue_i - fermi_level) / width) + 1)
+
+    Args:
+
+      eigenvalues (Float[Array, '...']): an array of eigenvalues of any shape.
+      fermi_level (Union[float, Float[Array, '']]): fermi level.
+      width (float): the width.
+
+    Returns:
+      jax.Array: the occpuation numbers with the same shape of input 
+        eigenvalues.
+
+    """
+  o = (eigenvalues - fermi_level) / width
+  o = jnp.clip(o, -100, 100)
+  o = jnp.exp(o) + 1
+  o = 1 / o
+  return o
+
+
+# TODO: Support symmetry.
+def get_fermi_level(
+  eigenvalues: Float[Array, '... num_k num_band'],
+  num_electrons: int,
+) -> Float[Array, '']:
+  """get the fermi level given a array of eigenvalues.
+  
+  Args:
+
+    eigenvalues (Float[Array, '... num_k num_band']): an array of eigenvalues. 
+      The dimension of the last two axes are num_k and num_band.
+    num_electrons (int): number of electrons
+
+    
+  Returns:
+
+      float: the fermi level.  
+  """
+
+  num_k = eigenvalues.shape[-2]
+  eigenvalues = eigenvalues.flatten().sort()  # ascending order.
+  return eigenvalues[num_k * num_electrons]
+
+
+class FermiDirac(nn.Module):
+  num_electrons: int
+  width: float
+
+  @nn.compact
+  def __call__(
+    self, eigenvalues: Float[Array, '... num_k num_band']
+  ) -> OccupationArray:
+    num_k = eigenvalues.shape[-2]
+    fermi_level = get_fermi_level(eigenvalues, self.num_electrons)
+    return fermi_dirac(eigenvalues, fermi_level, self.width) / num_k
