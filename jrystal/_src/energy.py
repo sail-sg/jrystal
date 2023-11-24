@@ -1,4 +1,6 @@
 """Energy functions. """
+
+import numpy as np
 import jax
 import jax.numpy as jnp
 import jax_xc
@@ -11,6 +13,20 @@ from typing import Callable, Union
 from jaxtyping import Float, Array
 from jrystal._src.jrystal_typing import ComplexGrid, RealVecterGrid, RealScalar
 from jrystal._src.jrystal_typing import RealGrid
+
+
+def reciprocal_braket(
+  potential_grids: ComplexGrid, density_grids: ComplexGrid, vol: RealScalar
+) -> RealScalar:
+  if potential_grids.shape != density_grids.shape:
+    raise ValueError(
+      f"potential and density shape are not aligned. Got "
+      f"{potential_grids.shape} and {density_grids.shape}."
+    )
+
+  num_grids = np.prod(np.array(potential_grids.shape))
+  discretize_factor = vol / num_grids / num_grids
+  return jnp.sum(potential_grids * density_grids) * discretize_factor
 
 
 def hartree(
@@ -38,10 +54,14 @@ def hartree(
     reciprocal_density_grid = jnp.sum(reciprocal_density_grid, axis=0)
 
   v_hartree_reciprocal = potential.hartree_reciprocal(
-    reciprocal_density_grid, g_vector_grid, vol
+    reciprocal_density_grid, g_vector_grid
   )
-  output = jnp.sum(v_hartree_reciprocal * reciprocal_density_grid) / 2
-  return output.real
+
+  hartree_energy = reciprocal_braket(
+    v_hartree_reciprocal, reciprocal_density_grid, vol
+  ) / 2
+
+  return hartree_energy.real
 
 
 def external(
@@ -77,11 +97,16 @@ def external(
       RealScalar: External energy.
 
   """
+  dim = g_vector_grid.shape[-1]
+  if reciprocal_density_grid.ndim == dim + 1:
+    reciprocal_density_grid = jnp.sum(reciprocal_density_grid, axis=0)
 
   v_externel_reciprocal = potential.externel_reciprocal(
     positions, charges, g_vector_grid, vol
   )
-  externel_energy = jnp.sum(v_externel_reciprocal * reciprocal_density_grid)
+  externel_energy = reciprocal_braket(
+    v_externel_reciprocal, reciprocal_density_grid, vol
+  )
 
   return externel_energy.real
 

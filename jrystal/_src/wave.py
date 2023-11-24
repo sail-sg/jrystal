@@ -29,7 +29,6 @@ class PlaneWaveDensity(nn.Module):
   cell_vectors: CellVector
   k_vectors: Float[Array, '... 3']
   spin: Int
-  vol: float
   occupation_method: str = 'gamma'
   xc_method: str = 'lda_x'
 
@@ -42,6 +41,7 @@ class PlaneWaveDensity(nn.Module):
     self.bloch = BatchedBlochWave(self.cell_vectors, self.k_vectors)
     self.r_vector_grid = r_vectors(self.cell_vectors, self.mask.shape)
     self.g_vector_grid = g_vectors(self.cell_vectors, self.mask.shape)
+    self.vol = jnp.linalg.det(self.cell_vectors)
 
     self.occupation = getattr(
       occupation, self.occupation_method.capitalize(), None
@@ -71,8 +71,7 @@ class PlaneWaveDensity(nn.Module):
     coeff_dense = self.qr()
     coeff_dense = jnp.swapaxes(coeff_dense, -1, -2)
     coeff_grid = coeff_expand(coeff_dense, self.mask)
-    wave = self.bloch(r, coeff_grid)
-
+    wave = self.bloch(r, coeff_grid) / jnp.sqrt(self.vol)
     density = complex_norm_square(wave)
 
     if reduce:  # reduce over k, i by occupation number
@@ -80,9 +79,9 @@ class PlaneWaveDensity(nn.Module):
       if (wave.ndim < occ.ndim or wave.shape[:occ.ndim] != occ.shape):
         raise errors.WavevecOccupationMismatchError(wave.shape, occ.shape)
       occ = jnp.expand_dims(occ, range(occ.ndim, wave.ndim))
-      density = jnp.sum(occ * density, axis=(1, 2)) / self.vol
+      density = jnp.sum(occ * density, axis=(1, 2))
     else:
-      density = density / self.vol
+      density = density
 
     return density
 
@@ -90,14 +89,13 @@ class PlaneWaveDensity(nn.Module):
     self, r_vector_grid: RealVecterGrid, reduce=True
   ) -> ComplexVecterGrid:
     density = self.density(r_vector_grid, reduce=reduce)
-    num_grids = jnp.prod(jnp.array(self.mask.shape))
-    
+
     if reduce:  # reduce over k, i
       dim = density.ndim - 1
-      density_fft = batched_fft(density, dim) / num_grids * self.vol
+      density_fft = batched_fft(density, dim)
     else:
       dim = density.ndim - 3
-      density_fft = batched_fft(density, dim) / num_grids * self.vol
+      density_fft = batched_fft(density, dim)
 
     return density_fft
 
@@ -151,7 +149,6 @@ class PlaneWaveFermiDirac(nn.Module):
   cell_vectors: CellVector
   k_vectors: Float[Array, '... 3']
   spin: Int
-  vol: float
   smearing: float
   xc_method: str = 'lda_x'
 
@@ -181,6 +178,7 @@ class PlaneWaveFermiDirac(nn.Module):
       )
     self.r_vector_grid = r_vectors(self.cell_vectors, self.mask.shape)
     self.g_vector_grid = g_vectors(self.cell_vectors, self.mask.shape)
+    self.vol = jnp.linalg.det(self.cell_vectors)
 
   def __call__(self, crystal):
     return self.total_energy(crystal)
@@ -189,7 +187,7 @@ class PlaneWaveFermiDirac(nn.Module):
     coeff_dense = self.qr()
     coeff_dense = jnp.swapaxes(coeff_dense, -1, -2)
     coeff_grid = coeff_expand(coeff_dense, self.mask)
-    wave = self.bloch(r, coeff_grid)
+    wave = self.bloch(r, coeff_grid) / jnp.sqrt(self.vol)
     density = complex_norm_square(wave)
 
     if reduce:
@@ -197,24 +195,23 @@ class PlaneWaveFermiDirac(nn.Module):
       if (wave.ndim < occ.ndim or wave.shape[:occ.ndim] != occ.shape):
         raise errors.WavevecOccupationMismatchError(wave.shape, occ.shape)
       occ = jnp.expand_dims(occ, range(occ.ndim, wave.ndim))
-      density = jnp.sum(occ * density, axis=(1, 2)) / self.vol
+      density = jnp.sum(occ * density, axis=(1, 2))
     else:
-      density = density / self.vol
+      density = density
     return density.real  # [2, num_k, num_band]
 
   def reciprocal_density(
     self, r_vector_grid: RealVecterGrid, reduce=True
   ) -> ComplexVecterGrid:
     density = self.density(r_vector_grid, reduce=reduce)
-    num_grids = jnp.prod(jnp.array(self.mask.shape))
     dim = self.cell_vectors.shape[0]
 
     if reduce:  # reduce over k, i
       dim = density.ndim - 1
-      density_fft = batched_fft(density, dim) / num_grids * self.vol
+      density_fft = batched_fft(density, dim)
     else:
       dim = density.ndim - 3
-      density_fft = batched_fft(density, dim) / num_grids * self.vol
+      density_fft = batched_fft(density, dim)
 
     return density_fft  # [2, num_k, num_band]
 
@@ -240,7 +237,7 @@ class PlaneWaveFermiDirac(nn.Module):
       reciprocal_density_reduced, self.g_vector_grid, self.vol
     )
     hartree = jnp.sum(
-      v_hartree * reciprocal_density_all_bands, 
+      v_hartree * reciprocal_density_all_bands,
       axis=range(-1, -self.dim - 1, -1)
     )
     hartree /= 2
@@ -256,7 +253,7 @@ class PlaneWaveFermiDirac(nn.Module):
       crystal.positions, crystal.charges, self.g_vector_grid, self.vol
     )
     external = jnp.sum(
-      v_external * reciprocal_density_all_bands, 
+      v_external * reciprocal_density_all_bands,
       axis=range(-1, -self.dim - 1, -1)
     )
 
