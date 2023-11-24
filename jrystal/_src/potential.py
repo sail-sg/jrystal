@@ -4,13 +4,11 @@ import jax.numpy as jnp
 from jaxtyping import Float, Array
 
 from jrystal._src.jrystal_typing import ComplexGrid, RealGrid, RealVecterGrid
-from jrystal._src.jrystal_typing import RealScalar
 
 
 def hartree_reciprocal(
   reciprocal_density_grid: ComplexGrid,
   g_vector_grid: RealVecterGrid,
-  vol: RealScalar
 ) -> ComplexGrid:
   r"""Hartree potential for planewaves on reciprocal space.
 
@@ -28,7 +26,6 @@ def hartree_reciprocal(
 
   """
   dim = g_vector_grid.shape[-1]
-
   if reciprocal_density_grid.ndim == dim + 1:  # have spin channel
     reciprocal_density_grid = jnp.sum(reciprocal_density_grid, axis=0)
 
@@ -36,7 +33,7 @@ def hartree_reciprocal(
   g_vec_square = g_vec_square.at[(0,) * dim].set(1e-16)
   output = reciprocal_density_grid / g_vec_square
   output = output.at[(0,) * dim].set(0)
-  output = output / vol * 4 * jnp.pi
+  output = output * 4 * jnp.pi
   return output
 
 
@@ -44,7 +41,7 @@ def externel_reciprocal(
   positions: Float[Array, 'num_atoms d'],
   charges: Float[Array, 'num_atoms'],
   g_vector_grid: RealVecterGrid,
-  vol: RealScalar
+  vol: Float[Array, '']
 ) -> ComplexGrid:
   r"""
     Externel potential.
@@ -70,9 +67,9 @@ def externel_reciprocal(
 
   """
   dim = positions.shape[-1]
-
   g_norm_square_grid = jnp.sum(g_vector_grid**2, axis=-1)
   si = jnp.exp(1.j * jnp.matmul(g_vector_grid, positions.transpose()))
+  num_grids = jnp.prod(jnp.array(g_vector_grid.shape[:-1]))
 
   charges = jnp.expand_dims(charges, range(3))
   g_norm_square_grid = jnp.expand_dims(g_norm_square_grid, -1)
@@ -80,14 +77,11 @@ def externel_reciprocal(
   vi = vi.at[(0,) * dim].set(0)
   vi *= 4 * jnp.pi
 
-  output = jnp.sum(vi * si, axis=-1) / vol
-  return -output
+  output = jnp.sum(vi * si, axis=-1)
+  return -output * num_grids / vol
 
 
-def xc_lda(
-  density_grid: RealGrid,
-  vol: RealScalar,
-) -> RealGrid:
+def xc_lda(density_grid: RealGrid,) -> RealGrid:
   r"""local density approximation potential. 
 
   NOTE: this is a non-polarized lda potential
@@ -108,11 +102,9 @@ def xc_lda(
   if density_grid.ndim == 4:
     density_grid = jnp.sum(density_grid, axis=0)
 
-  n1, n2, n3 = density_grid.shape
-  num_grid = n1 * n2 * n3
   output = -(density_grid * 3. / jnp.pi)**(1 / 3)
 
   if density_grid.ndim == 4:
     output = jnp.expand_dims(output / 2, axis=0)
 
-  return output * vol / num_grid
+  return output
