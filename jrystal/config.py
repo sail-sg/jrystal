@@ -15,10 +15,11 @@ def get_config() -> ml_collections.ConfigDict:
   # Planewave hyperparameters
   config.cutoff_energy: float = 100
   config.grid_sizes: Union[int, List[int], Tuple[int]] = 32
-  config.k_grid_sizes: Union[int, List[int], Tuple[int]] = 2
+  config.k_grid_sizes: Union[int, List[int], Tuple[int]] = 1
   config.occupation: str = 'gamma'
+  config.smearing: float = 0.01  # only valid when occupation is fermi dirac
 
-  # functional hyperparameters.
+  # Xc functional hyperparameters.
   # config.xc: str = 'gga_x_pbe'
   config.xc: str = 'lda_x'
 
