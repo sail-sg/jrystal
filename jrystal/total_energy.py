@@ -21,18 +21,18 @@ from jrystal.crystal import Crystal
 import time
 from tqdm import tqdm
 from absl import logging
-
+from ml_collections import ConfigDict
 logging.set_verbosity(logging.INFO)
 
 
-def create_crystal(config):
+def create_crystal(config: ConfigDict):
   _pkg_path = jrystal.get_pkg_path()
   path = _pkg_path + '/geometries/' + config.crystal + '.xyz'
   crystal = Crystal(xyz_file=path)
   return crystal
 
 
-def create_density_module(config):
+def create_density_module(config: ConfigDict):
   crystal = create_crystal(config)
   cutoff_energy = config.cutoff_energy
   g_grid_sizes = get_grid_sizes(config.grid_sizes)
@@ -43,15 +43,28 @@ def create_density_module(config):
   mask = get_mask_radius(crystal.cell_vectors, g_grid_sizes, cutoff_energy)
   k_vector_grid = k_vectors(crystal.cell_vectors, k_grid_sizes)
 
-  density_module = PlaneWaveFermiDirac(
-    crystal.num_electrons,
-    mask,
-    crystal.cell_vectors,
-    k_vector_grid,
-    spin,
-    crystal.vol,
-    xc_method=xc_method
-  )
+  if config.occupation in ["fermi dirac", "fermi_dirac", "fermi"]:
+    density_module = PlaneWaveFermiDirac(
+      crystal.num_electrons,
+      mask,
+      crystal.cell_vectors,
+      k_vector_grid,
+      spin,
+      crystal.vol,
+      xc_method=xc_method
+      
+    )
+  else:
+    density_module = PlaneWaveDensity(
+      crystal.num_electrons,
+      mask,
+      crystal.cell_vectors,
+      k_vector_grid,
+      spin,
+      crystal.vol,
+      occupation_method=config.occupation,
+      xc_method=xc_method
+    )
 
   return density_module
 
@@ -179,7 +192,7 @@ def train(config: ml_collections.ConfigDict):
   logging.info(f" Hartree: {e_har}")
   logging.info(f" Nucleus Repulsion: {e_ew}")
 
-  print(variables["variable"]["occupation"])
+  return
 
 
 if __name__ == '__main__':
