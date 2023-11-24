@@ -121,7 +121,7 @@ def kinetic(
     e_kin * complex_norm_square(coeff_grid), axis=range(3, dim + 3)
   )
 
-  if occupation:
+  if occupation is not None:
     e_kin = jnp.sum(e_kin * occupation) / 2
   else:
     e_kin /= 2
