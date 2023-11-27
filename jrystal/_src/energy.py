@@ -18,6 +18,24 @@ from jrystal._src.jrystal_typing import RealGrid
 def reciprocal_braket(
   potential_grids: ComplexGrid, density_grids: ComplexGrid, vol: RealScalar
 ) -> RealScalar:
+  r"""This function calculate the inner product of <f|g> in reciprocal space
+
+  .. math::
+    <f|g> \approx \sum_g f^*(g)r(g) * vol / N / N
+
+  where N is the number of grid size.
+
+  NOTE: in this project, hartree and external energy integral is calculated 
+  in reciprocal space.
+
+  Args:
+      potential_grids (ComplexGrid): potential in reciprocal space.
+      density_grids (ComplexGrid): density in reciprocal space.
+      vol (RealScalar): the volume of unit cell.
+
+  Returns:
+      RealScalar: the value of the inner product.
+  """
   if potential_grids.shape != density_grids.shape:
     raise ValueError(
       f"potential and density shape are not aligned. Got "
@@ -26,7 +44,44 @@ def reciprocal_braket(
 
   num_grids = np.prod(np.array(potential_grids.shape))
   discretize_factor = vol / num_grids / num_grids
-  return jnp.sum(potential_grids * density_grids) * discretize_factor
+  product = jnp.sum(
+    jnp.conj(potential_grids) * density_grids
+  ) * discretize_factor
+
+  return product.real
+
+
+def real_braket(
+    potential_grids: ComplexGrid, density_grids: ComplexGrid, vol: RealScalar
+) -> RealScalar:
+  r"""This function calculate the inner product of <f|g> in real space
+
+  .. math::
+    <f|g> \approx \sum_r f^*(r)r(r) * vol / N 
+
+  where N is the number of grid size.
+
+  NOTE: in this project, exchange-correlation energy integral is calculated 
+  in real space.
+
+  Args:
+      potential_grids (ComplexGrid): potential in real space.
+      density_grids (ComplexGrid): density in real space.
+      vol (RealScalar): the volume of unit cell.
+
+  Returns:
+      RealScalar: the value of the inner product.
+  """
+  if potential_grids.shape != density_grids.shape:
+    raise ValueError(
+      f"potential and density shape are not aligned. Got "
+      f"{potential_grids.shape} and {density_grids.shape}."
+    )
+
+  num_grids = np.prod(np.array(potential_grids.shape))
+  discretize_factor = vol / num_grids
+  product = jnp.sum(potential_grids * density_grids) * discretize_factor
+  return product
 
 
 def hartree(

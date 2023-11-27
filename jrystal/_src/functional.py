@@ -57,7 +57,7 @@ def coeff_compress(
   return _get_value(coeff_grid)
 
 
-def get_mask_radius(
+def get_mask_radial(
   cell_vectors: CellVector, grid_sizes: Union[List, jax.Array], e_cut: float
 ) -> MaskGrid:
   g_vector_grid = g_vectors(cell_vectors, grid_sizes)

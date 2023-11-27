@@ -81,7 +81,7 @@ def externel_reciprocal(
   return -output * num_grids / vol
 
 
-def xc_lda(density_grid: RealGrid,) -> RealGrid:
+def xc_lda(density_grid: RealGrid) -> RealGrid:
   r"""local density approximation potential. 
 
   NOTE: this is a non-polarized lda potential
@@ -108,3 +108,14 @@ def xc_lda(density_grid: RealGrid,) -> RealGrid:
     output = jnp.expand_dims(output / 2, axis=0)
 
   return output
+
+  if polarized:
+    density_real_vec = jnp.sum(density_real_vec, axis=0)
+    
+  N1, N2, N3 = density_real_vec.shape
+  N = N1 * N2 * N3
+  output = -(density_real_vec * 3. / jnp.pi)**(1 / 3)
+  
+  if polarized:
+    output = jnp.expand_dims(output, axis=0)
+  return output * vol / N

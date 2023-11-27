@@ -18,7 +18,7 @@ from jrystal._src.crystal import Crystal
 from typing import Tuple, Dict
 from jaxtyping import Int, Array, Float
 from jrystal._src.jrystal_typing import MaskGrid, CellVector, RealScalar
-from jrystal._src.jrystal_typing import ComplexVecterGrid, RealVecterGrid
+from jrystal._src.jrystal_typing import ComplexGrid, RealVecterGrid, RealGrid
 from jrystal._src import errors
 from jrystal._src.module import QRDecomp, BatchedBlochWave
 
@@ -30,7 +30,7 @@ class PlaneWaveDensity(nn.Module):
   k_vectors: Float[Array, '... 3']
   spin: Int
   occupation_method: str = 'gamma'
-  xc_method: str = 'lda_x'
+  xc_functional: str = 'lda_x'
 
   def setup(self):
     num_k = np.prod(np.array(self.k_vectors.shape)[:-1]).item()
@@ -55,19 +55,21 @@ class PlaneWaveDensity(nn.Module):
         "Occupation method must be \{gamma, orthogonal, uniform\}"
       )
 
-    self.xc_density = getattr(jax_xc.functionals, self.xc_method, None)
+    self.xc_density = getattr(jax_xc.functionals, self.xc_functional, None)
     if self.xc_density:
       self.xc_density = self.xc_density(polarized=True)
     else:
       raise NotImplementedError(
-        f"{self.xc_method} is not included in jax-xc. "
+        f"{self.xc_functional} is not included in jax-xc. "
         "See https://jax-xc.readthedocs.io/en/latest/index.html#"
       )
 
   def __call__(self, crystal):
     return self.total_energy(crystal)
 
-  def density(self, r, reduce=True) -> jax.Array:
+  def density(self, r=None, reduce=True) -> jax.Array:
+    if r is None:
+      r = self.r_vector_grid
     coeff_dense = self.qr()
     coeff_dense = jnp.swapaxes(coeff_dense, -1, -2)
     coeff_grid = coeff_expand(coeff_dense, self.mask)
@@ -85,10 +87,8 @@ class PlaneWaveDensity(nn.Module):
 
     return density
 
-  def reciprocal_density(
-    self, r_vector_grid: RealVecterGrid, reduce=True
-  ) -> ComplexVecterGrid:
-    density = self.density(r_vector_grid, reduce=reduce)
+  def reciprocal_density(self, reduce=True) -> ComplexGrid:
+    density = self.density(self.r_vector_grid, reduce=reduce)
 
     if reduce:  # reduce over k, i
       dim = density.ndim - 1
@@ -109,15 +109,11 @@ class PlaneWaveDensity(nn.Module):
     return self.occupation()
 
   def hartree(self) -> RealScalar:
-    reciprocal_density_grid = self.reciprocal_density(
-      self.r_vector_grid, reduce=True
-    )
+    reciprocal_density_grid = self.reciprocal_density(reduce=True)
     return energy.hartree(reciprocal_density_grid, self.g_vector_grid, self.vol)
 
   def external(self, crystal: Crystal) -> RealScalar:
-    reciprocal_density_grid = self.reciprocal_density(
-      self.r_vector_grid, reduce=True
-    )
+    reciprocal_density_grid = self.reciprocal_density(reduce=True)
     positions = crystal.positions
     charges = crystal.charges
     return energy.external(
@@ -132,7 +128,9 @@ class PlaneWaveDensity(nn.Module):
     )
 
   def xc(self) -> RealScalar:
-    return energy.xc(self.density, self.r_vector_grid, self.vol, self.xc_method)
+    return energy.xc(
+      self.density, self.r_vector_grid, self.vol, self.xc_functional
+    )
 
   def total_energy(self, crystal: Crystal) -> RealScalar:
     eh = self.hartree()
@@ -150,7 +148,7 @@ class PlaneWaveFermiDirac(nn.Module):
   k_vectors: Float[Array, '... 3']
   spin: Int
   smearing: float
-  xc_method: str = 'lda_x'
+  xc_functional: str = 'lda_x'
 
   def setup(self):
     num_k = self.k_vectors.shape[0]
@@ -168,12 +166,12 @@ class PlaneWaveFermiDirac(nn.Module):
     self.occupation_fn = occupation.FermiDirac(
       self.num_electrons, width=self.smearing
     )
-    self.xc_density = getattr(jax_xc.functionals, self.xc_method, None)
+    self.xc_density = getattr(jax_xc.functionals, self.xc_functional, None)
     if self.xc_density:
       self.xc_density = self.xc_density(polarized=True)
     else:
       raise NotImplementedError(
-        f"{self.xc_method} is not included in jax-xc. "
+        f"{self.xc_functional} is not included in jax-xc. "
         "See https://jax-xc.readthedocs.io/en/latest/index.html#"
       )
     self.r_vector_grid = r_vectors(self.cell_vectors, self.mask.shape)
@@ -183,7 +181,9 @@ class PlaneWaveFermiDirac(nn.Module):
   def __call__(self, crystal):
     return self.total_energy(crystal)
 
-  def density(self, r, reduce=True) -> jax.Array:
+  def density(self, r=None, reduce=True) -> jax.Array:
+    if r is None:
+      r = self.r_vector_grid
     coeff_dense = self.qr()
     coeff_dense = jnp.swapaxes(coeff_dense, -1, -2)
     coeff_grid = coeff_expand(coeff_dense, self.mask)
@@ -202,7 +202,7 @@ class PlaneWaveFermiDirac(nn.Module):
 
   def reciprocal_density(
     self, r_vector_grid: RealVecterGrid, reduce=True
-  ) -> ComplexVecterGrid:
+  ) -> ComplexGrid:
     density = self.density(r_vector_grid, reduce=reduce)
     dim = self.cell_vectors.shape[0]
 
@@ -265,7 +265,7 @@ class PlaneWaveFermiDirac(nn.Module):
 
   def xc(self) -> Float[Array, 'num_spin num_k num_bands']:
     epsilon_xc = xc_density.xc_density(
-      self.density, self.r_vector_grid, self.vol, self.xc_method
+      self.density, self.r_vector_grid, self.vol, self.xc_functional
     )
     density_all_bands = self.density(self.r_vector_grid, reduce=False)
     return jnp.sum(
@@ -290,3 +290,107 @@ class PlaneWaveFermiDirac(nn.Module):
     energies = {'hartree': eh, 'external': ee, 'kinetic': ek, 'xc': exc}
 
     return eh + ee + ek + exc, energies
+
+
+class PlaneWaveBandStructure(nn.Module):
+  density_hamitonian_fn: callable
+  num_bands: Int
+  mask: MaskGrid
+  cell_vectors: CellVector
+  k_vectors: Float[Array, '... 3']
+  xc_functional: str = 'lda_x'
+
+  def setup(self):
+    num_k = np.prod(np.array(self.k_vectors.shape)[:-1]).item()
+    num_g = np.sum(np.array(self.mask)).item()
+    shape = [1, num_k, num_g, self.num_bands]
+    self.dim = self.cell_vectors.shape[0]
+    self.qr = QRDecomp(shape)
+    self.bloch = BatchedBlochWave(self.cell_vectors, self.k_vectors)
+    self.r_vector_grid = r_vectors(self.cell_vectors, self.mask.shape)
+    self.g_vector_grid = g_vectors(self.cell_vectors, self.mask.shape)
+    self.vol = jnp.linalg.det(self.cell_vectors)
+
+    self.xc_potential = potential.xc_lda
+
+  def __call__(self, crystal):
+    return self.energy_trace(crystal)
+
+  def density_bands(self, r=None, reduce: bool = False) -> RealGrid:
+    if r is None:
+      r = self.r_vector_grid
+    coeff_dense = self.qr()
+    coeff_dense = jnp.swapaxes(coeff_dense, -1, -2)
+    coeff_grid = coeff_expand(coeff_dense, self.mask)
+    wave = self.bloch(r, coeff_grid) / jnp.sqrt(self.vol)
+    density = complex_norm_square(wave)
+
+    if reduce:
+      density = jnp.sum(density, axis=range(3))
+    return density
+  
+  def reciprocal_density_bands(self, reduce: bool = False) -> ComplexGrid:
+    density = self.density_bands(reduce=False)
+    dim = density.ndim - 3
+    density_fft = batched_fft(density, dim)
+    if reduce:
+      density_fft = jnp.sum(density_fft, axis=range(3))
+    return density_fft
+
+  def get_coefficient(self):
+    coeff_dense = self.qr()
+    coeff_dense = jnp.swapaxes(coeff_dense, -1, -2)
+    coeff_grid = coeff_expand(coeff_dense, self.mask)
+    return coeff_grid
+  
+  @property
+  def density_hamitonian_grid(self):
+    density = self.density_hamitonian_fn(self.r_vector_grid)
+    return jnp.sum(density, axis=0)
+  
+  @property
+  def reciprocal_density_hamitonian_grid(self):
+    return jnp.fft.fftn(self.density_hamitonian_grid)
+
+  def hamitonian_hartree(self) -> ComplexGrid:
+    return potential.hartree_reciprocal(
+      self.reciprocal_density_hamitonian_grid, self.g_vector_grid
+    )
+
+  def hamitonian_xc(self) -> RealGrid:
+    return potential.xc_lda(self.density_hamitonian_grid)    
+
+  def hamitonian_external(self, crystal: Crystal) -> RealGrid:
+    return potential.externel_reciprocal(
+      crystal.positions, crystal.charges, self.g_vector_grid, self.vol
+    )
+    
+  def energy_trace(self, crystal: Crystal) -> RealScalar:
+    
+    density_bands_grid = self.density_bands(reduce=True)
+    reciprocal_density_bands_grid = self.reciprocal_density_bands(reduce=True)
+    
+    hartree = energy.reciprocal_braket(
+      self.hamitonian_hartree(), reciprocal_density_bands_grid, self.vol
+    )
+
+    external = energy.reciprocal_braket(
+      self.hamitonian_external(crystal), reciprocal_density_bands_grid, self.vol
+    )
+
+    coeff_grid = self.get_coefficient()
+    kinetic = energy.kinetic(
+      self.g_vector_grid, self.k_vectors, coeff_grid, occupation=1
+    )
+
+    xc_energy = energy.real_braket(
+      self.hamitonian_xc(), density_bands_grid, self.vol
+    )
+
+    energies = {
+      'hartree': hartree, 'external': external, 
+      'kinetic': kinetic, 'xc': xc_energy
+    }
+
+    total_energy = hartree + external + kinetic + xc_energy
+    return total_energy, energies
