@@ -1,5 +1,6 @@
-"""Pure functional API of wave function that will be used for constructing 
+"""Pure functional API of wave function that will be used for constructing
   flax.linen.modules. """
+# TODO: functional is not a good naming for this file.
 import jax
 import jax.numpy as jnp
 from jaxtyping import Int, Float, Array, Complex
@@ -90,10 +91,10 @@ def batched_fft(
   x: Union[Complex[Array, '...'], Float[Array, '...']], fft_dim: Int
 ) -> Complex[Array, '...']:
   """batched fast Fourier transform. FFT will perform over the last ``fft_dim``
-    axes, and other axes are mapped. 
+    axes, and other axes are mapped.
 
   Args:
-      x (array): an array. 
+      x (array): an array.
       fft_dim (int): fft dimension.
 
   Returns:
@@ -110,11 +111,11 @@ def batched_fft(
 def batched_ifft(
   x: Union[Complex[Array, '...'], Float[Array, '...']], ifft_dim: Int
 ) -> Complex[Array, '...']:
-  """batched invser fast Fourier transform. IFFT will perform over the last 
-    ``ifft_dim`` axes, and other axes are mapped. 
+  """batched invser fast Fourier transform. IFFT will perform over the last
+    ``ifft_dim`` axes, and other axes are mapped.
 
   Args:
-      x (array): an array. 
+      x (array): an array.
       ifft_dim (int): ifft dimension.
 
   Returns:

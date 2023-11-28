@@ -113,7 +113,7 @@ def translation_vectors(
 
   Args:
     cell_vectors (ndarray): the reciprocal vectors
-    cutoff (ndarray): the real space cutoff such that 1/cutoff ~ 0.  
+    cutoff (ndarray): the real space cutoff such that 1/cutoff ~ 0.
           The larger the more precise of ewald sum.
 
   Returns:

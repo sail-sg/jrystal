@@ -1,8 +1,8 @@
 """The Crystal class.
 
-This module establishes the interface for the crystal structure. It's important 
-to note that all values are presented in ATOMIC UNITS inside, specifically 
-hartree for energy and Bohr for length. The input positions of atoms should be 
+This module establishes the interface for the crystal structure. It's important
+to note that all values are presented in ATOMIC UNITS inside, specifically
+hartree for energy and Bohr for length. The input positions of atoms should be
 in angstrom.
 """
 import ase
@@ -18,29 +18,29 @@ from jrystal._src.const import ANGSTROM2BOHR
 @chex.dataclass
 class Crystal:
   """Crystal object.
-  
-  The crystal object represents the structure of a solid-state crystal, 
-  characterized by its periodic repetition. It encompasses all the details 
+
+  The crystal object represents the structure of a solid-state crystal,
+  characterized by its periodic repetition. It encompasses all the details
   regarding the atoms and cells. It's a wrapper of the ASE
   (https://wiki.fysik.dtu.dk/ase/).
-  
+
   Attributes:
-  
+
     symbols: str = None
     scaled_positions: Float[Array, 'num_atoms d'] = None
-    positions: Float[Array, 'num_atoms d'] = None 
+    positions: Float[Array, 'num_atoms d'] = None
     charges: Int[Array, 'num_atoms'] = None
-    spin: int = None 
+    spin: int = None
     xyz_file: str = None
     cell_vectors: Float[Array, 'd d'] = None
     reciprocal_vectors: Float[Array, 'd d'] = None
     A: Float[Array, 'd d'] = None  # alias for lattice_vectors
     B: Float[Array, 'd d'] = None  # alias for reciprocal_vectors
-    vol: float = None 
+    vol: float = None
     num_atoms: int = None
-    num_electrons: int = None 
+    num_electrons: int = None
     _ase_cell: ase.Atoms = None
-  
+
   """
 
   symbols: str = None
