@@ -17,7 +17,7 @@ class _TestBlochWave(parameterized.TestCase):
     super().setUp()
     # hyper params
     ni, nk, nd = 1, 2, 3
-    # grid_sizes = (8,) * nd
+    grid_sizes = (8,) * nd
     key = jax.random.PRNGKey(42)
     # random lattice
     key, subkey = jax.random.split(key)
