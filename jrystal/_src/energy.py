@@ -23,10 +23,14 @@ def reciprocal_braket(
       f"potential and density shape are not aligned. Got "
       f"{potential_grids.shape} and {density_grids.shape}."
     )
-
   num_grids = np.prod(np.array(potential_grids.shape))
-  discretize_factor = vol / num_grids / num_grids
-  return jnp.sum(potential_grids * density_grids) * discretize_factor
+  # Parseval's theorem
+  parseval_factor = 1 / num_grids
+  # numerical integration weights
+  integral_weight = vol / num_grids
+  return jnp.sum(
+    potential_grids * density_grids
+  ) * parseval_factor * integral_weight
 
 
 def hartree(
@@ -64,6 +68,7 @@ def hartree(
   return hartree_energy.real
 
 
+# TODO: reduce annotation aliases, use explicit Complex[Array, "n1 n2 n3"] instead
 def external(
   reciprocal_density_grid: ComplexGrid,
   positions: Float[Array, 'num_atoms d'],
