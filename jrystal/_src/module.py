@@ -31,12 +31,8 @@ class PlaneWave(nn.Module):
       input shape [n1, n2, n3, 3].
 
   Returns:
-<<<<<<< Updated upstream
     ComplexVecterGrid: planewaves evaluated at r. 
       Shape[nspin, num_k, num_band, ..., 3]
-=======
-    ComplexVecterGrid: planewaves evaluated at r.
->>>>>>> Stashed changes
 
   Ref. https://en.wikipedia.org/wiki/Bloch%27s_theorem
 
