@@ -20,7 +20,8 @@ class PlaneWave(nn.Module):
 
   Attributes:
     shape (List): the shape of coeffients.
-      A typical shape is [2, num_k, num_g, num_bands] TODO: num_bands is a bit confusing
+      A typical shape is [2, num_k, num_g, num_bands]
+      TODO: num_bands is a bit confusing
       where num_g must be greater than num_bands.
     mask (MaskGrid): The mask for g vector grid cut-off.
     cell_vectors (CellVectors): cell vectors.
@@ -31,12 +32,8 @@ class PlaneWave(nn.Module):
       input shape [n1, n2, n3, 3].
 
   Returns:
-<<<<<<< Updated upstream
     ComplexVecterGrid: planewaves evaluated at r. 
       Shape[nspin, num_k, num_band, ..., 3]
-=======
-    ComplexVecterGrid: planewaves evaluated at r.
->>>>>>> Stashed changes
 
   Ref. https://en.wikipedia.org/wiki/Bloch%27s_theorem
 
