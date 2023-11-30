@@ -1,6 +1,5 @@
 """Functions and modules about grids"""
 
-import jax
 import jax.numpy as jnp
 from jaxtyping import Int, Array, Float
 import numpy as np
@@ -28,7 +27,10 @@ def grid_1d(n: Int, normalize=False) -> Int[Array, 'n']:
   return (grid / n if normalize else grid)
 
 
-def _vector_grid(basis: jax.Array, grid_sizes, normalize=False):
+def _vector_grid(
+  basis: Float[Array, "d"], grid_sizes,
+  normalize=False
+):
   """_summary_
 
   Args:
@@ -36,7 +38,6 @@ def _vector_grid(basis: jax.Array, grid_sizes, normalize=False):
     grid_sizes (_type_): _description_
     normalize (bool, optional): _description_. Defaults to False.
   """
-
   dim = len(grid_sizes)
   assert basis.shape[0] == basis.shape[1] == dim
   components = []
@@ -107,13 +108,13 @@ def get_grid_sizes(grid_sizes: Int | Int[Array, 'd']):
 
 def translation_vectors(
   cell_vectors: Float[Array, 'd d'],
-  cutoff: Float[Array, 'd'] = 1e4
+  cutoff: Float[Array, 'd'] = 1e4,
 ) -> RealVecterGrid:
   """Construct the translation grid lattice for ewald sum.
 
   Args:
     cell_vectors (ndarray): the reciprocal vectors
-    cutoff (ndarray): the real space cutoff such that 1/cutoff ~ 0.  
+    cutoff (ndarray): the real space cutoff such that 1/cutoff ~ 0.
           The larger the more precise of ewald sum.
 
   Returns:

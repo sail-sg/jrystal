@@ -87,6 +87,23 @@ def complex_norm_square(x: Complex[Array, '...']) -> Float[Array, '...']:
   return jnp.abs(jnp.conj(x) * x)
 
 
+def quartile(n: int) -> List[int]:
+  """Compute the quartiles of arange(n).
+
+  Args:
+      n (int): an integer
+
+  Returns:
+      List[int]: 3 quartiles.
+  """
+  quartiles = []
+  for q in [0.25, 0.5, 0.75]:
+    quartiles.append(
+      int(np.quantile(np.arange(n)+1, q, method="closest_observation"))
+    )
+  return quartiles
+
+
 def get_fftw_factor(n: int):
   """ get fftw factor n = 2^a * 3^b * 5^c *7 ^d * 11^e * 13^f   and  e/f = 0/1
   prime_factor_list = [2, 3, 5, 7, 11, 13] smaller than 2049.

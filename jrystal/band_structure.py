@@ -10,8 +10,6 @@ from jrystal.training_utils import create_crystal, get_ewald_coulomb_repulsion
 from jrystal.training_utils import create_optimizer
 from jrystal._src.band_structure import get_k_path
 from jrystal._src.grid import get_grid_sizes
-from jrystal._src.functional import get_mask_radial
-
 import time
 from tqdm import tqdm
 from absl import logging
@@ -22,21 +20,19 @@ logging.set_verbosity(logging.INFO)
 
 def create_module(config: ConfigDict, density_fn: callable):
   crystal = create_crystal(config)
-  cutoff_energy = config.cutoff_energy
   g_grid_sizes = get_grid_sizes(config.grid_sizes)
   xc_functional = config.xc
-  mask = get_mask_radial(crystal.cell_vectors, g_grid_sizes, cutoff_energy)
-  
+
   k_vectors = get_k_path(
-    crystal.cell_vectors, path=config.k_path, 
+    crystal.cell_vectors, path=config.k_path,
     num=config.num_kpoints, fractional=False
   )
 
   band_structure_module = PlaneWaveBandStructure(
     density_fn,
     config.num_unoccupied_bands + crystal.num_electrons//2,
-    mask,
     crystal.A,
+    g_grid_sizes,
     k_vectors,
     xc_functional=xc_functional
   )
@@ -72,7 +68,7 @@ def train(config: ConfigDict):
   density_fn = jrystal.total_energy.train(config, return_fn="density")
   logging.info("Done total energy minimization. "
                "Now optimize the sum of band energies...")
-  
+
   rng = jax.random.key(config.seed)
   rng, init_rng = jax.random.split(rng)
   state, variables = create_train_state(init_rng, config, density_fn)
@@ -130,7 +126,7 @@ def train(config: ConfigDict):
   logging.info(f" Hartree: {e_har}")
   logging.info(f" Nucleus Repulsion: {e_ew}")
 
- 
+
 if __name__ == '__main__':
   config = jrystal.config.get_config()
   train(config)

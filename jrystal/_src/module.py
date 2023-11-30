@@ -4,7 +4,7 @@ import flax.linen as nn
 
 from jrystal._src.bloch import bloch_wave
 from jrystal._src.utils import vmapstack
-from jrystal._src.functional import coeff_expand, batched_ifft
+from jrystal._src.wave_ops import coeff_expand, batched_ifft
 from jrystal._src.initializer import normal
 
 from typing import Union, List
@@ -14,24 +14,24 @@ from jrystal._src.jrystal_typing import ComplexVecterGrid, RealVecterGrid
 
 
 class PlaneWave(nn.Module):
-  """The plane wave module. 
-  
+  """The plane wave module.
+
   It maps position r with shape [..., d] to [nspin, nk, ni, ...]
 
   Attributes:
-    shape (List): the shape of coeffients. 
-      A typical shape is [2, num_k, num_g, num_bands] 
+    shape (List): the shape of coeffients.
+      A typical shape is [2, num_k, num_g, num_bands]
       where num_g must be greater than num_bands.
     mask (MaskGrid): The mask for g vector grid cut-off.
     cell_vectors (CellVectors): cell vectors.
     k_vector_grid (RealVecterGrid): k vector grid.
-  
+
   Args:
-    r (jax.array): the position in real space. Can also be a vector grid, eg, 
-      input shape [n1, n2, n3, 3]. 
+    r (jax.array): the position in real space. Can also be a vector grid, eg,
+      input shape [n1, n2, n3, 3].
 
   Returns:
-    ComplexVecterGrid: planewaves evaluated at r. 
+    ComplexVecterGrid: planewaves evaluated at r.
       Shape[nspin, num_k, num_band, ..., 3]
 
   Ref. https://en.wikipedia.org/wiki/Bloch%27s_theorem
@@ -92,15 +92,15 @@ class BatchedBlochWave(nn.Module):
   # add funtools.partial()
 
   # TODO: we may just need the u function in bloch wave for feature usage.
-  """Batched bloch wave module. 
-  
+  """Batched bloch wave module.
+
     Attributes:
       cell_vectors (CellVector): the cell vectors.
       k_vector_grid: the k vector grid.
 
     Args:
-      r (jax.array): the position in real space. Can also be a vector grid, eg, 
-        input shape [n1, n2, n3, 3]. 
+      r (jax.array): the position in real space. Can also be a vector grid, eg,
+        input shape [n1, n2, n3, 3].
       coeff_grid (ComplexVecterGrid): The Hermitian coeffecient grid. A typical
         shape is [num_spin, num_k, num_bands, n1, n2, n3]
 
@@ -108,7 +108,7 @@ class BatchedBlochWave(nn.Module):
       ComplexVecterGrid: the bloch wave function evaluated at r.
 
     Ref. https://en.wikipedia.org/wiki/Bloch%27s_theorem
-    
+
   """
 
   cell_vectors: CellVector
@@ -119,7 +119,7 @@ class BatchedBlochWave(nn.Module):
     self, r: Float[Array, '*batches r'], coeff_grid: ComplexVecterGrid
   ) -> ComplexVecterGrid:
     dim = r.shape[-1]
-    wavefun = bloch_wave(self.cell_vectors, coeff_grid, self.k_vector_grid)  #
+    wavefun = bloch_wave(self.cell_vectors, coeff_grid, self.k_vector_grid)
     if r.ndim == 1:
       wave = wavefun(r)
     else:

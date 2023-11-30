@@ -1,7 +1,7 @@
 import jax.numpy as jnp
 from absl.testing import absltest, parameterized
 import numpy as np
-from jrystal._src.utils import vmapstack, vmapstack_reverse
+from jrystal._src.utils import vmapstack, vmapstack_reverse, quartile
 from jax.config import config
 
 config.update("jax_enable_x64", True)
@@ -48,6 +48,12 @@ class _Test_utils(parameterized.TestCase):
     _vmap_f = vmapstack_reverse(times=2)(self.g)
     x = jnp.ones(shape=shape)
     np.testing.assert_array_equal(_vmap_f(x).shape, results)
+
+  def test_quartile(self):
+    np.testing.assert_array_equal(quartile(16), [4, 8, 12])
+    np.testing.assert_array_equal(quartile(30), [7, 15, 23])
+    np.testing.assert_array_equal(quartile(96), [24, 48, 72])
+    # print(quartile(6))
 
 
 if __name__ == "__main__":

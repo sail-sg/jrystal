@@ -16,7 +16,7 @@ def hartree_reciprocal(
     V = 4 \pi \sum_i \sum_k \sum_G \dfrac{n(G)}{\|G\|^2}
 
   Args:
-    reciprocal_density_grid (ComplexGrid): the density of grid points in 
+    reciprocal_density_grid (ComplexGrid): the density of grid points in
       reciprocal space.
     g_vector_grid (RealVecterGrid): G vector grid.
     vol (RealScalar): the volume of unit cell.
@@ -48,7 +48,7 @@ def externel_reciprocal(
 
     .. math::
         V = \sum_G \sum_i s_i(G) v_i(G)
-    
+
     where
 
     .. math::
@@ -56,7 +56,7 @@ def externel_reciprocal(
         v_i(G) = -4 \pi z_i / \Vert G \Vert^2
 
     Args:
-      positions (Array): Coordinates of atoms in a unit cell. 
+      positions (Array): Coordinates of atoms in a unit cell.
         Shape: [num_atoms d].
       charges (Array): Charges of atoms. Shape: [num_atoms].
       g_vector_grid (RealVecterGrid): G vector grid.
@@ -82,7 +82,7 @@ def externel_reciprocal(
 
 
 def xc_lda(density_grid: RealGrid) -> RealGrid:
-  r"""local density approximation potential. 
+  r"""local density approximation potential.
 
   NOTE: this is a non-polarized lda potential
 
@@ -90,7 +90,7 @@ def xc_lda(density_grid: RealGrid) -> RealGrid:
     v_lda = - (3 * n(r) / \pi )^{\frac 1/3 }
 
   Args:
-      density_grid (RealGrid): the density of grid points in 
+      density_grid (RealGrid): the density of grid points in
         real space.
       vol (RealScalar): the volume of unit cell.
 
@@ -107,15 +107,4 @@ def xc_lda(density_grid: RealGrid) -> RealGrid:
   if density_grid.ndim == 4:
     output = jnp.expand_dims(output / 2, axis=0)
 
-  return output
-
-  if polarized:
-    density_real_vec = jnp.sum(density_real_vec, axis=0)
-    
-  N1, N2, N3 = density_real_vec.shape
-  N = N1 * N2 * N3
-  output = -(density_real_vec * 3. / jnp.pi)**(1 / 3)
-  
-  if polarized:
-    output = jnp.expand_dims(output, axis=0)
-  return output * vol / N
+  return output/2

@@ -1,10 +1,9 @@
-"""Optimization 
-  
+"""Optimization
+
   This module is for optimizing the parameters.
 """
 import os
 import jax
-import jax.numpy as jnp
 import flax
 from flax.training import train_state
 import ml_collections
@@ -13,7 +12,7 @@ from jrystal.config import get_config
 from jrystal.wave import PlaneWaveDensity, PlaneWaveFermiDirac
 from jrystal._src.grid import get_grid_sizes
 from jrystal._src.grid import k_vectors
-from jrystal._src.functional import get_mask_radial
+from jrystal._src.wave_ops import get_mask_cubic, get_max_cutoff_energy
 from jrystal.training_utils import create_crystal, get_ewald_coulomb_repulsion
 from jrystal.training_utils import create_optimizer
 
@@ -27,20 +26,18 @@ logging.set_verbosity(logging.INFO)
 
 def create_module(config: ConfigDict):
   crystal = create_crystal(config)
-  cutoff_energy = config.cutoff_energy
   g_grid_sizes = get_grid_sizes(config.grid_sizes)
   xc_functional = config.xc
   ni = crystal.num_electrons
   k_grid_sizes = get_grid_sizes(config.k_grid_sizes)
   spin = int(ni % 2)
-  mask = get_mask_radial(crystal.cell_vectors, g_grid_sizes, cutoff_energy)
   k_vector_grid = k_vectors(crystal.cell_vectors, k_grid_sizes)
 
   if config.occupation in ["fermi dirac", "fermi_dirac", "fermi"]:
     density_module = PlaneWaveFermiDirac(
       crystal.num_electrons,
-      mask,
       crystal.cell_vectors,
+      g_grid_sizes,
       k_vector_grid,
       spin,
       xc_functional=xc_functional
@@ -48,13 +45,24 @@ def create_module(config: ConfigDict):
   else:
     density_module = PlaneWaveDensity(
       crystal.num_electrons,
-      mask,
       crystal.cell_vectors,
+      g_grid_sizes,
       k_vector_grid,
       spin,
       occupation_method=config.occupation,
       xc_functional=xc_functional
     )
+  mask, num = get_mask_cubic(g_grid_sizes)
+  cutoff_energy = get_max_cutoff_energy(
+    crystal.cell_vectors, g_grid_sizes, k_vector_grid
+  )
+  # mask_ratio = num / jnp.prod(jnp.array(g_grid_sizes))
+  logging.info("Creating density module...")
+  logging.info(f'{num} G points selected.')
+  # logging.info(f'{mask_ratio*100:.2f}% frequency masked.')
+  logging.info(f'The size of G grid: {mask.shape}')
+  logging.info(f'The size of K points: {k_vector_grid.shape[:-1]}')
+  logging.info(f'Estimated maximum of cutoff energy: {cutoff_energy:.3f} Ha')
 
   return density_module
 
@@ -65,12 +73,6 @@ def create_train_state(rng, config):
   # _, r_vector_grid, _ = create_grids(config)
   crystal = create_crystal(config)
   optimizer = create_optimizer(config)
-  grid_point_num = jnp.prod(jnp.array(density.mask.shape))
-  mask_ratio = jnp.sum(density.mask) / grid_point_num
-
-  logging.info(f'{jnp.sum(density.mask)} G points selected.')
-  logging.info(f'{mask_ratio*100:.2f}% frequency masked.')
-  logging.info(f'the mesh of G grid: {density.mask.shape}')
 
   variables, params = flax.core.pop(density.init(rng, crystal), 'params')
   state = train_state.TrainState.create(
