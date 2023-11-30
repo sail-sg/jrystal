@@ -7,7 +7,7 @@ in angstrom.
 """
 import ase
 from ase.io import read
-import jax.numpy as jnp
+import numpy as np
 from jaxtyping import Float, ArrayLike
 from typing import Union, List
 
@@ -18,29 +18,29 @@ from jrystal._src.const import ANGSTROM2BOHR
 @chex.dataclass
 class Crystal:
   """Crystal object.
-  
-  The crystal object represents the structure of a solid-state crystal, 
-  characterized by its periodic repetition. It encompasses all the details 
+
+  The crystal object represents the structure of a solid-state crystal,
+  characterized by its periodic repetition. It encompasses all the details
   regarding the atoms and cells. It's a wrapper of the ASE
   (https://wiki.fysik.dtu.dk/ase/).
-  
+
   Attributes:
-  
+
     symbols: str = None
     scaled_positions: Float[Array, 'num_atoms d'] = None
-    positions: Float[Array, 'num_atoms d'] = None 
+    positions: Float[Array, 'num_atoms d'] = None
     charges: Int[Array, 'num_atoms'] = None
-    spin: int = None 
+    spin: int = None
     xyz_file: str = None
     cell_vectors: Float[Array, 'd d'] = None
     reciprocal_vectors: Float[Array, 'd d'] = None
     A: Float[Array, 'd d'] = None  # alias for lattice_vectors
     B: Float[Array, 'd d'] = None  # alias for reciprocal_vectors
-    vol: float = None 
+    vol: float = None
     num_atoms: int = None
-    num_electrons: int = None 
+    num_electrons: int = None
     _ase_cell: ase.Atoms = None
-  
+
   """
 
   symbols: str = None
@@ -68,18 +68,18 @@ class Crystal:
       )
 
     self.symbols = self._ase_cell.symbols
-    self.positions = jnp.array(self._ase_cell.get_positions()) * ANGSTROM2BOHR
-    self.scaled_positions = jnp.array(self._ase_cell.get_scaled_positions())
-    self.charges = jnp.array(self._ase_cell.get_atomic_numbers())
+    self.positions = np.array(self._ase_cell.get_positions()) * ANGSTROM2BOHR
+    self.scaled_positions = np.array(self._ase_cell.get_scaled_positions())
+    self.charges = np.array(self._ase_cell.get_atomic_numbers())
 
     self.cell_vectors = self._ase_cell.get_cell() * ANGSTROM2BOHR
     self.A = self.cell_vectors
-    self.reciprocal_vectors = jnp.linalg.inv(self.A).T * 2 * jnp.pi
+    self.reciprocal_vectors = np.linalg.inv(self.A).T * 2 * np.pi
     self.B = self.reciprocal_vectors
 
     self.vol = self._ase_cell.get_volume() * ANGSTROM2BOHR**3
     self.num_atoms = self._ase_cell.get_global_number_of_atoms()
-    self.num_electrons = jnp.sum(self.charges).item()
+    self.num_electrons = np.sum(self.charges).item()
 
     self.spin = self.num_electrons % 2 if self.spin is None else self.spin
 
