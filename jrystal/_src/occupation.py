@@ -23,7 +23,7 @@ def occupation_gamma(nk: int, ni: int, spin: int):
 
 
 class Gamma(nn.Module):
-  """Occupation module with just Gamma point. 
+  """Occupation module with just Gamma point.
   Return a mask like this:
 
         ni
@@ -44,7 +44,7 @@ class Gamma(nn.Module):
 
 
 class Uniform(nn.Module):
-  """Uniform occupation number over k points. 
+  """Uniform occupation number over k points.
   Returns a mask like:
 
                 ni
@@ -83,7 +83,7 @@ class Orthogonal(nn.Module):
     nk  |o_31 o_32  0     \n
         |o_41 o_42  0     \n
         |o_51 o_52  0     \n
-  
+
     where \sum_i o_ij^2 = 1
 
   """
@@ -131,7 +131,7 @@ def fermi_dirac(
       width (float): the width.
 
     Returns:
-      jax.Array: the occpuation numbers with the same shape of input 
+      jax.Array: the occpuation numbers with the same shape of input
         eigenvalues.
 
     """
@@ -148,22 +148,22 @@ def get_fermi_level(
   num_electrons: int,
 ) -> Float[Array, '']:
   """get the fermi level given a array of eigenvalues.
-  
+
   Args:
 
-    eigenvalues (Float[Array, '... num_k num_band']): an array of eigenvalues. 
+    eigenvalues (Float[Array, '... num_k num_band']): an array of eigenvalues.
       The dimension of the last two axes are num_k and num_band.
     num_electrons (int): number of electrons
 
-    
+
   Returns:
 
-      float: the fermi level.  
+      float: the fermi level.
   """
 
   num_k = eigenvalues.shape[-2]
   eigenvalues = eigenvalues.flatten().sort()  # ascending order.
-  return eigenvalues[num_k * num_electrons]
+  return eigenvalues[num_k * num_electrons - 1]
 
 
 class FermiDirac(nn.Module):

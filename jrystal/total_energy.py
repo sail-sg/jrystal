@@ -147,9 +147,12 @@ def train(config: ml_collections.ConfigDict, return_fn=None):
   logging.info(f" Nucleus Repulsion: {e_ew}")
 
   if return_fn:
+
     def density(r):
       return state.apply_fn(
-          {'params': state.params, **variables}, r, method=return_fn
+        {
+          'params': state.params, **variables
+        }, r, method=return_fn
       )
 
     return density

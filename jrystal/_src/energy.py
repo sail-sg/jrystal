@@ -52,7 +52,7 @@ def reciprocal_braket(
 
 
 def real_braket(
-    potential_grids: ComplexGrid, density_grids: ComplexGrid, vol: RealScalar
+  potential_grids: ComplexGrid, density_grids: ComplexGrid, vol: RealScalar
 ) -> RealScalar:
   r"""This function calculate the inner product of <f|g> in real space
 

@@ -4,6 +4,7 @@ from jrystal import crystal
 from jrystal import occupation
 from jrystal import total_energy
 from jrystal import wave
+from jrystal import band_structure
 from jrystal import config
 from pathlib import Path
 
@@ -17,6 +18,7 @@ __all__ = [
   'crystal',
   'occupation',
   'total_energy',
+  'band_structure',
   'wave',
   'config',
 ]

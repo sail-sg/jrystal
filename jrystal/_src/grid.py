@@ -27,10 +27,7 @@ def grid_1d(n: Int, normalize=False) -> Int[Array, 'n']:
   return (grid / n if normalize else grid)
 
 
-def _vector_grid(
-  basis: Float[Array, "d"], grid_sizes,
-  normalize=False
-):
+def _vector_grid(basis: Float[Array, "d"], grid_sizes, normalize=False):
   """_summary_
 
   Args:

@@ -107,4 +107,4 @@ def xc_lda(density_grid: RealGrid) -> RealGrid:
   if density_grid.ndim == 4:
     output = jnp.expand_dims(output / 2, axis=0)
 
-  return output/2
+  return output / 2

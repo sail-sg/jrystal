@@ -66,7 +66,7 @@ def get_mask_radial(
 ) -> MaskGrid:
   g_vector_grid = g_vectors(cell_vectors, grid_sizes)
   g_norm = jnp.linalg.norm(g_vector_grid, axis=-1, keepdims=False)
-  mask = g_norm ** 2 <= cutoff_energy * 2
+  mask = g_norm**2 <= cutoff_energy * 2
   return mask
 
 
@@ -95,14 +95,15 @@ def get_mask_cubic(
 
 
 def get_max_cutoff_energy(
-  cell_vectors: CellVector, grid_size: Union[List, jax.Array],
+  cell_vectors: CellVector,
+  grid_size: Union[List, jax.Array],
   k_vectors: Float[Array, "num_k 3"]
 ) -> float:
   mask = get_mask_cubic(grid_size, return_mask_num=False)
   g_vector_grid = g_vectors(cell_vectors, grid_size)
   k_vectors = np.expand_dims(k_vectors, axis=[1, 2, 3])
-  kinetic = np.linalg.norm(g_vector_grid + k_vectors, axis=-1) ** 2 / 2
-  return np.max(kinetic*mask).item()
+  kinetic = np.linalg.norm(g_vector_grid + k_vectors, axis=-1)**2 / 2
+  return np.max(kinetic * mask).item()
 
 
 def get_grid_sizes_radius(a: Float[Array, 'd d'], e_cut: Float):

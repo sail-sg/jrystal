@@ -99,7 +99,7 @@ def quartile(n: int) -> List[int]:
   quartiles = []
   for q in [0.25, 0.5, 0.75]:
     quartiles.append(
-      int(np.quantile(np.arange(n)+1, q, method="closest_observation"))
+      int(np.quantile(np.arange(n) + 1, q, method="closest_observation"))
     )
   return quartiles
 

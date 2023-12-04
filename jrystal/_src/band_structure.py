@@ -13,7 +13,9 @@ from jrystal._src.const import BOHR2ANGSTROM
 
 
 def get_k_path(
-  cell_vectors: Float[Array, 'd d'], path: str, num: int, 
+  cell_vectors: Float[Array, 'd d'],
+  path: str,
+  num: int,
   fractional: bool = False
 ) -> np.array:
   """Get k path vectors. 

@@ -1,6 +1,7 @@
 """Module for band structure calculation. """
 import os
 import jax
+import jax.numpy as jnp
 import flax
 from flax.training import train_state
 import jrystal
@@ -24,25 +25,35 @@ def create_module(config: ConfigDict, density_fn: callable):
   xc_functional = config.xc
 
   k_vectors = get_k_path(
-    crystal.cell_vectors, path=config.k_path,
-    num=config.num_kpoints, fractional=False
+    crystal.cell_vectors,
+    path=config.k_path,
+    num=config.num_kpoints,
+    fractional=False
   )
 
-  band_structure_module = PlaneWaveBandStructure(
-    density_fn,
-    config.num_unoccupied_bands + crystal.num_electrons//2,
-    crystal.A,
-    g_grid_sizes,
-    k_vectors,
-    xc_functional=xc_functional
-  )
+  if config.k_path_fine_tuning:
+    band_structure_module = PlaneWaveBandStructure(
+      density_fn,
+      config.num_unoccupied_bands + crystal.num_electrons // 2,
+      crystal.A,
+      g_grid_sizes,
+      k_vectors[:1],
+      xc_functional=xc_functional
+    )
+  else:
+    band_structure_module = PlaneWaveBandStructure(
+      density_fn,
+      config.num_unoccupied_bands + crystal.num_electrons // 2,
+      crystal.A,
+      g_grid_sizes,
+      k_vectors,
+      xc_functional=xc_functional
+    )
 
   return band_structure_module
 
 
-def create_train_state(
-  rng, config: ConfigDict, density_fn: callable
-):
+def create_train_state(rng, config: ConfigDict, density_fn: callable):
   """Creates initial `TrainState`."""
   band_structure_module = create_module(config, density_fn)
   logging.info(f"{band_structure_module.k_vectors.shape[0]} k points sampled.")
@@ -66,29 +77,36 @@ def train(config: ConfigDict):
 
   logging.info("Starting total energy minimization...")
   density_fn = jrystal.total_energy.train(config, return_fn="density")
-  logging.info("Done total energy minimization. "
-               "Now optimize the sum of band energies...")
+  logging.info(
+    "Done total energy minimization. "
+    "Now optimize the sum of band energies..."
+  )
 
   rng = jax.random.key(config.seed)
   rng, init_rng = jax.random.split(rng)
   state, variables = create_train_state(init_rng, config, density_fn)
   crystal = create_crystal(config)
-  start_time = time.time()
-  iters = tqdm(range(config.band_structure_epoch))
-  ew = get_ewald_coulomb_repulsion(config)
+
+  e_ew = get_ewald_coulomb_repulsion(config)
+
+  k_vectors = get_k_path(
+    crystal.cell_vectors,
+    path=config.k_path,
+    num=config.num_kpoints,
+    fractional=False
+  )
 
   @jax.jit
   def update(
-    state: train_state.TrainState, variables
+    state: train_state.TrainState, variables, k_vector
   ) -> train_state.TrainState:
 
     def loss(params):
       energy, new_variables = state.apply_fn(
-        {'params': params, **variables}, crystal,
+        {'params': params, **variables}, crystal, k_vectors=k_vector,
         method='energy_trace', mutable=list(variables.keys())
       )
       total_energy, energies = energy
-      # e_tot = e_kin + e_har + e_ext + e_xc + ew
       return total_energy, (energies, new_variables)
 
     (e_total, energies), grads = jax.value_and_grad(loss, has_aux=True)(
@@ -97,34 +115,97 @@ def train(config: ConfigDict):
     energies, variables = energies
     return state.apply_gradients(grads=grads), (e_total, energies, variables)
 
+  if config.k_path_fine_tuning:
+    params_kpoint_list = []
+    logging.info("Optimizing the first k point...")
+    iters = tqdm(range(config.band_structure_epoch))
+    start_time = time.time()
+    for i in iters:
+      state, es = update(state, variables, k_vectors[:1])
+      e_tot, energies, variables = es
+      e_tot += e_ew
+      iters.set_description(f"Total energy: {e_tot:.3f}")
+
+    e_kin = energies["kinetic"]
+    e_ext = energies["external"]
+    e_xc = energies["xc"]
+    e_har = energies["hartree"]
+    converged = True
+
+    logging.info(
+      f"Converged: {converged}. \n"
+      f"Total epochs run: {i+1}. \n"
+      f"Training Time: {(time.time() - start_time):.3f}s. \n"
+    )
+    logging.info("Energy:")
+    logging.info(f" Ground State: {e_tot}")
+    logging.info(f" Kinetic: {e_kin}")
+    logging.info(f" External: {e_ext}")
+    logging.info(f" Exchange-Correlation: {e_xc}")
+    logging.info(f" Hartree: {e_har}")
+    logging.info("First k point converged. Starting fine tuning the others...")
+    params_kpoint_list.append(state.params)
+    num_k = k_vectors.shape[0]
+
+    iters = tqdm(range(1, num_k))
+    for i in iters:
+      for j in range(config.k_path_fine_tuning_epoch):
+        state, es = update(state, variables, k_vectors[i:(i + 1)])
+        e_tot, energies, variables = es
+        e_tot += e_ew
+      iters.set_description(f"Energy trace (the {i+1}th k point): {e_tot:.3f}")
+      params_kpoint_list.append(state.params)
+
+  else:
+    iters = tqdm(range(config.band_structure_epoch))
+    start_time = time.time()
+    for i in iters:
+      state, es = update(state, variables)
+      # e_tot, e_kin, e_har, e_ext, e_xc, e_ew = es
+      e_tot, energies, variables = es
+      e_tot += e_ew
+      iters.set_description(f"Total energy: {e_tot:.3f}")
+
+    e_kin = energies["kinetic"]
+    e_ext = energies["external"]
+    e_xc = energies["xc"]
+    e_har = energies["hartree"]
+
+    converged = True
+    # TODO(tianbo): include a convergence check module.
+
+    logging.info(
+      f"Converged: {converged}. \n"
+      f"Total epochs run: {i+1}. \n"
+      f"Training Time: {(time.time() - start_time):.3f}s. \n"
+    )
+    logging.info("Energy:")
+    logging.info(f" Ground State: {e_tot}")
+    logging.info(f" Kinetic: {e_kin}")
+    logging.info(f" External: {e_ext}")
+    logging.info(f" Exchange-Correlation: {e_xc}")
+    logging.info(f" Hartree: {e_har}")
+    logging.info(f" Nucleus Repulsion: {e_ew}")
+
+  iters = tqdm(range(len(params_kpoint_list)))
+  eigen_values = []
+
+  @jax.jit
+  def eig_fn(params, k_vector):
+    fork_k, _ = state.apply_fn(
+        {'params': params, **variables}, crystal, k_vectors=k_vector,
+        method='fork_matrix', mutable=list(variables.keys())
+      )
+    return jnp.linalg.eigvalsh(fork_k[0])
+
   for i in iters:
-    state, es = update(state, variables)
-    # e_tot, e_kin, e_har, e_ext, e_xc, e_ew = es
-    e_tot, energies, variables = es
-    e_ew = ew
-    e_tot += ew
-    iters.set_description(f"Total energy: {e_tot:.3f}")
+    prm = params_kpoint_list[i]
+    k = k_vectors[i:(i + 1), :]
+    iters.set_description(f"Diagonolizing the {i+1}th k points")
+    eig = eig_fn(prm, k)
+    eigen_values.append(eig)
 
-  e_kin = energies["kinetic"]
-  e_ext = energies["external"]
-  e_xc = energies["xc"]
-  e_har = energies["hartree"]
-
-  converged = True
-  # TODO(tianbo): include a convergence check module.
-
-  logging.info(
-    f"Converged: {converged}. \n"
-    f"Total epochs run: {i+1}. \n"
-    f"Training Time: {(time.time() - start_time):.3f}s. \n"
-  )
-  logging.info("Energy:")
-  logging.info(f" Ground State: {e_tot}")
-  logging.info(f" Kinetic: {e_kin}")
-  logging.info(f" External: {e_ext}")
-  logging.info(f" Exchange-Correlation: {e_xc}")
-  logging.info(f" Hartree: {e_har}")
-  logging.info(f" Nucleus Repulsion: {e_ew}")
+  return jnp.vstack(eigen_values)
 
 
 if __name__ == '__main__':

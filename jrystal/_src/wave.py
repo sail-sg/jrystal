@@ -5,6 +5,7 @@ import jax
 import jax.numpy as jnp
 import flax.linen as nn
 import numpy as np
+import einops
 
 import jax_xc
 
@@ -299,7 +300,6 @@ class PlaneWaveBandStructure(nn.Module):
   g_grid_sizes: Float[Array, 'd']
   k_vectors: Float[Array, '... 3']
   xc_functional: str = 'lda_x'
-
   """
 
   Args:
@@ -323,7 +323,7 @@ class PlaneWaveBandStructure(nn.Module):
 
     self.xc_potential = potential.xc_lda
 
-  def __call__(self, crystal):
+  def __call__(self, crystal: Crystal):
     return self.energy_trace(crystal)
 
   def wave(self, r=None) -> ComplexGrid:
@@ -380,7 +380,18 @@ class PlaneWaveBandStructure(nn.Module):
       crystal.positions, crystal.charges, self.g_vector_grid, self.vol
     )
 
-  def energy_trace(self, crystal: Crystal) -> RealScalar:
+  def hamitonian_kinetic(
+    self,
+    k_vectors: Float[Array, "num_k 3"] = None,
+  ) -> Float[Array, 'num_k n1 n2 n3']:
+    if k_vectors is None:
+      k_vectors = self.k_vectors
+    k_vectors = einops.rearrange(k_vectors, "nk d -> nk 1 1 1 d")
+    return jnp.sum((self.g_vector_grid + k_vectors)**2, axis=-1) / 2
+
+  def energy_trace(self, crystal: Crystal, k_vectors=None) -> RealScalar:
+    if k_vectors is None:
+      k_vectors = self.k_vectors
 
     density_grid = self.density(reduce=True)
     reciprocal_density_grid = self.reciprocal_density(reduce=True)
@@ -395,21 +406,67 @@ class PlaneWaveBandStructure(nn.Module):
 
     coeff_grid = self.get_coefficient()
     kinetic = energy.kinetic(
-      self.g_vector_grid, self.k_vectors, coeff_grid, occupation=1
+      self.g_vector_grid, k_vectors, coeff_grid, occupation=1
     )
 
-    xc_energy = energy.real_braket(
-      self.hamitonian_xc(), density_grid, self.vol
-    )
+    xc_energy = energy.real_braket(self.hamitonian_xc(), density_grid, self.vol)
 
     energies = {
-      'hartree': hartree, 'external': external,
-      'kinetic': kinetic, 'xc': xc_energy
+      'hartree': hartree,
+      'external': external,
+      'kinetic': kinetic,
+      'xc': xc_energy
     }
 
     total_energy = hartree + external + kinetic + xc_energy
     return total_energy, energies
 
-  # def get_fork(self) -> Float[Array, 'd d']:
-  #   reciprocal_density_band_grids = self.reciprocal_density_bands(reduce = )
-  #   v_hartree = potential.hartree_reciprocal()
+  def fork_matrix(self, crystal, k_vectors=None) -> Float[Array, 'd d']:
+    if k_vectors is None:
+      k_vectors = self.k_vectors
+
+    v_hartree = self.hamitonian_hartree()  # [n1 n2 n3]
+    wg = self.get_coefficient()  # [1 nk ni n1 n2 n3]
+    wr = self.wave()
+
+    num_grids = np.prod(np.array(v_hartree.shape))
+    integral_factor = self.vol / num_grids
+
+    fock_hartree = einops.einsum(
+      jnp.conj(wr),
+      jnp.fft.ifftn(v_hartree),
+      wr,
+      "a nk ni1 n1 n2 n3, n1 n2 n3, a nk ni2 n1 n2 n3 -> nk ni1 ni2"
+    ) * integral_factor
+
+    v_external = self.hamitonian_external(crystal)
+    fock_external = einops.einsum(
+      jnp.conj(wr),
+      jnp.fft.ifftn(v_external),
+      wr,
+      "a nk ni1 n1 n2 n3, n1 n2 n3, a nk ni2 n1 n2 n3 -> nk ni1 ni2"
+    ) * integral_factor
+
+    v_lda = self.hamitonian_xc()
+    fock_xc = einops.einsum(
+      jnp.conj(wr),
+      v_lda,
+      wr,
+      "a nk ni1 n1 n2 n3, n1 n2 n3, a nk ni2 n1 n2 n3 -> nk ni1 ni2"
+    ) * integral_factor
+
+    v_kin = self.hamitonian_kinetic(k_vectors)
+    fock_kinetic = einops.einsum(
+      jnp.conj(wg),
+      v_kin,
+      wg,
+      "a nk ni1 n1 n2 n3, nk n1 n2 n3, a nk ni2 n1 n2 n3 -> nk ni1 ni2"
+    )
+
+    fock = fock_hartree + fock_external + fock_xc + fock_kinetic
+    return fock
+
+  def eigenvalues(self, crystal: Crystal) -> Float[Array, 'num_k num_bands']:
+    fock = self.fork_matrix(crystal)
+    eigenvalues = jax.vmap(jnp.linalg.eigvalsh)(fock)
+    return eigenvalues
