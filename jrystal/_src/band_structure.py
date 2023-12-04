@@ -1,8 +1,7 @@
-"""Module for k path sampling. This module is a wrapper of
-ASE.BandPath modules. 
+"""Module for operations related to band structure optimization.
 
-See. https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
-
+This module is a wrapper of ASE.BandPath modules.
+See: https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
 
 """
 
@@ -18,20 +17,20 @@ def get_k_path(
   num: int,
   fractional: bool = False
 ) -> np.array:
-  """Get k path vectors. 
+  """Get k path vectors.
 
-  See. https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
+  See: https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
 
   Args:
       cell_vectors (Array): the cell vectors.
       path (str): a string of the special points in the Brillouin zone.
       num (int): the number of kpoints to be sampled.
       fractional (bool) Default: False. If True, the function will return
-          fractional coordinates. If false, it returns absolute coordinate 
+          fractional coordinates. If false, it returns absolute coordinate
           in 1/Bohr unit.
 
   Returns:
-      ndarray: the absolute coordinates of the k points in Bhor.
+      np.array: the absolute coordinates of the k points in Bhor.
   """
   _cell = cell.Cell(cell_vectors * BOHR2ANGSTROM)
   kpts = _cell.bandpath(path, npoints=num).cartesian_kpts() * BOHR2ANGSTROM
@@ -43,9 +42,3 @@ def get_k_path(
   else:
     B = np.linalg.inv(cell_vectors).T * 2 * np.pi
     return kpts @ B
-
-
-if __name__ == "__main__":
-  a = 2.
-  cell_vectors = np.array([[0, a, a], [a, 0, a], [a, a, 0]])
-  print(get_k_path(cell_vectors, 'GXLG', 4))

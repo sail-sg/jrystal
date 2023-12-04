@@ -69,10 +69,6 @@ class _PlaneWaveFFT(nn.Module):
     return wave
 
 
-# I prefer not use Crystal object as input as I want this API to be decoupled
-# with other modules.
-
-
 class BatchedBlochWave(nn.Module):
   # There are three reasons that I still keep this module.
 

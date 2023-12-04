@@ -21,8 +21,6 @@ from tqdm import tqdm
 from absl import logging
 from ml_collections import ConfigDict
 
-logging.set_verbosity(logging.INFO)
-
 
 def create_module(config: ConfigDict):
   crystal = create_crystal(config)
@@ -57,12 +55,12 @@ def create_module(config: ConfigDict):
     crystal.cell_vectors, g_grid_sizes, k_vector_grid
   )
   # mask_ratio = num / jnp.prod(jnp.array(g_grid_sizes))
-  logging.info("Creating density module...")
-  logging.info(f'{num} G points selected.')
+  logging.info("===> Creating density module...")
+  logging.info(f' {num} G points selected.')
   # logging.info(f'{mask_ratio*100:.2f}% frequency masked.')
-  logging.info(f'The size of G grid: {mask.shape}')
-  logging.info(f'The size of K points: {k_vector_grid.shape[:-1]}')
-  logging.info(f'Estimated maximum of cutoff energy: {cutoff_energy:.3f} Ha')
+  logging.info(f' The size of G grid: {mask.shape}')
+  logging.info(f' The size of K points: {k_vector_grid.shape[:-1]}')
+  logging.info(f' Estimated maximum of cutoff energy: {cutoff_energy:.3f} Ha')
 
   return density_module
 
@@ -82,6 +80,9 @@ def create_train_state(rng, config):
 
 
 def train(config: ml_collections.ConfigDict, return_fn=None):
+
+  if config.verbose:
+    logging.set_verbosity(logging.INFO)
 
   jax.config.update("jax_enable_x64", config.jax_enable_x64)
   if config.xla_preallocate is False:
@@ -133,18 +134,16 @@ def train(config: ml_collections.ConfigDict, return_fn=None):
   converged = True
   # TODO(tianbo): include a convergence check module.
 
-  logging.info(
-    f"Converged: {converged}. \n"
-    f"Total epochs run: {i+1}. \n"
-    f"Training Time: {(time.time() - start_time):.3f}s. \n"
-  )
-  logging.info("Energy:")
-  logging.info(f" Ground State: {e_tot}")
-  logging.info(f" Kinetic: {e_kin}")
-  logging.info(f" External: {e_ext}")
-  logging.info(f" Exchange-Correlation: {e_xc}")
-  logging.info(f" Hartree: {e_har}")
-  logging.info(f" Nucleus Repulsion: {e_ew}")
+  logging.info(f" Converged: {converged}.")
+  logging.info(f" Total epochs run: {i+1}.")
+  logging.info(f" Training Time: {(time.time() - start_time):.3f}s.")
+  logging.info(" Energy:")
+  logging.info(f" - Ground State: {e_tot}")
+  logging.info(f" - Kinetic: {e_kin}")
+  logging.info(f" - External: {e_ext}")
+  logging.info(f" - Exchange-Correlation: {e_xc}")
+  logging.info(f" - Hartree: {e_har}")
+  logging.info(f" - Nucleus Repulsion: {e_ew}")
 
   if return_fn:
 

@@ -1,5 +1,4 @@
 """Potential modules."""
-
 import jax.numpy as jnp
 from jaxtyping import Float, Array
 

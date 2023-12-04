@@ -1,14 +1,16 @@
 """Customized typing modules.
 
+NOTE: This module will be retired in future version.
+
 Variable type and associated typings:
 
-- A variable named with postfix ``_vector_grid`` implies it has shape 
+- A variable named with postfix ``_vector_grid`` implies it has shape
 [*batch n1, n2, n3, 3].
 
-- A variable named with postfix ``_grid`` implies it has shape 
+- A variable named with postfix ``_grid`` implies it has shape
 [*batch n1, n2, n3]
 
-Ref. /jrystal/docs/symbol.md
+Ref.: /jrystal/docs/symbol.md
 
 """
 from typing import Union

@@ -55,6 +55,9 @@ def create_module(config: ConfigDict, density_fn: callable):
 
 def create_train_state(rng, config: ConfigDict, density_fn: callable):
   """Creates initial `TrainState`."""
+  if config.verbose:
+    logging.set_verbosity(logging.INFO)
+
   band_structure_module = create_module(config, density_fn)
   logging.info(f"{band_structure_module.k_vectors.shape[0]} k points sampled.")
   logging.info(f"{band_structure_module.num_bands} bands will be computed.")
@@ -71,16 +74,17 @@ def create_train_state(rng, config: ConfigDict, density_fn: callable):
 
 
 def train(config: ConfigDict):
+  if config.verbose:
+    logging.set_verbosity(logging.INFO)
+
   jax.config.update("jax_enable_x64", config.jax_enable_x64)
   if config.xla_preallocate is False:
     os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
 
-  logging.info("Starting total energy minimization...")
+  logging.info("===> Starting total energy minimization...")
   density_fn = jrystal.total_energy.train(config, return_fn="density")
-  logging.info(
-    "Done total energy minimization. "
-    "Now optimize the sum of band energies..."
-  )
+  logging.info(" Done total energy minimization. ")
+  logging.info("===> Optimize the sum of band energies...")
 
   rng = jax.random.key(config.seed)
   rng, init_rng = jax.random.split(rng)
@@ -117,7 +121,7 @@ def train(config: ConfigDict):
 
   if config.k_path_fine_tuning:
     params_kpoint_list = []
-    logging.info("Optimizing the first k point...")
+    logging.info("===> Optimizing the first k point...")
     iters = tqdm(range(config.band_structure_epoch))
     start_time = time.time()
     for i in iters:
@@ -132,18 +136,18 @@ def train(config: ConfigDict):
     e_har = energies["hartree"]
     converged = True
 
-    logging.info(
-      f"Converged: {converged}. \n"
-      f"Total epochs run: {i+1}. \n"
-      f"Training Time: {(time.time() - start_time):.3f}s. \n"
-    )
-    logging.info("Energy:")
-    logging.info(f" Ground State: {e_tot}")
-    logging.info(f" Kinetic: {e_kin}")
-    logging.info(f" External: {e_ext}")
-    logging.info(f" Exchange-Correlation: {e_xc}")
-    logging.info(f" Hartree: {e_har}")
-    logging.info("First k point converged. Starting fine tuning the others...")
+    logging.info(f" Converged: {converged}.")
+    logging.info(f" Total epochs run: {i+1}.")
+    logging.info(f" Training Time: {(time.time() - start_time):.3f}s.")
+    logging.info(" Energy:")
+    logging.info(f" - Ground State: {e_tot}")
+    logging.info(f" - Kinetic: {e_kin}")
+    logging.info(f" - External: {e_ext}")
+    logging.info(f" - Exchange-Correlation: {e_xc}")
+    logging.info(f" - Hartree: {e_har}")
+    logging.info("The first k point converged.")
+    logging.info("===> Starting fine tuning the others...")
+
     params_kpoint_list.append(state.params)
     num_k = k_vectors.shape[0]
 
@@ -153,7 +157,7 @@ def train(config: ConfigDict):
         state, es = update(state, variables, k_vectors[i:(i + 1)])
         e_tot, energies, variables = es
         e_tot += e_ew
-      iters.set_description(f"Energy trace (the {i+1}th k point): {e_tot:.3f}")
+      iters.set_description(f"Total Energy(the {i+1}th k point): {e_tot:.3f}")
       params_kpoint_list.append(state.params)
 
   else:
@@ -174,18 +178,15 @@ def train(config: ConfigDict):
     converged = True
     # TODO(tianbo): include a convergence check module.
 
-    logging.info(
-      f"Converged: {converged}. \n"
-      f"Total epochs run: {i+1}. \n"
-      f"Training Time: {(time.time() - start_time):.3f}s. \n"
-    )
-    logging.info("Energy:")
-    logging.info(f" Ground State: {e_tot}")
-    logging.info(f" Kinetic: {e_kin}")
-    logging.info(f" External: {e_ext}")
-    logging.info(f" Exchange-Correlation: {e_xc}")
-    logging.info(f" Hartree: {e_har}")
-    logging.info(f" Nucleus Repulsion: {e_ew}")
+    logging.info(f" Converged: {converged}.")
+    logging.info(f" Total epochs run: {i+1}.")
+    logging.info(f" Training Time: {(time.time() - start_time):.3f}s.")
+    logging.info(" Energy:")
+    logging.info(f" - Ground State: {e_tot}")
+    logging.info(f" - Kinetic: {e_kin}")
+    logging.info(f" - External: {e_ext}")
+    logging.info(f" - Exchange-Correlation: {e_xc}")
+    logging.info(f" - Hartree: {e_har}")
 
   iters = tqdm(range(len(params_kpoint_list)))
   eigen_values = []

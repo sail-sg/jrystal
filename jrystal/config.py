@@ -39,6 +39,7 @@ def get_config() -> ml_collections.ConfigDict:
   # Environment setting
   config.xla_preallocate: bool = False
   config.jax_enable_x64: bool = True
+  config.verbose: bool = True
 
   ################################################
   # Band Structure Calculation Hyper-parameters. #

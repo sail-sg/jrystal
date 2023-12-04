@@ -1,4 +1,15 @@
-"""Wave function module
+"""Wave function modules.
+
+The wave function module is the core to our differentiable computation
+framework. It is responsible for defining the wave function ansatz and the
+corresponding integrals.
+
+NOTE: It is advisable to keep the wave function module separate from the
+crystal objects, which define the external potential of the system.
+NOTE: Integrals should be defined in association with the wave function,
+ideally as methods within the module.
+NOTE: Wherever feasible, functional programming approaches should be employed.
+
 """
 
 import jax
@@ -18,7 +29,7 @@ from jrystal._src.grid import r_vectors, g_vectors
 from jrystal._src.crystal import Crystal
 
 from typing import Tuple, Dict, Callable
-from jaxtyping import Int, Array, Float
+from jaxtyping import Int, Array, Float, Complex
 from jrystal._src.jrystal_typing import CellVector, RealScalar
 from jrystal._src.jrystal_typing import ComplexGrid, RealVecterGrid, RealGrid
 from jrystal._src import errors
@@ -33,6 +44,20 @@ class PlaneWaveDensity(nn.Module):
   spin: Int
   occupation_method: str = 'gamma'
   xc_functional: str = 'lda_x'
+  """
+  The wave function module for total energy minimization.
+
+  Attributes:
+      num_electrons (Int): the number of electrons(orbitals).
+      cell_vectors (Array): the cell vector.
+      g_grid_sizes (Array): grid lattice for FFT.
+      k_vectors (Array): the samples within the Brillouin zone.
+      spin (Int): the number of unpaired electrons.
+      occupation_method (str): occupation method.
+      xc_functional (str): the xc functional.
+        See https://jax-xc.readthedocs.io/en/latest/index.html#
+
+  """
 
   def setup(self):
     num_k = np.prod(np.array(self.k_vectors.shape)[:-1]).item()
@@ -72,9 +97,7 @@ class PlaneWaveDensity(nn.Module):
   def density(self, r=None, reduce=True) -> jax.Array:
     if r is None:
       r = self.r_vector_grid
-    coeff_dense = self.qr()
-    coeff_dense = jnp.swapaxes(coeff_dense, -1, -2)
-    coeff_grid = coeff_expand(coeff_dense, self.mask)
+    coeff_grid = self.get_coefficient()
     wave = self.bloch(r, coeff_grid) / jnp.sqrt(self.vol)
     density = complex_norm_square(wave)
 
@@ -110,7 +133,7 @@ class PlaneWaveDensity(nn.Module):
   def get_occupation(self):
     return self.occupation()
 
-  def hartree(self) -> RealScalar:
+  def hartree(self) -> Float[Array, '']:
     reciprocal_density_grid = self.reciprocal_density(reduce=True)
     return energy.hartree(reciprocal_density_grid, self.g_vector_grid, self.vol)
 
@@ -151,6 +174,24 @@ class PlaneWaveFermiDirac(nn.Module):
   spin: Int
   smearing: float
   xc_functional: str = 'lda_x'
+  """
+    The wave function module for total energy minimization with
+    fermi dirac smearing.
+
+  NOTE: this module is NOT finished. The eigenvalues are NOT the actual ones.
+  Need to fix in the Future version.
+
+  Attributes:
+      num_electrons (Int): the number of electrons(orbitals).
+      cell_vectors (Array): the cell vector.
+      g_grid_sizes (Array): grid lattice for FFT.
+      k_vectors (Array): the samples within the Brillouin zone.
+      spin (Int): the number of unpaired electrons.
+      smearing (float): the smearing constant.
+      xc_functional (str): the xc functional.
+        See https://jax-xc.readthedocs.io/en/latest/index.html#
+
+  """
 
   def setup(self):
     num_k = self.k_vectors.shape[0]
@@ -186,7 +227,6 @@ class PlaneWaveFermiDirac(nn.Module):
   def density(self, r=None, reduce=True) -> jax.Array:
     if r is None:
       r = self.r_vector_grid
-
     coeff_grid = self.get_coefficient()
     wave = self.bloch(r, coeff_grid) / jnp.sqrt(self.vol)
     density = complex_norm_square(wave)
@@ -279,7 +319,9 @@ class PlaneWaveFermiDirac(nn.Module):
     ek = self.kinetic()
     exc = self.xc()
 
-    eigenvalues = eh + ee + ek + exc  # TODO: this is wrong, need to fix
+    # NOTE: this is wrong, need to fix.
+    eigenvalues = eh + ee + ek + exc
+
     occupation = self.occupation_fn(eigenvalues)
     self.occ_number.value = occupation
 
@@ -296,17 +338,28 @@ class PlaneWaveFermiDirac(nn.Module):
 class PlaneWaveBandStructure(nn.Module):
   hamitonian_density_fn: Callable
   num_bands: Int
-  cell_vectors: CellVector
+  cell_vectors: Float[Array, 'd d']
   g_grid_sizes: Float[Array, 'd']
   k_vectors: Float[Array, '... 3']
   xc_functional: str = 'lda_x'
   """
+  The wave function module for band structure calculation.
 
-  Args:
+  NOTE: this module DOES NOT consider polarized circumstances.
 
-    hamitonian_density_fn (Callable): the density function for constructing the
-      effective potential.
-    num_bands (Int): number of bands.
+  Attributes:
+      hamitonian_density_fn (Callable): the converged density function on real
+        space. It can be any function that take inputs with shape (..., 3) and
+        return the shape (...). If flax.nn.module is used, it can be something
+        like `module.apply({'params': params}, r)`
+      num_bands (Int): the number of bands.
+      g_grid_sizes (Array):
+      k_vectors (Array): the path of special points sampled within the
+        Brillouin zone.
+      xc_functional: the xc functional
+
+  TODO: Now it only supports lda for xc_functional. Next version will support
+  all the xc functional provided in Jax-xc.
 
   """
 
@@ -326,7 +379,18 @@ class PlaneWaveBandStructure(nn.Module):
   def __call__(self, crystal: Crystal):
     return self.energy_trace(crystal)
 
-  def wave(self, r=None) -> ComplexGrid:
+  def wave(self, r: Float[Array, "... 3"] = None) -> Complex[Array, "... 3"]:
+    """the bloch wave function.
+
+    Args:
+        r (Array, optional): The real space coordinate. If None, a grid mesh of
+          r asscoiated with the g grid is used, where fft is performed for the
+          computation.
+
+    Returns:
+        Array: the value of the bloch wave function evaluated at r.
+
+    """
     if r is None:
       r = self.r_vector_grid
     coeff_grid = self.get_coefficient()

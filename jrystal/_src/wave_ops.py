@@ -1,5 +1,5 @@
 """Pure functional API of wave function that will be used for constructing
-  flax.linen.module objects """
+  flax.linen.module objects"""
 
 import jax
 import numpy as np
