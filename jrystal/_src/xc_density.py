@@ -1,4 +1,4 @@
-"""the energy density of exchange-correlation functions.
+"""The energy density module of exchange-correlation functions.
 
 This module is the the \epsilon(r) as in
 

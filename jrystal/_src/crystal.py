@@ -7,7 +7,7 @@ in angstrom.
 """
 import ase
 from ase.io import read
-import jax.numpy as jnp
+import numpy as np
 from jaxtyping import Float, ArrayLike
 from typing import Union, List
 
@@ -68,18 +68,18 @@ class Crystal:
       )
 
     self.symbols = self._ase_cell.symbols
-    self.positions = jnp.array(self._ase_cell.get_positions()) * ANGSTROM2BOHR
-    self.scaled_positions = jnp.array(self._ase_cell.get_scaled_positions())
-    self.charges = jnp.array(self._ase_cell.get_atomic_numbers())
+    self.positions = np.array(self._ase_cell.get_positions()) * ANGSTROM2BOHR
+    self.scaled_positions = np.array(self._ase_cell.get_scaled_positions())
+    self.charges = np.array(self._ase_cell.get_atomic_numbers())
 
     self.cell_vectors = self._ase_cell.get_cell() * ANGSTROM2BOHR
     self.A = self.cell_vectors
-    self.reciprocal_vectors = jnp.linalg.inv(self.A).T * 2 * jnp.pi
+    self.reciprocal_vectors = np.linalg.inv(self.A).T * 2 * np.pi
     self.B = self.reciprocal_vectors
 
     self.vol = self._ase_cell.get_volume() * ANGSTROM2BOHR**3
     self.num_atoms = self._ase_cell.get_global_number_of_atoms()
-    self.num_electrons = jnp.sum(self.charges).item()
+    self.num_electrons = np.sum(self.charges).item()
 
     self.spin = self.num_electrons % 2 if self.spin is None else self.spin
 

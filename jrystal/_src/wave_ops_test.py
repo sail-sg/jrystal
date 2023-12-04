@@ -4,20 +4,18 @@ from absl.testing import absltest, parameterized
 
 import numpy as np
 from jrystal._src.module import QRDecomp
-from jrystal._src.functional import coeff_compress, coeff_expand
+from jrystal._src.wave_ops import coeff_compress, coeff_expand, get_mask_cubic
+from jrystal._src.wave_ops import batched_fft, batched_ifft
 from jax.config import config
 
 config.update("jax_enable_x64", True)
 
 
-class _Test_pw(parameterized.TestCase):
+class _Test_wave_ops(parameterized.TestCase):
 
   def setUp(self):
     shape = [2, 3, 4, 5]
-    key = jax.random.PRNGKey(123)
-    mask = jax.random.choice(key, a=2, shape=[3, 4, 5], replace=True)
-    mask = jnp.asarray(mask, dtype=jnp.int8)
-    self.mask = mask
+    self.mask, self.num_g = get_mask_cubic([3, 4, 5], return_mask_num=True)
     self.shape = shape
     return super().setUp()
 
@@ -34,16 +32,11 @@ class _Test_pw(parameterized.TestCase):
 
   @parameterized.parameters((1), (2))
   def test_fft(self, seed):
-    ifft = BatchedInverseFFT(3)
-    fft = BatchedFFT(3)
-
     key = jax.random.PRNGKey(seed)
     weights = jax.random.normal(key, [10, 5, 20, 20, 20])
-    p1 = ifft.init(key, weights)
-    p2 = fft.init(key, weights)
-
-    output = fft.apply(p2, ifft.apply(p1, weights))
-    np.testing.assert_array_almost_equal(output, weights, decimal=10)
+    p1 = batched_fft(weights, 3)
+    p2 = batched_ifft(p1, 3)
+    np.testing.assert_array_almost_equal(p2, weights, decimal=10)
 
   # @absltest.skip("skip")
   def test_coeff_compress_expand(self):
@@ -52,12 +45,16 @@ class _Test_pw(parameterized.TestCase):
     coeff = coeff_expand(coeff, self.mask)
     np.testing.assert_array_equal(self.shape, coeff.shape)
 
-  @parameterized.named_parameters(('shape', [2, 35]))
-  def test_coeff_expand_compress(self, shape):
-    coeff = jnp.zeros(shape)
+  def test_coeff_expand_compress(self):
+    coeff = jnp.zeros([2, self.num_g])
     coeff = coeff_expand(coeff, self.mask)
     coeff = coeff_compress(coeff, self.mask)
-    np.testing.assert_array_equal(shape, coeff.shape)
+    np.testing.assert_array_equal([2, self.num_g], coeff.shape)
+
+  @parameterized.parameters((3), (10), (15), (24))
+  def test_mask_cubic(self, n):
+    mask, num = get_mask_cubic([n, n, n])
+    np.testing.assert_array_equal(np.sum(mask), num)
 
 
 if __name__ == "__main__":

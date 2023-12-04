@@ -1,11 +1,12 @@
 """Pure functional API of wave function that will be used for constructing
-  flax.linen.modules. """
-# TODO: functional is not a good naming for this file.
+  flax.linen.module objects"""
+
 import jax
+import numpy as np
 import jax.numpy as jnp
 from jaxtyping import Int, Float, Array, Complex
 from jrystal._src.grid import g_vectors
-from jrystal._src.utils import vmapstack
+from jrystal._src.utils import vmapstack, quartile
 from jrystal._src import errors
 
 from typing import Union, List
@@ -58,16 +59,51 @@ def coeff_compress(
   return _get_value(coeff_grid)
 
 
-def get_mask_radius(
-  cell_vectors: CellVector, grid_sizes: Union[List, jax.Array], e_cut: float
+def get_mask_radial(
+  cell_vectors: CellVector,
+  grid_sizes: Union[List, jax.Array],
+  cutoff_energy: float
 ) -> MaskGrid:
   g_vector_grid = g_vectors(cell_vectors, grid_sizes)
   g_norm = jnp.linalg.norm(g_vector_grid, axis=-1, keepdims=False)
-  return g_norm**2 <= e_cut * 2
+  mask = g_norm**2 <= cutoff_energy * 2
+  return mask
 
 
-def get_mask_cubic(a, grid_sizes, e_cut):
-  pass
+def get_mask_cubic(
+  grid_sizes: Union[List, jax.Array], return_mask_num: bool = True
+) -> MaskGrid:
+  if len(grid_sizes) != 3:
+    return NotImplementedError
+
+  q = [quartile(n) for n in grid_sizes]
+  mask = np.zeros(shape=grid_sizes)
+  idx = np.ix_(
+    list(range(q[0][0])) + list(range(q[0][2], grid_sizes[0])),
+    list(range(q[1][0])) + list(range(q[1][2], grid_sizes[1])),
+    list(range(q[2][0])) + list(range(q[2][2], grid_sizes[2]))
+  )
+  mask[idx] = 1
+  mask = (mask == 1)
+
+  if return_mask_num:
+    mask_num = [q[i][0] + grid_sizes[i] - q[i][2] for i in range(3)]
+    mask_num = np.prod(np.asarray(mask_num))
+    return mask, mask_num
+  else:
+    return mask
+
+
+def get_max_cutoff_energy(
+  cell_vectors: CellVector,
+  grid_size: Union[List, jax.Array],
+  k_vectors: Float[Array, "num_k 3"]
+) -> float:
+  mask = get_mask_cubic(grid_size, return_mask_num=False)
+  g_vector_grid = g_vectors(cell_vectors, grid_size)
+  k_vectors = np.expand_dims(k_vectors, axis=[1, 2, 3])
+  kinetic = np.linalg.norm(g_vector_grid + k_vectors, axis=-1)**2 / 2
+  return np.max(kinetic * mask).item()
 
 
 def get_grid_sizes_radius(a: Float[Array, 'd d'], e_cut: Float):

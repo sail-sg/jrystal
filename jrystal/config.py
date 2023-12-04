@@ -5,8 +5,14 @@ from typing import Dict, Union, List, Tuple
 def get_config() -> ml_collections.ConfigDict:
   config = ml_collections.ConfigDict()
 
-  # random seed
+  # Random seed
   config.seed: int = 123
+
+  ################################################
+  # Total Energy Minimization Hyper-parameters.  #
+  ################################################
+
+  # NOTE: The following configs are valid for all calculation.
 
   # Crystal geometry
   config.crystal = 'diamond'
@@ -33,5 +39,26 @@ def get_config() -> ml_collections.ConfigDict:
   # Environment setting
   config.xla_preallocate: bool = False
   config.jax_enable_x64: bool = True
+  config.verbose: bool = True
+
+  ################################################
+  # Band Structure Calculation Hyper-parameters. #
+  ################################################
+
+  # NOTE: The following configs are only valid for band structure calculation.
+
+  # Need to either indicate the k_path or the k_path file.
+  config.num_unoccupied_bands: int = 4
+  config.k_path: str = "LGXL"
+  config.num_kpoints: int = 60
+  config.k_path_file: str = None
+  config.band_structure_epoch: int = 5000
+
+  # This flag indicates whether the fine tuning process will be adopted. If
+  # true, then the module will optimize with respect to the first k-point,
+  # and then use the params as the initialation of the next k-point.
+  # Recommend to use this trick when the input crystal system is large.
+  config.k_path_fine_tuning = True
+  config.k_path_fine_tuning_epoch = 200
 
   return config

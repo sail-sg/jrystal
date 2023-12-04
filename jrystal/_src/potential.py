@@ -1,5 +1,4 @@
 """Potential modules."""
-
 import jax.numpy as jnp
 from jaxtyping import Float, Array
 
@@ -80,7 +79,7 @@ def externel_reciprocal(
   return -output * num_grids / vol
 
 
-def xc_lda(density_grid: RealGrid,) -> RealGrid:
+def xc_lda(density_grid: RealGrid) -> RealGrid:
   r"""local density approximation potential.
 
   NOTE: this is a non-polarized lda potential
@@ -106,4 +105,4 @@ def xc_lda(density_grid: RealGrid,) -> RealGrid:
   if density_grid.ndim == 4:
     output = jnp.expand_dims(output / 2, axis=0)
 
-  return output
+  return output / 2

@@ -18,7 +18,7 @@ CLASSIFIERS = [
   'Topic :: Software Development :: Libraries :: Python Modules',
   'Topic :: Scientific/Engineering',
 ]
-LICENSE = 'Apache License 2.0'
+LICENSE = 'MIT License'
 
 
 def _read_requirements():

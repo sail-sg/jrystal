@@ -4,7 +4,7 @@ import flax.linen as nn
 
 from jrystal._src.bloch import bloch_wave
 from jrystal._src.utils import vmapstack
-from jrystal._src.functional import coeff_expand, batched_ifft
+from jrystal._src.wave_ops import coeff_expand, batched_ifft
 from jrystal._src.initializer import normal
 
 from typing import Union, List
@@ -32,7 +32,7 @@ class PlaneWave(nn.Module):
       input shape [n1, n2, n3, 3].
 
   Returns:
-    ComplexVecterGrid: planewaves evaluated at r. 
+    ComplexVecterGrid: planewaves evaluated at r.
       Shape[nspin, num_k, num_band, ..., 3]
 
   Ref. https://en.wikipedia.org/wiki/Bloch%27s_theorem
@@ -71,10 +71,6 @@ class _PlaneWaveFFT(nn.Module):
     N = jnp.prod(jnp.array(coeff_grid.shape[-dim:]))
     wave = batched_ifft(coeff_grid, self.k_vector_grid.shape[-1]) * N
     return wave
-
-
-# I prefer not use Crystal object as input as I want this API to be decoupled
-# with other modules.
 
 
 class BatchedBlochWave(nn.Module):
@@ -123,7 +119,7 @@ class BatchedBlochWave(nn.Module):
     self, r: Float[Array, '*batches r'], coeff_grid: ComplexVecterGrid
   ) -> ComplexVecterGrid:
     dim = r.shape[-1]
-    wavefun = bloch_wave(self.cell_vectors, coeff_grid, self.k_vector_grid)  #
+    wavefun = bloch_wave(self.cell_vectors, coeff_grid, self.k_vector_grid)
     if r.ndim == 1:
       wave = wavefun(r)
     else:

@@ -11,7 +11,7 @@ Plane-wave density functional theory for crystals in JAX
 - **Direct optimization**.
 
 ### Jrystal design diagram
-<img title="Jrystal design diagram" alt="Alt text" src="/docs/Jrystal-diagram.png" width="600"/>
+<img title="Jrystal design diagram" alt="jrystal design diagram" src="docs/Jrystal-diagram.png" width="600"/>
 
 
 ### Installation
@@ -32,6 +32,21 @@ pip install --editable .
 ```
 
 This allows to modify your source code and have the changes take effect without you having to rebuild and reinstall.
+
+## Examples
+
+#### Total energy minimization
+Users may edit the `config` file first and run:
+```sh
+python jrystal/total_energy.py
+```
+
+
+#### Band structure calculation
+Users may run:
+```sh
+python jrystal/band_structure.py
+```
 
 
 ## Developer notes
