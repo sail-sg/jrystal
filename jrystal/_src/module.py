@@ -21,6 +21,7 @@ class PlaneWave(nn.Module):
   Attributes:
     shape (List): the shape of coeffients.
       A typical shape is [2, num_k, num_g, num_bands]
+      TODO: num_bands is a bit confusing
       where num_g must be greater than num_bands.
     mask (MaskGrid): The mask for g vector grid cut-off.
     cell_vectors (CellVectors): cell vectors.
@@ -37,6 +38,9 @@ class PlaneWave(nn.Module):
   Ref. https://en.wikipedia.org/wiki/Bloch%27s_theorem
 
   """
+  # TODO: shape maybe derived from mask?
+  # maybe we can specify num_k, num_electron, mask
+  # and derive num_g = sum(mask)
   shape: Union[Int[Array, 'nspin num_k num_g num_bands'], List]
   mask: MaskGrid
   cell_vectors: CellVector

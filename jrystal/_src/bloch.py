@@ -18,9 +18,9 @@ def u(a, cg, r, *, force_fft=False):
 
   Args:
     a: the lattice vectors in the real space, which has shape `(nd, nd)`.
-    cg: a tensor of shape `(batch_dims_of_cg..., n1, n2, ..., nd)`
+    cg: a tensor of shape `(leading_dims_of_cg..., n1, n2, ..., nd)`
       coefficient to linearly combine over different g.
-      here `batch_dims_of_cg...` is often used for different i, k in the
+      here `leading_dims_of_cg...` is often used for different i, k in the
       bloch wave function $\psi_{ik}$.
     r: a coordinate in the real space.
       a vector of shape (batch_dims_of_r..., d),
@@ -30,7 +30,7 @@ def u(a, cg, r, *, force_fft=False):
       created from `r_vectors(a, cg.shape[-ndim:])`.
   Returns:
     a complex tensor that is the wave function value at `r`.
-    the shape of the tensor is `(batch_dims_of_cg..., batch_dims_of_r...)`.
+    the shape of the tensor is `(leading_dims_of_cg..., batch_dims_of_r...)`.
 
     .. math::
       \sum_{g} c_{g} \exp(\mathrm{i}G_gr)
@@ -73,6 +73,13 @@ def _u_fft(g_vec, r, cg):
   """This is the fft version of `_u`.
   When the `r` happen to be the `r_vectors` of the crystal,
   we can use fft to accelerate the computation of `_u`.
+
+  The ifft api in numpy performs inverse transform, according to
+  https://en.wikipedia.org/wiki/Discrete_Fourier_transform#Inverse_transform
+  it has a factor of 1/N.
+
+  In the mostly seen definition of bloch wave, there's no such factor.
+  therefore we multiply back the N factor.
   """
   ndim = r.shape[-1]
   grid_sizes = cg.shape[-ndim:]
@@ -278,14 +285,16 @@ def bloch_wave(a, cg, k_vec):
 
   Args:
     a: the lattice vectors in the real space, which has shape (nd, nd).
-    cg: a tensor of shape (batch..., nk, n1, n2, ..., nd)
+      typically, nd=3.
+    cg: a tensor of shape (leading..., nk, n1, n2, n3)
       coefficient to linearly combine different g.
-    k_vec: a grid of k vectors (nk, d)
+    k_vec: a grid of k vectors (nk, nd)
 
   Returns:
     wave: a wave function that takes r as input.
   """
   ndim = a.shape[1]
+  assert cg.shape[-ndim - 1] == k_vec.shape[0]
   grid_sizes = cg.shape[-ndim:]
   g_vec = g_vectors(a, grid_sizes)  # noqa
   # r_vec is used to check whether fft should be used.
@@ -296,14 +305,16 @@ def bloch_wave(a, cg, k_vec):
 
     Args:
       r: a coordinate in the real space.
-        a vector of shape `(d,)`
+        a vector of shape `(batch..., d)`
     Returns:
       a complex tensor that is the wave function value at `r`.
-      the shape of the tensor is `(batch, ..., nk, ...)`
+      the shape of the tensor is `(leading..., nk, batch...)`
     """
-    sum_cg_expigr = u(a, cg, r, force_fft=force_fft)
-    kr = jnp.tensordot(k_vec, r, axes=(-1, -1))
-    expikr = jnp.expand_dims(jnp.exp(1.j * kr), -1)
+    sum_cg_expigr = u(
+      a, cg, r, force_fft=force_fft
+    )  # (leading..., nk, batch...)
+    kr = jnp.tensordot(k_vec, r, axes=(-1, -1))  # (nk, batch...)
+    expikr = jnp.exp(1.j * kr)
     return sum_cg_expigr * expikr
 
   return wave

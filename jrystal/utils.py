@@ -1,7 +1,10 @@
 import jax
+from jax import core
 import jaxlib
 import graphviz
 from jaxlib.xla_extension import hlo_module_from_text, XlaComputation
+import itertools
+from graphviz import Digraph
 
 
 def view_hlo(fun, optimized=True):

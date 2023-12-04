@@ -43,11 +43,13 @@ def reciprocal_braket(
     )
 
   num_grids = np.prod(np.array(potential_grids.shape))
-  discretize_factor = vol / num_grids / num_grids
+  # Parseval's theorem
+  parseval_factor = 1 / num_grids
+  # numerical integration weights
+  integral_weight = vol / num_grids
   product = jnp.sum(
-    jnp.conj(potential_grids) * density_grids
-  ) * discretize_factor
-
+    potential_grids * density_grids
+  ) * parseval_factor * integral_weight
   return product.real
 
 

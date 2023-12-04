@@ -18,7 +18,6 @@ def hartree_reciprocal(
     reciprocal_density_grid (ComplexGrid): the density of grid points in
       reciprocal space.
     g_vector_grid (RealVecterGrid): G vector grid.
-    vol (RealScalar): the volume of unit cell.
 
   Returns:
     ComplexGrid: Hartree potential evaluated at reciprocal grid points
