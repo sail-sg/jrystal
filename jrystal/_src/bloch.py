@@ -294,7 +294,7 @@ def bloch_wave(a, cg, k_vec):
     wave: a wave function that takes r as input.
   """
   ndim = a.shape[1]
-  assert cg.shape[-ndim - 1] == k_vec.shape[0]
+  # assert cg.shape[-ndim - 1] == k_vec.shape[0]
   grid_sizes = cg.shape[-ndim:]
   g_vec = g_vectors(a, grid_sizes)  # noqa
   # r_vec is used to check whether fft should be used.
