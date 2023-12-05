@@ -27,6 +27,20 @@ def grid_1d(n: Int, normalize=False) -> Int[Array, 'n']:
   return (grid / n if normalize else grid)
 
 
+def half_frequency_mask(grid_sizes):
+  """Return a mask to select the frequency components that are less than half
+  the maximum frequency, along each direction.
+  """
+  dim = len(grid_sizes)
+  masks = []
+  for i in range(dim):
+    fftfreq = jnp.fft.fftfreq(grid_sizes[i], 1 / grid_sizes[i])
+    max_freq = jnp.abs(fftfreq).max()
+    m = jnp.abs(fftfreq) <= max_freq / 2
+    masks.append(m)
+  return jnp.einsum('i,j,k->ijk', *masks)
+
+
 def _vector_grid(basis: Float[Array, "d"], grid_sizes, normalize=False):
   """_summary_
 
