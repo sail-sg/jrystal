@@ -48,7 +48,7 @@ def reciprocal_braket(
   # numerical integration weights
   integral_weight = vol / num_grids
   product = jnp.sum(
-    potential_grids * density_grids
+    jnp.conj(potential_grids) * density_grids
   ) * parseval_factor * integral_weight
   return product.real
 
