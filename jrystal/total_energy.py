@@ -8,13 +8,13 @@ import flax
 from flax.training import train_state
 import ml_collections
 
-from jrystal.config import get_config
-from jrystal.wave import PlaneWaveDensity, PlaneWaveFermiDirac
-from jrystal._src.grid import get_grid_sizes
-from jrystal._src.grid import k_vectors
-from jrystal._src.wave_ops import get_mask_cubic, get_max_cutoff_energy
-from jrystal.training_utils import create_crystal, get_ewald_coulomb_repulsion
-from jrystal.training_utils import create_optimizer
+from .config import get_config
+from .wave import PlaneWaveDensity, PlaneWaveFermiDirac
+from ._src.grid import get_grid_sizes
+from ._src.grid import k_vectors
+from ._src.wave_ops import get_mask_cubic, get_max_cutoff_energy
+from .training_utils import create_crystal, get_ewald_coulomb_repulsion
+from .training_utils import create_optimizer
 
 import time
 from tqdm import tqdm

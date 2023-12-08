@@ -12,9 +12,9 @@ NOTE: Wherever feasible, functional programming approaches should be employed.
 
 """
 
-from jrystal._src.wave import PlaneWaveDensity, PlaneWaveFermiDirac
-from jrystal._src.wave import PlaneWaveBandStructure
-from jrystal._src.module import PlaneWave, QRDecomp
+from ._src.wave import PlaneWaveDensity, PlaneWaveFermiDirac
+from ._src.wave import PlaneWaveBandStructure
+from ._src.module import PlaneWave, QRDecomp
 
 __all__ = (
   "PlaneWaveDensity",
