@@ -14,7 +14,9 @@ from .jrystal_typing import (ComplexGrid, RealVecterGrid, RealScalar, RealGrid)
 
 
 def reciprocal_braket(
-  potential_grids: ComplexGrid, density_grids: ComplexGrid, vol: RealScalar
+  bra: ComplexGrid,
+  ket: ComplexGrid,
+  vol: RealScalar,
 ) -> RealScalar:
   r"""This function calculate the inner product of <f|g> in reciprocal space
 
@@ -27,32 +29,34 @@ def reciprocal_braket(
   in reciprocal space.
 
   Args:
-      potential_grids (ComplexGrid): potential in reciprocal space.
-      density_grids (ComplexGrid): density in reciprocal space.
+      bra (ComplexGrid): bra in reciprocal space.
+      ket (ComplexGrid): ket in reciprocal space.
       vol (RealScalar): the volume of unit cell.
 
   Returns:
       RealScalar: the value of the inner product.
   """
-  if potential_grids.shape != density_grids.shape:
+  if bra.shape != ket.shape:
     raise ValueError(
-      f"potential and density shape are not aligned. Got "
-      f"{potential_grids.shape} and {density_grids.shape}."
+      f"bra and ket shape are not aligned. Got "
+      f"{bra.shape} and {ket.shape}."
     )
 
-  num_grids = np.prod(np.array(potential_grids.shape))
+  num_grids = np.prod(np.array(bra.shape))
   # Parseval's theorem
   parseval_factor = 1 / num_grids
   # numerical integration weights
-  integral_weight = vol / num_grids
+  numerical_integral_weight = vol / num_grids
   product = jnp.sum(
-    jnp.conj(potential_grids) * density_grids
-  ) * parseval_factor * integral_weight
+    jnp.conj(bra) * ket
+  ) * parseval_factor * numerical_integral_weight
   return product.real
 
 
 def real_braket(
-  potential_grids: ComplexGrid, density_grids: ComplexGrid, vol: RealScalar
+  bra: ComplexGrid,
+  ket: ComplexGrid,
+  vol: RealScalar,
 ) -> RealScalar:
   r"""This function calculate the inner product of <f|g> in real space
 
@@ -65,22 +69,22 @@ def real_braket(
   in real space.
 
   Args:
-      potential_grids (ComplexGrid): potential in real space.
-      density_grids (ComplexGrid): density in real space.
+      bra (ComplexGrid): potential in real space.
+      ket (ComplexGrid): density in real space.
       vol (RealScalar): the volume of unit cell.
 
   Returns:
       RealScalar: the value of the inner product.
   """
-  if potential_grids.shape != density_grids.shape:
+  if bra.shape != ket.shape:
     raise ValueError(
-      f"potential and density shape are not aligned. Got "
-      f"{potential_grids.shape} and {density_grids.shape}."
+      f"bra and ket shape are not aligned. Got "
+      f"{bra.shape} and {ket.shape}."
     )
 
-  num_grids = np.prod(np.array(potential_grids.shape))
-  discretize_factor = vol / num_grids
-  product = jnp.sum(potential_grids * density_grids) * discretize_factor
+  num_grids = np.prod(np.array(bra.shape))
+  numerical_integral_weight = vol / num_grids
+  product = jnp.sum(bra * ket) * numerical_integral_weight
   return product
 
 
