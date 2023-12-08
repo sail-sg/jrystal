@@ -2,8 +2,8 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from absl.testing import absltest, parameterized
-from jrystal._src.module import QRDecomp, BatchedBlochWave
-from jrystal._src.module import PlaneWave, _PlaneWaveFFT
+from jrystal._src.module import QRDecomp
+from jrystal._src.module import PlaneWave
 from jrystal._src.module import PlaneWaveDensity
 from jrystal._src.grid import r_vectors
 from jax.config import config
@@ -29,26 +29,6 @@ class _Test_modules(parameterized.TestCase):
     self.a = jnp.eye(3)
     self.k_grid = jnp.zeros([self.nk, 3])
     self.r_vec = r_vectors(self.a, grid_size)
-
-  def test_bloch_shape(self):
-    r_vec = r_vectors(self.a, self.shape[-3:])
-    cg = jnp.ones(self.shape)
-
-    bw = BatchedBlochWave(self.a, self.k_grid)
-    params = bw.init(self.key, r_vec, cg)
-    psi = bw.apply(params, r_vec, cg)
-    np.testing.assert_array_equal(psi.shape, cg.shape)
-
-  def test_pw_fft_equal(self):
-    shape = [2, 1, self.ng, 4]
-    pw = PlaneWave(shape, self.mask, self.a, self.k_grid)
-    params = pw.init(self.key, self.r_vec)
-    x_bw = pw.apply(params, self.r_vec)
-
-    pw = _PlaneWaveFFT(shape, self.mask, self.k_grid)
-    params = pw.init(self.key)
-    x_fft = pw.apply(params)
-    np.testing.assert_array_almost_equal(x_fft, x_bw, decimal=8)
 
   def test_pw_shape(self):
 

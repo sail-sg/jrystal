@@ -86,30 +86,6 @@ class ApplyExpCoeffShapeError(JrystalError):
     )
 
 
-class ApplyFFTShapeError(JrystalError):
-  """The input shape of fft module object should be incompatible with the
-  dimension of the fft operation. This error is raised when the dim of input
-  array is smaller than the fft dimension.
-
-  Example:
-
-  >>> from jrystal import BatchedFFT
-  >>> fft = BatchedFFT(3)
-  >>> x = jnp.ones([3, 5])
-  >>> fft.apply(None, x)
-
-  >>> jrystal.errors.ApplyFFTShapeError: Input array must have higher dimension
-  than fft ndim 3. Got input shape: (3, 5).
-
-  """
-
-  def __init__(self, fft_dim, input_shape):
-    super().__init__(
-      f'Input array must have higher dimension than fft ndim '
-      f'{fft_dim}. Got input shape: {input_shape}.'
-    )
-
-
 class WavevecOccupationMismatchError(JrystalError):
   """The wave function should return an jax.Array with shape:
       wave_fun: r -> [nspin, ni, nk, ...]

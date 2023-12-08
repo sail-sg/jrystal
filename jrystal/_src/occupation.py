@@ -5,7 +5,6 @@ import flax.linen as nn
 from jrystal._src.module import QRDecomp
 from typing import Union
 from jaxtyping import Int, Array, Float
-from jrystal._src.utils import vmapstack
 from jrystal._src.jrystal_typing import OccupationArray
 # TODO: since we already has this file named occupations.py,
 # (maybe change to singular occupation.py). We don't need to prefix
@@ -101,16 +100,15 @@ class Orthogonal(nn.Module):
       )
 
     occ = jnp.zeros([2, self.nk, self.ni])
+
     shape = [1, self.nk, (self.ni + self.spin) // 2]
     qr1 = QRDecomp(shape, False, False)()
-    pad = vmapstack(2)(lambda x: jnp.pad(x, (0, self.ni - qr1.shape[2])))
-    qr1 = pad(qr1)
+    occ = occ.at[0, :, :(self.ni + self.spin) // 2].set(qr1)
 
     shape = [1, self.nk, (self.ni - self.spin) // 2]
     qr2 = QRDecomp(shape, False, False)()
-    pad = vmapstack(2)(lambda x: jnp.pad(x, (0, self.ni - qr2.shape[2])))
-    qr2 = pad(qr2)
-    occ = jnp.vstack((qr1, qr2))
+    occ = occ.at[1, :, :(self.ni - self.spin) // 2].set(qr2)
+
     return occ**2
 
 

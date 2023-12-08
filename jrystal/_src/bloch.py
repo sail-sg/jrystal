@@ -83,7 +83,7 @@ def _u_fft(g_vec, r, cg):
   """
   ndim = r.shape[-1]
   grid_sizes = cg.shape[-ndim:]
-  out = np.prod(grid_sizes) * jnp.fft.ifftn(cg, axes=tuple(range(-ndim, 0)))
+  out = np.prod(grid_sizes) * jnp.fft.ifftn(cg, axes=range(-ndim, 0))
   out = jnp.reshape(out, (*cg.shape[:-ndim], *r.shape[:-1]))
   return out
 

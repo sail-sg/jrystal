@@ -6,13 +6,13 @@ This module is the the \epsilon(r) as in
     E_xc = \int  \epsilon(r) \rho(r) dr
 
 """
+import numpy as np
 import jax.numpy as jnp
 from jaxtyping import Float, Array
 from typing import Callable
 
 from jrystal._src.jrystal_typing import RealVecterGrid, RealScalar
 import jax_xc
-from jrystal._src.utils import vmapstack
 
 
 def lda_x(r0: Float[Array, "*nd"]):
@@ -40,11 +40,14 @@ def xc_density(
   else:
     raise NotImplementedError('xc functional is not implemented')
 
-  num_grid = jnp.prod(jnp.array(r_vector_grid.shape))
-  map_dim = r_vector_grid.ndim - 1
+  num_grid = np.prod(r_vector_grid.shape)
 
   def e_xc(r):
     return epsilon_xc(density_fn, r)
 
-  e_xc_grid = vmapstack(map_dim)(e_xc)(r_vector_grid)
+  rs = jnp.reshape(r_vector_grid, (-1, r_vector_grid.shape[-1]))
+  e_xc_grid = jax.vmap(e_xc)(rs)
+  e_xc_grid = e_xc_grid.reshape(
+    (*r_vector_grid.shape[:-1], *e_xc_grid.shape[1:])
+  )
   return e_xc_grid * vol / num_grid

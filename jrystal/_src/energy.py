@@ -7,7 +7,7 @@ import jax_xc
 from typing import Callable, Union
 from jaxtyping import Float, Array
 
-from .utils import complex_norm_square, vmapstack
+from .utils import complex_norm_square
 from . import potential
 from . import xc_density
 from .jrystal_typing import (ComplexGrid, RealVecterGrid, RealScalar, RealGrid)
@@ -219,17 +219,17 @@ def xc(
   vol: RealScalar,
   xc: str = 'lda_x'
 ) -> Float:
+  ndim = r_vector_grid.shape[-1]
   epsilon_xc = getattr(jax_xc, xc, None)
   if epsilon_xc:
     epsilon_xc = epsilon_xc(polarized=True)
 
-  num_grid = jnp.prod(jnp.array(r_vector_grid.shape))
-  map_dim = r_vector_grid.ndim - 1
+  num_grid = np.prod(r_vector_grid.shape)
 
   def _integrand(r):
     return epsilon_xc(density_fn, r) * density_fn(r)
 
-  _eps_den_grid = vmapstack(map_dim)(_integrand)(r_vector_grid)
+  _eps_den_grid = jax.vmap(_integrand)(r_vector_grid.reshape((-1, ndim)))
   return jnp.sum(_eps_den_grid) * vol / num_grid
 
 

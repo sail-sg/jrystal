@@ -66,7 +66,6 @@ class PlaneWaveDensity(nn.Module):
     shape = [2, num_k, num_g, self.num_electrons]
     self.dim = self.cell_vectors.shape[0]
     self.qr = QRDecomp(shape)
-    self.bloch = BatchedBlochWave(self.cell_vectors, self.k_vectors)
     self.r_vector_grid = r_vectors(self.cell_vectors, self.g_grid_sizes)
     self.g_vector_grid = g_vectors(self.cell_vectors, self.g_grid_sizes)
     self.vol = jnp.linalg.det(self.cell_vectors)
@@ -95,11 +94,14 @@ class PlaneWaveDensity(nn.Module):
   def __call__(self, crystal):
     return self.total_energy(crystal)
 
+  def bloch(self, coeff, r):
+    return bloch_wave(self.cell_vectors, coeff, self.k_vectors)(r)
+
   def density(self, r=None, reduce=True) -> jax.Array:
     if r is None:
       r = self.r_vector_grid
     coeff_grid = self.get_coefficient()
-    wave = self.bloch(r, coeff_grid) / jnp.sqrt(self.vol)
+    wave = self.bloch(coeff_grid, r) / jnp.sqrt(self.vol)
     density = complex_norm_square(wave)
 
     if reduce:  # reduce over k, i by occupation number
@@ -198,7 +200,6 @@ class PlaneWaveFermiDirac(nn.Module):
     )
     self.dim = self.cell_vectors.shape[-1]
     self.qr = QRDecomp(shape)
-    self.bloch = BatchedBlochWave(self.cell_vectors, self.k_vectors)
     self.occupation_fn = occupation.FermiDirac(
       self.num_electrons, width=self.smearing
     )
@@ -217,11 +218,14 @@ class PlaneWaveFermiDirac(nn.Module):
   def __call__(self, crystal):
     return self.total_energy(crystal)
 
+  def bloch(self, coeff, r):
+    return bloch_wave(self.cell_vectors, coeff, self.k_vectors)(r)
+
   def density(self, r=None, reduce=True) -> jax.Array:
     if r is None:
       r = self.r_vector_grid
     coeff_grid = self.get_coefficient()
-    wave = self.bloch(r, coeff_grid) / jnp.sqrt(self.vol)
+    wave = self.bloch(coeff_grid, r) / jnp.sqrt(self.vol)
     density = complex_norm_square(wave)
 
     if reduce:
@@ -354,12 +358,14 @@ class PlaneWaveBandStructure(nn.Module):
     shape = [1, num_k, num_g, self.num_bands]
     self.dim = self.cell_vectors.shape[0]
     self.qr = QRDecomp(shape)
-    self.bloch = BatchedBlochWave(self.cell_vectors, self.k_vectors)
     self.r_vector_grid = r_vectors(self.cell_vectors, self.g_grid_sizes)
     self.g_vector_grid = g_vectors(self.cell_vectors, self.g_grid_sizes)
     self.vol = jnp.linalg.det(self.cell_vectors)
 
     self.xc_potential = potential.xc_lda
+
+  def bloch(self, coeff, r):
+    return bloch_wave(self.cell_vectors, coeff, self.k_vectors)(r)
 
   def __call__(self, crystal: Crystal):
     return self.energy_trace(crystal)
@@ -379,7 +385,7 @@ class PlaneWaveBandStructure(nn.Module):
     if r is None:
       r = self.r_vector_grid
     coeff_grid = self.get_coefficient()
-    wave = self.bloch(r, coeff_grid) / jnp.sqrt(self.vol)
+    wave = self.bloch(coeff_grid, r) / jnp.sqrt(self.vol)
     return wave
 
   def density(self, r=None, reduce: bool = False) -> RealGrid:
