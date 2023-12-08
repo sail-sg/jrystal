@@ -151,7 +151,10 @@ def train(config: ml_collections.ConfigDict, return_fn=None):
       return state.apply_fn(
         {
           'params': state.params, **variables
-        }, *args, **kwargs, method=return_fn
+        },
+        *args,
+        **kwargs,
+        method=return_fn
       )
 
     return fn

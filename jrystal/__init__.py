@@ -20,9 +20,7 @@ def get_pkg_path():
 
 __path__ = get_pkg_path()
 
-
 __all__ = [
-
   "config",
   "crystal",
   "energy",
