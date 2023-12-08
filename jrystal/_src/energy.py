@@ -226,10 +226,10 @@ def xc(
   num_grid = jnp.prod(jnp.array(r_vector_grid.shape))
   map_dim = r_vector_grid.ndim - 1
 
-  def _integrad(r):
+  def _integrand(r):
     return epsilon_xc(density_fn, r) * density_fn(r)
 
-  _eps_den_grid = vmapstack(map_dim)(_integrad)(r_vector_grid)
+  _eps_den_grid = vmapstack(map_dim)(_integrand)(r_vector_grid)
   return jnp.sum(_eps_den_grid) * vol / num_grid
 
 
