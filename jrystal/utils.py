@@ -1,6 +1,6 @@
 import jax
 from jax import core
-import jaxlib
+# import jaxlib
 import graphviz
 from jaxlib.xla_extension import hlo_module_from_text, XlaComputation
 import itertools
