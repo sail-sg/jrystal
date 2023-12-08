@@ -20,20 +20,21 @@ import einops
 
 import jax_xc
 
-from jrystal._src.wave_ops import coeff_expand, batched_fft
-from jrystal._src.wave_ops import get_mask_cubic
-from jrystal._src import occupation
-from jrystal._src.utils import complex_norm_square
-from jrystal._src import energy, potential, xc_density
-from jrystal._src.grid import r_vectors, g_vectors
-from jrystal._src.crystal import Crystal
+from .wave_ops import coeff_expand
+from .wave_ops import get_mask_cubic
+from . import occupation
+from .utils import complex_norm_square
+from . import energy, potential, xc_density
+from .grid import r_vectors, g_vectors
+from .crystal import Crystal
+from .bloch import bloch_wave
 
 from typing import Tuple, Dict, Callable
 from jaxtyping import Int, Array, Float, Complex
-from jrystal._src.jrystal_typing import CellVector, RealScalar
-from jrystal._src.jrystal_typing import ComplexGrid, RealVecterGrid, RealGrid
-from jrystal._src import errors
-from jrystal._src.module import QRDecomp, BatchedBlochWave
+from .jrystal_typing import CellVector, RealScalar
+from .jrystal_typing import ComplexGrid, RealVecterGrid, RealGrid
+from . import errors
+from .module import QRDecomp
 
 
 class PlaneWaveDensity(nn.Module):
@@ -114,15 +115,7 @@ class PlaneWaveDensity(nn.Module):
 
   def reciprocal_density(self, reduce=True) -> ComplexGrid:
     density = self.density(self.r_vector_grid, reduce=reduce)
-
-    if reduce:  # reduce over k, i
-      dim = density.ndim - 1
-      density_fft = batched_fft(density, dim)
-    else:
-      dim = density.ndim - 3
-      density_fft = batched_fft(density, dim)
-
-    return density_fft
+    return jnp.fft.fftn(density, axes=range(-self.dim, 0))
 
   def get_coefficient(self):
     coeff_dense = self.qr()
@@ -244,17 +237,9 @@ class PlaneWaveFermiDirac(nn.Module):
   def reciprocal_density(
     self, r_vector_grid: RealVecterGrid, reduce=True
   ) -> ComplexGrid:
+    ndim = r_vector_grid.shape[-1]
     density = self.density(r_vector_grid, reduce=reduce)
-    dim = self.cell_vectors.shape[0]
-
-    if reduce:  # reduce over k, i
-      dim = density.ndim - 1
-      density_fft = batched_fft(density, dim)
-    else:
-      dim = density.ndim - 3
-      density_fft = batched_fft(density, dim)
-
-    return density_fft  # [2, num_k, num_band]
+    return jnp.fft.fftn(density, axes=range(-ndim, 0))
 
   def get_coefficient(self):
     coeff_dense = self.qr()
@@ -407,11 +392,7 @@ class PlaneWaveBandStructure(nn.Module):
 
   def reciprocal_density(self, reduce: bool = False) -> ComplexGrid:
     density = self.density(reduce=False)
-    dim = density.ndim - 3
-    density_fft = batched_fft(density, dim)
-    if reduce:
-      density_fft = jnp.sum(density_fft, axis=range(3))
-    return density_fft
+    return jnp.fft.fftn(density, axes=range(-self.dim, 0))
 
   def get_coefficient(self):
     coeff_dense = self.qr()
