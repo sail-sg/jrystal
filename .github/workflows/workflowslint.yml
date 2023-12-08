@@ -21,7 +21,7 @@ jobs:
         pip install yapf
     - name: flake8
       run: |
-        flake8 jrystal --ignore="E731 E124 W605 E722 W293 W291 F821 F722"
+        flake8 jrystal --ignore="E731 E124 W605 E722 W293 W291 F821 F722 E126 E121 E123"
     - name: yapf
       run: |
         yapf -r -d jrystal
