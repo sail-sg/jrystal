@@ -4,15 +4,13 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 import jax_xc
-
-from jrystal._src.utils import complex_norm_square, vmapstack
-from jrystal._src import potential
-from jrystal._src import xc_density
-
 from typing import Callable, Union
 from jaxtyping import Float, Array
-from jrystal._src.jrystal_typing import ComplexGrid, RealVecterGrid, RealScalar
-from jrystal._src.jrystal_typing import RealGrid
+
+from .utils import complex_norm_square, vmapstack
+from . import potential
+from . import xc_density
+from .jrystal_typing import (ComplexGrid, RealVecterGrid, RealScalar, RealGrid)
 
 
 def reciprocal_braket(
