@@ -147,14 +147,14 @@ def train(config: ml_collections.ConfigDict, return_fn=None):
 
   if return_fn:
 
-    def density(r):
+    def fn(*args, **kwargs):
       return state.apply_fn(
         {
           'params': state.params, **variables
-        }, r, method=return_fn
+        }, *args, **kwargs, method=return_fn
       )
 
-    return density
+    return fn
 
 
 if __name__ == '__main__':
