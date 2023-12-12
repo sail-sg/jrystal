@@ -397,7 +397,7 @@ class PlaneWaveBandStructure(nn.Module):
     return density
 
   def reciprocal_density(self, reduce: bool = False) -> ComplexGrid:
-    density = self.density(reduce=False)
+    density = self.density(reduce=reduce)
     return jnp.fft.fftn(density, axes=range(-self.dim, 0))
 
   def get_coefficient(self):
