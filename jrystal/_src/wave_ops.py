@@ -34,7 +34,9 @@ def coeff_expand(
       expanded coeff: shape (*batch, *nd)
   """
   coeff_shape = coeff_dense.shape[:-1] + mask.shape
-  return jnp.zeros(coeff_shape).at[..., mask].set(coeff_dense)
+  return jnp.zeros(
+    coeff_shape, dtype=coeff_dense.dtype
+  ).at[..., mask].set(coeff_dense)
 
 
 def coeff_compress(
