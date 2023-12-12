@@ -21,3 +21,6 @@ jobs:
     - name: test_total_energy
       run: |
         python tests/total_energy.py
+    - name: test_band_gap
+      run: |
+        python tests/band_gap.py
