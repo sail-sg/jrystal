@@ -247,7 +247,8 @@ def _u_transpose_rule(cotangent, a, cg, r, *, force_fft):
         raise ValueError(
           "force_fft is True, but r is not the r_vectors of the crystal."
         )
-      return _transpose_u_fft(cotangent)
+      wrt_cg = _transpose_u_fft(cotangent)
+      return (None, wrt_cg, None)
 
     if np.prod(r.shape) == np.prod(r_vec.shape):
       pred = jnp.array_equal(r.flatten(), r_vec.flatten())
