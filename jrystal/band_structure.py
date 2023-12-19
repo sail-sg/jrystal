@@ -53,8 +53,10 @@ def create_module(config: ConfigDict, density_fn: callable):
 
 def create_train_state(rng, config: ConfigDict, density_fn: callable):
   """Creates initial `TrainState`."""
-  if config.verbose == "true":
+  if config.verbose:
     logging.set_verbosity(logging.INFO)
+  else:
+    logging.set_verbosity(logging.WARNING)
 
   band_structure_module = create_module(config, density_fn)
   logging.info(f"{band_structure_module.k_vectors.shape[0]} k points sampled.")
