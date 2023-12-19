@@ -24,3 +24,6 @@ jobs:
     - name: test_band_gap
       run: |
         python tests/band_gap.py
+    - name: test_energy_gap
+      run: |
+        python tests/energy_gap.py
