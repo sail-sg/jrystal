@@ -5,6 +5,19 @@ import graphviz
 from jaxlib.xla_extension import hlo_module_from_text, XlaComputation
 import itertools
 from graphviz import Digraph
+import webbrowser
+
+
+def is_jupyter_notebook():
+  try:
+    from IPython import get_ipython
+    if 'IPKernelApp' not in get_ipython().config:
+      return False
+  except ImportError:
+    return False
+  except AttributeError:
+    return False
+  return True
 
 
 def view_hlo(fun, optimized=True):
@@ -29,13 +42,28 @@ def view_hlo(fun, optimized=True):
     if not optimized:
       xla_comp = jax.xla_computation(fun)(*args, **kwargs)
       dot = xla_comp.as_hlo_dot_graph()
-      graphviz.Source(dot).view()
+      gvz = graphviz.Source(dot)
     else:
       hlo_text = fun.lower(*args, **kwargs).compile().as_text()
       hlo_module = hlo_module_from_text(hlo_text)
       dot = XlaComputation(hlo_module.as_serialized_hlo_module_proto()
                           ).as_hlo_dot_graph()
-      graphviz.Source(dot).view()
+      gvz = graphviz.Source(dot)
+
+    filename = "optimized_" * optimized + f"hlo_of_{fun.__name__}@{id(fun)}"
+    is_jupyter = is_jupyter_notebook()
+    gvz.render(
+      filename=filename,
+      directory=".",
+      cleanup=True,
+      format="pdf",
+      view=(not is_jupyter),
+    )
+    if is_jupyter:
+      from IPython.display import display, Javascript
+      display(
+        Javascript('window.open("{filename}.pdf");'.format(filename=filename))
+      )
     return fun(*args, **kwargs)
 
   return _wrapped_func
@@ -123,9 +151,21 @@ def view_jaxpr(fn):
 
   def _wrapped_func(*args, **kwargs):
     closed_jaxpr = jax.make_jaxpr(fn)(*args, **kwargs)
-    g = jaxpr_to_dot_graph(closed_jaxpr.jaxpr)
-    filename = f"{fn.__name__}@{id(fn)}"
-    g.view(filename=filename, directory="/tmp", cleanup=True)
+    gvz = jaxpr_to_dot_graph(closed_jaxpr.jaxpr)
+    filename = f"jaxpr_of_{fn.__name__}@{id(fn)}"
+    is_jupyter = is_jupyter_notebook()
+    gvz.render(
+      filename=filename,
+      directory=".",
+      cleanup=True,
+      format="pdf",
+      view=(not is_jupyter),
+    )
+    if is_jupyter:
+      from IPython.display import display, Javascript
+      display(
+        Javascript('window.open("{filename}.pdf");'.format(filename=filename))
+      )
     return fn(*args, **kwargs)
 
   return _wrapped_func
