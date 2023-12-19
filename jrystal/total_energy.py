@@ -83,6 +83,8 @@ def train(config: ml_collections.ConfigDict, return_fn=None):
 
   if config.verbose:
     logging.set_verbosity(logging.INFO)
+  else:
+    logging.set_verbosity(logging.WARNING)
 
   jax.config.update("jax_enable_x64", config.jax_enable_x64)
   if config.xla_preallocate is False:
@@ -93,7 +95,10 @@ def train(config: ml_collections.ConfigDict, return_fn=None):
   state, variables = create_train_state(init_rng, config)
   crystal = create_crystal(config)
   start_time = time.time()
-  iters = tqdm(range(config.epoch))
+  if config.verbose:
+    iters = tqdm(range(config.epoch))
+  else:
+    iters = tqdm(range(config.epoch), disable=True)
   ew = get_ewald_coulomb_repulsion(config)
 
   @jax.jit

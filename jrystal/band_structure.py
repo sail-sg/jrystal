@@ -16,8 +16,6 @@ from tqdm import tqdm
 from absl import logging
 from ml_collections import ConfigDict
 
-logging.set_verbosity(logging.INFO)
-
 
 def create_module(config: ConfigDict, density_fn: callable):
   crystal = create_crystal(config)
@@ -55,7 +53,7 @@ def create_module(config: ConfigDict, density_fn: callable):
 
 def create_train_state(rng, config: ConfigDict, density_fn: callable):
   """Creates initial `TrainState`."""
-  if config.verbose:
+  if config.verbose == "true":
     logging.set_verbosity(logging.INFO)
 
   band_structure_module = create_module(config, density_fn)
@@ -76,6 +74,8 @@ def create_train_state(rng, config: ConfigDict, density_fn: callable):
 def train(config: ConfigDict):
   if config.verbose:
     logging.set_verbosity(logging.INFO)
+  else:
+    logging.set_verbosity(logging.WARNING)
 
   jax.config.update("jax_enable_x64", config.jax_enable_x64)
   if config.xla_preallocate is False:
@@ -122,7 +122,11 @@ def train(config: ConfigDict):
   if config.k_path_fine_tuning:
     params_kpoint_list = []
     logging.info("===> Optimizing the first k point...")
-    iters = tqdm(range(config.band_structure_epoch))
+    if config.verbose:
+      iters = tqdm(range(config.band_structure_epoch))
+    else:
+      iters = tqdm(range(config.band_structure_epoch), disable=True)
+
     start_time = time.time()
     for i in iters:
       state, es = update(state, variables, k_vectors[:1])
@@ -151,7 +155,11 @@ def train(config: ConfigDict):
     params_kpoint_list.append(state.params)
     num_k = k_vectors.shape[0]
 
-    iters = tqdm(range(1, num_k))
+    if config.verbose:
+      iters = tqdm(range(1, num_k))
+    else:
+      iters = tqdm(range(1, num_k), disable=True)
+
     for i in iters:
       for j in range(config.k_path_fine_tuning_epoch):
         state, es = update(state, variables, k_vectors[i:(i + 1)])
@@ -161,7 +169,11 @@ def train(config: ConfigDict):
       params_kpoint_list.append(state.params)
 
   else:
-    iters = tqdm(range(config.band_structure_epoch))
+    if config.verbose:
+      iters = tqdm(range(config.band_structure_epoch))
+    else:
+      iters = tqdm(range(config.band_structure_epoch), disable=True)
+
     start_time = time.time()
     for i in iters:
       state, es = update(state, variables)
@@ -188,7 +200,11 @@ def train(config: ConfigDict):
     logging.info(f" - Exchange-Correlation: {e_xc}")
     logging.info(f" - Hartree: {e_har}")
 
-  iters = tqdm(range(len(params_kpoint_list)))
+  if config.verbose:
+    iters = tqdm(range(len(params_kpoint_list)))
+  else:
+    iters = tqdm(range(len(params_kpoint_list)), disable=True)
+
   eigen_values = []
 
   @jax.jit
