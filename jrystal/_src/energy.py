@@ -224,7 +224,7 @@ def xc(
   if epsilon_xc:
     epsilon_xc = epsilon_xc(polarized=True)
 
-  num_grid = np.prod(r_vector_grid.shape)
+  num_grid = np.prod(r_vector_grid.shape[:-1])
 
   def _integrand(r):
     return epsilon_xc(density_fn, r) * density_fn(r)
