@@ -1,11 +1,13 @@
 """Functions and modules about grids"""
 
 import jax.numpy as jnp
+from jax import lax
 from jaxtyping import Int, Array, Float
 import numpy as np
 from jrystal._src.utils import get_fftw_factor
 from jrystal._src.jrystal_typing import RealVecterGrid
 from ase.dft.kpoints import monkhorst_pack
+import itertools
 
 
 # TODO(linmin): retire this function
@@ -33,12 +35,55 @@ def half_frequency_mask(grid_sizes):
   """
   dim = len(grid_sizes)
   masks = []
-  for i in range(dim):
-    fftfreq = jnp.fft.fftfreq(grid_sizes[i], 1 / grid_sizes[i])
-    max_freq = jnp.abs(fftfreq).max()
-    m = jnp.abs(fftfreq) <= max_freq / 2
+  for size in grid_sizes:
+    pos_max_freq = float((size - 1) // 2)
+    neg_max_freq = float(-(size - 1) // 2)
+    pos_size = int(np.floor(pos_max_freq / 2)) + 1
+    neg_start = int(np.ceil(neg_max_freq / 2)) + size
+    m = np.arange(size, dtype=int)
+    m = np.logical_or(m < pos_size, m >= neg_start)
     masks.append(m)
   return jnp.einsum('i,j,k->ijk', *masks)
+
+
+def _half_frequency_ranges(grid_sizes):
+  # instead of masks, we return ranges that are non-zero
+  sizes = []
+  starts = []
+  for size in grid_sizes:
+    pos_max_freq = float((size - 1) // 2)
+    neg_max_freq = float(-(size - 1) // 2)
+    pos_start = 0
+    pos_size = int(np.floor(pos_max_freq / 2)) + 1
+    neg_start = int(np.ceil(neg_max_freq / 2)) + size
+    neg_size = -int(np.ceil(neg_max_freq / 2))
+    sizes.append((pos_size, neg_size))
+    starts.append((pos_start, neg_start))
+  return starts, sizes
+
+
+def half_frequency_shape(grid_sizes):
+  _, sizes = _half_frequency_ranges(grid_sizes)
+  return tuple(map(sum, sizes))
+
+
+def half_frequency_pad_to(tensor, grid_sizes):
+  grid_sizes = tuple(grid_sizes)
+  batch_dims = tensor.shape[:-len(grid_sizes)]
+  starts, sizes = _half_frequency_ranges(grid_sizes)
+  assert tensor.shape[-len(grid_sizes):] == tuple(map(sum, sizes))
+  updates = [tensor]
+  for i, sz in enumerate(sizes):
+    split_updates = []
+    for u in updates:
+      split_updates.extend(jnp.split(u, [sz[0]], axis=i + len(batch_dims)))
+    updates = split_updates
+  start_indices = list(itertools.product(*starts))
+  ret = jnp.zeros(batch_dims + grid_sizes, dtype=tensor.dtype)
+  for s, u in zip(start_indices, updates):
+    start_idx = (0,) * len(batch_dims) + s
+    ret = lax.dynamic_update_slice(ret, u, start_idx)
+  return ret
 
 
 def _vector_grid(basis: Float[Array, "d"], grid_sizes, normalize=False):
