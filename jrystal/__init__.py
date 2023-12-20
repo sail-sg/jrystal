@@ -1,15 +1,15 @@
 __version__ = '0.0.2'
 
-from jrystal import crystal
-from jrystal import occupation
-from jrystal import total_energy
-from jrystal import wave
-from jrystal import band_structure
-from jrystal import visualization
-from jrystal import config
-from jrystal import energy
-from jrystal import training_utils
-from jrystal import utils
+from . import crystal
+from . import occupation
+from . import total_energy
+from . import wave
+from . import band_structure
+from . import visualization
+from . import config
+from . import energy
+from . import training_utils
+from . import utils
 
 from pathlib import Path
 

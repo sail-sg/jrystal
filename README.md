@@ -35,19 +35,33 @@ This allows to modify your source code and have the changes take effect without 
 
 ## Examples
 
-#### Total energy minimization
-Users may edit the `config` file first and run:
+Currently we support two modes:
+- `energy`: total energy minimization;
+- `band`: band structure calculation.
+
+#### Total energy minimization.
+Users may edit the `config.yaml` file first and run:
+
 ```sh
-python jrystal/total_energy.py
+python main.py --mode energy
+```
+
+You may want to identify your our config yaml file by:
+```sh
+python main.py --mode energy --config YOUR_CONFIG_FILE
+```
+
+You can also tuning some of the setting via command line:
+```sh
+python main.py --mode energy --epoch 2000 --grid 32
 ```
 
 
 #### Band structure calculation
 Users may run:
 ```sh
-python jrystal/band_structure.py
+python main.py --mode band
 ```
-
 
 ## Developer notes
 

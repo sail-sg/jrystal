@@ -16,3 +16,4 @@ ml_collections
 einops
 
 graphviz
+pyyaml
