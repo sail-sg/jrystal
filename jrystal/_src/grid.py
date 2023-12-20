@@ -33,7 +33,7 @@ def half_frequency_mask(grid_sizes):
   """Return a mask to select the frequency components that are less than half
   the maximum frequency, along each direction.
   """
-  dim = len(grid_sizes)
+  # dim = len(grid_sizes)
   masks = []
   for size in grid_sizes:
     pos_max_freq = float((size - 1) // 2)
