@@ -6,6 +6,8 @@ from jaxlib.xla_extension import hlo_module_from_text, XlaComputation
 import itertools
 from graphviz import Digraph
 import webbrowser  # noqa
+import subprocess
+from functools import partial
 
 
 def is_jupyter_notebook():
@@ -20,7 +22,65 @@ def is_jupyter_notebook():
   return True
 
 
-def view_hlo(fun, optimized=True):
+is_jupyter = is_jupyter_notebook()
+
+
+def view(filename, view_command=None):
+  if view_command is not None:
+    subprocess.Popen(
+      [view_command, filename],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL,
+    )
+  elif is_jupyter:
+    from IPython.display import display, Javascript
+    display(Javascript('window.open("{filename}");'.format(filename=filename)))
+  else:
+    webbrowser.open(filename)
+
+
+def write_graphviz(gvz, filename):
+  gvz.render(
+    filename=filename,
+    directory=".",
+    cleanup=True,
+    format="pdf",
+    view=False,
+  )
+  return filename + ".pdf"
+
+
+def write_txt(text, filename):
+  with open(f"{filename}.txt", "w") as f:
+    f.write(text)
+  return filename + ".txt"
+
+
+def view_hlo(
+  *args,
+  optimized=True,
+  graph=True,
+  txt=False,
+  view_command=None,
+):
+  if len(args) == 1 and callable(args[0]):
+    return _view_hlo(
+      args[0],
+      optimized=optimized,
+      graph=graph,
+      txt=txt,
+      view_command=view_command,
+    )
+  return partial(
+    _view_hlo,
+    optimized=optimized,
+    graph=graph,
+    txt=txt,
+    view_command=view_command,
+  )
+
+
+def _view_hlo(fun, *, optimized, graph, txt, view_command):
   """Decorator to view the HLO graph of a function.
 
   Usage:
@@ -39,31 +99,25 @@ def view_hlo(fun, optimized=True):
   """
 
   def _wrapped_func(*args, **kwargs):
+    filename = "optimized_" * optimized + f"hlo_of_{fun.__name__}@{id(fun)}"
     if not optimized:
       xla_comp = jax.xla_computation(fun)(*args, **kwargs)
-      dot = xla_comp.as_hlo_dot_graph()
-      gvz = graphviz.Source(dot)
+      if graph:
+        dot = xla_comp.as_hlo_dot_graph()
+        gvz = graphviz.Source(dot)
+      if txt:
+        hlo_text = xla_comp.as_hlo_text()
     else:
       hlo_text = fun.lower(*args, **kwargs).compile().as_text()
-      hlo_module = hlo_module_from_text(hlo_text)
-      dot = XlaComputation(hlo_module.as_serialized_hlo_module_proto()
-                          ).as_hlo_dot_graph()
-      gvz = graphviz.Source(dot)
-
-    filename = "optimized_" * optimized + f"hlo_of_{fun.__name__}@{id(fun)}"
-    is_jupyter = is_jupyter_notebook()
-    gvz.render(
-      filename=filename,
-      directory=".",
-      cleanup=True,
-      format="pdf",
-      view=(not is_jupyter),
-    )
-    if is_jupyter:
-      from IPython.display import display, Javascript
-      display(
-        Javascript('window.open("{filename}.pdf");'.format(filename=filename))
-      )
+      if graph:
+        hlo_module = hlo_module_from_text(hlo_text)
+        dot = XlaComputation(hlo_module.as_serialized_hlo_module_proto()
+                            ).as_hlo_dot_graph()
+        gvz = graphviz.Source(dot)
+    if graph:
+      view(write_graphviz(gvz, filename), view_command=view_command)
+    if txt:
+      view(write_txt(hlo_text, filename), view_command=view_command)
     return fun(*args, **kwargs)
 
   return _wrapped_func
@@ -132,7 +186,13 @@ def jaxpr_to_dot_graph(jaxpr):
   return graph
 
 
-def view_jaxpr(fn):
+def view_jaxpr(*args, graph=True, txt=False, view_command=None):
+  if len(args) == 1 and callable(args[0]):
+    return _view_jaxpr(args[0], graph=graph, txt=txt, view_command=view_command)
+  return partial(_view_jaxpr, graph=graph, txt=txt, view_command=view_command)
+
+
+def _view_jaxpr(fn, *, graph, txt, view_command):
   """Decorator to view the jaxpr graph of a function.
 
   Usage:
@@ -150,21 +210,14 @@ def view_jaxpr(fn):
   """
 
   def _wrapped_func(*args, **kwargs):
+    filename = f"jaxpr_of_{fn.__name__}@{id(fn)}"
     closed_jaxpr = jax.make_jaxpr(fn)(*args, **kwargs)
     gvz = jaxpr_to_dot_graph(closed_jaxpr.jaxpr)
-    filename = f"jaxpr_of_{fn.__name__}@{id(fn)}"
-    is_jupyter = is_jupyter_notebook()
-    gvz.render(
-      filename=filename,
-      directory=".",
-      cleanup=True,
-      format="pdf",
-      view=(not is_jupyter),
-    )
-    if is_jupyter:
-      from IPython.display import display, Javascript
-      display(
-        Javascript('window.open("{filename}.pdf");'.format(filename=filename))
+    if graph:
+      view(write_graphviz(gvz, filename), view_command=view_command)
+    if txt:
+      view(
+        write_txt(str(closed_jaxpr.jaxpr), filename), view_command=view_command
       )
     return fn(*args, **kwargs)
 
