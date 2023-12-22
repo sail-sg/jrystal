@@ -36,12 +36,12 @@ def half_frequency_mask(grid_sizes):
   # dim = len(grid_sizes)
   masks = []
   for size in grid_sizes:
-    pos_max_freq = float((size - 1) // 2)
-    neg_max_freq = float(-(size - 1) // 2)
-    pos_size = int(np.floor(pos_max_freq / 2)) + 1
-    neg_start = int(np.ceil(neg_max_freq / 2)) + size
-    m = np.arange(size, dtype=int)
-    m = np.logical_or(m < pos_size, m >= neg_start)
+    G_min = -(size // 2)
+    G_max = (size - 1) // 2
+    lower_bound = -G_max // 2
+    upper_bound = G_max // 2
+    m = np.ones((size,), dtype=bool)
+    m[upper_bound + 1:lower_bound] = False
     masks.append(m)
   return jnp.einsum('i,j,k->ijk', *masks)
 
@@ -51,12 +51,14 @@ def _half_frequency_ranges(grid_sizes):
   sizes = []
   starts = []
   for size in grid_sizes:
-    pos_max_freq = float((size - 1) // 2)
-    neg_max_freq = float(-(size - 1) // 2)
+    G_min = -(size // 2)
+    G_max = (size - 1) // 2
+    lower_bound = -G_max // 2
+    upper_bound = G_max // 2
     pos_start = 0
-    pos_size = int(np.floor(pos_max_freq / 2)) + 1
-    neg_start = int(np.ceil(neg_max_freq / 2)) + size
-    neg_size = -int(np.ceil(neg_max_freq / 2))
+    pos_size = upper_bound + 1
+    neg_start = lower_bound + size
+    neg_size = size - neg_start
     sizes.append((pos_size, neg_size))
     starts.append((pos_start, neg_start))
   return starts, sizes
