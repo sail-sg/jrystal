@@ -17,3 +17,5 @@ einops
 
 graphviz
 pyyaml
+
+autofd>=0.0.6

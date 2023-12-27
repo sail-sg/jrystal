@@ -8,7 +8,7 @@ from jrystal._src.bloch import u
 from jrystal._src.energy import hartree
 from autofd import function
 import autofd.operators as o
-from jaxtyping import Float32, Array
+from jaxtyping import Float32, Complex64, Array
 from jrystal.utils import view_hlo
 
 
@@ -49,24 +49,19 @@ class _TestOperators(parameterized.TestCase):
     cell_vectors = jax.random.uniform(key, [3, 3])
     grid_sizes = (48,) * 3
 
-    def potential_grid(cell_vectors):
+    @view_hlo
+    @jax.jit
+    def potential_grid():
 
       @function
-      def density(r: Float32[Array, "3"]) -> Float32[Array, ""]:
-        return jnp.sum(jnp.sin(r), axis=-1)
+      def density(r: Float32[Array, "3"]) -> Complex64[Array, ""]:
+        return jnp.sum(jnp.sin(r), axis=-1) + 0.j
 
       def hartree_energy(density):
         vhar = hartree_potential(
           density, cell_vectors=cell_vectors, grid_sizes=grid_sizes
         )
-        integrand = o.compose(
-          lambda v,
-          rho: 0.5 * jnp.real(v * rho),
-          vhar,
-          density,
-          share_inputs=True,
-        )
-        return o.integrate(integrand, argnums=0)
+        return o.braket(density, vhar, real=True)
 
       with jax.ensure_compile_time_eval():
         d = jax.grad(hartree_energy)(density)
@@ -74,7 +69,7 @@ class _TestOperators(parameterized.TestCase):
       r_vec = jnp.reshape(r_vector_grid, (-1, 3))
       return jax.vmap(d)(r_vec)
 
-    view_hlo(jax.jit(potential_grid), optimized=True, txt=True)(cell_vectors)
+    potential_grid()
 
 
 if __name__ == '__main__':
