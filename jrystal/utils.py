@@ -1,6 +1,7 @@
 import jax
 from jax import core
 # import jaxlib
+import os
 import graphviz
 from jaxlib.xla_extension import hlo_module_from_text, XlaComputation
 import itertools
@@ -36,7 +37,7 @@ def view(filename, view_command=None):
     from IPython.display import display, Javascript
     display(Javascript('window.open("{filename}");'.format(filename=filename)))
   else:
-    webbrowser.open(filename)
+    webbrowser.open_new_tab(f"file://{os.path.abspath(filename)}")
 
 
 def write_graphviz(gvz, filename):
