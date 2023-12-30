@@ -287,7 +287,7 @@ def bloch_wave(a, cg, k_vec):
   Args:
     a: the lattice vectors in the real space, which has shape (nd, nd).
       typically, nd=3.
-    cg: a tensor of shape (leading..., nk, n1, n2, n3)
+    cg: a tensor of shape (leading..., nk, _, n1, n2, n3)
       coefficient to linearly combine different g.
     k_vec: a grid of k vectors (nk, nd)
 
@@ -316,6 +316,7 @@ def bloch_wave(a, cg, k_vec):
     )  # (leading..., nk, batch...)
     kr = jnp.tensordot(k_vec, r, axes=(-1, -1))  # (nk, batch...)
     expikr = jnp.exp(1.j * kr)
+    expikr = jnp.expand_dims(expikr, 1)
     return sum_cg_expigr * expikr
 
   return wave
