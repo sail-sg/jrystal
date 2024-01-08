@@ -91,3 +91,37 @@ jax.interpreters.ad.deflinear2(
 jax.interpreters.ad.primitive_transposes[hartree_potential_p] = (
   _hartree_potential_transpose_rule
 )
+
+
+def external_potential(positions, charges, cell_vectors, grid_sizes):
+  """External potential for plane waves.
+
+  Args:
+    positions (Array): Coordinates of atoms in a unit cell.
+      Shape: [num_atoms d].
+    charges (Array): Charges of atoms. Shape: [num_atoms].
+    cell_vectors (Array): Vectors of unit cell.
+      Shape: [d d].
+    grid_sizes (Array): Number of grid points in each direction.
+  """
+  ndim = cell_vectors.shape[-1]
+  g_vector_grid = g_vectors(cell_vectors, grid_sizes)
+  g_vec_square = jnp.sum(g_vector_grid**2, axis=-1)
+  si = jnp.exp(1.j * jnp.matmul(g_vector_grid, jnp.transpose(positions)))
+  vi = charges / jnp.expand_dims(g_vec_square, -1)
+  vi = vi.at[(0,) * ndim].set(0)
+  vi *= 4 * jnp.pi
+  vol = np.linalg.det(cell_vectors)
+  reciprocal_potential_grid = jnp.sum(vi * si, axis=-1) / vol
+
+  @function
+  @lu.wrap_init
+  def potential(r):
+    return u(
+      cell_vectors,
+      reciprocal_potential_grid,
+      r,
+      force_fft=force_fft,
+    )
+
+  return potential
