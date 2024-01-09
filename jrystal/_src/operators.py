@@ -9,7 +9,7 @@ import jax.extend.linear_util as lu
 from .bloch import u
 
 from autofd.operators import def_operator
-from autofd.general_array import operator, function, Spec, Ret
+from autofd.general_array import operator, function, Spec, Ret, Arg, Grid
 
 hartree_potential_p = core.Primitive("hartree_potential")
 
@@ -43,20 +43,25 @@ def hartree_potential_impl(density, *, cell_vectors, grid_sizes, force_fft):
   @function
   @lu.wrap_init
   def potential(r):
-    return u(
-      cell_vectors,
-      reciprocal_potential_grid,
-      r,
-      force_fft=force_fft,
+    # TODO: we're reusing the u function here, but it is not optimal
+    # because in the case of density which is a real function,
+    # the rfft can be used for saving some computation/memory.
+    # TODO: the division of np.prod(grid_sizes) will cancel with the
+    # multiplication in the u function, but XLA may not cancel them cleanly.
+    return jnp.real(
+      u(
+        cell_vectors,
+        reciprocal_potential_grid,
+        r,
+        force_fft=force_fft,
+      )
     ) / np.prod(grid_sizes)
 
   return potential
 
 
 def hartree_potential_spec(density, *, cell_vectors, grid_sizes, force_fft):
-  real_z = jnp.zeros((), dtype=density.ret.spec.dtype)
-  dtype = real_z.astype(complex).dtype
-  return (Ret(Spec((), dtype)), density.shape[1]), None
+  return density.shape, None
 
 
 def hartree_potential_grid(density, *, cell_vectors, grid_sizes, force_fft):
@@ -92,8 +97,39 @@ jax.interpreters.ad.primitive_transposes[hartree_potential_p] = (
   _hartree_potential_transpose_rule
 )
 
+external_potential_p = core.Primitive("external_potential")
 
-def external_potential(positions, charges, cell_vectors, grid_sizes):
+
+def external_potential(
+  *,
+  positions,
+  charges,
+  cell_vectors,
+  grid_sizes,
+  force_fft=True,
+  real=True,
+):
+  return external_potential_p.bind(
+    positions=positions,
+    charges=charges,
+    cell_vectors=cell_vectors,
+    grid_sizes=grid_sizes,
+    force_fft=force_fft,
+    real=real,
+  )
+
+
+@operator
+@lu.wrap_init
+def external_potential_impl(
+  *,
+  positions,
+  charges,
+  cell_vectors,
+  grid_sizes,
+  force_fft,
+  real,
+):
   """External potential for plane waves.
 
   Args:
@@ -117,11 +153,54 @@ def external_potential(positions, charges, cell_vectors, grid_sizes):
   @function
   @lu.wrap_init
   def potential(r):
-    return u(
+    ret = -u(
       cell_vectors,
       reciprocal_potential_grid,
       r,
       force_fft=force_fft,
     )
+    return jnp.real(ret) if real else ret
 
   return potential
+
+
+def external_potential_spec(
+  *,
+  positions,
+  charges,
+  cell_vectors,
+  grid_sizes,
+  force_fft,
+  real,
+):
+  dtype = (
+    positions.dtype
+    if real else jnp.zeros((), dtype=positions.dtype).astype(complex).dtype
+  )
+  return (
+    (Ret(Spec((), dtype=dtype)), Arg(Spec((3,), dtype=positions.dtype))), None
+  )
+
+
+def external_potential_grid(
+  *,
+  positions,
+  charges,
+  cell_vectors,
+  grid_sizes,
+  force_fft,
+  real,
+):
+  r_vector_grid = r_vectors(cell_vectors, grid_sizes)
+  vol = jnp.linalg.det(cell_vectors)
+  nodes = jnp.reshape(r_vector_grid, (-1, 3))
+  weights = vol / np.prod(grid_sizes)
+  return Grid((nodes,), (weights,))
+
+
+def_operator(
+  external_potential_p,
+  external_potential_impl,
+  external_potential_spec,
+  external_potential_grid,
+)
