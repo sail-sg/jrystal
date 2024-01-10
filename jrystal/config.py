@@ -19,6 +19,10 @@ def get_config() -> ml_collections.ConfigDict:
   config.crystal_xyz_file = None
 
   # Planewave hyperparameters
+  config.g_grid_mask_method: str = "cubic"
+  # g_grid_mask_method can be either "cubic" or "spherical".
+  # For "cubic", the cutoff cannot be assigned, but will be estimated.
+  # Only for "spherical" method, the cutoff_energy argument is valid.
   config.cutoff_energy: float = 100
   config.grid_sizes: Union[int, List[int], Tuple[int]] = 32
   config.k_grid_sizes: Union[int, List[int], Tuple[int]] = 1

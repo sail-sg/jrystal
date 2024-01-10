@@ -10,10 +10,14 @@ xla_preallocate: false
 ################################################
 # Total Energy Minimization Hyper-parameters.  #
 ################################################
-crystal: diamond
+crystal: diamond1
 crystal_xyz_file: null
 
 # Planewave hyperparameters
+# g_grid_mask_method can be either "cubic" or "spherical".
+# For "cubic", the cutoff cannot be assigned, but will be estimated.
+# Only for "spherical" method, the cutoff_energy argument is valid.
+g_grid_mask_method: "spherical"
 cutoff_energy: 100
 grid_sizes: 32
 k_grid_sizes: 1
@@ -30,7 +34,7 @@ xc: lda_x
 optimizer: yogi
 optimizer_args:
   learning_rate: 0.01
-epoch: 5000
+epoch: 10000
 convergence_condition: 1.0e-06
 
 

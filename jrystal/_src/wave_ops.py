@@ -47,15 +47,20 @@ def coeff_compress(
   return coeff_grid[..., mask]
 
 
-def get_mask_radial(
+def get_mask_spherical(
   cell_vectors: CellVector,
   grid_sizes: Union[List, jax.Array],
-  cutoff_energy: float
+  cutoff_energy: float,
+  return_mask_num: bool = True
 ) -> MaskGrid:
   g_vector_grid = g_vectors(cell_vectors, grid_sizes)
-  g_norm = jnp.linalg.norm(g_vector_grid, axis=-1, keepdims=False)
+  g_norm = np.linalg.norm(g_vector_grid, axis=-1, keepdims=False)
   mask = g_norm**2 <= cutoff_energy * 2
-  return mask
+  if return_mask_num:
+    mask_num = np.sum(mask == 1)
+    return mask, mask_num
+  else:
+    return mask
 
 
 def get_mask_cubic(

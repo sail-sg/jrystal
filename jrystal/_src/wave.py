@@ -45,6 +45,7 @@ class PlaneWaveDensity(nn.Module):
   spin: Int
   occupation_method: str = 'gamma'
   xc_functional: str = 'lda_x'
+  mask: Float[Array, '*d'] = None
   """
   The wave function module for total energy minimization.
 
@@ -62,7 +63,9 @@ class PlaneWaveDensity(nn.Module):
 
   def setup(self):
     num_k = np.prod(np.array(self.k_vectors.shape)[:-1]).item()
-    self.mask, num_g = get_mask_cubic(self.g_grid_sizes)
+    if self.mask is None:
+      self.mask, num_g = get_mask_cubic(self.g_grid_sizes)
+    num_g = self.mask.sum()
     shape = [2, num_k, num_g, self.num_electrons]
     self.dim = self.cell_vectors.shape[0]
     self.qr = QRDecomp(shape)

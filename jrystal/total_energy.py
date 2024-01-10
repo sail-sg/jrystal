@@ -12,7 +12,8 @@ from .config import get_config
 from .wave import PlaneWaveDensity, PlaneWaveFermiDirac
 from ._src.grid import get_grid_sizes
 from ._src.grid import k_vectors
-from ._src.wave_ops import get_mask_cubic, get_max_cutoff_energy
+from ._src.wave_ops import get_max_cutoff_energy, get_mask_spherical
+from ._src.wave_ops import get_mask_cubic
 from .training_utils import create_crystal, get_ewald_coulomb_repulsion
 from .training_utils import create_optimizer
 
@@ -30,8 +31,19 @@ def create_module(config: ConfigDict):
   k_grid_sizes = get_grid_sizes(config.k_grid_sizes)
   spin = int(ni % 2)
   k_vector_grid = k_vectors(crystal.cell_vectors, k_grid_sizes)
+  if config.g_grid_mask_method == "spherical":
+    mask, num_g = get_mask_spherical(
+      crystal.cell_vectors, g_grid_sizes, config.cutoff_energy
+    )
+    cutoff = config.cutoff_energy
+  else:
+    mask, num_g = get_mask_cubic(g_grid_sizes)
+    cutoff = get_max_cutoff_energy(
+      crystal.cell_vectors, g_grid_sizes, k_vector_grid
+    )
 
   if config.occupation in ["fermi dirac", "fermi_dirac", "fermi"]:
+    logging.warning("only support parallelepiped mask")
     density_module = PlaneWaveFermiDirac(
       crystal.num_electrons,
       crystal.cell_vectors,
@@ -48,19 +60,16 @@ def create_module(config: ConfigDict):
       k_vector_grid,
       spin,
       occupation_method=config.occupation,
-      xc_functional=xc_functional
+      xc_functional=xc_functional,
+      mask=mask
     )
-  mask, num = get_mask_cubic(g_grid_sizes)
-  cutoff_energy = get_max_cutoff_energy(
-    crystal.cell_vectors, g_grid_sizes, k_vector_grid
-  )
-  # mask_ratio = num / jnp.prod(jnp.array(g_grid_sizes))
+
   logging.info("===> Creating density module...")
-  logging.info(f' {num} G points selected.')
+  logging.info(f' {num_g} G points selected.')
   # logging.info(f'{mask_ratio*100:.2f}% frequency masked.')
   logging.info(f' The size of G grid: {mask.shape}')
   logging.info(f' The size of K points: {k_vector_grid.shape[:-1]}')
-  logging.info(f' Estimated maximum of cutoff energy: {cutoff_energy:.3f} Ha')
+  logging.info(f' Maximum of cutoff energy: {cutoff:.3f} Ha')
 
   return density_module
 

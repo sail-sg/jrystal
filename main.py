@@ -23,9 +23,16 @@ parser.add_argument(
   default="config.yaml"
 )
 
-parser.add_argument("-g", "--grid", type=int, help="Grid sizes", default="32")
+parser.add_argument("-g", "--grid", type=int, help="Grid sizes", default=None)
 parser.add_argument(
-  "-e", "--epoch", type=int, help="Epoch number", default=5000
+  "-e", "--epoch", type=int, help="Epoch number", default=None
+)
+parser.add_argument(
+  "--grid_mask",
+  type=str,
+  choices=['spherical', 'cubic'],
+  help="method for generating G grid mask",
+  default='cubic'
 )
 
 args = parser.parse_args()
@@ -35,8 +42,14 @@ with open(config_file, 'r') as file:
   config = yaml.safe_load(file)
 
 config = ConfigDict(config)
-config.epoch = args.epoch
-config.grid_sizes = args.grid
+
+if args.grid is not None:
+  config.grid_sizes = args.grid
+
+if args.epoch is not None:
+  config.epoch = args.epoch
+
+config.g_grid_mask_method = args.grid_mask
 
 if args.mode == "energy":
   jrystal.total_energy.train(config)
