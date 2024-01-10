@@ -61,7 +61,8 @@ def create_module(config: ConfigDict):
       spin,
       occupation_method=config.occupation,
       xc_functional=xc_functional,
-      mask=mask
+      mask=mask,
+      num_g=num_g
     )
 
   logging.info("===> Creating density module...")

@@ -6,8 +6,6 @@ import numpy as np
 import jax.numpy as jnp
 from jaxtyping import Float, Array, Complex
 from jrystal._src.grid import g_vectors
-from jrystal._src.utils import quartile
-
 from typing import Union, List
 from jrystal._src.jrystal_typing import ComplexGrid, MaskGrid, CellVector
 
