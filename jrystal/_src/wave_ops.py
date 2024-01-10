@@ -66,23 +66,21 @@ def get_mask_spherical(
 def get_mask_cubic(
   grid_sizes: Union[List, jax.Array], return_mask_num: bool = True
 ) -> MaskGrid:
-  if len(grid_sizes) != 3:
-    return NotImplementedError
+  masks = []
+  mask_sizes = []
+  for size in grid_sizes:
+    G_min = -(size // 2)
+    G_max = (size - 1) // 2
+    lower_bound = -G_max // 2
+    upper_bound = G_max // 2
+    m = np.ones((size,), dtype=bool)
+    m[upper_bound + 1:lower_bound] = False
+    masks.append(m)
+    mask_sizes.append(upper_bound - lower_bound + 1)
 
-  q = [quartile(n) for n in grid_sizes]
-  mask = np.zeros(shape=grid_sizes)
-  idx = np.ix_(
-    list(range(q[0][0])) + list(range(q[0][2], grid_sizes[0])),
-    list(range(q[1][0])) + list(range(q[1][2], grid_sizes[1])),
-    list(range(q[2][0])) + list(range(q[2][2], grid_sizes[2]))
-  )
-  mask[idx] = 1
-  mask = (mask == 1)
-
+  mask = jnp.einsum('i,j,k->ijk', *masks)
   if return_mask_num:
-    mask_num = [q[i][0] + grid_sizes[i] - q[i][2] for i in range(3)]
-    mask_num = np.prod(np.asarray(mask_num))
-    return mask, mask_num
+    return mask, np.prod(mask_sizes)
   else:
     return mask
 

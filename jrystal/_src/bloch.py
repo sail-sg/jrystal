@@ -276,7 +276,7 @@ jax.interpreters.ad.primitive_transposes[u_p] = _u_transpose_rule
 jax.interpreters.batching.primitive_batchers[u_p] = _u_batch_rule
 
 
-def bloch_wave(a, cg, k_vec):
+def bloch_wave(a, cg, k_vec=None):
   r"""Return a wave function that takes a coordinate `r` as input,
   that generates the wave function value at `r` for all `k`.
 
@@ -287,7 +287,7 @@ def bloch_wave(a, cg, k_vec):
   Args:
     a: the lattice vectors in the real space, which has shape (nd, nd).
       typically, nd=3.
-    cg: a tensor of shape (leading..., nk, n1, n2, n3)
+    cg: a tensor of shape (leading..., nk, _, n1, n2, n3)
       coefficient to linearly combine different g.
     k_vec: a grid of k vectors (nk, nd)
 
@@ -314,8 +314,12 @@ def bloch_wave(a, cg, k_vec):
     sum_cg_expigr = u(
       a, cg, r, force_fft=force_fft
     )  # (leading..., nk, batch...)
-    kr = jnp.tensordot(k_vec, r, axes=(-1, -1))  # (nk, batch...)
-    expikr = jnp.exp(1.j * kr)
-    return sum_cg_expigr * expikr
+    if k_vec is not None:
+      kr = jnp.tensordot(k_vec, r, axes=(-1, -1))  # (nk, batch...)
+      expikr = jnp.exp(1.j * kr)
+      expikr = jnp.expand_dims(expikr, 1)
+      return sum_cg_expigr * expikr
+    else:
+      return sum_cg_expigr
 
   return wave
