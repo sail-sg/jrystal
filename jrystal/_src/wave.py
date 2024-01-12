@@ -13,11 +13,12 @@ NOTE: Wherever feasible, functional programming approaches should be employed.
 """
 
 import jax
+from jax import lax
 import jax.numpy as jnp
 import flax.linen as nn
 import numpy as np
 import einops
-
+from typing import List, Union
 import jax_xc
 
 from .wave_ops import coeff_expand
@@ -25,7 +26,12 @@ from .wave_ops import get_mask_cubic
 from . import occupation
 from .utils import complex_norm_square
 from . import energy, potential, xc_density
-from .grid import r_vectors, g_vectors
+from .grid import (
+  r_vectors,
+  g_vectors,
+  half_frequency_shape,
+  half_frequency_pad_to,
+)
 from .crystal import Crystal
 from .bloch import bloch_wave
 
@@ -35,6 +41,96 @@ from .jrystal_typing import CellVector, RealScalar
 from .jrystal_typing import ComplexGrid, RealVecterGrid, RealGrid
 from . import errors
 from .module import QRDecomp
+
+
+def normalize(raw_occ, num_electrons):
+  raw_occ += (num_electrons -
+              jnp.sum(raw_occ.flatten())) / np.prod(raw_occ.shape)
+  return raw_occ
+
+
+def clip(raw_occ, num_k):
+  return jnp.clip(raw_occ, a_min=0, a_max=1 / num_k)
+
+
+def constrain_occ(raw_occ, num_electrons, num_k):
+  cond_fn = lambda x: jnp.all(jnp.logical_and(x >= 0, x <= 1 / num_k))
+  body_fn = lambda x: normalize(
+    clip(x, num_k), num_electrons
+  )  # iteratively project
+  return lax.while_loop(cond_fn, body_fn, raw_occ)
+
+
+class ElectronWave(nn.Module):
+  num_electrons: Int
+  g_grid_sizes: List
+  k_grid_sizes: List
+  spin: Union[Int, None] = None
+
+  def setup(self):
+    self.half_shape = half_frequency_shape(self.g_grid_sizes)
+    mask_size = np.prod(self.half_shape)
+    num_k = np.prod(self.k_grid_sizes).item()
+    param_shape = (2, num_k, mask_size, self.num_electrons)
+    occ_shape = (2, num_k, self.num_electrons)
+    self.coeff_real = self.param(
+      "coeff_real", nn.initializers.normal(), param_shape
+    )
+    self.coeff_imag = self.param(
+      "coeff_imag", nn.initializers.normal(), param_shape
+    )
+    self.occ = self.param("occ", nn.initializers.normal(), occ_shape)
+    self.constrain_occupation()
+
+  def k_vectors(self, cell_vectors):
+    k_vector_grid = r_vectors(jnp.linalg.inv(cell_vectors), self.k_grid_sizes)
+    return k_vector_grid.reshape((-1, 3))
+
+  def coefficient(self):
+    # constrain the coefficients
+    num_spins = 2
+    num_k = np.prod(np.array(self.k_grid_sizes)).item()
+    raw_coeff = self.coeff_real + 1j * self.coeff_imag
+    raw_coeff = jnp.swapaxes(
+      jnp.linalg.qr(raw_coeff, mode="reduced")[0], -1, -2
+    )
+    raw_coeff = jnp.reshape(
+      raw_coeff,
+      (num_spins, num_k, self.num_electrons, *self.half_shape),
+    )
+    coeff = half_frequency_pad_to(raw_coeff, self.g_grid_sizes)
+    return coeff
+
+  def density(self, r, cell_vectors):
+    coeff = self.coefficient()
+    vol = jnp.linalg.det(cell_vectors)
+    psi = bloch_wave(cell_vectors, coeff, k_vec=None)
+    psir = psi(r, force_fft=True)
+    dens = jnp.real(jnp.conj(psir) * psir) / vol  # (2, nk, ni, *r.shape[:-1])
+    occ = self.occ
+    return jnp.einsum("ski...,ski->s...", dens, occ)
+
+  def constrain_occupation(self):
+    occ = self.occ
+    num_k = np.prod(np.array(self.k_grid_sizes)).item()
+    occ = constrain_occ(occ, self.num_electrons, num_k)
+    self.occ.value = occ
+
+  def kinetic_energy(self, cell_vectors):
+    g_vector_grid = g_vectors(cell_vectors, self.g_grid_sizes)
+    k_vec = self.k_vectors(cell_vectors)
+    print(k_vec)
+    occ = self.get_variable("params", "occ")
+    coeff = self.coefficient()
+    return energy.kinetic(g_vector_grid, k_vec, coeff, occ)
+
+  def __call__(self, r, cell_vectors):
+    coeff = self.coefficient()
+    # compute the wave function
+    vol = jnp.linalg.det(cell_vectors)
+    k_vec = self.k_vectors(cell_vectors)
+    psi = bloch_wave(cell_vectors, coeff, k_vec)
+    return psi(r, force_fft=True) / jnp.sqrt(vol)
 
 
 class PlaneWaveDensity(nn.Module):
