@@ -32,7 +32,7 @@ parser.add_argument(
   type=str,
   choices=['spherical', 'cubic'],
   help="method for generating G grid mask",
-  default='cubic'
+  default=None
 )
 
 args = parser.parse_args()
@@ -49,7 +49,8 @@ if args.grid is not None:
 if args.epoch is not None:
   config.epoch = args.epoch
 
-config.g_grid_mask_method = args.grid_mask
+if args.grid_mask is not None:
+  config.g_grid_mask_method = args.grid_mask
 
 if args.mode == "energy":
   jrystal.total_energy.train(config)
