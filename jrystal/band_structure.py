@@ -7,9 +7,7 @@ from flax.training import train_state
 import jrystal
 
 from jrystal.wave import PlaneWaveBandStructure
-from ._src.wave_ops import (
-  get_max_cutoff_energy, get_mask_spherical, get_mask_cubic
-)
+from ._src.wave_ops import get_mask_spherical, get_mask_cubic
 from jrystal.training_utils import create_crystal, get_ewald_coulomb_repulsion
 from jrystal.training_utils import create_optimizer
 from jrystal._src.band_structure import get_k_path
