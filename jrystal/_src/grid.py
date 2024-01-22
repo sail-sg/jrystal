@@ -36,7 +36,7 @@ def half_frequency_mask(grid_sizes):
   # dim = len(grid_sizes)
   masks = []
   for size in grid_sizes:
-    G_min = -(size // 2)
+    # G_min = -(size // 2)
     G_max = (size - 1) // 2
     lower_bound = -G_max // 2
     upper_bound = G_max // 2
@@ -51,7 +51,7 @@ def _half_frequency_ranges(grid_sizes):
   sizes = []
   starts = []
   for size in grid_sizes:
-    G_min = -(size // 2)
+    # G_min = -(size // 2)
     G_max = (size - 1) // 2
     lower_bound = -G_max // 2
     upper_bound = G_max // 2

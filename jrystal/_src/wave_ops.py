@@ -67,7 +67,7 @@ def get_mask_cubic(
   masks = []
   mask_sizes = []
   for size in grid_sizes:
-    G_min = -(size // 2)
+    # G_min = -(size // 2)
     G_max = (size - 1) // 2
     lower_bound = -G_max // 2
     upper_bound = G_max // 2

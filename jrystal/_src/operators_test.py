@@ -9,7 +9,6 @@ from jrystal._src.energy import hartree
 from autofd import function
 import autofd.operators as o
 from jaxtyping import Float64, Array
-from jrystal.utils import view_hlo
 
 jax.config.update("jax_enable_x64", True)
 

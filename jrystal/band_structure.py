@@ -7,6 +7,9 @@ from flax.training import train_state
 import jrystal
 
 from jrystal.wave import PlaneWaveBandStructure
+from ._src.wave_ops import (
+  get_max_cutoff_energy, get_mask_spherical, get_mask_cubic
+)
 from jrystal.training_utils import create_crystal, get_ewald_coulomb_repulsion
 from jrystal.training_utils import create_optimizer
 from jrystal._src.band_structure import get_k_path
@@ -21,6 +24,12 @@ def create_module(config: ConfigDict, density_fn: callable):
   crystal = create_crystal(config)
   g_grid_sizes = get_grid_sizes(config.grid_sizes)
   xc_functional = config.xc
+  if config.g_grid_mask_method == "spherical":
+    mask, num_g = get_mask_spherical(
+      crystal.cell_vectors, g_grid_sizes, config.cutoff_energy
+    )
+  else:
+    mask, num_g = get_mask_cubic(g_grid_sizes)
 
   k_vectors = get_k_path(
     crystal.cell_vectors,
@@ -36,7 +45,9 @@ def create_module(config: ConfigDict, density_fn: callable):
       crystal.A,
       g_grid_sizes,
       k_vectors[:1],
-      xc_functional=xc_functional
+      xc_functional=xc_functional,
+      mask=mask,
+      num_g=num_g
     )
   else:
     band_structure_module = PlaneWaveBandStructure(
@@ -45,7 +56,9 @@ def create_module(config: ConfigDict, density_fn: callable):
       crystal.A,
       g_grid_sizes,
       k_vectors,
-      xc_functional=xc_functional
+      xc_functional=xc_functional,
+      mask=mask,
+      num_g=num_g
     )
 
   return band_structure_module
