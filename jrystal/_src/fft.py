@@ -58,17 +58,13 @@ sharded_fftn.def_partition(
   partition=_partition
 )
 
-
 if __name__ == '__main__':
   import numpy as np
   from jax.sharding import Mesh
   from jax.experimental.pjit import pjit
 
   num_gpus = len(jax.local_devices())
-  mesh = Mesh(
-    np.array(jax.devices()).reshape([1, 1, -1]),
-    ('s', 'k', 'i')
-  )
+  mesh = Mesh(np.array(jax.devices()).reshape([1, 1, -1]), ('s', 'k', 'i'))
   spec = P('i')
   named_sharding = NamedSharding(mesh, spec)
 
