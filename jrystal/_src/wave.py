@@ -194,7 +194,7 @@ class PlaneWaveDensity(nn.Module):
     return self.total_energy(crystal)
 
   def bloch(self, coeff, r):
-    return bloch_wave(self.cell_vectors, coeff)(r)
+    return bloch_wave(self.cell_vectors, coeff)(r, force_fft=True)
 
   def density(self, r=None, reduce=True) -> jax.Array:
     if r is None:
@@ -318,7 +318,7 @@ class PlaneWaveFermiDirac(nn.Module):
     return self.total_energy(crystal)
 
   def bloch(self, coeff, r):
-    return bloch_wave(self.cell_vectors, coeff)(r)
+    return bloch_wave(self.cell_vectors, coeff)(r, force_fft=True)
 
   def density(self, r=None, reduce=True) -> jax.Array:
     if r is None:
@@ -467,7 +467,7 @@ class PlaneWaveBandStructure(nn.Module):
     self.xc_potential = potential.xc_lda
 
   def bloch(self, coeff, r):
-    return bloch_wave(self.cell_vectors, coeff)(r)
+    return bloch_wave(self.cell_vectors, coeff)(r, force_fft=True)
 
   def __call__(self, crystal: Crystal):
     return self.energy_trace(crystal)
