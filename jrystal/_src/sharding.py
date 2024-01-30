@@ -49,5 +49,10 @@ def fftn(x):
 
 
 @custom_sharding_by_batches
+def ifftn(x):
+  return jnp.fft.ifftn(x, axes=range(-3, 0))
+
+
+@custom_sharding_by_batches
 def qr(x):
   return jnp.linalg.qr(x)[0]
