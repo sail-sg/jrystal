@@ -6,7 +6,6 @@ https://jax.readthedocs.io/en/latest/jax.experimental.custom_partitioning.html
 """
 
 import jax
-import jax.numpy as jnp
 from jax.sharding import NamedSharding
 from jax.experimental.custom_partitioning import custom_partitioning
 from jax.sharding import PartitionSpec as P
@@ -27,6 +26,17 @@ def _infer_sharding_from_operands(mesh, arg_shapes, result_shape):
 
 
 def custom_sharding_by_batches(fun: Callable[..., jax.Array]) -> Callable:
+  """Inserts a CustomCallOp into the XLA graph with custom SPMD lowering rules
+  such that the transformed function can be sharded over the first batched
+  dimensions.
+
+  Args:
+      fun (Callable[..., jax.Array]): a function that takes arguments have
+        batched dimensions.
+
+  Returns:
+      Callable:
+  """
 
   def _partition(mesh, arg_shapes, result_shape):
     arg_shardings = jax.tree_map(lambda x: x.sharding, arg_shapes)
@@ -41,18 +51,3 @@ def custom_sharding_by_batches(fun: Callable[..., jax.Array]) -> Callable:
   )
 
   return sharded_fun
-
-
-@custom_sharding_by_batches
-def fftn(x):
-  return jnp.fft.fftn(x, axes=range(-3, 0))
-
-
-@custom_sharding_by_batches
-def ifftn(x):
-  return jnp.fft.ifftn(x, axes=range(-3, 0))
-
-
-@custom_sharding_by_batches
-def qr(x):
-  return jnp.linalg.qr(x)[0]
