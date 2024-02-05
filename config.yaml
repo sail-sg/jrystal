@@ -48,3 +48,9 @@ k_path_fine_tuning: true
 k_path_fine_tuning_epoch: 200
 num_kpoints: 60
 num_unoccupied_bands: 4
+
+
+################################################
+# Parallelism Setting                          #
+################################################
+enable_spmd: True

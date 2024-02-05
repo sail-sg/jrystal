@@ -65,4 +65,9 @@ def get_config() -> ml_collections.ConfigDict:
   config.k_path_fine_tuning = True
   config.k_path_fine_tuning_epoch = 200
 
+  ################################################
+  # Parallelism Setting                          #
+  ################################################
+  config.enable_spmd = False
+
   return config

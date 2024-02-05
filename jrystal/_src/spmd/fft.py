@@ -19,7 +19,7 @@ import jax
 import jax.numpy as jnp
 from jax.sharding import NamedSharding
 from jax.sharding import PartitionSpec as P
-from jrystal._src.sharding import custom_sharding_by_batches
+from jrystal._src.spmd.sharding import custom_sharding_by_batches
 from jax import core
 from jax.interpreters import mlir
 
@@ -61,7 +61,6 @@ jax.interpreters.ad.primitive_jvps[_ifftn_p] = _ifftn_jvp
 # jax.interpreters.ad.primitive_transposes[_ifftn_p] = _ifftn_tranpose_rule
 jax._src.interpreters.ad.deflinear2(_ifftn_p, _ifftn_tranpose_rule)
 
-
 if __name__ == '__main__':
   # On CPU devices please enable:
   # import os
@@ -85,9 +84,7 @@ if __name__ == '__main__':
     x = jax.random.normal(key, shape, dtype=jnp.complex64)
     print("input shape: ", x.addressable_shards[-1].data.shape)
 
-    jitted_ifftn = pjit(
-      ifftn, in_shardings=named_sharding
-    )
+    jitted_ifftn = pjit(ifftn, in_shardings=named_sharding)
     print(
       "customized ifftn output shape on single device: ",
       jitted_ifftn(x).addressable_shards[-1].data.shape

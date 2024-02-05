@@ -10,6 +10,7 @@ from . import config
 from . import energy
 from . import training_utils
 from . import utils
+from ._src import spmd
 
 from pathlib import Path
 
@@ -26,9 +27,11 @@ __all__ = [
   "energy",
   "occupation",
   "total_energy",
+  "total_energy_spmd",
   "training_utils",
   "utils",
   "wave",
   "band_structure",
   "visualization",
+  "spmd"
 ]
