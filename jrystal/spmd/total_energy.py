@@ -2,71 +2,76 @@
 
   This module is for optimizing the parameters for total eneryg minimization.
 """
-# import os
+import argparse
 import jax
 import jax.numpy as jnp
 import numpy as np
 from math import ceil
-# import flax
-# from flax.training import train_state
-# import ml_collections
-
-from jax.sharding import NamedSharding
-from jax.sharding import PartitionSpec as P
-from jax.sharding import Mesh
-from jrystal.config import get_config
-from jrystal.training_utils import create_crystal, create_optimizer
-from jrystal.spmd.wave import PlaneWave
-from jrystal._src.occupation import occupation_gamma
-from jrystal._src.grid import k_vectors, g_vectors, get_grid_sizes
-from jrystal._src.grid import half_frequency_shape
-from jrystal._src import energy
-from jrystal._src.grid import translation_vectors
-# from jrystal.utils import extend_carbon_crystal
-
-# import time
+from jax.sharding import Mesh, NamedSharding, PartitionSpec as P
 from tqdm import tqdm
 from absl import logging
 from ml_collections import ConfigDict
-import argparse
 import optax
 
-logging.set_verbosity(logging.INFO)
-jax.config.update("jax_enable_x64", False)
-
-# load configuration and parser:
-config = get_config()
-parser = argparse.ArgumentParser(
-  prog='Jrystal total energy minimization (spmd).'
+from jrystal.config import get_config
+from jrystal.training_utils import create_crystal, create_optimizer
+from jrystal.spmd.wave import PlaneWave
+from jrystal._src import energy
+from jrystal._src.grid import (
+  k_vectors,
+  g_vectors,
+  get_grid_sizes,
+  half_frequency_shape,
+  translation_vectors
 )
-
-for key, value in config.items():
-  parser.add_argument(f"--{key}", type=type(value), default=value)
-args = parser.parse_args()
-
-for key, value in vars(args).items():
-  config[key] = value
+from jrystal._src.occupation import occupation_gamma
 
 
-def total_energy(config: ConfigDict):
-  num_gpus = jax.device_count()
+def parse_args(config: ConfigDict) -> ConfigDict:
+  """Parse command-line arguments."""
+  parser = argparse.ArgumentParser(
+    description='Jrystal total energy minimization (SPMD).'
+  )
+  for key, value in config.items():
+    parser.add_argument(f"--{key}", type=type(value), default=value)
+  args = parser.parse_args()
+
+  for key, value in vars(args).items():
+    config[key] = value
+
+  return config
+
+
+def set_env_params(config):
+  if config.verbose:
+    logging.set_verbosity(logging.INFO)
+  jax.config.update("jax_enable_x64", config.jax_enable_x64)
+
+
+config = parse_args(get_config())
+
+
+def initialize_mesh_and_sharding():
+  """Initialize mesh and sharding for parallel computations."""
   mesh = Mesh(np.array(jax.devices()).reshape(1, 1, -1), ('s', 'k', 'i'))
   shd = NamedSharding(mesh, P('s', 'k', 'i'))
+  return mesh, shd
 
-  grid_sizes = get_grid_sizes(args.grid_sizes)
+
+def create_module(config):
+  num_gpus = jax.device_count()
+  grid_sizes = get_grid_sizes(config.grid_sizes)
+  k_grid_sizes = get_grid_sizes(config.k_grid_sizes)
   half_shape = np.array(half_frequency_shape(grid_sizes), dtype=int)
   logging.info(f"grid_sizes: {grid_sizes}")
   logging.info(f"half_shape: {half_shape}")
 
   crystal = create_crystal(config)
-  # crystal = extend_carbon_crystal([4, 4, 4])
-  empty_bands = args.empty_bands
+  empty_bands = config.empty_bands
 
-  kpts = k_vectors(crystal.cell_vectors, get_grid_sizes(args.k_grid_sizes))
+  kpts = k_vectors(crystal.cell_vectors, get_grid_sizes(config.k_grid_sizes))
   kpts = jnp.array(kpts)
-  # r_vector_grid = r_vectors(crystal.cell_vectors, grid_sizes)
-  g_vector_grid = g_vectors(crystal.cell_vectors, grid_sizes)
-  num_k = kpts.shape[0]
+
   num_bands = ceil(
     crystal.num_electrons * (1. + empty_bands) // 2 // num_gpus
   ) * num_gpus
@@ -74,20 +79,38 @@ def total_energy(config: ConfigDict):
   logging.info(f"num_gpts: {np.prod(np.array(half_shape), dtype=int).item()}")
   logging.info(f"num_bands: {num_bands}")
   logging.info(f"Polarize: {config.polarize}")
-  # create model
-  occupation = occupation_gamma(
-    num_k, crystal.num_electrons, crystal.spin, num_bands, config.polarize
-  )
-  pw = PlaneWave(
-    num_bands, grid_sizes, args.k_grid_sizes, polarize=config.polarize
+
+  return PlaneWave(
+    num_bands, grid_sizes, k_grid_sizes, polarize=config.polarize
   )
 
-  # initialize params
+
+def get_occupation(config):
+  num_gpus = jax.device_count()
+  k_grid_sizes = get_grid_sizes(config.k_grid_sizes)
+  num_k = np.prod(k_grid_sizes).item()
+  crystal = create_crystal(config)
+  num_bands = ceil(
+    crystal.num_electrons * (1. + config.empty_bands) // 2 // num_gpus
+  ) * num_gpus
+  return occupation_gamma(
+    num_k, crystal.num_electrons, crystal.spin, num_bands, config.polarize
+  )
+
+
+def total_energy(config: ConfigDict):
+  mesh, shd = initialize_mesh_and_sharding()
+  crystal = create_crystal(config)
+  # crystal = extend_carbon_crystal([4, 4, 4])
+  grid_sizes = get_grid_sizes(config.grid_sizes)
+  g_vector_grid = g_vectors(crystal.cell_vectors, grid_sizes)
+
+  pw = create_module(config)
   key = jax.random.PRNGKey(123)
   params = pw.init(key)
-  # optimizer = optax.yogi(1e-2)
   optimizer = create_optimizer(config)
   opt_state = optimizer.init(params)
+  occupation = get_occupation(config)
 
   # calculate ewald
   ewald_grid = translation_vectors(crystal.cell_vectors, cutoff=2e4)
@@ -99,7 +122,6 @@ def total_energy(config: ConfigDict):
     ewald_eta=0.1,
     ewald_grid=ewald_grid
   )
-  # ew = 0
 
   @jax.jit
   def update(params, opt_state, g_vector_grid):
@@ -119,7 +141,7 @@ def total_energy(config: ConfigDict):
       )
       ex = energy.xc_lda(density2, crystal.vol)
       ek = pw.apply(
-        params, crystal.cell_vectors, kpts, occupation, shd, method='kinetic'
+        params, crystal.cell_vectors, occupation, shd, method='kinetic'
       )
       return eh + ee + ex + ek, (eh, ee, ex, ek)
 
@@ -129,7 +151,7 @@ def total_energy(config: ConfigDict):
 
     return params, opt_state, e_tot, es
 
-  iters = tqdm(range(args.epoch))
+  iters = tqdm(range(config.epoch))
 
   with mesh:
     for i in iters:

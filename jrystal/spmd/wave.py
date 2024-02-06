@@ -109,7 +109,8 @@ class PlaneWave(nn.Module):
   def __call__(self, *args):
     return self.wave(*args)
 
-  def kinetic(self, cell_vectors, kpts, occupation, sharding: Sharding = None):
+  def kinetic(self, cell_vectors, occupation, sharding: Sharding = None):
+    kpts = self.k_vectors(cell_vectors)
     g_vector_grid = g_vectors(cell_vectors, self.grid_sizes)
 
     @partial(pjit, in_shardings=sharding)
