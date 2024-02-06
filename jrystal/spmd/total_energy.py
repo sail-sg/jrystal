@@ -12,8 +12,6 @@ from tqdm import tqdm
 from absl import logging
 from ml_collections import ConfigDict
 import optax
-
-from jrystal.config import get_config
 from jrystal.training_utils import create_crystal, create_optimizer
 from jrystal.spmd.wave import PlaneWave
 from jrystal._src import energy
@@ -42,13 +40,10 @@ def parse_args(config: ConfigDict) -> ConfigDict:
   return config
 
 
-def set_env_params(config):
+def set_env_params(config: ConfigDict):
   if config.verbose:
     logging.set_verbosity(logging.INFO)
   jax.config.update("jax_enable_x64", config.jax_enable_x64)
-
-
-config = parse_args(get_config())
 
 
 def initialize_mesh_and_sharding():
@@ -58,7 +53,7 @@ def initialize_mesh_and_sharding():
   return mesh, shd
 
 
-def create_module(config):
+def create_module(config: ConfigDict):
   num_gpus = jax.device_count()
   grid_sizes = get_grid_sizes(config.grid_sizes)
   k_grid_sizes = get_grid_sizes(config.k_grid_sizes)
@@ -85,7 +80,7 @@ def create_module(config):
   )
 
 
-def get_occupation(config):
+def get_occupation(config: ConfigDict):
   num_gpus = jax.device_count()
   k_grid_sizes = get_grid_sizes(config.k_grid_sizes)
   num_k = np.prod(k_grid_sizes).item()
@@ -99,6 +94,9 @@ def get_occupation(config):
 
 
 def total_energy(config: ConfigDict):
+  config = parse_args(config)
+  set_env_params(config)
+
   mesh, shd = initialize_mesh_and_sharding()
   crystal = create_crystal(config)
   # crystal = extend_carbon_crystal([4, 4, 4])
@@ -170,4 +168,7 @@ def total_energy(config: ConfigDict):
 
 
 if __name__ == "__main__":
+  from jrystal.config import get_config
+
+  config = get_config()
   total_energy(config)
