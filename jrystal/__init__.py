@@ -10,7 +10,7 @@ from . import config
 from . import energy
 from . import training_utils
 from . import utils
-from ._src import spmd
+from . import spmd
 
 from pathlib import Path
 

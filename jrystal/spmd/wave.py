@@ -8,15 +8,14 @@ import numpy as np
 from typing import List, Union
 from jaxtyping import Int, Array
 from jax.sharding import Sharding
-from ..grid import (
+from .._src.grid import (
   r_vectors,
   g_vectors,
   half_frequency_shape,
   half_frequency_pad_to,
 )
-from ..initializer import normal
+from .._src.initializer import normal
 from .fft import ifftn
-from ..occupation import occupation_gamma
 from .. import energy
 
 from functools import partial
@@ -28,7 +27,6 @@ def qr(x):
 
 class QR(nn.Module):
   shape: Int[Array, '*batch num_g num_bands']
-  polarize: bool = True
   complex_weights: bool = True
 
   @nn.compact
@@ -50,16 +48,17 @@ class QR(nn.Module):
 
 class PlaneWave(nn.Module):
   num_electrons: int
-  grid_sizes: List
-  k_grid_sizes: List
+  grid_sizes: List | Array
+  k_grid_sizes: List | Array
   spin: Union[Int, None] = None
+  polarize: bool = True
 
   def setup(self):
     self.half_shape = half_frequency_shape(self.grid_sizes)
     num_g = np.prod(self.half_shape)
     num_k = np.prod(self.k_grid_sizes).item()
-    param_shape = (2, num_k, num_g, self.num_electrons)
-    self.occ = occupation_gamma(num_k, self.num_electrons, 0)
+    num_s = 2 if self.polarize else 1
+    param_shape = (num_s, num_k, num_g, self.num_electrons)
     self.qr = QR(param_shape)
 
   def r_vector_grid(self, cell_vectors):
@@ -76,9 +75,10 @@ class PlaneWave(nn.Module):
     coeff_dense = self.qr()
     coeff_dense = jnp.swapaxes(coeff_dense, -1, -2)
     num_k = np.prod(np.array(self.k_grid_sizes)).item()
+    ns = 2 if self.polarize else 1
     coeff_dense = jnp.reshape(
       coeff_dense,
-      (2, num_k, self.num_electrons, *self.half_shape),
+      (ns, num_k, self.num_electrons, *self.half_shape),
     )
 
     def pad(coeff_dense):
@@ -87,7 +87,7 @@ class PlaneWave(nn.Module):
     coeff = pjit(pad, in_shardings=None, out_shardings=sharding)(coeff_dense)
     return coeff
 
-  def wave(self, cell_vectors, sharding: Sharding = None):
+  def wave(self, sharding: Sharding = None):
     coeff = self.coefficient(sharding)
     if sharding:
       coeff = jax.device_put(coeff, sharding)
@@ -96,24 +96,24 @@ class PlaneWave(nn.Module):
     wave = wave * np.prod(grid_sizes)
     return wave
 
-  def density(self, cell_vectors, sharding: Sharding = None):
+  def density(self, cell_vectors, occupation, sharding: Sharding = None):
     vol = jnp.linalg.det(cell_vectors)
-    wave = self.wave(cell_vectors, sharding=sharding)
+    wave = self.wave(sharding=sharding)
     dens = jnp.abs(wave)**2 / vol
-    return jnp.einsum("ski...,ski->s...", dens, self.occ)
+    return jnp.einsum("ski...,ski->s...", dens, occupation)
 
   def reciprocal_density(self, cell_vectors, sharding: Sharding = None):
     density_grid = self.density(cell_vectors, sharding=sharding)
     return jnp.fft.fftn(density_grid, axes=range(-3, 0))
 
-  def __call__(self, cell_vectors):
-    return self.wave(cell_vectors)
+  def __call__(self, *args):
+    return self.wave(*args)
 
-  def kinetic(self, cell_vectors, kpts, sharding: Sharding = None):
+  def kinetic(self, cell_vectors, kpts, occupation, sharding: Sharding = None):
     g_vector_grid = g_vectors(cell_vectors, self.grid_sizes)
 
     @partial(pjit, in_shardings=sharding)
     def kin(coeff):
-      return energy.kinetic(g_vector_grid, kpts, coeff, self.occ)
+      return energy.kinetic(g_vector_grid, kpts, coeff, occupation)
 
     return kin(self.coefficient(sharding))

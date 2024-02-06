@@ -19,7 +19,7 @@ import jax
 import jax.numpy as jnp
 from jax.sharding import NamedSharding
 from jax.sharding import PartitionSpec as P
-from jrystal._src.spmd.sharding import custom_sharding_by_batches
+from .sharding import custom_sharding_by_batches
 from jax import core
 from jax.interpreters import mlir
 

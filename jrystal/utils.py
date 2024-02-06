@@ -9,6 +9,34 @@ from graphviz import Digraph
 import webbrowser  # noqa
 import subprocess
 from functools import partial
+from jrystal.config import get_config
+from jrystal.training_utils import create_crystal
+import numpy as np
+
+
+def extend_carbon_crystal(shape):
+  config = get_config()
+  config.crystal = "diamond"
+  crystal = create_crystal(config)
+  crystal.symbols = "C" + str(np.prod(shape).item())
+
+  shift = np.array(np.meshgrid(*(range(i) for i in shape))).T.reshape(-1, 3)
+  crystal.scaled_positions = np.vstack(
+    [i + shift for i in crystal.scaled_positions]
+  )
+  crystal.positions = np.matmul(crystal.scaled_positions, crystal.A)
+  crystal.charges = np.ones(crystal.positions.shape[0]) * 6
+
+  crystal.num_atoms = crystal.positions.shape[0]
+  crystal.num_electrons = np.sum(crystal.charges, dtype=int).item()
+
+  crystal.cell_vectors = np.matmul(crystal.cell_vectors, np.diag(shape))
+  crystal.A = crystal.cell_vectors
+  crystal.reciprocal_vectors = np.linalg.inv(crystal.A).T * 2 * np.pi
+  crystal.B = crystal.reciprocal_vectors
+  crystal.vol = np.linalg.det(crystal.A)
+
+  return crystal
 
 
 def is_jupyter_notebook():
