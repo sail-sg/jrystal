@@ -14,10 +14,15 @@ from jrystal._src.jrystal_typing import OccupationArray
 # occ = jrystal.occupations.OccUniform(ni, nk, spin)()
 
 
-def occupation_gamma(nk: int, ni: int, spin: int):
-  occ = jnp.zeros([2, nk, ni])
+def occupation_gamma(nk: int, ni: int, spin: int, nb=None, polarize=True):
+  nb = ni if nb is None else nb
+  occ = jnp.zeros([2, nk, nb])
   occ = occ.at[0, 0, :(ni + spin) // 2].set(1)
   occ = occ.at[1, 0, :(ni - spin) // 2].set(1)
+
+  if polarize is False:
+    return jnp.sum(occ, axis=0, keepdims=True)
+
   return occ
 
 

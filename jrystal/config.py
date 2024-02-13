@@ -24,11 +24,12 @@ def get_config() -> ml_collections.ConfigDict:
   # For "cubic", the cutoff cannot be assigned, but will be estimated.
   # Only for "spherical" method, the cutoff_energy argument is valid.
   config.cutoff_energy: float = 100
-  config.grid_sizes: Union[int, List[int], Tuple[int]] = 32
+  config.grid_sizes: Union[int, List[int], Tuple[int]] = 24
   config.k_grid_sizes: Union[int, List[int], Tuple[int]] = 1
   config.occupation: str = 'gamma'
   config.smearing: float = 0.01  # only valid when occupation is fermi dirac
-
+  config.polarize = False
+  config.empty_bands = 3  # the ratio of unoccupapied bands\orbitals
   # Xc functional hyperparameters.
   # config.xc: str = 'gga_x_pbe'
   config.xc: str = 'lda_x'
@@ -36,7 +37,7 @@ def get_config() -> ml_collections.ConfigDict:
   # Optimizer hyperparamters
   config.optimizer: str = 'yogi'
   config.optimizer_args: Dict = {'learning_rate': 1e-2}
-  config.epoch: int = 5000
+  config.epoch: int = 10000
   config.convergence_condition: float = 1e-6
   config.ewald_args: Dict = {'ewald_eta': 0.1, 'ewald_cut': 2e4}
 
@@ -64,5 +65,10 @@ def get_config() -> ml_collections.ConfigDict:
   # Recommend to use this trick when the input crystal system is large.
   config.k_path_fine_tuning = True
   config.k_path_fine_tuning_epoch = 200
+
+  ################################################
+  # Parallelism Setting                          #
+  ################################################
+  config.enable_spmd = False
 
   return config
