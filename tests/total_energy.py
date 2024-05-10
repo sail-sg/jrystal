@@ -10,7 +10,7 @@ class Test_total_energy_diamond(absltest.TestCase):
     config.grid_sizes = 32
     config.epoch = 5000
     config.verbose = False
-    total_energy = jrystal.total_energy.train(config, return_fn="total_energy")
+    total_energy, _ = jrystal.total_energy.train(config, return_fn="total_energy")
     ewald = jrystal.training_utils.get_ewald_coulomb_repulsion(config)
     crystal = jrystal.training_utils.create_crystal(config)
     energy = total_energy(crystal)[0] + ewald
