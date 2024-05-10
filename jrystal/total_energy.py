@@ -172,7 +172,9 @@ def train(config: ml_collections.ConfigDict, return_fn=None):
         method=return_fn
       )
 
-    return fn
+    return fn, state.params
+
+  return state.params
 
 
 if __name__ == '__main__':
