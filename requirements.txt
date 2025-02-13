@@ -1,0 +1,10 @@
+jax>=0.4.14
+jaxlib>=0.4.14
+optax>=0.1.4
+
+jaxtyping
+tqdm
+ase
+absl-py
+einops
+ml_collections
