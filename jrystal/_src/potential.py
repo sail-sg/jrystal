@@ -1,9 +1,11 @@
 """Potentials."""
-from jax.lax import stop_gradient
+from typing import Tuple, Union
+
 import jax.numpy as jnp
-from typing import Tuple
-from jaxtyping import Float, Array, Complex
-from .typing import VectorGrid, ScalarGrid
+from jax.lax import stop_gradient
+from jaxtyping import Array, Complex, Float
+
+from .typing import ScalarGrid, VectorGrid
 
 
 def hartree_reciprocal(
@@ -200,7 +202,7 @@ def effective(
   split: bool = False,
   xc: str = "lda",
   kohn_sham: bool = False
-) -> Tuple[Array, Array, Array] | Array:
+) -> Union[Tuple[Array, Array, Array], Array]:
   """
   Compute the effective potentials in real space.
 

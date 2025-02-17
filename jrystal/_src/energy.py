@@ -1,16 +1,17 @@
 """Energy functions. """
-import numpy as np
-import jax.numpy as jnp
-from typing import Union
-from jaxtyping import Float, Array, Int, Complex
+from typing import Optional, Union
 
+import jax.numpy as jnp
+import numpy as np
+from jaxtyping import Array, Complex, Float, Int
+
+from . import braket, potential, pw
+from .ewald import ewald_coulomb_repulsion
+from .grid import translation_vectors
+from .typing import OccupationArray, ScalarGrid, VectorGrid
 from .utils import (
   absolute_square, safe_real, wave_to_density, wave_to_density_reciprocal
 )
-from . import braket, potential, pw
-from .typing import OccupationArray, VectorGrid, ScalarGrid
-from .ewald import ewald_coulomb_repulsion
-from .grid import translation_vectors
 
 
 def hartree(
@@ -101,7 +102,7 @@ def kinetic(
   g_vector_grid: VectorGrid[Float, 3],
   k_vector_grid: VectorGrid[Float, 3],
   coeff_grid: ScalarGrid[Complex, 3],
-  occupation: OccupationArray | None = None
+  occupation: Optional[OccupationArray] = None
 ) -> Union[Float, Float[Array, "num_spin num_k num_bands"]]:
   r"""Kinetic energy.
 
@@ -195,7 +196,7 @@ def total_energy(
   g_vector_grid: VectorGrid[Float, 3],
   kpts: Float[Array, "num_k dim"],
   vol: Float,
-  occupation: OccupationArray | None = None,
+  occupation: Optional[OccupationArray] = None,
   kohn_sham: bool = False,
   xc: str = 'lda',
   split: bool = False,

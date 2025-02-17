@@ -1,15 +1,16 @@
 """Functions about grids"""
+import itertools
+from typing import List, Tuple, Union
+
 import jax
 import jax.numpy as jnp
-from jax import lax
 import numpy as np
-from typing import Union, List, Tuple
-from jaxtyping import Int, Array, Float, Bool
-
-from .utils import fft_factor
-from .typing import CellVector, ScalarGrid, VectorGrid
 from ase.dft.kpoints import monkhorst_pack
-import itertools
+from jax import lax
+from jaxtyping import Array, Bool, Float, Int
+
+from .typing import CellVector, ScalarGrid, VectorGrid
+from .utils import fft_factor
 
 
 def _half_frequency_ranges(
@@ -122,7 +123,9 @@ def r_vectors(cell_vectors, grid_sizes) -> VectorGrid[Float, 3]:
   return _vector_grid(cell_vectors, grid_sizes, normalize=True)
 
 
-def proper_grid_size(grid_sizes: Int | Int[Array, 'd'] | Tuple | List) -> Array:
+def proper_grid_size(
+  grid_sizes: Union[Int, Int[Array, 'd'], Tuple, List]
+) -> Array:
   """Get proper grid_sizes which is an numpy array, the grid size are good
   fftw factors.
 

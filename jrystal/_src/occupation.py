@@ -1,9 +1,12 @@
 """Occupation module."""
+from typing import Optional
+
+import einops
 import jax.numpy as jnp
 from jaxtyping import Int
+
 from .typing import OccupationArray
 from .unitary_module import unitary_matrix, unitary_matrix_param_init
-import einops
 
 
 def idempotent_param_init(key, num_bands, num_kpts):
@@ -45,7 +48,7 @@ def uniform(
   num_k: Int,
   num_electrons: Int,
   spin: Int = 0,
-  num_bands: Int | None = None,
+  num_bands: Optional[Int] = None,
   restricted: bool = True
 ) -> OccupationArray:
   """uniform occupation.
@@ -94,7 +97,7 @@ def gamma(
   num_k: Int,
   num_electrons: Int,
   spin: Int = 0,
-  num_bands: Int | None = None,
+  num_bands: Optional[Int] = None,
   restricted: bool = True
 ) -> OccupationArray:
   """occupation on Gamma point.

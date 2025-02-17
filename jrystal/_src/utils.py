@@ -1,11 +1,13 @@
 """Utility functions."""
+from typing import Callable, Dict, List, Optional, Tuple, Union
+
 import jax
 import jax.numpy as jnp
-from jaxtyping import Complex, Float, Array, Bool
 import numpy as np
+from jaxtyping import Array, Bool, Complex, Float
+
 from . import const
-from .typing import ScalarGrid, CellVector, OccupationArray
-from typing import Tuple, List, Union, Dict, Callable, Optional
+from .typing import CellVector, OccupationArray, ScalarGrid
 
 
 def safe_real(array: Array, tol: float = 1e-8) -> Array:
@@ -98,7 +100,7 @@ def volume(cell_vectors: CellVector) -> Float:
 def wave_to_density(
   wave_grid: ScalarGrid[Complex, 3],
   occupation: Optional[OccupationArray] = None,
-  axis: int | Tuple | List | None = None
+  axis: Optional[Union[int, Tuple, List]] = None
 ) -> ScalarGrid[Float, 3]:
   """Compute the density grid from the wave_grid and occupation mask,
   returning real space density values at grid points.
