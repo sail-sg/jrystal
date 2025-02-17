@@ -21,6 +21,7 @@ from typing_extensions import TypeAlias
 class VectorGrid:
   """Defines a vector field, which has shape (*batches, n1, ..., nd, d)
   """
+
   def __class_getitem__(cls, params: Tuple[TypeVar, int]):
     if len(params) != 2 or not isinstance(params[1], int):
       raise TypeError("VectorGrid takes 2 parameters, dtype and ndim")
@@ -32,6 +33,7 @@ class VectorGrid:
 class ScalarGrid:
   """Defines a scalar field, which has shape (*batches, n1, ..., nd)
   """
+
   def __class_getitem__(cls, params: Tuple[TypeVar, int]):
     if len(params) != 2 or not isinstance(params[1], int):
       raise TypeError("VectorGrid takes 2 parameters, dtype and ndim")

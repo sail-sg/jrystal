@@ -2,6 +2,12 @@ import jax
 import optax
 from math import ceil
 
+from dataclasses import dataclass
+from absl import logging
+from tqdm import tqdm
+import time
+from typing import List
+
 from ..config import JrystalConfigDict
 from .opt_utils import (
   create_crystal,
@@ -9,15 +15,11 @@ from .opt_utils import (
   create_grids,
   set_env_params,
   get_ewald_coulomb_repulsion,
-  create_freq_mask
+  create_freq_mask,
+  create_pseudopotential
 )
 from .._src import occupation, pw, energy, entropy
-
-from dataclasses import dataclass
-from absl import logging
-from tqdm import tqdm
-import time
-from typing import List
+from ..pseudopotential import local, ncpp
 
 
 @dataclass
@@ -45,6 +47,26 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   freq_mask = create_freq_mask(config)
   ew = get_ewald_coulomb_repulsion(config)
 
+  # initialize pseudopotential
+  pseudopot = create_pseudopotential(config)
+  potential_loc = local._potential_local_reciprocal(
+    crystal.positions,
+    r_vec,
+    g_vec,
+    pseudopot.r_grid,
+    pseudopot.local_potential_grid,
+    pseudopot.local_potential_charge,
+    crystal.vol
+  )
+  potential_nl = ncpp._potential_nonlocal_square_root(
+    crystal.positions,
+    g_vec,
+    k_vec,
+    pseudopot.r_grid,
+    pseudopot.nonlocal_beta_grid,
+    pseudopot.nonlocal_angular_momentum,
+  )
+
   # Define functions for energy calculation.
   # assume fermi-dirac occupation.
   def get_occupation(params):
@@ -52,19 +74,33 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       params, crystal.num_electron, num_kpts, crystal.spin
     )
 
-  def total_energy(params_pw, params_occ):
+  def total_energy(params_pw, params_occ, g_vec):
     coeff = pw.coeff(params_pw, freq_mask)
     occ = get_occupation(params_occ)
-    return energy.total_energy(
-      coeff, crystal.positions, crystal.charges, g_vec, k_vec, crystal.vol, occ
+    density = pw.density_grid(coeff, crystal.vol, occ)
+    density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
+    kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
+    hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
+    external_local = local._energy_local(
+      density_reciprocal, v_local_reciprocal=potential_loc, vol=crystal.vol
     )
+    external_nonlocal = ncpp._energy_nonlocal(
+      coeff,
+      potential_nl,
+      pseudopot.nonlocal_d_matrix,
+      vol=crystal.vol,
+      occupation=occ
+    )
+
+    lda = energy.xc_lda(density, crystal.vol)
+    return kinetic + hartree + external_local + external_nonlocal + lda
 
   def get_entropy(params_occ):
     occ = get_occupation(params_occ)
     return entropy.fermi_dirac(occ, eps=EPS)
 
-  def free_energy(params_pw, params_occ, temp):
-    total = total_energy(params_pw, params_occ)
+  def free_energy(params_pw, params_occ, temp, g_vec):
+    total = total_energy(params_pw, params_occ, g_vec)
     etro = get_entropy(params_occ)
     free = total + temp * etro
     return free, (total, etro)
@@ -78,8 +114,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
   # Define update function.
   @jax.jit
-  def update(params, opt_state, temp):
-    loss = lambda x: free_energy(x["pw"], x["occ"], temp)
+  def update(params, opt_state, temp, g_vec):
+    loss = lambda x: free_energy(x["pw"], x["occ"], temp, g_vec)
     (loss_val, es), grad = jax.value_and_grad(loss, has_aux=True)(params)
     updates, opt_state = optimizer.update(grad, opt_state)
     params = optax.apply_updates(params, updates)
@@ -110,7 +146,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   for i in iters:
     temp = temperature_scheduler(i)
     start = time.time()
-    params, opt_state, loss_val, es = update(params, opt_state, temp)
+    params, opt_state, loss_val, es = update(params, opt_state, temp, g_vec)
     etot, entro = es
     etot = jax.block_until_ready(etot)
     train_time += time.time() - start
@@ -129,13 +165,22 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
   kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
   hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
-  external = energy.external(
-    density_reciprocal, crystal.positions, crystal.charges, g_vec, crystal.vol
+  external_local = local._energy_local(
+    density_reciprocal, v_local_reciprocal=potential_loc, vol=crystal.vol
   )
+  external_nonlocal = ncpp._energy_nonlocal(
+    coeff,
+    potential_nl,
+    pseudopot.nonlocal_d_matrix,
+    vol=crystal.vol,
+    occupation=occ
+  )
+
   lda = energy.xc_lda(density, crystal.vol)
 
   logging.info(f"Hartree Energy: {hartree:.4f}")
-  logging.info(f"External Energy: {external:.4f}")
+  logging.info(f"External (local) Energy: {external_local:.4f}")
+  logging.info(f"External (nonlocal) Energy: {external_nonlocal:.4f}")
   logging.info(f"LDA Energy: {lda:.4f}")
   logging.info(f"Kinetic Energy: {kinetic:.4f}")
   logging.info(f"Nuclear repulsion Energy: {ew:.4f}")

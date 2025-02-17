@@ -54,7 +54,7 @@ def ewald_coulomb_repulsion(
       jnp.expand_dims(tau, range(dim)),
       axis=-1
     )
-  )   # [N1, N2, N3, na, na, nt]
+  )  # [N1, N2, N3, na, na, nt]
   ew_rprcl2 = ew_rprcl2.at[(0,) * dim].set(0)  # this is to exclude G = 0
   ew_rprcl = jnp.sum(ew_rprcl1 * ew_rprcl2, axis=range(dim))  # [na, na]
   ew_rprcl = ew_rprcl * 4 * jnp.pi / vol

@@ -13,7 +13,11 @@ def idempotent_param_init(key, num_bands, num_kpts):
 
 
 def idempotent(
-  params, num_electrons, num_kpts, spin=0, restricted=True,
+  params,
+  num_electrons,
+  num_kpts,
+  spin=0,
+  restricted=True,
 ) -> OccupationArray:
   num_bands = params["w_re"].shape[0] // num_kpts
 
@@ -28,11 +32,7 @@ def idempotent(
     return occ.reshape([num_kpts, num_bands]) / num_kpts
 
   occ = jnp.stack(
-    [
-      o((num_electrons - spin) // 2),
-      o((num_electrons + spin) // 2)
-    ],
-    axis=0
+    [o((num_electrons - spin) // 2), o((num_electrons + spin) // 2)], axis=0
   )
 
   if restricted is False:

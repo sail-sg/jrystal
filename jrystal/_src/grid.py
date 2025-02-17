@@ -167,10 +167,8 @@ def translation_vectors(
   return np.reshape(grid, [-1, cell_vectors.shape[0]])
 
 
-def k_vectors(
-  cell_vectors: CellVector,
-  grid_sizes: Int[Array, '...']
-) -> Float[Array, 'nkpts 3']:
+def k_vectors(cell_vectors: CellVector,
+              grid_sizes: Int[Array, '...']) -> Float[Array, 'nkpts 3']:
   """Construct a uniform sampling of k-space of given size with
   Monkhorst-Pack scheme.
 
@@ -261,11 +259,11 @@ def grid_vector_radius(grid_vector: Float[Array, "*n d"]):
   """
 
   def radius(r):
-      return jnp.sqrt(jnp.sum(r**2))
+    return jnp.sqrt(jnp.sum(r**2))
 
   ndim = grid_vector.ndim - 1
   for _ in range(ndim):
-      radius = jax.vmap(radius)
+    radius = jax.vmap(radius)
 
   return radius(grid_vector)
 

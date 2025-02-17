@@ -25,8 +25,7 @@ def param_init(
 
 
 def coeff(
-  pw_param: Array | Tuple,
-  freq_mask: ScalarGrid[Bool, 3]
+  pw_param: Array | Tuple, freq_mask: ScalarGrid[Bool, 3]
 ) -> Complex[Array, "spin kpts band n1 n2 n3"]:
   r"""Reshape the plane wave coefficients to the shape of the frequency mask.
 
@@ -171,6 +170,7 @@ def nabla_density_r(
   g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
   occupation: Optional[OccupationArray] = None,
 ):
+
   def den(r):
     return density_r(r, coeff, cell_vectors, g_vector_grid, occupation)
 
@@ -218,6 +218,6 @@ def nabla_density_grid(
 
   if occupation is not None:
     occupation = jnp.expand_dims(occupation, -1)
-    output = jnp.sum(output*occupation, axis=range(0, 3)) / vol
+    output = jnp.sum(output * occupation, axis=range(0, 3)) / vol
 
   return output

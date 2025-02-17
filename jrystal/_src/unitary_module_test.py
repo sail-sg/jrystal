@@ -6,7 +6,6 @@ from .unitary_module import UnitaryMatrix
 
 from jrystal._src.grid import cubic_mask, k_vectors
 
-
 jax.config.update("jax_enable_x64", True)
 
 

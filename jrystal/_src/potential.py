@@ -130,9 +130,7 @@ def externel(
   g_vector_grid: VectorGrid[Float, 3],
   vol: Float,
 ) -> ScalarGrid[Complex, 3]:
-  ext_pot_grid_rcprl = externel_reciprocal(
-    position, charge, g_vector_grid, vol
-  )
+  ext_pot_grid_rcprl = externel_reciprocal(position, charge, g_vector_grid, vol)
   return jnp.fft.ifftn(ext_pot_grid_rcprl, axes=range(-3, 0))
 
 
@@ -160,10 +158,8 @@ def lda_density(density_grid: ScalarGrid[Float, 3]) -> ScalarGrid[Float, 3]:
   return res
 
 
-def xc_lda(
-  density_grid: ScalarGrid[Float, 3],
-  kohn_sham: bool = False
-) -> ScalarGrid[Float, 3]:
+def xc_lda(density_grid: ScalarGrid[Float, 3],
+           kohn_sham: bool = False) -> ScalarGrid[Float, 3]:
   r"""local density approximation potential.
 
   See Eq. (7.4.9) Robert G. Parr, Yang Weitao 1994

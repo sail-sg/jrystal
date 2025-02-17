@@ -21,9 +21,7 @@ class _TestModules(parameterized.TestCase):
     self.freq_mask = jr.grid.cubic_mask([7, 8, 9])
 
   def test_wave(self):
-    pw_param = jr.pw.pw_param_init(
-      self.key, self.num_bands, 1, self.freq_mask
-    )
+    pw_param = jr.pw.pw_param_init(self.key, self.num_bands, 1, self.freq_mask)
     coeff = jr.pw.pw_coeff(pw_param, self.freq_mask)
     wave_grid1 = jr.pw.wave_grid(coeff, self.crystal.vol)
 
@@ -38,9 +36,7 @@ class _TestModules(parameterized.TestCase):
     np.testing.assert_allclose(wave_grid1, wave_grid2, atol=1e-8)
 
   def test_nabla_n_grid(self):
-    pw_param = jr.pw.pw_param_init(
-      self.key, self.num_bands, 1, self.freq_mask
-    )
+    pw_param = jr.pw.pw_param_init(self.key, self.num_bands, 1, self.freq_mask)
     coeff = jr.pw.pw_coeff(pw_param, self.freq_mask)
     occupation = jr.occupation.gamma(
       1, self.crystal.num_electron, num_bands=self.num_bands
@@ -52,10 +48,12 @@ class _TestModules(parameterized.TestCase):
     )
 
     def nabla_n(r):
+
       def f(r):
         return jr.pw.density_r(
           r, coeff, self.crystal.A, self.g_vecs, occupation
         )
+
       return jax.grad(f)(r)
 
     nabla_density_r2 = nabla_n(r)

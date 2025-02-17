@@ -249,7 +249,6 @@ NUMBER2SYMBOL_DICT = {
   118: 'Og'
 }
 
-
 CUFFT_FACTORS = [
   1,
   2,

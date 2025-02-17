@@ -50,6 +50,7 @@ def vmapstack(times: int, args: List[Dict] = None) -> Callable:
   Raises:
     ValueError: If the length of args does not match the number of times.
   """
+
   def decorator(f):
     if args:
       if len(args) != times:

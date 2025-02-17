@@ -15,23 +15,26 @@ from .._src.grid import cubic_mask, spherical_mask
 from .._src.grid import estimate_max_cutoff_energy
 from .._src.crystal import Crystal
 from .._src.utils import check_spin_number
-from ..config import ConfigDict
+from ..config import JrystalConfigDict
 
 
-def set_env_params(config: ConfigDict):
-  logging.warning(f'Versbose: {config.verbose}')
+def set_env_params(config: JrystalConfigDict):
+
   if config.verbose:
     logging.set_verbosity(logging.INFO)
+    logging.info(f'Versbose mode is on.')
+    if config.jax_enable_x64:
+      logging.info(f"Precision: Double (64 bit).")
   else:
     logging.set_verbosity(logging.WARNING)
+    logging.warning(f'Versbose mode is off.')
+
   jax.config.update("jax_enable_x64", config.jax_enable_x64)
 
 
-def parse_args(config: ConfigDict) -> ConfigDict:
+def parse_args(config: JrystalConfigDict) -> JrystalConfigDict:
   """Parse command-line arguments."""
-  parser = argparse.ArgumentParser(
-    description='Jrystal energy optimization.'
-  )
+  parser = argparse.ArgumentParser(description='Jrystal energy optimization.')
   for key, value in config.items():
     parser.add_argument(f"--{key}", type=type(value), default=value)
   args = parser.parse_args()
@@ -41,7 +44,7 @@ def parse_args(config: ConfigDict) -> ConfigDict:
   return config
 
 
-def create_fft_mask(config: ConfigDict):
+def create_freq_mask(config: JrystalConfigDict):
   crystal = create_crystal(config)
   grid_sizes = proper_grid_size(config.grid_sizes)
   logging.info(f"grid_mask_method: {config.g_grid_mask_method}")
@@ -66,7 +69,7 @@ def create_fft_mask(config: ConfigDict):
   return mask
 
 
-def create_crystal(config: ConfigDict) -> Crystal:
+def create_crystal(config: JrystalConfigDict) -> Crystal:
   _pkg_path = jr.get_pkg_path()
   path = _pkg_path + '/geometry/' + config.crystal + '.xyz'
   crystal = Crystal.create_from_xyz_file(xyz_file=path)
@@ -74,7 +77,17 @@ def create_crystal(config: ConfigDict) -> Crystal:
   return crystal
 
 
-def create_grids(config: ConfigDict):
+def create_pseudopotential(config: JrystalConfigDict):
+  assert config.use_pseudopotential
+  crystal = create_crystal(config)
+  _pkg_path = jr.get_pkg_path()
+  path = _pkg_path + '/pseudopotential/normconserving/'
+  logging.info(f"Pseudopotential path: {path}")
+  pp = jr.pseudopotential.NormConservingPseudopotential.create(crystal, path)
+  return pp
+
+
+def create_grids(config: JrystalConfigDict):
   crystal = create_crystal(config)
   grid_sizes = proper_grid_size(config.grid_sizes)
   k_grid_sizes = proper_grid_size(config.k_grid_sizes)
@@ -84,9 +97,7 @@ def create_grids(config: ConfigDict):
   return g_vector_grid, r_vector_grid, k_vector_grid
 
 
-def create_optimizer(
-  config: ConfigDict
-) -> optax.GradientTransformation:
+def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
   logging.info(f"optimization method: {config.optimizer}")
   config_dict = dict(config.optimizer_args)
   opt = getattr(alias, config.optimizer, None)
@@ -103,7 +114,7 @@ def create_optimizer(
   return optimizer
 
 
-def create_occupation(config: ConfigDict) -> Callable:
+def create_occupation(config: JrystalConfigDict) -> Callable:
   occupation_method = config.occupation
   if occupation_method == "fermi-dirac":
     return jr.occupation.idempotent
@@ -117,7 +128,7 @@ def create_occupation(config: ConfigDict) -> Callable:
     )
 
 
-def get_ewald_coulomb_repulsion(config: ConfigDict):
+def get_ewald_coulomb_repulsion(config: JrystalConfigDict):
   crystal = create_crystal(config)
   ewald_grid = translation_vectors(
     crystal.cell_vectors, config.ewald_args['ewald_cutoff']

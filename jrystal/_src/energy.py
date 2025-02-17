@@ -139,7 +139,9 @@ def kinetic(
 
 
 def xc_lda(
-  density_grid: ScalarGrid[Float, 3], vol: Float, kohn_sham: bool = False
+  density_grid: ScalarGrid[Float, 3],
+  vol: Float,
+  kohn_sham: bool = False
 ) -> Float:
   r"""local density approximation potential.
 
@@ -209,9 +211,7 @@ def total_energy(
 
   wave_grid_arr = pw.wave_grid(coefficient, vol)
   density_grid = wave_to_density(wave_grid_arr, occupation)
-  density_grid_rec = wave_to_density_reciprocal(
-    wave_grid_arr, occupation
-  )
+  density_grid_rec = wave_to_density_reciprocal(wave_grid_arr, occupation)
 
   e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
   e_ext = external(density_grid_rec, positions, charges, g_vector_grid, vol)
@@ -242,8 +242,14 @@ def band_energy(
   density_grid_sum = pw.density_grid(coefficient, vol, occupation)
   density_per_band = pw.density_grid(coefficient, vol)
   v_eff = potential.effective(
-    density_grid_sum, positions, charges, g_vector_grid, vol, split=False,
-    xc=xc, kohn_sham=kohn_sham
+    density_grid_sum,
+    positions,
+    charges,
+    g_vector_grid,
+    vol,
+    split=False,
+    xc=xc,
+    kohn_sham=kohn_sham
   )
   e_eff = braket.real_braket(density_per_band, v_eff, vol)
 

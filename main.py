@@ -25,9 +25,16 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-with open(args.config, 'r') as file:
-  config = yaml.safe_load(file)
-  config = JrystalConfigDict(config)
+config = jr.config.get_config("config.yaml")
 
 if args.mode == "energy":
-  jr.calc.energy(config)
+  if config.use_pseudopotential:
+    jr.calc.energy_ncpp(config)
+  else:
+    jr.calc.energy(config)
+elif args.mode == "band":
+  if config.use_pseudopotential:
+    jr.calc.band_ncpp(config)
+  else:
+    jr.calc.band(config)
+

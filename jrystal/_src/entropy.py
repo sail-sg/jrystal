@@ -16,10 +16,10 @@ def fermi_dirac(occupation: OccupationArray, eps: float = 1e-8) -> float:
   """
   num_spin, num_k, _ = occupation.shape
 
-  entropy = - jnp.sum(
-      occupation * jnp.log(eps + occupation) +
-      ((3-num_spin) / num_k - occupation) *
-      jnp.log(eps + (3-num_spin) / num_k - occupation)
-    )
+  entropy = -jnp.sum(
+    occupation * jnp.log(eps + occupation) +
+    ((3 - num_spin) / num_k - occupation) *
+    jnp.log(eps + (3 - num_spin) / num_k - occupation)
+  )
 
   return entropy
