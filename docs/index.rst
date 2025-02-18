@@ -1,6 +1,37 @@
 jrystal
 =======================================================================
 
+
+.. raw:: html
+
+    <!-- Container for the graph -->
+    <div id="graph" style="text-align: center;"></div>
+
+    <!-- Load required libraries (using CDN here) -->
+    <script src="//d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/@hpcc-js/wasm@2.20.0/dist/graphviz.umd.js"></script>
+    <script src="https://unpkg.com/d3-graphviz@5.6.0/build/d3-graphviz.js"></script>
+
+    <!-- Render the DOT graph -->
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+          fetch("/_static/graph.dot?" + new Date().getTime())
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error("Network response was not ok: " + response.statusText);
+                }
+                return response.text();
+            })
+            .then(function(dot) {
+                d3.select("#graph").graphviz().renderDot(dot);
+            })
+            .catch(function(error) {
+                console.error("Error fetching DOT file:", error);
+            });
+      });
+    </script>
+
 .. automodule:: jrystal._src.band
    :members:
 
