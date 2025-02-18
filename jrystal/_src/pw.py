@@ -356,7 +356,7 @@ def wave_r(
   it can have leading batch dimensions.
 
   Args:
-    r: spatial location to evaluate the wave function, shape: (*batch, 3).
+    r: spatial location to evaluate the wave function, shape: (3,).
     coeff: wave function coefficients, which has a shape of
       :code:`(..., n1, n2, n3)`.
       it can be created from :py:func:`param_init` followed by :py:func:`coeff`.
@@ -365,7 +365,7 @@ def wave_r(
 
   Returns:
     Complex tensor that represents wave functions evaluated at location r,
-    with shape (*batch,).
+    with shape of the leading dimensions of the coeff (...).
   """
   vol = volume(cell_vectors)
   n1, n2, n3 = coeff.shape[-3:]
@@ -373,12 +373,13 @@ def wave_r(
   if g_vector_grid is None:
     g_vector_grid = g_vectors(cell_vectors, [n1, n2, n3])
 
-  batch_dims = r.shape[:-1]
-  r_ = r.reshape((-1, r.shape[-1]))
+  if r.shape != (3,):
+    raise ValueError("r must have shape (3,)")
   leading_dims = coeff.shape[:-3]
   coeff_ = coeff.reshape((-1, n1, n2, n3))
-  output = jnp.exp(1j * jnp.einsum("lxyzd,d->lxyz", g_vector_grid, r))
+  output = jnp.exp(1j * g_vector_grid @ r)
   output = jnp.einsum("lxyz,xyz->skb", coeff_, output)
+  output = jnp.reshape(output, leading_dims)
   return output / jnp.sqrt(vol)
 
 
@@ -389,6 +390,29 @@ def density_r(
   g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
   occupation: Optional[OccupationArray] = None,
 ):
+  r"""Compute the electron density at location r.
+
+  :py:func:`wave_r` computes the electron density at location :math:`r`.
+  This function computes the density at location :math:`r`. If occupation is
+  not provided, it simply returns the absolute square of the :py:func:`wave_r`.
+  If occupation is provided, the :code:`coeff` needs to have a shape of
+  :code:`(num_spin, num_kpts, num_bands, n1, n2, n3)`, the :code:`occupation`
+  needs to have the dimension of the :code:`(num_spin, num_kpts, num_bands)`.
+
+  Args:
+    r: spatial location to evaluate the density, shape: (3,).
+    coeff: wave function coefficients, which has a shape of
+      :code:`(num_spin, num_kpts, num_bands, n1, n2, n3)`.
+      it can be created from :py:func:`param_init` followed by :py:func:`coeff`.
+    cell_vectors: the cell vectors of the crystal unit cell.
+    g_vector_grid: the G vectors computed from
+      :py:func:`jrystal.grid.g_vectors`.
+    occupation: occupation over different k frequencies.
+      Refer to :py:func:`density_grid` for more information.
+
+  Returns:
+    A real scalar that represents the density at location r.
+  """
   density = absolute_square(wave_r(r, coeff, cell_vectors, g_vector_grid))
   if occupation is not None:
     density = jnp.sum(density * occupation)
@@ -402,6 +426,25 @@ def nabla_density_r(
   g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
   occupation: Optional[OccupationArray] = None,
 ):
+  r"""Compute the first order derivative of the density at location r.
+
+  Refer the :py:func:`density_r` for more information.
+
+  Args:
+    r: spatial location to evaluate the density, shape: (3,).
+    coeff: wave function coefficients, which has a shape of
+      :code:`(num_spin, num_kpts, num_bands, n1, n2, n3)`.
+      it can be created from :py:func:`param_init` followed by :py:func:`coeff`.
+    cell_vectors: the cell vectors of the crystal unit cell.
+    g_vector_grid: the G vectors computed from
+      :py:func:`jrystal.grid.g_vectors`.
+    occupation: occupation over different k frequencies.
+      Refer to :py:func:`density_grid` for more information.
+
+  Returns:
+    A :code:`(3,)` real vector that represents the density derivative at
+      location :code:`r`.
+  """
 
   def den(r):
     return density_r(r, coeff, cell_vectors, g_vector_grid, occupation)
@@ -416,6 +459,31 @@ def nabla_density_grid(
   g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
   occupation: Optional[OccupationArray] = None,
 ) -> ScalarGrid[Float, 3]:
+  r"""Compute the first order derivative of the density at a specific grid of
+  spatial locations.
+
+  Refer the :py:func:`density_grid` for more information.
+
+  Args:
+    coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension
+      which will be summed to get the overall density.
+      Therefore the shape is :code:`(..., num_kpts, num_bands, n1, n2, n3)`.
+    vol: volume of the unit cell, a real scalar.
+    occupation: the occupation over different k frequencies.
+      The shape is :code:`(..., num_kpts, num_bands)`, it should have the same leading dimension
+      as :code:`coeff`.
+      This is an option argument, when :code:`occupation=None`, we compute the density
+      contribution from each :math:`k` without summing them. If :code:`occupation` is
+      provided, we sum up all the density from each :math:`k` weighted by the
+      occupation.
+
+  Returns:
+    A real valued tensor that represents the density derivative at the spatial
+    grid computed from :py:func:`jrystal.grid.r_vectors`.
+    The shape is :code:`(n1, n2, n3, 3)` if :code:`occupation` is provided,
+    else the shape is :code:`(..., num_kpts, num_bands, n1, n2, n3, 3)`.
+  """
+
   r = jnp.reshape(r, (-1))
 
   if r.shape[0] != 3:
