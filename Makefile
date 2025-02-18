@@ -30,7 +30,9 @@ doc-install:
 	$(call check_install, pydocstyle)
 	$(call check_install_extra, doc8, "doc8<1")
 	$(call check_install, sphinx)
-	$(call check_install, sphinx_rtd_theme)
+	$(call check_install, sphinx_book_theme)
+	$(call check_install, readthedocs-sphinx-search)
+	$(call check_install, myst-parser)
 	$(call check_install_extra, sphinxcontrib.spelling, sphinxcontrib.spelling pyenchant)
 
 auditwheel-install:
