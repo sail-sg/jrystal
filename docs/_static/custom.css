@@ -1,0 +1,14 @@
+/* _static/custom.css */
+g.node.dim, g.edge.dim {
+    opacity: 0.3;
+}
+
+g.node.active, g.edge.active {
+    opacity: 1;
+}
+
+a.doc-link text {
+    font-size: 10px;
+    fill: blue;
+    cursor: pointer;
+}

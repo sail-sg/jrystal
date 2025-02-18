@@ -67,3 +67,9 @@ napoleon_numpy_docstring = False
 napoleon_include_init_with_doc = True
 
 html_static_path = ['_static']
+
+
+# conf.py
+def setup(app):
+  app.add_css_file('custom.css')
+  app.add_js_file("graph.js")

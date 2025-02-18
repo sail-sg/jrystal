@@ -2,6 +2,8 @@ jrystal
 =======================================================================
 
 
+Call Graph
+------------
 .. raw:: html
 
     <!-- Container for the graph -->
@@ -13,25 +15,10 @@ jrystal
     <script src="https://unpkg.com/d3-graphviz@5.6.0/build/d3-graphviz.js"></script>
 
     <!-- Render the DOT graph -->
+    <script src="/_static/graph.js"></script>
 
-    <script>
-      document.addEventListener("DOMContentLoaded", function() {
-          fetch("/_static/graph.dot?" + new Date().getTime())
-            .then(function(response) {
-                if (!response.ok) {
-                    throw new Error("Network response was not ok: " + response.statusText);
-                }
-                return response.text();
-            })
-            .then(function(dot) {
-                d3.select("#graph").graphviz().renderDot(dot);
-            })
-            .catch(function(error) {
-                console.error("Error fetching DOT file:", error);
-            });
-      });
-    </script>
-
+API
+------------
 .. automodule:: jrystal._src.band
    :members:
 
