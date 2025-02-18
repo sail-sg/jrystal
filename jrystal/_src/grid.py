@@ -59,12 +59,17 @@ def _half_frequency_pad_to(tensor, grid_sizes):
 
 
 def _vector_grid(basis: Float[Array, "d"], grid_sizes, normalize=False):
-  """_summary_
+  """This is a shared function that is used by :code:`g_vectors`
+  and :code:`r_vectors`.
 
   Args:
-    basis (_type_): _description_
-    grid_sizes (_type_): _description_
-    normalize (bool, optional): _description_. Defaults to False.
+    basis: The cell vectors or reciprocal vectors.
+    grid_sizes: number of grid points along each axis.
+    normalize: :code:`False` for :code:`r_vectors` and :code:`True` for
+      :code:`g_vectors`.
+
+  Returns:
+    jnp.ndarray: a tensor with shape `[*grid_sizes, d]`.
   """
   dim = len(grid_sizes)
   assert basis.shape[0] == basis.shape[1] == dim
@@ -80,21 +85,23 @@ def _vector_grid(basis: Float[Array, "d"], grid_sizes, normalize=False):
 
 def g_vectors(cell_vectors, grid_sizes) -> VectorGrid[Float, 3]:
   r"""Given the lattice vector of the unit cell,
-  and grid size on each axis, return the G vectors
-  in the recirpocal space.
+  and grid size on each axis, return the G vectors in the recirpocal space.
 
+  We denote :code:`cell_vectors` as :math:`\boldsymbol{a}`,
+  reciprocal vector as :math:`\boldsymbol{b}`.
   In 3D,
 
   .. math::
+
     &G_{ijk} = (i\boldsymbol{b}_1 + j\boldsymbol{b}_2 + k\boldsymbol{b}_3) \\
     &i \in [0, n_i-1], j \in [0, n_j-1], k \in [0, n_k-1]
 
   Args:
-    a: real space lattice vectors for the the unit cell.
-      A `(d, d)` matrix if the spatial dimension is `d`.
+    cell_vectors: real space lattice vectors for the the unit cell.
+      A `(d, d)` matrix if the spatial dimension is `d`. `d` is usually `3`
     grid_sizes: number of grid points along each axis.
   Returns:
-    jnp.ndarray: a tensor with shape `[*grid_sizes, d]`.
+    jnp.ndarray: a tensor with shape `(*grid_sizes, d)`.
   """
   b = 2 * jnp.pi * jnp.linalg.inv(cell_vectors).T
   return _vector_grid(b, grid_sizes)
@@ -105,19 +112,22 @@ def r_vectors(cell_vectors, grid_sizes) -> VectorGrid[Float, 3]:
   and grid size on each axis, return the R vectors
   in the real space.
 
+  We denote :code:`cell_vectors` as :math:`\boldsymbol{a}`,
+  reciprocal vector as :math:`\boldsymbol{b}`.
   In 3D,
 
   .. math::
-    &R_{ijk} = \frac{i}{n_i}\boldsymbol{a}_1
-    + \frac{j}{n_j}\boldsymbol{a}_2
-    + \frac{k}{n_k}\boldsymbol{a}_3 \\
+
+    &R_{ijk} = \frac{i}{n_i}\boldsymbol{a}_1 + \frac{j}{n_j}\boldsymbol{a}_2
+      + \frac{k}{n_k}\boldsymbol{a}_3 \\
     &i \in [0, n_i-1], j \in [0, n_j-1], k \in [0, n_k-1]
+
   Args:
-    a: real space lattice vectors for the the unit cell.
-      A `(d, d)` matrix if the spatial dimension is `d`.
+    cell_vectors: real space lattice vectors for the the unit cell.
+      A `(d, d)` matrix if the spatial dimension is `d`. `d` is usually `3`.
     grid_sizes: number of grid points along each axis.
   Returns:
-    jnp.ndarray: a tensor with shape `[*grid_sizes, d]`.
+    jnp.ndarray: a tensor with shape `(*grid_sizes, d)`.
   """
   return _vector_grid(cell_vectors, grid_sizes, normalize=True)
 
@@ -127,12 +137,12 @@ def proper_grid_size(grid_sizes: Int | Int[Array, 'd'] | Tuple | List) -> Array:
   fftw factors.
 
   Args:
-      grid_sizes (Int | Array | Tuple | List): grid size. can be either list,
-      tuple, numpy.array or scalar. A scalar indicates that all the
-      dimensions have the same grid size.
+    grid_sizes (Int | Array | Tuple | List): grid size. can be either list,
+    tuple, numpy.array or scalar. A scalar indicates that all the
+    dimensions have the same grid size.
 
   Returns:
-      Array: a numpy array indicates the grid size on each dimension.
+    Array: a numpy array indicates the grid size on each dimension.
   """
   if hasattr(grid_sizes, "__len__"):
     grid_sizes = np.array(grid_sizes)
@@ -157,7 +167,7 @@ def translation_vectors(
           The larger the more precise of ewald sum.
 
   Returns:
-      RealVecterGrid: the translation grid lattice; shape: [nt, 3]
+    The translation grid lattice, shape: (nt, 3)
   """
 
   dim = cell_vectors.shape[0]
@@ -173,11 +183,11 @@ def k_vectors(cell_vectors: CellVector,
   Monkhorst-Pack scheme.
 
   Args:
-      cell_vectors (CellVector): cell vectors.
-      grid_sizes (Int[Array, '...']): grid sizes = (n1, n2, n3).
+    cell_vectors: cell vectors of shape `(3, 3)`.
+    grid_sizes: `(n1, n2, n3)`.
 
   Returns:
-      Float[Array, 'nkpts 3']: k-vectors.
+    Float[Array, 'nkpts 3']: k-vectors.
   """
   b = 2 * jnp.pi * jnp.linalg.inv(cell_vectors).T
   return monkhorst_pack(grid_sizes) @ b
@@ -188,17 +198,21 @@ def spherical_mask(
   grid_sizes: Union[List, jax.Array],
   cutoff_energy: float
 ) -> ScalarGrid[Bool, 3]:
-  """Get a sherical fft frequency mask such that:
-    ||G||^2 / 2 <= cutoff
-    holds for all G
+  r"""Get a spherical fft frequency mask such that
+
+  .. math::
+
+    \frac{\|G\|^2}{2} \leq \text{cutoff}
+
+  holds for all :math:`G`.
 
   Args:
-      cell_vectors (CellVector): cell vectors
-      grid_sizes (Union[List, jax.Array]): fft grid sizes (n1, n2, n3).
-      cutoff_energy (float): cutoff energy
+    cell_vectors: cell vectors
+    grid_sizes: grid sizes `(n1, n2, n3)` of the 3D reciprocal frequency.
+    cutoff_energy: cutoff energy of the frequencies.
 
   Returns:
-      ScalarGrid[Bool, 3]: a 3-dimensional fft frequency mask.
+    A 3D frequency mask.
   """
   g_vector_grid = g_vectors(cell_vectors, grid_sizes)
   g_norm = np.linalg.norm(g_vector_grid, axis=-1, keepdims=False)
@@ -207,14 +221,19 @@ def spherical_mask(
 
 
 def cubic_mask(grid_sizes: Union[List, jax.Array]) -> ScalarGrid[Bool, 3]:
-  """Get a cubic fft frequency mask such that the mask is half of the grid
-    sizes
+  r"""Get a cubic fft frequency mask such that it enables only part of the
+  frequencies. Since the density :math:`\rho` is the absolute square of
+  the wave function :math:`\psi`, therefore :math:`\rho` contains more
+  frequency components, as the components in :math:`\psi` are combined.
+
+  Read more on
+  1. Why / How to mask the frequency components.
 
   Args:
-      grid_sizes (Union[List, jax.Array]): fft grid sizes  (n1, n2, n3).
+    grid_sizes: grid sizes `(n1, n2, n3)` of the 3D reciprocal frequency.
 
   Returns:
-      ScalarGrid[Bool, 3]: a 3-dimensional fft frequency mask.
+    A 3D frequency mask.
   """
   masks = []
   for size in grid_sizes:
@@ -237,11 +256,11 @@ def estimate_max_cutoff_energy(
   """Estimate the maximum of cutoff energy of a cubic mask.
 
   Args:
-      cell_vectors (CellVector): cell vectors.
-      mask (ScalarGrid[Bool, 3]): a cubic mask. can also be any frequency mask.
+    cell_vectors (CellVector): cell vectors.
+    mask (ScalarGrid[Bool, 3]): a cubic mask. can also be any frequency mask.
 
   Returns:
-      float: the maximum cutoff energy corresponding to the input mask.
+    the maximum cutoff energy corresponding to the input mask.
   """
   grid_sizes = mask.shape
   g_vector_grid = g_vectors(cell_vectors, grid_sizes)
@@ -253,9 +272,8 @@ def grid_vector_radius(grid_vector: Float[Array, "*n d"]):
   """get the radius of grid vectors.
 
   Args:
-      grid_vector (VectorField): a input vector field.
-        the first seveval dimensions can be any batch dimension.
-
+    grid_vector (VectorField): a input vector field.
+      the first seveval dimensions can be any batch dimension.
   """
 
   def radius(r):
@@ -275,11 +293,11 @@ def g2r_vector_grid(
   """Transform the G vector grid (reciprocal space) to R vector grid.
 
   Args:
-      g_vector_grid (Float[Array, "*nd d"]): the G vector grid.
-      cell_vectors (CellVector): the cell vectors.
+    g_vector_grid (Float[Array, "*nd d"]): the G vector grid.
+    cell_vectors (CellVector): the cell vectors.
 
   Returns:
-      Float[Array, "*nd d"]: the R vector grid.
+    Float[Array, "*nd d"]: the R vector grid.
   """
   grid_sizes = g_vector_grid.shape[:-1]
   r_vector_grid = r_vectors(cell_vectors, grid_sizes)
@@ -293,11 +311,11 @@ def r2g_vector_grid(
   """Transform the R vector grid to G vector grid.
 
   Args:
-      r_vector_grid (Float[Array, "*nd d"]): the R vector grid.
-      cell_vectors (CellVector): the cell vectors.
+    r_vector_grid (Float[Array, "*nd d"]): the R vector grid.
+    cell_vectors (CellVector): the cell vectors.
 
   Returns:
-      Float[Array, "*nd d"]: the G vector grid.
+    Float[Array, "*nd d"]: the G vector grid.
   """
 
   grid_sizes = r_vector_grid.shape[:-1]
