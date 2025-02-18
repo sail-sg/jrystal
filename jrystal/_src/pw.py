@@ -1,14 +1,15 @@
 """Planewave module."""
+from typing import Optional, Tuple, Union
+
 import jax
 import jax.numpy as jnp
 import numpy as np
-from typing import Optional, Tuple
-from jaxtyping import Array, Complex, Bool, Float
+from jaxtyping import Array, Bool, Complex, Float
 
-from .typing import OccupationArray, ScalarGrid
-from .utils import reshape_coefficient, absolute_square, volume
-from .unitary_module import unitary_matrix, unitary_matrix_param_init
 from .grid import g_vectors
+from .typing import OccupationArray, ScalarGrid
+from .unitary_module import unitary_matrix, unitary_matrix_param_init
+from .utils import absolute_square, reshape_coefficient, volume
 
 
 def param_init(
@@ -25,7 +26,7 @@ def param_init(
 
 
 def coeff(
-  pw_param: Array | Tuple, freq_mask: ScalarGrid[Bool, 3]
+  pw_param: Union[Array, Tuple], freq_mask: ScalarGrid[Bool, 3]
 ) -> Complex[Array, "spin kpts band n1 n2 n3"]:
   r"""Reshape the plane wave coefficients to the shape of the frequency mask.
 
@@ -45,7 +46,7 @@ def coeff(
 
 def wave_grid(
   coeff: Complex[Array, "spin kpts band n1 n2 n3"],
-  vol: float | Array,
+  vol: Union[float, Array],
 ):
   r"""Construct the wave function in real space evaluated at fft grid from
   plane wave coefficients.
@@ -66,7 +67,7 @@ def wave_grid(
 
 def density_grid(
   coeff: Complex[Array, "spin kpts band n1 n2 n3"],
-  vol: float | Array,
+  vol: Union[float, Array],
   occupation: Optional[OccupationArray] = None
 ) -> ScalarGrid[Complex, 3]:
   r"""Construct the density grid from plane wave coefficients.
@@ -97,7 +98,7 @@ def density_grid(
 
 def density_grid_reciprocal(
   coeff: Complex[Array, "spin kpts band n1 n2 n3"],
-  vol: float | Array,
+  vol: Union[float, Array],
   occupation: Optional[OccupationArray] = None
 ) -> ScalarGrid[Complex, 3]:
   r"""Construct the density grid from plane wave coefficients in reciprocal

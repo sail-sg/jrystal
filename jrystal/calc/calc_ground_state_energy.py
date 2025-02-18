@@ -1,23 +1,23 @@
+import time
+from dataclasses import dataclass
+from math import ceil
+from typing import List, Union
+
 import jax
 import optax
-from math import ceil
+from absl import logging
+from tqdm import tqdm
 
+from .._src import energy, entropy, occupation, pw
 from ..config import JrystalConfigDict
 from .opt_utils import (
   create_crystal,
-  create_optimizer,
+  create_freq_mask,
   create_grids,
-  set_env_params,
+  create_optimizer,
   get_ewald_coulomb_repulsion,
-  create_freq_mask
+  set_env_params
 )
-from .._src import occupation, pw, energy, entropy
-
-from dataclasses import dataclass
-from absl import logging
-from tqdm import tqdm
-import time
-from typing import List
 
 
 @dataclass
@@ -25,7 +25,7 @@ class GroundStateEnergyOutput:
   config: JrystalConfigDict
   params_pw: jax.Array
   params_occ: jax.Array
-  total_energy: float | jax.Array
+  total_energy: Union[float, jax.Array]
   total_energy_history: List[float]
 
 
