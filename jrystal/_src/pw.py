@@ -587,10 +587,14 @@ def wave_r(
 
   Args:
 <<<<<<< HEAD
+<<<<<<< HEAD
     r: spatial location to evaluate the wave function, shape: (3,).
 =======
     r: spatial location to evaluate the wave function, shape: (*batch, 3).
 >>>>>>> 33691b5 (update)
+=======
+    r: spatial location to evaluate the wave function, shape: (3,).
+>>>>>>> c44cf0a (update)
     coeff: wave function coefficients, which has a shape of
       :code:`(..., n1, n2, n3)`.
       it can be created from :py:func:`param_init` followed by :py:func:`coeff`.
@@ -600,10 +604,14 @@ def wave_r(
   Returns:
     Complex tensor that represents wave functions evaluated at location r,
 <<<<<<< HEAD
+<<<<<<< HEAD
     with shape of the leading dimensions of the coeff (...).
 =======
     with shape (*batch,).
 >>>>>>> 33691b5 (update)
+=======
+    with shape of the leading dimensions of the coeff (...).
+>>>>>>> c44cf0a (update)
   """
   vol = volume(cell_vectors)
   n1, n2, n3 = coeff.shape[-3:]
@@ -611,6 +619,7 @@ def wave_r(
   if g_vector_grid is None:
     g_vector_grid = g_vectors(cell_vectors, [n1, n2, n3])
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   if r.shape != (3,):
     raise ValueError("r must have shape (3,)")
@@ -622,11 +631,19 @@ def wave_r(
 =======
   batch_dims = r.shape[:-1]
   r_ = r.reshape((-1, r.shape[-1]))
+=======
+  if r.shape != (3,):
+    raise ValueError("r must have shape (3,)")
+>>>>>>> c44cf0a (update)
   leading_dims = coeff.shape[:-3]
   coeff_ = coeff.reshape((-1, n1, n2, n3))
-  output = jnp.exp(1j * jnp.einsum("lxyzd,d->lxyz", g_vector_grid, r))
+  output = jnp.exp(1j * g_vector_grid @ r)
   output = jnp.einsum("lxyz,xyz->skb", coeff_, output)
+<<<<<<< HEAD
 >>>>>>> 33691b5 (update)
+=======
+  output = jnp.reshape(output, leading_dims)
+>>>>>>> c44cf0a (update)
   return output / jnp.sqrt(vol)
 
 
