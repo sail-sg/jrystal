@@ -9,8 +9,8 @@ II = 1.0j
 
 
 class pyNumSBT(object):
-  '''
-    Numerically perform spherical Bessel transform (SBT) in O(Nln(N)) time based
+  r'''
+    Numerically perform spherical Bessel transform (SBT) in :math:`O(Nln(N))` time based
     on the algorithm proposed by J. Talman.
 
         Talman, J. Computer Physics Communications 2009, 180, 332-338.
@@ -18,10 +18,12 @@ class pyNumSBT(object):
     For a function "f(r)" defined numerically on a LOGARITHMIC radial grid "r",
     the SBT for the function gives
 
+    .. math::
         g(k) = \sqrt{2\over\pi} \int_0^\infty j_l(kr) f(r) r^2 dr           (c1)
 
     and the inverse SBT (iSBT) gives
 
+    .. math::
         f(r) = \sqrt{2\over\pi} \int_0^\infty j_l(kr) g(k) k^2 dk           (c2)
   '''
 
@@ -36,14 +38,16 @@ class pyNumSBT(object):
     self.sbt_mltb(self.lmax)
 
   def sbt_init(self, rr, kmax: float):
-    '''
-      Initialize the real-space grid (rr) and momentum-space grid (kk).
+    r'''
+    Initialize the real-space grid (rr) and momentum-space grid (kk).
 
+    .. math::
           \rho   = \ln(rr)
           \kappa = \ln(kk)
 
-      The algorithm by Talman requries
+    The algorithm by Talman requries
 
+    .. math::
           \Delta\kappa = \Delta\rho
     '''
 

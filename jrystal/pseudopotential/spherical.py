@@ -31,20 +31,21 @@ def cartesian_to_spherical(x: Float[Array, "*nd 3"]) -> Float[Array, "*nd 3"]:
 def legendre_to_sph_harm(
   l: int = 0,
 ) -> Callable[[Float[Array, "*batch 3"]], Float[Array, "*batch m"]]:  # noqa
-  """
-    Decompose the legendre polynomial into spherical harmonics:
+  r"""
+  Decompose the legendre polynomial into spherical harmonics:
 
-     (2l+1) P_l(x^Ty) = 4\pi \sum_m Y_{l, m}(x) Y*_{l, m}(y)
+   .. math::
+     (2l+1) P_l(x^Ty) = 4\pi \sum_m Y_{l, m}(x) Y^*_{l, m}(y)
 
-    where l is the index for angular momentum, and Y are the sperical harmonics.
+  where l is the index for angular momentum, and Y are the sperical harmonics.
 
-    - When we need this function?
+  - When we need this function?
 
-      when we need to calculate P_l(G^T G'). If we compute the every pair of the
-      inner products between two G vections, it is very expensive. Instead, we 
-      can decompose the Legendre polynomial into spherical harmonics, and then 
-      compute the spherical harmonics for each G vector and calculate the inner 
-      products of these spherical harmonics. This is much faster.
+  when we need to calculate :math:`P_l(G^T G')`. If we compute the every pair of the
+  inner products between two G vections, it is very expensive. Instead, we
+  can decompose the Legendre polynomial into spherical harmonics, and then
+  compute the spherical harmonics for each G vector and calculate the inner
+  products of these spherical harmonics. This is much faster.
 
   """
   m = jnp.arange(-l, l + 1)

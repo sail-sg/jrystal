@@ -67,7 +67,7 @@ docstyle: doc-install
 	pydocstyle $(PROJECT_NAME) && doc8 docs && cd docs && make html SPHINXOPTS="-W"
 
 doc: doc-install
-	cd docs && make html && cd _build/html && python3 -m http.server
+	sphinx-autobuild --watch jrystal docs docs/_build/html
 
 spelling: doc-install
 	cd docs && make spelling SPHINXOPTS="-W"
