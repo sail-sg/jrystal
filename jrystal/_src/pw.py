@@ -18,6 +18,48 @@ def param_init(
   freq_mask: ScalarGrid[Bool, 3],
   restricted: bool = True,
 ):
+  r"""Initialize the raw parameters.
+
+    In planewave based calculation, a wave function is represented as a
+    linear combination of the fourier series in 3D. Therefore to create one
+    wave function we need a 3D shaped tensor to represent the mixing
+    coefficients on each of the frequency component (denoted as `G`).
+    `freq_mask` provides a 3D mask to decide which frequency components
+    are selected, the number of selected components is denoted as `num_g`.
+
+    The `num_bands` & `num_kpts` is a bit hard to explain, intuitively,
+    the wave functions consists of high frequency components that has a period
+    smaller than the unit cell (denoted $G$) and components that has a period
+    larger than the unit cell (denoted $k$). However, with the contraints that
+    the resulting system is periodic, we don't need to linearly combine over all
+    the components, but instead just linearly combine over the $G$ components
+    with different coefficients for each $k$.
+
+    Extension reads:
+    1. Why and how to mask the frequency components.
+    2. Bloch theorum.
+
+    As far as this function is concerned, it simply just returns a randomly
+    initialized parameter of shape `(num_spin, num_kpts, num_g, num_bands)`.
+    The input arguments to this function is only used to determine the shape.
+
+    Note that this function returns the raw parameter that can not be used
+    directly to weight the frequency components, as in quantum chemistry we
+    require the wave functions to be orthogonal to each other.
+    check :py:func:`coeff` for converting the raw parameter into an unitary
+    tensor.
+
+    Args:
+      key: ranodm key for initializing the parameters
+      num_bands: the number of bands.
+      num_kpts: the number of k points.
+      freq_mask: a 3D mask that denotes which frequency components are selected.
+      restricted: if `True`, `num_spin=2` else `num_spin=1`.
+
+    Returns:
+      A complex type raw parameter of shape
+      `(num_spin, num_kpts, num_g, num_bands)`.
+    """
   num_spin = 1 if restricted else 2
   num_g = np.sum(freq_mask).item()
   shape = (num_spin, num_kpts, num_g, num_bands)
@@ -27,19 +69,40 @@ def param_init(
 def coeff(
   pw_param: Array | Tuple, freq_mask: ScalarGrid[Bool, 3]
 ) -> Complex[Array, "spin kpts band n1 n2 n3"]:
-  r"""Reshape the plane wave coefficients to the shape of the frequency mask.
+  r"""Create the linear coefficients to combine the frequency components.
 
-  Args:
-      pw_param (Array): plane wave coefficients.
-      freq_mask (ScalarGrid[Bool, 3]): frequency mask.
+    The `pw_param` should be created from :py:func:`param_init`, and the same
+    `freq_mask` used in :py:func:`param_init` should be used here. As mentioned
+    in :py:func:`param_init`, we use linear combination over 3D fourier
+    components for creating wave functions. Some extra requirements are
 
-  Returns:
-      Complex[Array, "spin kpts band n1 n2 n3"]: reshaped plane wave
-      coefficients.
-  """
+    1. The wave functions that has the same spin and same k component needs
+       to be orthogonal to each other.
+    2. We only activate some of the frequency components with the `freq_mask`.
+
+    As the raw parameter returned from :py:func:`param_init` has the shape
+    `(num_spin, num_kpts, num_g, num_bands)`, where `num_g` is the number of
+    activated frequencies flattend from the activated entries in the `freq_mask`
+    This function first orthogonalize over the last two dimensions and
+    reorganize the orthogonalized parameter into a 3D grid the same shape of
+    the frequency mask.
+
+    Extension reads:
+    1. Why and how to mask the frequency components.
+    2. Bloch theorum.
+
+    Args:
+      pw_param: the raw parameter, maybe created from
+      :py:func:`param_init`.
+      freq_mask: a 3D mask to select the frequency components.
+
+    Returns:
+      Complex array of shape `(num_spin, num_kpts, num_band, n1, n2, n3)`.
+      It satisfies the unitary constraint that for any `i,j`
+      `einsum('kabc,labc->kl', ret[i, j], ret[i, j])` is an identity matrix.
+    """
   coeff = unitary_matrix(pw_param, complex=True)
   coeff = jnp.swapaxes(coeff, -1, -2)
-
   return reshape_coefficient(coeff, freq_mask)
 
 
@@ -47,17 +110,74 @@ def wave_grid(
   coeff: Complex[Array, "spin kpts band n1 n2 n3"],
   vol: float | Array,
 ):
-  r"""Construct the wave function in real space evaluated at fft grid from
-  plane wave coefficients.
+  r"""Wave function evaluated at a grid of spacial locations.
 
-  Args:
-      coeff (Complex[Array, "spin kpts band n1 n2 n3"]): plane wave
-        coefficients.
-      vol (float | Array): volume of the unit cell.
+    Our wave functions lives in the 3D space, and we use linear combination of
+    3D fourier components to parameterize them, the parameters are the
+    linear coeffcients. A single wave function look like
 
-  Returns:
-      Complex[Array, "spin kpts band n1 n2 n3"]: wave grid.
-  """
+    $$
+    \psi(r)=\frac{1}{\sqrt{V}} \sum_G c_{G} e^{iG^\top r}
+    $$
+
+    $G$ is the 3D frequency components, $V$ is the volume of the crystal
+    unit cell, which is to make sure the wave function is normalized within
+    the cell.
+
+    where $c$ is the linear coefficient. It combines over different $G$
+    components that is generated with :py:func:`jrystal.grid.g_vectors`.
+    We can evaluate the wave function at any spatial location $r$ which takes
+    $O(|G|)$ computation. However, if we evaluate this function on a specific
+    spatial grid of size $|G|$, we can be faster than $O(|G|^2)$ by using
+    fourier transform. IFFT gives us an $O(|G|\log(|G|))$ implementation of the
+    above equation. The $G$ and $R$ grid can be obtained from
+    :py:func:`jrystal.grid.g_vectors` and :py:func:`jrystal.grid.r_vectors`
+    correspondingly.
+
+    ```python
+    G = jrystal.grid.g_vectors(*args)  # (n1, n2, n3, 3)
+    R = jrystal.grid.r_vectors(*args)  # (n1, n2, n3, 3)
+    coefficients = ...  # (n1, n2, n3)
+    vol = ...
+
+    def wave_function(r):
+      return (coefficients * jnp.exp(1j * G @ r)).sum() / jnp.sqrt(vol)
+
+    # The following is O(|G|^2)
+    wave_at_R_naive = jax.vmap(jax.vmap(jax.vmap(wave_function)))(R)
+    # The following is O(|G|log|G|)
+    wave_at_R_fft = wave_grid(coefficients, vol)
+    ```
+
+    As IFFT implements
+
+    $$
+    x_n = \frac{1}{N} \sum_{k=0}^{N-1} X_k e^{i\frac{2\pi}{N}kn}
+    $$
+
+    It is a bit different from the definition of the wave function,
+    if you check the code, we do two things to align them,
+
+    1. we multiply back the $N$ to cancel the $\frac{1}{N}$
+    factor in the IFFT (in 3D the `np.prod(grid_sizes)`).
+    2. we divide by the $\sqrt{V}$.
+
+    The `coeff` passed to this function has shape `(..., n1, n2, n3)`,
+    it can have any leading dimension.
+    It can be created using :py:func:`param_init` and :py:func:`coeff`.
+    :py:func:`param_init` creates a raw parameter and :py:func:`coeff` converts
+    that parameter into coefficients that are used to linearly weight the 3D
+    fourier components.
+
+    Args:
+      coeff: linear combination coefficients over the 3D fourier components.
+        shape is `(..., n1, n2, n3)` where `(n1, n2, n3)` is the shape of the
+        3D frequency components generated
+        from :py:func:`jrystal.grid.g_vectors`.
+      vol: volume of the unit cell.
+    Returns:
+      The result of evaluating the wave function on the specific spatial grid.
+    """
   grid_sizes = coeff.shape[-3:]
   wave_grid = jnp.fft.ifftn(coeff, axes=range(-3, 0))
   wave_grid *= np.prod(grid_sizes) / jnp.sqrt(vol)
@@ -67,19 +187,19 @@ def wave_grid(
 def density_grid(
   coeff: Complex[Array, "spin kpts band n1 n2 n3"],
   vol: float | Array,
-  occupation: Optional[OccupationArray] = None
+  occupation: Optional[OccupationArray] = None,
 ) -> ScalarGrid[Complex, 3]:
   r"""Construct the density grid from plane wave coefficients.
 
-  Args:
-      coeff (Complex[Array, "spin kpts band n1 n2 n3"]): plane wave
-        coefficients.
-      vol (float | Array): volume of the unit cell.
-      occpation (Optional[OccupationArray]): occupation numbers.
+    Args:
+        coeff (Complex[Array, "spin kpts band n1 n2 n3"]): plane wave
+          coefficients.
+        vol (float | Array): volume of the unit cell.
+        occpation (Optional[OccupationArray]): occupation numbers.
 
-  Returns:
-      ScalarGrid[Complex, 3]: density grid.
-  """
+    Returns:
+        ScalarGrid[Complex, 3]: density grid.
+    """
   wave_grid_arr = wave_grid(coeff, vol)
   dens = absolute_square(wave_grid_arr)
 
@@ -98,20 +218,20 @@ def density_grid(
 def density_grid_reciprocal(
   coeff: Complex[Array, "spin kpts band n1 n2 n3"],
   vol: float | Array,
-  occupation: Optional[OccupationArray] = None
+  occupation: Optional[OccupationArray] = None,
 ) -> ScalarGrid[Complex, 3]:
   r"""Construct the density grid from plane wave coefficients in reciprocal
-  space.
+    space.
 
-  Args:
-      coeff (Complex[Array, "spin kpts band n1 n2 n3"]): plane wave
-        coefficients.
-      vol (float | Array): volume of the unit cell.
-      occpation (Optional[OccupationArray]): occupation numbers.
+    Args:
+        coeff (Complex[Array, "spin kpts band n1 n2 n3"]): plane wave
+          coefficients.
+        vol (float | Array): volume of the unit cell.
+        occpation (Optional[OccupationArray]): occupation numbers.
 
-  Returns:
-      ScalarGrid[Complex, 3]: density grid.
-  """
+    Returns:
+        ScalarGrid[Complex, 3]: density grid.
+    """
   dens = density_grid(coeff, vol, occupation)
   return jnp.fft.fftn(dens, axes=range(-3, 0))
 
@@ -124,18 +244,18 @@ def wave_r(
 ) -> Complex[Array, "spin kpts band *b"]:
   """Evaluate plane wave functions at location r.
 
-  .. math::
-    \psi_i(r) = \sum_G c_{i, G} exp(iGr)
+    .. math::
+      \psi_i(r) = \sum_G c_{i, G} exp(iGr)
 
-  Args:
-    r (Array): locations. Shape: [*b 3].
-    coeff (Array): plane wave coefficients, which is the output of the
-      `pw_coeff` function. Shape: [spin kpts band n1 n2 n3].
-    vol (float | Array): volume of the unit cell.
+    Args:
+      r (Array): locations. Shape: [*b 3].
+      coeff (Array): plane wave coefficients, which is the output of the
+        `pw_coeff` function. Shape: [spin kpts band n1 n2 n3].
+      vol (float | Array): volume of the unit cell.
 
-  Returns:
-    Complex[Array, "spin kpts band"]: wave functions at location r.
-  """
+    Returns:
+      Complex[Array, "spin kpts band"]: wave functions at location r.
+    """
 
   vol = volume(cell_vectors)
   _, num_kpts, num_bands, n1, n2, n3 = coeff.shape
