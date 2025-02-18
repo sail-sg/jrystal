@@ -65,3 +65,5 @@ napoleon_google_docstring = True
 # set this to True if you also use numpy-style docstrings
 napoleon_numpy_docstring = False
 napoleon_include_init_with_doc = True
+
+html_static_path = ['_static']
