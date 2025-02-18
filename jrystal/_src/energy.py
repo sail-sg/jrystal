@@ -21,15 +21,28 @@ def hartree(
   kohn_sham: bool = False
 ) -> Float:
   r"""
-  Compute the Hartree energy for plane wave orbitals in reciprocal space.
+  Compute the Hartree energy for plane wave orbitals.
+
+  The calculation is performed in reciprocal space. In
+  :py:func:`hartree_reciprocal`, we have computed the Hartree potential in
+  reciprocal space given by
 
   .. math::
-    E = 2\pi \sum_i \sum_k \sum_G \dfrac{n(G)^2}{\|G\|^2}
+    \hat{V}(G) = 4 \pi \dfrac{\hat{n}(G)}{\|G\|^2},
+    \hat{V}(0) = 0.
+
+  Using the Parseval's identity, the real space integration of the Hartree
+  energy can be calculated as the summation over the reciprocal lattice as:
+
+  .. math::
+    E = 2\pi \sum_G \dfrac{\hat{n}(G)^2}{\|G\|^2}
+
+  This is evaluated by the braket operation in :py:func:`reciprocal_braket`.
 
   Args:
-    density_grid_reciprocal (ScalarGrid[Complex, 3]): The density of grid
-    points in reciprocal space. Shape: [_, n1, n2, n3].
-    g_vector_grid (VectorGrid[Float, 3]): G vector grid. Shape: [n1, n2, n3, 3].
+    density_grid_reciprocal (ScalarGrid[Complex, 3]): The electron density on
+    reciprocal lattice.
+    g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.
     vol (Float): Volume of the unit cell.
     kohn_sham (bool, optional): If True, use Kohn-Sham potential. Defaults to
     False.
@@ -61,24 +74,24 @@ def external(
   vol: Float
 ) -> Float:
   r"""
-  Externel energy for plane waves
+  Compute the External energy for plane wave orbitals.
+
+  Similar to the Hartree energy, we use the Parseval's identity to calculate
+  the external energy by summation over the reciprocal lattice as:
 
   .. math::
-      V = \sum_G \sum_i s_i(G) v_i(G)
-      E = \int V(r) \rho(r) dr
+      E = \sum_G \hat{n(G)}\sum_k s_k(G) v_k(G) 
 
-  where
-
-  .. math::
-      s_i(G) = exp(jG\tau_i)
-      v_i(G) = -4 \pi z_i / \Vert G \Vert^2
+  where the summation $k$ is over all atoms in the unit cell and $G$ is over
+  the reciprocal lattice.
 
   Args:
-    density_grid_reciprocal (ScalarGrid[Complex, 3]): the density of grid
-      points in reciprocal space.
-    position (Array): Coordinates of atoms in a unit cell. Shape: [atom 3].
-    charge (Array): Charges of atoms. Shape: [atom].
-    g_vector_grid (VectorGrid[Float, 3]): G vectors at grid points.
+    density_grid_reciprocal (ScalarGrid[Complex, 3]): The electron density on
+    reciprocal lattice.
+    position (VectorGrid[Float, 3]): Coordinates of atoms in a unit cell.
+    charge (VectorGrid[Float, 1]): Charges of atoms.
+    g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.
+    vol (Float): the volume of unit cell.
 
   Return:
     Float: External energy.
@@ -106,20 +119,22 @@ def kinetic(
 ) -> Union[Float, Float[Array, "num_spin num_k num_bands"]]:
   r"""Kinetic energy.
 
+  The kinetic energy is calculated by contracting the plane wave coefficients
+  with the kinetic energy matrix obtained from :py:func:`kinetic`.
+
   .. math::
       E = 1/2 \sum_{G} |k + G|^2 c_{i,k,G}^2
 
   Args:
-      g_vector_grid (VectorGrid[Float, 3]):  G vector grid.
-      k_vector_grid (VectorGrid[Float, 3]):  k vector grid.
-      coeff_grid (ScalarGrid[Complex, 3]): Plane wave coefficient.
-      occupation (Array, optional): occupation array. If provided, then the
-        function will be reduced by applying occupation number. If not provided,
-        then the function will return the kinetic energy of all the orbitals.
+    g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.
+    k_vector_grid (VectorGrid[Float, 3]): k points.
+    coeff_grid (ScalarGrid[Complex, 3]): Plane wave coefficient.
+    occupation (Array, optional): occupation array. If provided, then the
+      function will be reduced by applying occupation number. If not provided,
+      then the function will return the kinetic energy of all the orbitals.
 
   Returns:
-      Float or Float[Array, "num_spin num_k num_bands"]]: kinetic energy.
-
+    Float or Float[Array, "num_spin num_k num_bands"]]: kinetic energy.
   """
 
   dim = g_vector_grid.shape[-1]
@@ -152,12 +167,13 @@ def xc_lda(
       E_{\rm x}^{\mathrm{LDA}}[\rho] = - \frac{3}{4}\left( \frac{3}{\pi} \right)^{1/3}\int\rho(\mathbf{r})^{4/3}  # noqa: E501
 
   Args:
-      density_grid (ScalarGrid[Float, 3]): the density of grid points in
-        real space.
-      vol (Float): the volume of unit cell.
+    density_grid (ScalarGrid[Float, 3]): the density on real space grid.
+    vol (Float): the volume of unit cell.
+    kohn_sham (bool, optional): If True, use Kohn-Sham potential. Defaults to
+    False.
 
   Returns:
-      ScalarGrid[Float, 3]: the variation of the lda energy with respect to the density.
+    ScalarGrid[Float, 3]: the variation of the lda energy with respect to the density.
 
   """
 
@@ -175,24 +191,41 @@ def xc_lda(
 
 
 def nuclear_repulsion(
-  positions: Float[Array, 'num_atoms d'],
-  charges: Float[Array, 'num_atoms'],
+  position: Float[Array, 'num_atoms d'],
+  charge: Float[Array, 'num_atoms'],
   cell_vectors: Float[Array, '3 3'],
   g_vector_grid: VectorGrid[Float, 3],
   vol: Float,
   ewald_eta: Float,
   ewald_cutoff: VectorGrid[Float, 3],
 ) -> Float:
+  """
+  Compute the nuclear repulsion energy.
+
+  This function calculates the nuclear repulsion energy using Ewald summation.
+
+  Args:
+    position (VectorGrid[Float, 3]): Coordinates of atoms in a unit cell.
+    charge (VectorGrid[Float, 1]): Charges of atoms.
+    cell_vectors (VectorGrid[Float, 3]): cell vectors of crystal.
+    g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.
+    vol (Float): Volume of the unit cell.
+    ewald_eta (Float): Ewald decomposition parameter.
+    ewald_cutoff (VectorGrid[Float, 3]): Ewald cutoff.
+
+  Returns:
+    Float: Nuclear repulsion energy.
+  """
   ewald_grid = translation_vectors(cell_vectors, ewald_cutoff)
   return ewald_coulomb_repulsion(
-    positions, charges, g_vector_grid, vol, ewald_eta, ewald_grid
+    position, charge, g_vector_grid, vol, ewald_eta, ewald_grid
   )
 
 
 def total_energy(
   coefficient: Complex[Array, "spin kpoint band *ndim"],
-  positions: Float[Array, "num_atoms dim"],
-  charges: Int[Array, "num_atoms"],
+  position: Float[Array, "num_atoms dim"],
+  charge: Int[Array, "num_atoms"],
   g_vector_grid: VectorGrid[Float, 3],
   kpts: Float[Array, "num_k dim"],
   vol: Float,
@@ -202,12 +235,29 @@ def total_energy(
   split: bool = False,
 ) -> Float:
   """
+  Compute the total energy of the system.
+
+  This function first calculates the electron density and then use it to
+  calculate different components of the energy using the functions above.
 
   Args:
+    coefficient (ScalarGrid[Complex, 3]): Coefficients of the plane-wave
+    orbitals.
+    position (VectorGrid[Float, 3]): Coordinates of atoms in a unit cell.
+    charge (VectorGrid[Float, 1]): Charges of atoms.
+    g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.
+    kpts (VectorGrid[Float, 3]): k points.
+    vol (Float): Volume of the unit cell.
+    occupation (Array, optional): occupation array. If provided, then the
+    function will be reduced by applying occupation number. If not provided,
+    then the function will return the kinetic energy of all the orbitals.
+    kohn_sham (bool, optional): If True, use Kohn-Sham potential. Defaults to
+    False.
+    xc (str): Exchange-correlation functional. Defaults to "lda".
+    split (bool): If True, return split energy [e_kin, e_ext, e_har, e_xc].
 
-  coefficient (Complex[Array, "spin kpoint band *ndim"]): the plane wave 
-  coefficients. You can get it from jrystal.pw.pw_coefficient.
-
+  Returns:
+    Float: Total energy of the system.
   """
 
   wave_grid_arr = pw.wave_grid(coefficient, vol)
@@ -215,7 +265,7 @@ def total_energy(
   density_grid_rec = wave_to_density_reciprocal(wave_grid_arr, occupation)
 
   e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
-  e_ext = external(density_grid_rec, positions, charges, g_vector_grid, vol)
+  e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
   if xc == 'lda':
     e_xc = xc_lda(density_grid, vol, kohn_sham)
@@ -230,8 +280,8 @@ def total_energy(
 
 def band_energy(
   coefficient: Complex[Array, "spin kpoint band *ndim"],
-  positions: Float[Array, "num_atoms dim"],
-  charges: Int[Array, "num_atoms"],
+  position: Float[Array, "num_atoms dim"],
+  charge: Int[Array, "num_atoms"],
   g_vector_grid: VectorGrid[Float, 3],
   kpts: Float[Array, "num_k dim"],
   vol: Float,
@@ -239,13 +289,34 @@ def band_energy(
   kohn_sham: bool = False,
   xc: str = 'lda'
 ):
+  """
+  TODO:
+
+  Args:
+    coefficient (ScalarGrid[Complex, 3]): Coefficients of the plane-wave
+    orbitals.
+    position (VectorGrid[Float, 3]): Coordinates of atoms in a unit cell.
+    charge (VectorGrid[Float, 1]): Charges of atoms.
+    g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.
+    kpts (VectorGrid[Float, 3]): k points.
+    vol (Float): Volume of the unit cell.
+    occupation (Array, optional): occupation array. If provided, then the
+    function will be reduced by applying occupation number. If not provided,
+    then the function will return the kinetic energy of all the orbitals.
+    kohn_sham (bool, optional): If True, use Kohn-Sham potential. Defaults to
+    False.
+    xc (str): Exchange-correlation functional. Defaults to "lda".
+
+  Returns:
+
+  """
 
   density_grid_sum = pw.density_grid(coefficient, vol, occupation)
   density_per_band = pw.density_grid(coefficient, vol)
   v_eff = potential.effective(
     density_grid_sum,
-    positions,
-    charges,
+    position,
+    charge,
     g_vector_grid,
     vol,
     split=False,
