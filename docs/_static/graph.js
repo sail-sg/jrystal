@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", function() {
+
   fetch("/_static/graph.dot?" + new Date().getTime())
     .then(function(response) {
       if (!response.ok) {
@@ -11,6 +12,7 @@ document.addEventListener("DOMContentLoaded", function() {
         .on("end", function() {
           // Attach click event to every node.
           d3.selectAll("g.node").on("click", function(event) {
+            // Retrieve the node's label from its <title>.
             var clickedLabel = d3.select(this).select("title").text().trim();
 
             // Toggle: if this node is already active, clear all styling and remove doc links.
@@ -38,25 +40,32 @@ document.addEventListener("DOMContentLoaded", function() {
             // Dim edges as needed.
             d3.selectAll("g.edge").classed("dim", true);
 
-            // Construct the URL from the node label.
-            var baseUrl = "http://localhost:8000/index.html#";
-            var url = baseUrl + encodeURIComponent(clickedLabel);
+            // Define a lookup table: keys are node labels, values are documentation URLs.
+            var docLookup = {
+              "v_local": "http://localhost:8000/index.html#module-jrystal.pseudopotential.local",
+              "coeff": "http://localhost:8000/index.html#jrystal._src.pw.density_grid_reciprocal",
+            };
 
-            // Compute the absolute position of the node's right edge.
-            // First, get the bounding box of the clicked node.
+            // Look up the documentation URL using the lookup table.
+            var nodeDoc = docLookup[clickedLabel] ||
+                          "http://localhost:8000/index.html#" + encodeURIComponent(clickedLabel);
+
+            // Compute the absolute position of the node's right edge with a constant pixel offset.
             var bbox = this.getBBox();
-            // Create an SVGPoint for the desired position: 5px to the right of the node, vertically centered.
+            var ctm = this.getCTM();
+            var scale = Math.sqrt(ctm.a * ctm.a + ctm.b * ctm.b);
+            var desiredOffset = 5; // constant 5-pixel gap
+            var offsetInLocal = desiredOffset / scale;
             var pt = this.ownerSVGElement.createSVGPoint();
-            pt.x = bbox.x + bbox.width + 0.1;
+            pt.x = bbox.x + bbox.width + offsetInLocal;
             pt.y = bbox.y + bbox.height / 2;
-            // Transform the point using the node's current transformation matrix.
-            var globalPt = pt.matrixTransform(this.getCTM());
+            var globalPt = pt.matrixTransform(ctm);
 
-            // Append the doc link to the top-level SVG container.
+            // Append the doc link to the top-level SVG container at the computed position.
             d3.select(this.ownerSVGElement)
               .append("svg:a")
               .attr("class", "doc-link")
-              .attr("xlink:href", url)
+              .attr("xlink:href", nodeDoc)
               .attr("target", "_blank")
               .append("svg:text")
               .text("doc")
