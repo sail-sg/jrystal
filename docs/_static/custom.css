@@ -8,7 +8,7 @@ g.node.active, g.edge.active {
 }
 
 a.doc-link text {
-    font-size: 10px;
+    font-size: 20px;
     fill: blue;
     cursor: pointer;
 }
