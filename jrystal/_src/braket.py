@@ -1,15 +1,16 @@
 """Integration operations. """
 
+import einops
 import jax.numpy as jnp
 import numpy as np
-from jaxtyping import Array, Float, Complex
-import einops
+from jaxtyping import Array, Complex, Float, Union
+
 from .typing import ScalarGrid
 
 
 def reciprocal_braket(
-  bra: ScalarGrid[Complex, 3] | ScalarGrid[Float, 3],
-  ket: ScalarGrid[Complex, 3] | ScalarGrid[Float, 3],
+  bra: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
+  ket: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
   vol: Float,
 ) -> Float:
   r"""This function calculate the inner product of <f|g> in reciprocal space
@@ -50,8 +51,8 @@ def reciprocal_braket(
 
 
 def real_braket(
-  bra: ScalarGrid[Complex, 3] | ScalarGrid[Float, 3],
-  ket: ScalarGrid[Complex, 3] | ScalarGrid[Float, 3],
+  bra: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
+  ket: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
   vol: Float,
 ) -> Float:
   r"""This function calculate the inner product of <f|g> in real space
@@ -87,10 +88,11 @@ def real_braket(
 
 
 def expectation(
-  bra: ScalarGrid[Complex, 3] | ScalarGrid[Float, 3],
-  hamiltonian: Float[Array, "nk n1 n2 n3"] | Float[Array, "n1 n2 n3"],
+  bra: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
+  # hamiltonian: Float[Array, "nk n1 n2 n3"] | Float[Array, "n1 n2 n3"],
+  hamiltonian: Float[Array, "nk n1 n2 n3"],
   vol: Float,
-  ket: ScalarGrid[Complex, 3] | ScalarGrid[Float, 3] | None = None,
+  ket: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
   diagonal: bool = False,
   mode: str = 'real'
 ) -> Array:

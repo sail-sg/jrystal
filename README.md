@@ -20,6 +20,12 @@ pip install -e .
 
 This allows to modify your source code and have the changes take effect without you having to rebuild and reinstall.
 
+To build and serve the documentation locally:
+``` sh
+make doc-dev
+```
+then visit `localhost:8000`.
+
 
 #### Run your own system.
 
