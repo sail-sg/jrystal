@@ -1,4 +1,4 @@
-"""Constants
+"""Constants.
 """
 
 BOHR2ANGSTROM = 0.529177249
