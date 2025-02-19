@@ -10,30 +10,19 @@ def kinetic(
   g_vector_grid: VectorGrid[Float, 3],
   k_points: Float[Array, "num_k 3"] = None,
 ) -> Array:
-  """The Kinetic operator in reciprocal space.
+  """Compute Kinetic energy in reciprocal space.
 
-    See. Eq. (12.5). Martin, Richard M. 2020.
-
-    .. math::
-      \hat T \psi> = - \dfrac12 \nabla^2 \psi>
-
-    Usage:
-
-      >>> from .module import PlaneWave
-      >>> from .ops import expecation
-
-      >>> pw = PlaneWave(...)
-      >>> coefficient = pw.coefficient()    # real space
-      >>> kinetic = hamiltonian.kinetic(...)
-      >>> kinetic_energy = expectation(coefficient, kinetic, mode='kinetic')
-
+  This function calculates the kinetic energy matrix element evaluated at
+  each k-point and reciprocal lattice vector which will be contracted with
+  the coefficient matrix to obtain the kinetic energy.
+    
   Args:
-      g_vector_grid (VectorGrid[Float, 3]): _description_
-      k_points (Float[Array, 'num_k 3'], optional): _description_.
-        Defaults to None.
+      g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.
+      k_points (Float[Array, 'num_k 3'], optional): k-points. Defaults to None.
 
   Returns:
-      Array: _description_
+      Float[Array, 'num_k ... 3']: kinetic energy matrix element evaluated at
+      each k-point and reciprocal lattice vector. 
   """
   k_points = jnp.zeros([1, 3]) if k_points is None else k_points
   k_points = einops.rearrange(k_points, "nk d -> nk 1 1 1 d")
