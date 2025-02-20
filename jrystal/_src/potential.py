@@ -96,14 +96,14 @@ def hartree(
   return jnp.fft.ifftn(har_pot_grid_rcprl, axes=range(-3, 0))
 
 
-def externel_reciprocal(
+def external_reciprocal(
   position: Float[Array, 'num_atoms 3'],
   charge: Float[Array, 'num_atoms'],
   g_vector_grid: VectorGrid[Float, 3],
   vol: Float,
 ) -> ScalarGrid[Complex, 3]:
   r"""
-    Compute the externel potential in reciprocal space.
+    Compute the external potential in reciprocal space.
 
     This function calculates the external potential evaluated at reciprocal
     grid from the nucleus position, charge, reciprocal lattice vectors, and
@@ -153,17 +153,17 @@ def externel_reciprocal(
   return -output * num_grids / vol
 
 
-def externel(
+def external(
   position: Float[Array, 'num_atoms 3'],
   charge: Float[Array, 'num_atoms'],
   g_vector_grid: VectorGrid[Float, 3],
   vol: Float,
 ) -> ScalarGrid[Complex, 3]:
   r"""
-  Compute the externel potential in real space.
+  Compute the external potential in real space.
 
   This function applies inverse Fourier transform to the output of
-  :py:func:`externel_reciprocal` to get the externel potential evaluated at
+  :py:func:`external_reciprocal` to get the external potential evaluated at
   real space grid points.
 
   Args:
@@ -177,7 +177,7 @@ def externel(
       grid points
 
   """
-  ext_pot_grid_rcprl = externel_reciprocal(position, charge, g_vector_grid, vol)
+  ext_pot_grid_rcprl = external_reciprocal(position, charge, g_vector_grid, vol)
   return jnp.fft.ifftn(ext_pot_grid_rcprl, axes=range(-3, 0))
 
 
@@ -295,7 +295,7 @@ def effective(
   v_hartree = hartree_reciprocal(
     density_grid_reciprocal, g_vector_grid, kohn_sham
   )
-  v_external = externel_reciprocal(position, charge, g_vector_grid, vol)
+  v_external = external_reciprocal(position, charge, g_vector_grid, vol)
 
   # real space:
   if xc.strip() in ["lda", "lda_x"]:
