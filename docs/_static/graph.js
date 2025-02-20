@@ -149,28 +149,51 @@ document.addEventListener("DOMContentLoaded", function() {
             var docLinkURL = docLinkLookup[clickedLabel] ||
                              "http://localhost:8000/index.html#" + encodeURIComponent(clickedLabel);
 
-            // Compute the absolute position of the clicked node's right edge
-            // with a constant offset in pixels.
+            // Compute the position for the doc link
             var bbox = this.getBBox();
-            var ctm = this.getCTM();
-            var scale = Math.sqrt(ctm.a * ctm.a + ctm.b * ctm.b);
-            var desiredOffset = 5; // constant 5-pixel gap in screen space
-            var offsetInLocal = desiredOffset / scale;
-            var pt = this.ownerSVGElement.createSVGPoint();
-            pt.x = bbox.x + bbox.width + offsetInLocal;
-            pt.y = bbox.y + bbox.height / 2;
-            var globalPt = pt.matrixTransform(ctm);
-
-            // Append the doc link to the top-level SVG container.
-            d3.select(this.ownerSVGElement)
+            
+            // Find the text element in the node
+            var nodeText = d3.select(this).select("text");
+            var textX = parseFloat(nodeText.attr("x") || 0);
+            var textY = parseFloat(nodeText.attr("y") || 0);
+            
+            // Add a small fixed offset
+            var offsetX = 5;
+            
+            // Add the doc link directly to the node's group
+            var link = d3.select(this)
               .append("svg:a")
               .attr("class", "doc-link")
               .attr("xlink:href", docLinkURL)
-              .attr("target", "_blank")
-              .append("svg:text")
-              .text("doc")
-              .attr("x", globalPt.x)
-              .attr("y", globalPt.y);
+              .attr("target", "_blank");
+            
+            // Add background rectangle for button
+            var buttonText = "go to doc";
+            var padding = 6;
+            var fontSize = 11;
+            var buttonWidth = buttonText.length * fontSize * 0.6 + 2 * padding;
+            var buttonHeight = fontSize + 2 * padding;
+            
+            link.append("rect")
+              .attr("x", textX + bbox.width/2 + offsetX)
+              .attr("y", textY - buttonHeight/2)
+              .attr("width", buttonWidth)
+              .attr("height", buttonHeight)
+              .style("fill", "#ffffff")        // White background
+              .style("stroke", "#000000")      // Black border
+              .style("stroke-width", "1px")
+              .style("rx", "3")               // Rounded corners
+              .style("ry", "3");
+            
+            // Add the text
+            link.append("svg:text")
+              .text(buttonText)
+              .attr("x", textX + bbox.width/2 + offsetX + padding)
+              .attr("y", textY)
+              .attr("dy", "0.3em")
+              .attr("text-anchor", "start")
+              .style("font-size", fontSize + "px")
+              .style("fill", "#0066cc");       // Blue text
           });
         });
     })
