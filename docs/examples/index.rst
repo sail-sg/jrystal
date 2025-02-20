@@ -8,4 +8,4 @@ Contents
 .. toctree::
    :maxdepth: 1
 
-   example
+   ground_state

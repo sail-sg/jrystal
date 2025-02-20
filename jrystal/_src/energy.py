@@ -101,14 +101,14 @@ def external(
   if density_grid_reciprocal.ndim == dim + 1:
     density_grid_reciprocal = jnp.sum(density_grid_reciprocal, axis=0)
 
-  v_externel_reciprocal = potential.externel_reciprocal(
+  v_external_reciprocal = potential.external_reciprocal(
     position, charge, g_vector_grid, vol
   )
-  externel_energy = braket.reciprocal_braket(
-    v_externel_reciprocal, density_grid_reciprocal, vol
+  external_energy = braket.reciprocal_braket(
+    v_external_reciprocal, density_grid_reciprocal, vol
   )
 
-  return safe_real(externel_energy)
+  return safe_real(external_energy)
 
 
 def kinetic(

@@ -8,7 +8,7 @@ digraph G {
   cutoff [label="cutoff energy", style="filled", fillcolor=lightgoldenrodyellow]
   
   v_local [label="V_local", style="filled", fillcolor=lightgoldenrodyellow]
-  v_nonlocal [label="V_local", style="filled", fillcolor=lightgoldenrodyellow]
+  v_nonlocal [label="V_nonlocal", style="filled", fillcolor=lightgoldenrodyellow]
   
   coeff [label="PW coefficients (psi_g)", style="filled", fillcolor=lightskyblue]
   param_coeff [label="param_coeff", style="filled", fillcolor=lightcoral]

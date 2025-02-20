@@ -127,7 +127,7 @@ def energy_local(
   local_potential_charge: Float[Array, "na"],
   vol: Float,
 ) -> Float:
-  v_externel_reciprocal = _potential_local_reciprocal(
+  v_external_reciprocal = _potential_local_reciprocal(
     positions,
     r_vector_grid,
     g_vector_grid,
@@ -136,7 +136,7 @@ def energy_local(
     local_potential_charge,
     vol
   )
-  externel_energy = braket.reciprocal_braket(
-    v_externel_reciprocal, reciprocal_density_grid, vol
+  external_energy = braket.reciprocal_braket(
+    v_external_reciprocal, reciprocal_density_grid, vol
   )
-  return externel_energy.real
+  return external_energy.real
