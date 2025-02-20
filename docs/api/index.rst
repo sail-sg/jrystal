@@ -1,15 +1,11 @@
-API
-========
-
-
-Contents
---------
+API Documentation
+===============
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   band
-   braket
-   const
-   crystal
-   api
+   core
+   pseudopotential
+   calc
+   sbt
+   utils

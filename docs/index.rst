@@ -91,3 +91,4 @@ Contents
 
    examples/index
    api/index
+   glossary

@@ -80,8 +80,70 @@ document.addEventListener("DOMContentLoaded", function() {
             // --- Create the doc link ---
             // Define a lookup table for doc links.
             var docLinkLookup = {
-              "v_local": "http://localhost:8000/index.html#module-jrystal.pseudopotential.local",
-              "param_coeff": "http://localhost:8000/api/api.html#jrystal._src.pw.coeff"
+              // Core modules - Energy related
+              "e_kin": "api/core/kinetic.html#jrystal._src.kinetic.kinetic_energy",
+              "e_total": "api/core/energy.html#jrystal._src.energy.total_energy",
+              "e_har": "api/core/energy.html#jrystal._src.energy.hartree_energy",
+              "e_ext": "api/core/energy.html#jrystal._src.energy.external_energy",
+              "e_xc": "api/core/energy.html#jrystal._src.energy.exchange_correlation_energy",
+              "e_ewald": "api/core/ewald.html#jrystal._src.ewald.ewald_energy",
+              "E_free": "api/core/energy.html#jrystal._src.energy.free_energy",
+              "Entropy": "api/core/entropy.html#jrystal._src.entropy.entropy",
+              
+              // Grid related
+              "grid_size": "api/core/grid.html#jrystal._src.grid.grid_size",
+              "gpts": "api/core/grid.html#jrystal._src.grid.g_vectors",
+              "kpts": "api/core/grid.html#jrystal._src.grid.k_points",
+              "freq_mask": "api/core/grid.html#jrystal._src.grid.frequency_mask",
+              
+              // Wave functions and coefficients
+              "coeff": "api/core/pw.html#jrystal._src.pw.plane_wave_coefficients",
+              "param_coeff": "api/core/pw.html#jrystal._src.pw.param_coefficients",
+              "wave_r": "api/core/pw.html#jrystal._src.pw.wave_grid",
+              "dens_r": "api/core/pw.html#jrystal._src.pw.density_grid",
+              "dens_g": "api/core/pw.html#jrystal._src.pw.density_grid_reciprocal",
+              
+              // Occupation
+              "occupation": "api/core/occupation.html#jrystal._src.occupation.occupation_numbers",
+              "param_occ": "api/core/occupation.html#jrystal._src.occupation.param_occupation",
+              
+              // Potentials
+              "v_local": "api/pseudopotential.html#jrystal.pseudopotential.local.local_potential",
+              "v_nonlocal": "api/pseudopotential.html#jrystal.pseudopotential.beta.nonlocal_potential",
+              "v_har": "api/core/potential.html#jrystal._src.potential.hartree_potential",
+              "v_xc": "api/core/potential.html#jrystal._src.potential.exchange_correlation_potential",
+              "v_ext": "api/core/potential.html#jrystal._src.potential.external_potential",
+              
+              // Hamiltonian
+              "hamil_matrix": "api/core/hamiltonian.html#jrystal._src.hamiltonian.hamiltonian_matrix",
+              "hamil_matrix_diag": "api/core/hamiltonian.html#jrystal._src.hamiltonian.hamiltonian_diagonal",
+              "band_structure": "api/core/band.html#jrystal._src.band.band_structure",
+              
+              // Crystal properties
+              "cellvec": "api/core/grid.html#jrystal._src.grid.cell_vectors",
+              "position": "api/core/grid.html#jrystal._src.grid.atomic_positions",
+              "charge": "api/core/grid.html#jrystal._src.grid.atomic_charges",
+              "spin": "api/core/grid.html#jrystal._src.grid.spin_configuration",
+              "vol": "api/core/grid.html#jrystal._src.grid.cell_volume",
+              "total_charge": "api/core/grid.html#jrystal._src.grid.total_charge",
+              
+              // Parameters
+              "cutoff": "api/core/grid.html#jrystal._src.grid.cutoff_energy",
+              "temperature": "api/core/entropy.html#jrystal._src.entropy.temperature",
+              "ewald_eta": "api/core/ewald.html#jrystal._src.ewald.ewald_eta",
+              "ewald_cutoff": "api/core/ewald.html#jrystal._src.ewald.ewald_cutoff",
+              
+              // Band structure related
+              "band_structure": "api/core/band.html#jrystal._src.band.band_structure",
+              
+              // Braket operations
+              "braket": "api/core/braket.html#jrystal._src.braket",
+              
+              // Constants
+              "const": "api/core/const.html#jrystal._src.const",
+              
+              // Crystal structure
+              "crystal": "api/core/crystal.html#jrystal._src.crystal"
             };
             // Lookup the URL from our lookup table; if not found, use a fallback.
             var docLinkURL = docLinkLookup[clickedLabel] ||
