@@ -29,22 +29,22 @@ class Crystal:
   2. create from a xyz file. 
   
   Examples:
-  
-  ```python
-  from jrystal import Crystal
-  
-  # Create a crystal object from a xyz file.
-  crystal = Crystal.create_from_xyz_file("diamond.xyz")
-  
-  # Create a crystal object from crystal attributes.
-  crystal = Crystal(
-    charges=[6, 6],
-    positions=[[0, 0, 0], [1.5, 1.5, 1.5]],
-    cell_vectors=[[3, 0, 0], [0, 3, 0], [0, 0, 3]],
-    spin=0
-  )
-  ```
-  
+
+  .. code:: python
+
+    from jrystal import Crystal
+
+    # Create a crystal object from a xyz file.
+    crystal = Crystal.create_from_xyz_file("diamond.xyz")
+
+    # Create a crystal object from crystal attributes.
+    crystal = Crystal(
+      charges=[6, 6],
+      positions=[[0, 0, 0], [1.5, 1.5, 1.5]],
+      cell_vectors=[[3, 0, 0], [0, 3, 0], [0, 0, 3]],
+      spin=0
+    )
+
   Args:
     charges (Optional[Float[Array, "atom"]]): The atomic charges. Defaults to None.
     positions (Optional[Float[Array, "atom 3"]]): The absolute coordinates of each atom in Bohr unit. Defaults to None.
