@@ -6,8 +6,9 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information
 
-project = 'jrystal'
+project = 'JAX-based Differentiable Density Functional Theory Framework for Materials'
 copyright = '2025, SEA AI LAB'
+author = "SAIL AI4Science Team"
 
 # release = '0.0'
 version = '0.0.1'
@@ -30,12 +31,13 @@ intersphinx_mapping = {
   'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
 }
 intersphinx_disabled_domains = ['std']
-
 templates_path = ['_templates']
 
 # -- Options for HTML output
 
 html_theme = 'sphinx_book_theme'
+html_favicon = 'images/jrystal_logo.png'
+html_logo = 'images/jrystal_logo.png'
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
@@ -67,7 +69,7 @@ napoleon_numpy_docstring = False
 napoleon_include_init_with_doc = True
 
 html_static_path = ['_static']
-
+html_css_files = ['custom.css']
 
 # conf.py
 def setup(app):

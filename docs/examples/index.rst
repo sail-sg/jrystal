@@ -1,10 +1,6 @@
 Examples
 ========
 
-
-Contents
---------
-
 .. toctree::
    :maxdepth: 1
 

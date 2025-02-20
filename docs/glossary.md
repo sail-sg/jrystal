@@ -1,3 +1,6 @@
+# Glossary
+
+
 ## Variable names and meaning
 A summary of the variables and arguments used in this package, along with their meanings, are shown below.
 

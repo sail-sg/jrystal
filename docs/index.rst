@@ -1,5 +1,7 @@
-jrystal
+Jrystal
 =======================================================================
+.. rst-class:: project-subtitle
+A JAX-based Differentiable Density Functional Theory Framework for Materials.
 
 
 Call Graph
@@ -20,17 +22,6 @@ Call Graph
 
 This project is a `JAX <https://github.com/google/jax/>`_-based package for differantiable density functional theory computation of solids.
 
-
-.. _installation:
-
-Installation
-------------
-
-To use :guilabel:`jrystal`, first install it using pip:
-
-.. code-block:: console
-
-   $ pip install jrystal
 
 Getting Started
 ###############
@@ -87,8 +78,11 @@ Contents
 --------
 
 .. toctree::
-   :maxdepth: 2
-
+   :maxdepth: 3
+   
+   quickstart
+   installation
    examples/index
+   tutorial/index
    api/index
    glossary
