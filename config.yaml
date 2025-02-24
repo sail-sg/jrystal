@@ -17,7 +17,7 @@ xc: "lda_x"
 ################################################
 #           Pseudopotential Setting            #
 ################################################
-use_pseudopotential: False
+use_pseudopotential: True
 pseudopotential_file_dir: null
 # The pseudopotential file directory. If None, the code will use the default
 # pseudopotential file directory.
@@ -32,9 +32,9 @@ g_grid_mask_method: "spherical"
 # Only for "spherical" method, the cutoff_energy argument is valid.
 
 # cutoff energy in Hartree
-cutoff_energy: 200
+cutoff_energy: 40
 # grid sizes for the FFT grid
-grid_sizes: 80
+grid_sizes: 24
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
 k_grid_sizes: 1
 # Occupation method
@@ -42,9 +42,9 @@ occupation: "gamma"
 # occupation support {"fermi-dirac", "gamma", "uniform"}
 
 # smearing factor for the Fermi-Dirac distribution
-smearing: 0.000
+smearing: 0.0001
 # the total number of unoccupapied bands
-empty_bands: 10
+empty_bands: 4
 restricted: True
 # whether the calculation is restricted or not, ie., spin-up and spin-down
 # electrons share the same spatial orbitals.
@@ -57,7 +57,7 @@ ewald_args:
 ################################################
 #           Optimizizer Setting                #
 ################################################
-epoch: 10000
+epoch: 1000
 optimizer: "adam"
 optimizer_args:
   learning_rate: 0.001

@@ -1,5 +1,5 @@
-Ground state energy
-============================
+Calculate All The Energies
+==================
 
 
 >>> import jrystal
