@@ -12,14 +12,14 @@ Prerequisites
 ~~~~~~~~~~~~
 
 .. warning::
-   Before installing :guilabel:`jrystal`, make sure you have the latest version of :guilabel:`JAX` installed. 
-   For :guilabel:`JAX` installation instructions, please refer to the `JAX Installation Guide <https://docs.jax.dev/en/latest/installation.html>`_.
+   Before installing ``jrystal``, make sure you have the latest version of ``JAX`` installed. 
+   For ``JAX`` installation instructions, please refer to the `JAX Installation Guide <https://docs.jax.dev/en/latest/installation.html>`_.
 
 
 Install from PyPI
 ~~~~~~~~~~~~~~~~
 
-The easiest way to install jrystal is via pip:
+The easiest way to install ``jrystal`` is via pip:
 
 .. code-block:: console
 

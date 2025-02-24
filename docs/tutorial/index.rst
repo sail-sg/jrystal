@@ -4,7 +4,9 @@ Tutorials
 .. toctree::
    :maxdepth: 1
 
-   quickstart
+   for_cspeople
+   for_chemists
+   crystallography
    total_energy
-   tmks
+   equivalence
    occupation
