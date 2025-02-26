@@ -15,6 +15,22 @@ Call Graph
     <script src="//d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/@hpcc-js/wasm@2.20.0/dist/graphviz.umd.js"></script>
     <script src="https://unpkg.com/d3-graphviz@5.6.0/build/d3-graphviz.js"></script>
+    
+    <!-- Add MathJax with SVG output -->
+    <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']]
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+    </script>
+    <script id="MathJax-script" async 
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
 
     <!-- Render the DOT graph -->
     <script src="/_static/graph.js"></script>

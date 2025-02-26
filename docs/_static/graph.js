@@ -157,8 +157,9 @@ document.addEventListener("DOMContentLoaded", function() {
             var textX = parseFloat(nodeText.attr("x") || 0);
             var textY = parseFloat(nodeText.attr("y") || 0);
             
-            // Add a small fixed offset
-            var offsetX = 5;
+            // Calculate position for button below the node
+            var buttonX = textX; // Center the button on the node
+            var buttonY = textY + bbox.height + 5; // Position below the node using box height + small padding
             
             // Add the doc link directly to the node's group
             var link = d3.select(this)
@@ -175,8 +176,8 @@ document.addEventListener("DOMContentLoaded", function() {
             var buttonHeight = fontSize + 2 * padding;
             
             link.append("rect")
-              .attr("x", textX + bbox.width/2 + offsetX)
-              .attr("y", textY - buttonHeight/2)
+              .attr("x", buttonX - buttonWidth/2) // Center the button horizontally
+              .attr("y", buttonY)
               .attr("width", buttonWidth)
               .attr("height", buttonHeight)
               .style("fill", "#ffffff")        // White background
@@ -188,10 +189,10 @@ document.addEventListener("DOMContentLoaded", function() {
             // Add the text
             link.append("svg:text")
               .text(buttonText)
-              .attr("x", textX + bbox.width/2 + offsetX + padding)
-              .attr("y", textY)
+              .attr("x", buttonX) // Center the text
+              .attr("y", buttonY + buttonHeight/2)
               .attr("dy", "0.3em")
-              .attr("text-anchor", "start")
+              .attr("text-anchor", "middle") // Center text horizontally
               .style("font-size", fontSize + "px")
               .style("fill", "#0066cc");       // Blue text
           });
