@@ -10,37 +10,38 @@ digraph G {
   v_local [label="V_local", style="filled", fillcolor=lightgoldenrodyellow]
   v_nonlocal [label="V_nonlocal", style="filled", fillcolor=lightgoldenrodyellow]
   
-  coeff [label="PW coefficients (psi_g)", style="filled", fillcolor=lightskyblue]
+  coeff [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>PW coefficients</TD></TR><TR><TD>ψ<SUB>G</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightskyblue]
   param_coeff [label="param_coeff", style="filled", fillcolor=lightcoral]
   
   occupation [label="occupation", style="filled", fillcolor=lightskyblue]
   param_occ [label="param_occupation", style="filled", fillcolor=lightcoral]
   
-  wave_r [label="wave_grid"]
-  dens_r [label="density_grid"]
-  dens_g [label="density_grid_reciprocal"]
+  wave_r [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>wave_grid</TD></TR><TR><TD>ψ(r)</TD></TR></TABLE>>]
+  dens_r [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>density_grid</TD></TR><TR><TD>ρ(r)</TD></TR></TABLE>>]
+  dens_g [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>density_grid_reciprocal</TD></TR><TR><TD>ρ(G)</TD></TR></TABLE>>]
   
-  vol [label="volume"]
-  gpts [label="g-vectors"]
-  kpts [label="k-vectors"]
+  vol [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>volume</TD></TR><TR><TD>Ω</TD></TR></TABLE>>]
+  gpts [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>g-vectors</TD></TR><TR><TD>G</TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  kpts [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>k-vectors</TD></TR><TR><TD>k</TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
   total_charge [label="total_charges"]
   
-  e_har [label="E_hartree"]
-  e_ext [label="E_external"]
-  e_xc [label="E_xc"]
-  e_kin [label="E_kinetic"]
-  e_ewald [label="E_Ewald"]
-  e_total [label="E_total"]
+  e_har [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>E_hartree</TD></TR><TR><TD>E<SUB>H</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  e_ext [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>E_external</TD></TR><TR><TD>E<SUB>ext</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  e_xc [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>E_xc</TD></TR><TR><TD>E<SUB>xc</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  e_kin [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>E_kinetic</TD></TR><TR><TD>E<SUB>kin</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  e_ewald [label="E_Ewald", style="filled", fillcolor=lightgoldenrodyellow]
+  e_total [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>E_total</TD></TR><TR><TD>E<SUB>total</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
   
-  v_har [label="V_hartree"]
-  v_xc [label="V_xc"]
-  v_ext [label="V_external"]
+  v_har [label="V_hartree", style="filled", fillcolor=lightgoldenrodyellow]
+  v_xc [label="V_xc", style="filled", fillcolor=lightgoldenrodyellow]
+  v_ext [label="V_external", style="filled", fillcolor=lightgoldenrodyellow]
   grid_size [label = "grid_size", style="filled", fillcolor=lightgoldenrodyellow]
   
-  hamil_matrix [label = "hamiltonian(full matrix)"]
-  hamil_matrix_diag [label = "hamiltonian(diagonal)"]
+  hamil_matrix [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>hamiltonian</TD></TR><TR><TD>H</TD></TR></TABLE>>]
+  hamil_matrix_diag [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>hamiltonian(diagonal)</TD></TR><TR><TD>H<SUB>diag</SUB></TD></TR></TABLE>>]
   
-
+  band_structure [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>band_structure</TD></TR><TR><TD>ε<SUB>nk</SUB></TD></TR></TABLE>>]
+  
   ####################################################
   
   param_coeff -> coeff [label="QR&Reshape"]

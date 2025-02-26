@@ -7,6 +7,11 @@ g.node.active, g.edge.active {
     opacity: 1;
 }
 
+a.doc-link {
+    z-index: 1000 !important;
+    pointer-events: all !important;
+}
+
 a.doc-link text {
     font-size: 20px;
     fill: blue;
