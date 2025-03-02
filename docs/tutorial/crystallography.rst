@@ -63,3 +63,23 @@ The term :math:`\boldsymbol{k}`-points references specific locations within the 
 .. image:: images/kpath.png
     :width: 50%
     :align: center
+
+
+Bloch's theorem
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Define the translation operator $\hat{\mathbf{T}}_\mathbf{n}$ as:
+$$
+  \hat{\mathbf{T}}_n\psi(\mathbf{r}) = \psi(\mathbf{r} + \mathbf{n}) 
+$$
+
+In crystalline system, as the externel potential is periodic, the
+Hamiltonian commutes with the translation operator, i.e.
+$$
+  [\hat{\text{H}}, \hat{\mathbf{T}}_\mathbf{n}] = 0, \quad \forall \mathbf{n}
+$$
+Moreover, translation operators with different translation vector $\mathbf{n}$ trivially commute. Therefore, all these operators share the same set of eigenvector. It is well-known that the eigenvalues of the translation operators lies on the unit circle and all eigenvectors have the following form:
+$$
+  \hat{\mathbf{T}}_n\psi(\mathbf{r}) = e^{-i\mathbf{k}\cdot \mathbf{n}}\psi(\mathbf{r})
+$$
+where $\psi(\mathbf{r})$ is a periodic wave function over the unit cell. Therefore, any wave function of the orbital should be a "Block wave" of the form above, this is the so-called Block's theorem.
