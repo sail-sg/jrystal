@@ -7,13 +7,13 @@ Installation
 Installation Guide
 -----------------
 
-
-Prerequisites
-~~~~~~~~~~~~
-
 .. warning::
    Before installing ``jrystal``, make sure you have the latest version of ``JAX`` installed. 
    For ``JAX`` installation instructions, please refer to the `JAX Installation Guide <https://docs.jax.dev/en/latest/installation.html>`_.
+
+
+.. note::
+   We strongly recommend user to install the cuda version of ``JAX`` for better performance, if you have a GPU. ``jrystal`` can be run on CPU, but it is not optimized for CPU and not recommended.
 
 
 Install from PyPI
