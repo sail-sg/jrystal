@@ -15,3 +15,4 @@ Tutorials
    equivalence
    occupation
    band_structure
+   ewald
