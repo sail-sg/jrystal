@@ -3,7 +3,8 @@
 import einops
 import jax.numpy as jnp
 import numpy as np
-from jaxtyping import Array, Complex, Float, Union
+from  typing import Union, Optional
+from jaxtyping import Array, Complex, Float
 
 from .typing import ScalarGrid
 
@@ -92,7 +93,7 @@ def expectation(
   # hamiltonian: Float[Array, "nk n1 n2 n3"] | Float[Array, "n1 n2 n3"],
   hamiltonian: Float[Array, "nk n1 n2 n3"],
   vol: Float,
-  ket: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
+  ket: Optional[Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]]] = None,
   diagonal: bool = False,
   mode: str = 'real'
 ) -> Array:
