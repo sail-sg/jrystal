@@ -4,9 +4,9 @@
 
 # Code will load the "$CRYSTAL.xyz" file in the geometry directory if
 # crystal name is provided, otherwise the code will read the from the path
-# specified by "crystal_xyz_file_path".
+# specified by "crystal_file_path_path".
 crystal: "diamond"
-crystal_xyz_file_path: null
+crystal_file_path_path: null
 
 ################################################
 #         Exchange-Correlation Setting         #
@@ -17,7 +17,7 @@ xc: "lda_x"
 ################################################
 #           Pseudopotential Setting            #
 ################################################
-use_pseudopotential: True
+use_pseudopotential: False
 pseudopotential_file_dir: null
 # The pseudopotential file directory. If None, the code will use the default
 # pseudopotential file directory.
@@ -57,7 +57,7 @@ ewald_args:
 ################################################
 #           Optimizizer Setting                #
 ################################################
-epoch: 1000
+epoch: 10000
 optimizer: "adam"
 optimizer_args:
   learning_rate: 0.001
