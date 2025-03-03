@@ -10,3 +10,4 @@ Tutorials
    total_energy
    equivalence
    occupation
+   band_structure
