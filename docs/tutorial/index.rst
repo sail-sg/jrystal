@@ -14,3 +14,4 @@ Tutorials
    differentiation
    equivalence
    occupation
+   band_structure
