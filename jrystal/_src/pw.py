@@ -21,6 +21,10 @@ def param_init(
 ):
   r"""Initialize the raw parameters.
 
+  This function generates a random tensor of shape
+  :code:`(num_spin, num_kpts, num_g, num_bands)`, where :code:`num_g` is the
+  number of :code:`True` items in the :code:`freq_mask`.
+
   In planewave based calculation, a wave function is represented as a
   linear combination of the fourier series in 3D. Therefore to create one
   wave function we need a 3D shaped tensor to represent the mixing
@@ -33,23 +37,14 @@ def param_init(
   smaller than the unit cell (denoted :math:`G`) and components that has a period
   larger than the unit cell (denoted :math:`k`).
 
-  The most general form of wave function is
+  The form of wave function under solid state
 
   .. math::
 
-    \psi(r) = \sum_k \sum_G c_{kG} e^{i(k+G)r}
-
-  However, according to bloch theorum, which uses extra periodic constraints,
-  the parametric form of wave function can be reduced to
-
-  .. math::
-
-    \psi(r) = \sum_k d_k e^{ikr}\sum_G c_{kG} e^{iGr}
+    \psi(r) = e^{ikr}\sum_G c_{kG} e^{iGr}
 
   This function generates a raw parameter, which after processing by
   :py:func:`coeff` can be used as the :math:`c_{kG}` part of the above equation.
-  For the :math:`d_k` part of the parameter, refer to :py:func:`jrystal.occupation`.
-
 
   Extension reads:
   1. Why and how to mask the frequency components.
@@ -66,7 +61,7 @@ def param_init(
   tensor.
 
   Args:
-    key: ranodm key for initializing the parameters
+    key: random key for initializing the parameters.
     num_bands: the number of bands.
     num_kpts: the number of k points.
     freq_mask: a 3D mask that denotes which frequency components are selected.
@@ -86,6 +81,11 @@ def coeff(
   pw_param: Union[Array, Tuple], freq_mask: ScalarGrid[Bool, 3]
 ) -> Complex[Array, "spin kpts band n1 n2 n3"]:
   r"""Create the linear coefficients to combine the frequency components.
+
+  This function takes a raw parameter of shape
+  :code:`(num_spin, num_kpts, num_g, num_bands)`, orthogonalize for the last
+  two dimensions, so that the resulting tensor satisfies the unitary constraint
+  :code:`einsum('kabc,labc->kl', ret[i, j], ret[i, j]) == eye(num_bands)`.
 
   The :code:`pw_param` should be created from :py:func:`param_init`, and the same
   :code:`freq_mask` used in :py:func:`param_init` should be used here. As mentioned
@@ -128,20 +128,18 @@ def wave_grid(
 ):
   r"""Wave function evaluated at a grid of spacial locations.
 
-  Our wave functions lives in the 3D space, and we use linear combination of
-  3D fourier components to parameterize them, the parameters are the
-  linear coeffcients. A single wave function look like
+  This function implements the :math:`U(r)` part of the bloch wave function.
 
   .. math::
 
-    \psi(r)=\frac{1}{\sqrt{V}} \sum_G c_{G} e^{iG^\top r}
+    U(r)=\frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iG^\top r}
 
-  :math:`G` is the 3D frequency components, :math:`V` is the volume of the crystal
-  unit cell, which is to make sure the wave function is normalized within
-  the cell.
+  :math:`G` is the 3D frequency components, :math:`\Omega_\text{cell}` is the
+  volume of the crystal unit cell, which is to make sure the wave function is
+  normalized within the cell.
 
-  where :math:`c` is the linear coefficient. It combines over different :math:`G`
-  components that is generated with :py:func:`jrystal.grid.g_vectors`.
+  where :math:`c` is the linear coefficient. It combines over different
+  :math:`G` components that is generated with :py:func:`jrystal.grid.g_vectors`.
   We can evaluate the wave function at any spatial location :math:`r` which takes
   :math:`O(|G|)` computation. However, if we evaluate this function on a specific
   spatial grid of size :math:`|G|`, we can be faster than :math:`O(|G|^2)` by using
@@ -176,7 +174,7 @@ def wave_grid(
 
   1. we multiply back the :math:`N` to cancel the :math:`\frac{1}{N}`
   factor in the IFFT (in 3D the :code:`np.prod(grid_sizes)`).
-  2. we divide by the :math:`\sqrt{V}`.
+  2. we divide by the :math:`\sqrt{\Omega_\text{cell}}`.
 
   The :code:`coeff` passed to this function has shape :code:`(..., n1, n2, n3)`,
   it can have any leading dimension.
@@ -218,31 +216,25 @@ def density_grid(
 
     \rho(r) = \sum_i |\psi_i(r)|^2
 
-  This function evaluates the density :math:`\rho(r)` as the spatial grid generated
-  from the :py:func:`jrystal.grid.r_vectors`.
+  This function evaluates the density :math:`\rho(r)` as the spatial grid
+  generated from the :py:func:`jrystal.grid.r_vectors`.
 
-  In crystals, this is a little bit more complicated. If we consider the
-  components whose period is smaller than the unit cell as :math:`G` and the
-  components whose period is larger than the unit cell as :math:`k`, the most
-  general form of wave function is
+  In crystals, this is a little bit more complicated. The form of the wave
+  function is
 
   .. math::
 
-    \psi(r) = \frac{1}{\sqrt{V}} \sum_k \sum_G c_{kG} e^{i(k+G)r}
+    \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} e^{ikr} \sum_G c_{kG}
+    e^{iGr}
 
-  However, according to bloch theorum, which uses extra periodic constraints,
-  the parametric form of wave function can be reduced to
+  The :math:`c_{kG}` can be computed from :py:func:`param_init`
+  and :py:func:`coeff`. For calculation of density, we only need
+  the :math:`c_{kG}` and the occupation :math:`o_k` over :math:`k`.
 
   .. math::
 
-    \psi(r) = \frac{1}{\sqrt{V}} \sum_k d_k e^{ikr}\sum_G c_{kG} e^{iGr}
-
-  The :math:`c_{kG}` part of the parameter can be computed from :py:func:`param_init`
-  and :py:func:`coeff`. The :math:`d_k` part of the parameter we refer to
-  :py:func:`jrystal.occupation`. For calculation of density, we only need
-  the :math:`c_{kG}` and :math:`o_k=d_k^2`, which we also call :math:`o_k` the occupation over
-  different :math:`k` frequencies. It is very intuitive because density is the
-  absolute square of the wave function.
+    \rho(r) = \frac{1}{\Omega_\text{cell}} e^{ikr} \sum_G c_{kG}
+    e^{iGr}
 
   Args:
     coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension
@@ -345,7 +337,7 @@ def wave_r(
 
   .. math::
 
-    \psi(r) = \frac{1}{\sqrt{V}} \sum_G c_{G} e^{iGr}
+    \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iGr}
 
   the :code:`coeff` provided is the :math:`c_{G}`, the :code:`cell_vectors` is
   used to generate the grid of frequency components $G$ by calling the function
