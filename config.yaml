@@ -45,8 +45,8 @@ occupation: "gamma"
 smearing: 0.0001
 # the total number of unoccupapied bands
 empty_bands: 4
-restricted: True
-# whether the calculation is restricted or not, ie., spin-up and spin-down
+spin_restricted: True
+# whether the calculation is spin_restricted or not, ie., spin-up and spin-down
 # electrons share the same spatial orbitals.
 
 # Hyperparameters for the Ewald sum.

@@ -1,3 +1,5 @@
+.. _occupation:
+
 How Do We Deal with Occupation Numbers in Direct Optimization?
 =============================================================
 
@@ -18,8 +20,8 @@ The figure above compares ``jrystal``'s results (direct minimization with Fermi-
 Theory
 ------
 
-Free Energy Functional
-^^^^^^^^^^^^^^^^^^^^^^^
+Free Energy Minimization
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 The starting point of our approach is the [hohenberg1964density]_ density functional theory (DFT) as generalized by [mermin1965thermal]_ to thermal ensembles.  According to this
 the equilibrium density of the many-electron system is obtained by minimizing the free energy :math:`A[n]`, regarded as a functional of the electronic density :math:`n(\boldsymbol{r})`.

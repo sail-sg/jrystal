@@ -1,4 +1,4 @@
-Equivalence Between total Energy Minimization and Solving Kohn-Sham Equation
+Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation
 ==============================================================================
 
 In this tutorial, we demonstrate that minimizing the total energy in density functional theory (DFT) is mathematically equivalent to solving the Kohn-Sham equations. This equivalence underpins direct minimization methods, an alternative to conventional diagonalization-based approaches for DFT calculations.
@@ -10,7 +10,7 @@ In this tutorial, we demonstrate that minimizing the total energy in density fun
 .. note::
     Assumptions:
         - Occupation numbers are omitted (i.e., all orbitals are singly occupied).
-        - Spin-restricted formalism is used. For generalization with occupation numbers, see [Li2024]_.
+        - Spin-spin_restricted formalism is used. For generalization with occupation numbers, see [Li2024]_.
 
 Total Energy Functional
 ^^^^^^^^^^^^^^^^^^^^^^^
