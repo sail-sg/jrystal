@@ -7,7 +7,7 @@ import numpy as np
 from jaxtyping import Array, Bool, Complex, Float
 
 from . import const
-from .typing import CellVector, OccupationArray, ScalarGrid
+from ._typing import CellVector, OccupationArray, ScalarGrid
 
 
 def safe_real(array: Array, tol: float = 1e-8) -> Array:
@@ -171,10 +171,10 @@ def fft_factor(n: int):
   return output
 
 
-def reshape_coefficient(
-  coeff_dense: Complex[Array, "*batch ng"],
-  mask: Bool[Array, '*ndim'],
-) -> Complex[Array, "*batch ng"]:
+def expand_coefficient(
+  coeff_compact: Complex[Array, "spin kpt band gpt"],
+  mask: Bool[Array, 'x y z'],
+) -> Complex[Array, "spin kpt band x y z"]:
   """
   Expand coefficients based on the provided mask.
   The sum of the mask should equal the last dimension of coeff_dense.
@@ -197,10 +197,31 @@ def reshape_coefficient(
     Complex[Array, "*batch ng"]: Expanded coefficients with shape
     (*batch, *ndim).
   """
-  coeff_shape = coeff_dense.shape[:-1] + mask.shape
+  coeff_compact = jnp.swapaxes(coeff_compact, -1, -2)
+  coeff_shape = coeff_compact.shape[:-1] + mask.shape
   return jnp.zeros(
-    coeff_shape, dtype=coeff_dense.dtype
-  ).at[..., mask].set(coeff_dense)
+    coeff_shape, dtype=coeff_compact.dtype
+  ).at[..., mask].set(coeff_compact)
+
+
+def squeeze_coefficient(
+  coeff: Complex[Array, "spin kpts band x y z"],
+  mask: Bool[Array, "spin kpts band x y z"],
+) -> Complex[Array, "spin kpts num_g band"]:
+  """
+  Reshape the parameter to a compact shape with the mask, and the swap the
+  last two axes such that the for each spin and kpt, the coefficients are
+  a tall matrix where number of rows are greater than the number of columns.
+
+  Args:
+    coeff (Complex[Array, "spin kpts band x y z"]): The coefficient array.
+    mask (Bool[Array, "spin kpts band x y z"]): The mask array.
+
+  Returns:
+    Complex[Array, "spin kpts num_g band"]: The squeezed coefficient array.
+  """
+  coeff_compact = coeff[..., mask].get()
+  return jnp.swapaxes(coeff_compact, -1, -2)
 
 
 def check_spin_number(num_electrons, spin):

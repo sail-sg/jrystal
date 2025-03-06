@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 from jaxtyping import Float, Array
-from .typing import VectorGrid
+from ._typing import VectorGrid
 
 
 def ewald_coulomb_repulsion(
@@ -43,7 +43,7 @@ def ewald_coulomb_repulsion(
   )
 
   # the reciprocal space part:
-  gvec_norm_sq = jnp.sum(g_vector_grid**2, axis=3)  # [N1, N2, N3]
+  gvec_norm_sq = jnp.sum(g_vector_grid**2, axis=3)  # [x y z]
   gvec_norm_sq = gvec_norm_sq.at[(0,) * dim].set(1e16)
 
   ew_rprcl = jnp.exp(-gvec_norm_sq / 4 / ewald_eta**2) / gvec_norm_sq
@@ -54,7 +54,7 @@ def ewald_coulomb_repulsion(
       jnp.expand_dims(tau, range(dim)),
       axis=-1
     )
-  )  # [N1, N2, N3, na, na, nt]
+  )  # [x y z, na, na, nt]
   ew_rprcl2 = ew_rprcl2.at[(0,) * dim].set(0)  # this is to exclude G = 0
   ew_rprcl = jnp.sum(ew_rprcl1 * ew_rprcl2, axis=range(dim))  # [na, na]
   ew_rprcl = ew_rprcl * 4 * jnp.pi / vol

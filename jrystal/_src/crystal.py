@@ -35,7 +35,7 @@ class Crystal:
     from jrystal import Crystal
 
     # Create a crystal object from a xyz file.
-    crystal = Crystal.create_from_xyz_file("diamond.xyz")
+    crystal = Crystal.create_from_file("diamond.xyz")
 
     # Create a crystal object from crystal attributes.
     crystal = Crystal(
@@ -101,12 +101,12 @@ class Crystal:
     return self.reciprocal_vectors
 
   @staticmethod
-  def create_from_xyz_file(xyz_file: str, spin: Optional[int] = None):
+  def create_from_file(file_path: str, spin: Optional[int] = None):
     r"""
     Create a crystal object from a xyz file.
 
     Args:
-      xyz_file (str): The path of the xyz file.
+      file_path (str): The path of the xyz file.
       spin (int, optional): The number of unpaired electron.
         Defaults to None. If not provided, spin is set to 1 if the total
         number of electrons is odd, otherwise 0.
@@ -115,7 +115,7 @@ class Crystal:
       A Crystal onbject.
 
     """
-    _ase_cell = read(xyz_file)
+    _ase_cell = read(file_path)
     positions = np.array(_ase_cell.get_positions()) * ANGSTROM2BOHR
     charges = np.array(_ase_cell.get_atomic_numbers())
     cell_vectors = np.array(_ase_cell.get_cell()) * ANGSTROM2BOHR
@@ -136,7 +136,7 @@ class Crystal:
   def create_from_symbols(
     symbols: str, 
     positions: Union[List[List], Float[Array, "num_atom 3"]],
-    cell_vectors: Float[Array, '3 3'],
+    cell_vectors: Float[Array, "3 3"],
   ):
     r"""
     Create a crystal object from symbols, positions, and cell vectors.
@@ -145,7 +145,7 @@ class Crystal:
       symbols (str): The atomic symbols.
       positions (Union[List[List], Float[Array, "num_atom 3"]): The absolute
         coordinates of each atom in Bohr unit.
-      cell_vectors (Float[Array, '3 3']): The cell vectors in Bohr unit.
+      cell_vectors (Float[Array, "3 3"]): The cell vectors in Bohr unit.
 
     Returns:
       A Crystal object.

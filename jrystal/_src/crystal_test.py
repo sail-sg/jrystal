@@ -8,7 +8,7 @@ from .crystal import Crystal
 class _TestModules(parameterized.TestCase):
 
   def setUp(self):
-    self.xyz_file = "../geometry/diamond.xyz"
+    self.file_path = "../geometry/diamond.xyz"
     self.positions = np.array(
       [
         [-0.84251071, -0.84251071, -0.84251071],
@@ -34,8 +34,8 @@ class _TestModules(parameterized.TestCase):
       ]
     )
 
-  def test_create_from_xyz_file(self):
-    crystal = Crystal.create_from_xyz_file(self.xyz_file)
+  def test_create_from_file(self):
+    crystal = Crystal.create_from_file(self.file_path)
     np.testing.assert_almost_equal(crystal.positions, self.positions)
     np.testing.assert_almost_equal(crystal.charges, self.charges)
     np.testing.assert_almost_equal(crystal.cell_vectors, self.cell_vectors)

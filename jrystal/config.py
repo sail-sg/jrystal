@@ -5,7 +5,7 @@ import yaml
 
 class JrystalConfigDict(ConfigDict):
   crystal: Optional[str]
-  crystal_xyz_file_path: Optional[str]
+  crystal_file_path_path: Optional[str]
   use_pseudopotential: bool
   pseudopotential_file_dir: Optional[str]
   g_grid_mask_method: str
@@ -15,7 +15,7 @@ class JrystalConfigDict(ConfigDict):
   occupation: str
   smearing: float
   empty_bands: int
-  restricted: bool
+  spin_restricted: bool
   ewald_args: Dict[str, float]
   epoch: int
   optimizer: str
@@ -38,7 +38,7 @@ class JrystalConfigDict(ConfigDict):
 
 default_config = {
   "crystal": "diamond",
-  "crystal_xyz_file_path": None,
+  "crystal_file_path_path": None,
   "xc": "lda_x",
   "use_pseudopotential": False,
   "pseudopotential_file_dir": None,
@@ -48,8 +48,8 @@ default_config = {
   "k_grid_sizes": 3,
   "occupation": "fermi-dirac",
   "smearing": 0.0001,
-  "empty_bands": 10,
-  "restricted": True,
+  "empty_bands": 8,
+  "spin_restricted": True,
   "ewald_args": {
     'ewald_eta': 0.1, 'ewald_cutoff': 2e4
   },
@@ -58,9 +58,9 @@ default_config = {
   "optimizer_args": {
     "learning_rate": 1e-2
   },
-  "scheduler": None,
+  "scheduler": "adam",
   "convergence_condition": 1e-8,
-  "band_structure_empty_bands": None,
+  "band_structure_empty_bands": 8,
   "k_path_special_points": None,
   "num_kpoints": 60,
   "k_path_file": None,

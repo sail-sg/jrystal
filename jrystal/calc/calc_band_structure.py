@@ -48,7 +48,9 @@ def calc(
     num=config.num_kpoints,
     fractional=False
   )
-  logging.info(f"{k_path.shape[0]} k-points generated.")
+  logging.info(
+    f"{k_path.shape[0]} k-points generated. ({config.k_path_special_points})"
+  )
 
   # optimitimize ground state energy if not provided.
   if ground_state_energy_output is None:
@@ -78,7 +80,7 @@ def calc(
   # Define the objective function for band structure calculation.
   def hamiltonian_trace(params_pw_band, kpts):
     coeff_band = pw.coeff(params_pw_band, freq_mask)
-    return hamiltonian.hamiltonian_matrix_trace(
+    energy = hamiltonian.hamiltonian_matrix_trace(
       coeff_band,
       crystal.positions,
       crystal.charges,
@@ -87,11 +89,12 @@ def calc(
       kpts,
       crystal.vol
     )
+    return jnp.sum(energy).real
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
   num_bands = ceil(crystal.num_electron / 2) + config.band_structure_empty_bands
-  params_pw_band = pw.param_init(key, num_bands, k_path.shape[0], freq_mask)
+  params_pw_band = pw.param_init(key, num_bands, 1, freq_mask)
   opt_state = optimizer.init(params_pw_band)
 
   # define update function
@@ -106,6 +109,7 @@ def calc(
 
   # the main loop for band structure calculation.
   logging.info("===> Starting band structure calculation...")
+  logging.info(f"Number of bands: {num_bands}")
   logging.info("Optimizing the first K point...")
 
   params_kpoint_list = []
@@ -147,24 +151,28 @@ def calc(
     params_kpoint_list.append(params_pw_band)
 
   logging.info("===> Band structure calculation done.")
+
   ########################################################
   # One-time eigen decomposition
   logging.info("===> Diagonalizing the Hamiltonian matrix...")
 
   @jax.jit
-  def eig_fn(param, kpts):
-    coeff_i = pw.coeff(param, freq_mask)
+  def eig_fn(param, k):
+    coeff_k = pw.coeff(param, freq_mask)
     hamil_matrix = hamiltonian.hamiltonian_matrix(
-      coeff_i,
+      coeff_k,
       crystal.positions,
       crystal.charges,
       ground_state_density_grid,
       g_vec,
-      kpts,
+      k,
       crystal.vol,
-      xc
+      xc,
+      kohn_sham=True,
     )
-    return jnp.linalg.eigvalsh(hamil_matrix[0])
+
+    eigen_values = jnp.linalg.eigvalsh(hamil_matrix[0])
+    return eigen_values
 
   iters = tqdm(range(len(params_kpoint_list)))
   for i in iters:
@@ -174,7 +182,7 @@ def calc(
     eig = eig_fn(prm, k)
     eigen_values.append(eig)
 
-  eigen_values = jnp.vstack(eigen_values)
+  # eigen_values = jnp.vstack(eigen_values)
   logging.info("===> Eigen decomposition done.")
   save_file = ''.join(crystal.symbol) + "_band_structure.npy"
   logging.info(f"results is saved in {save_file}")

@@ -13,8 +13,9 @@ from ._src import grid
 from ._src import hamiltonian
 from ._src import band
 from ._src import energy
+from ._src import potential
 from ._src import entropy
-from ._src import typing
+from ._src import _typing
 from ._src import const
 from . import config
 
@@ -38,8 +39,9 @@ __all__ = [
   "hamiltonian",
   "band",
   "energy",
+  "potential",
   "entropy",
-  "typing",
+  "_typing",
   "const",
   "get_pkg_path",
   "config",

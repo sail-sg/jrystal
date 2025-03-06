@@ -1,6 +1,6 @@
 """ Entropy functions. """
 import jax.numpy as jnp
-from .typing import OccupationArray
+from ._typing import OccupationArray
 
 
 def fermi_dirac(occupation: OccupationArray, eps: float = 1e-8) -> float:

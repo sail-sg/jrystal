@@ -8,7 +8,7 @@ from jaxtyping import Array, Complex, Float, Int
 from . import braket, potential, pw
 from .ewald import ewald_coulomb_repulsion
 from .grid import translation_vectors
-from .typing import OccupationArray, ScalarGrid, VectorGrid
+from ._typing import OccupationArray, ScalarGrid, VectorGrid
 from .utils import (
   absolute_square, safe_real, wave_to_density, wave_to_density_reciprocal
 )
@@ -143,7 +143,7 @@ def kinetic(
   _k = jnp.expand_dims(
     k_vector_grid, axis=[0] + [i + 2 for i in range(dim + 1)]
   )
-  e_kin = jnp.sum((_g + _k)**2, axis=-1)  # [1, nk, ni, N1, N2, N3]
+  e_kin = jnp.sum((_g + _k)**2, axis=-1)  # [1, nk, ni, x y z]
   e_kin = jnp.sum(e_kin * absolute_square(coeff_grid), axis=range(3, dim + 3))
 
   if occupation is not None:
@@ -164,6 +164,7 @@ def xc_lda(
   NOTE: this is a non-polarized lda potential
 
   .. math::
+  
       E_{\rm x}^{\mathrm{LDA}}[\rho] = - \frac{3}{4}\left( \frac{3}{\pi} \right)^{1/3}\int\rho(\mathbf{r})^{4/3}  # noqa: E501
 
   Args:
@@ -261,6 +262,11 @@ def total_energy(
   """
 
   wave_grid_arr = pw.wave_grid(coefficient, vol)
+  
+  occupation = jnp.ones(
+    shape=coefficient.shape[:3]
+  ) if occupation is None else occupation
+
   density_grid = wave_to_density(wave_grid_arr, occupation)
   density_grid_rec = wave_to_density_reciprocal(wave_grid_arr, occupation)
 

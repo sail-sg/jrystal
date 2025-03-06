@@ -12,8 +12,8 @@ class _TestModules(parameterized.TestCase):
 
   def setUp(self):
     self.key = jax.random.PRNGKey(123)
-    diamond_xyz_file = "../geometry/diamond.xyz"
-    self.crystal = jr.Crystal.create_from_xyz_file(diamond_xyz_file)
+    diamond_file_path = "../geometry/diamond.xyz"
+    self.crystal = jr.Crystal.create_from_file(diamond_file_path)
     self.num_bands = self.crystal.num_electron
     self.key = jax.random.PRNGKey(123)
     self.kpts = jr.grid.k_vectors(self.crystal.A, [1, 1, 1])

@@ -7,7 +7,7 @@ from jaxtyping import Float, Array, Complex, Int
 from einops import einsum
 
 from ..._src import braket
-from ..._src.typing import OccupationArray, ScalarGrid, VectorGrid
+from ..._src._typing import OccupationArray, ScalarGrid, VectorGrid
 from ..._src import potential, energy, hamiltonian
 from ..._src.utils import wave_to_density
 from ..._src import pw
@@ -41,12 +41,12 @@ def _potential_nonlocal_square_root(
 
   gk_vector_grid = jnp.expand_dims(
     k_points, axis=(1, 2, 3)
-  ) + jnp.expand_dims(g_vector_grid, 0)  # [nk n1 n2 n3 3]
+  ) + jnp.expand_dims(g_vector_grid, 0)  # [nk x y z 3]
 
   # sbt for beta function and intepolate
   beta_gk = beta_sbt_grid_multi_atoms(
     r_grid, nonlocal_beta_grid, nonlocal_angular_momentum, gk_vector_grid
-  )  # shape [num_atom num_beta nk n1 n2 n3]
+  )  # shape [num_atom num_beta nk x y z]
 
   # kernel trick for legendre polynormials.
   kappa_all = []
@@ -57,16 +57,16 @@ def _potential_nonlocal_square_root(
     kappa = []
     for k in kappa_list:
       kappa.append(k(gk_vector_grid))
-    kappa = jnp.stack(kappa)  # shape: [num_beta nk n1 n2 n3 dim_phi]
+    kappa = jnp.stack(kappa)  # shape: [num_beta nk x y z dim_phi]
     kappa_all.append(kappa)
 
-  kappa = jnp.stack(kappa_all)  # shape: [num_atom num_beta nk n1 n2 n3 dim_phi]
+  kappa = jnp.stack(kappa_all)  # shape: [num_atom num_beta nk x y z dim_phi]
 
   # structure factor
   structure_factor = jnp.exp(
     1.j * jnp.matmul(gk_vector_grid, position.transpose())
   )
-  # shape: [nk n1 n2 n3 na]
+  # shape: [nk x y z na]
 
   return einsum(
     kappa,
@@ -77,7 +77,7 @@ def _potential_nonlocal_square_root(
 
 
 def hamiltonian_nonlocal(
-  pw_coefficients: Complex[Array, "*batchs n1 n2 n3"],
+  pw_coefficients: Complex[Array, "*batchs x y z"],
   positions: Float[Array, 'na 3'],
   g_vector_grid: Float[Array, "*nd d"],
   k_points: Float[Array, "*nd d"],
@@ -133,7 +133,7 @@ def _hamiltonian_nonlocal(
 
 
 def _energy_nonlocal(
-  pw_coefficients: Complex[Array, "*batchs n1 n2 n3"],
+  pw_coefficients: Complex[Array, "*batchs x y z"],
   potential_nl_sqrt: Array,
   nonlocal_d_matrix: Float[Array, "j j"],
   vol: Float,
@@ -150,7 +150,7 @@ def _energy_nonlocal(
 
 
 def energy_nonlocal(
-  pw_coefficients: Complex[Array, "*batchs n1 n2 n3"],
+  pw_coefficients: Complex[Array, "*batchs x y z"],
   positions: Float[Array, 'na 3'],
   g_vector_grid: Float[Array, "*nd d"],
   k_vec: Float[Array, "nk 3"],

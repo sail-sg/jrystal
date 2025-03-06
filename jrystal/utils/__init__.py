@@ -3,4 +3,6 @@ from .._src.utils import (
   vmapstack,
   wave_to_density,
   wave_to_density_reciprocal,
+  expand_coefficient,
+  squeeze_coefficient,
 )

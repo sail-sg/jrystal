@@ -47,6 +47,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
   # Define functions for energy calculation.
   # assume fermi-dirac occupation.
+  logging.info(f"Potentially-occupied bands: {num_bands}")
+
   def get_occupation(params):
     return occupation.idempotent(
       params, crystal.num_electron, num_kpts, crystal.spin
@@ -56,7 +58,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     coeff = pw.coeff(params_pw, freq_mask)
     occ = get_occupation(params_occ)
     return energy.total_energy(
-      coeff, crystal.positions, crystal.charges, g_vec, k_vec, crystal.vol, occ
+      coeff, crystal.positions, crystal.charges, g_vec, k_vec, crystal.vol, occ,
+      kohn_sham=False,
     )
 
   def get_entropy(params_occ):
