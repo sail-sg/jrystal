@@ -10,8 +10,8 @@ def beta_sbt_grid_single_atom(
   r_grid: Float[Array, "num_r"],
   nonlocal_beta_grid: Float[Array, "num_beta num_r"],
   nonlocal_angular_momentum: List[int],
-  g_vector_grid: Float[Array, "n1 n2 n3 3"],
-) -> Float[Array, "num_beta n1 n2 n3"]:
+  g_vector_grid: Float[Array, "x y z 3"],
+) -> Float[Array, "num_beta x y z"]:
   """calculate the spherical bessel transform of the beta functions for a
     single atom.
 
@@ -27,11 +27,11 @@ def beta_sbt_grid_single_atom(
       nonlocal_beta_grid (Float[Array, "num_beta num_r"]): beta values.
       nonlocal_angular_momentum (List[int]): angular momentum corresponding
         to the beta functions.
-      g_vector_grid (Float[Array, "n1 n2 n3 3"]): reciprocal vectors to
+      g_vector_grid (Float[Array, "x y z 3"]): reciprocal vectors to
         interpolate.
 
   Returns:
-      Float[Array, "num_beta n1 n2 n3"]: the beta functions in reciprocal space.
+      Float[Array, "num_beta x y z"]: the beta functions in reciprocal space.
 
   Warning: Cubic spline interpolation is not implemented in JAX. This function
     uses NumPy and is not differentiable.
@@ -54,8 +54,8 @@ def beta_sbt_grid_multi_atoms(
   r_grid: List[Float[Array, "num_r"]],
   nonlocal_beta_grid: List[Float[Array, "num_beta num_r"]],
   nonlocal_angular_momentum: List[List[int]],
-  g_vector_grid: Float[Array, "n1 n2 n3 3"],
-) -> List[Float[Array, "num_beta n1 n2 n3"]]:
+  g_vector_grid: Float[Array, "x y z 3"],
+) -> List[Float[Array, "num_beta x y z"]]:
 
   output = []
   for r, b, l in zip(r_grid, nonlocal_beta_grid, nonlocal_angular_momentum):

@@ -18,7 +18,7 @@ def _potential_local_reciprocal(
   local_potential_grid: List[Float[Array, "num_r"]],
   local_potential_charge: List[int],
   vol: float,
-) -> Complex[Array, "n1 n2 n3"]:
+) -> Complex[Array, "x y z"]:
   # v_loc = (v_loc + Z/r) - Z/r   where v_loc is always negative
 
   # First part v1 = (v_loc + Z/r)
@@ -38,13 +38,13 @@ def _potential_local_reciprocal(
     return f_k
 
   v1_g = g(r_grid, local_potential_grid, local_potential_charge)
-  v1_g = jnp.stack(v1_g)  # shape [na n1 n2 n3]
+  v1_g = jnp.stack(v1_g)  # shape [na x y z]
 
   # Second part v2 = - Z/r in reciprocal space
   g_radius = g_radius.at[0, 0, 0].set(1e10)
   v2_g = jnp.expand_dims(
     local_potential_charge, axis=(1, 2, 3)
-  ) / jnp.expand_dims(g_radius**2, 0)  # [natom n1 n2 n3]
+  ) / jnp.expand_dims(g_radius**2, 0)  # [natom x y z]
   v2_g *= 4 * jnp.pi
   v2_g = v2_g.at[:, 0, 0, 0].set(0)
 
@@ -56,7 +56,7 @@ def _potential_local_reciprocal(
   # structure factor
   structure_factor = jnp.exp(
     -1.j * jnp.matmul(g_vector_grid, positions.transpose())
-  )  # shape: [n1 n2 n3 na]
+  )  # shape: [x y z na]
   structure_factor = jnp.transpose(structure_factor, axes=(3, 0, 1, 2))
   v_g *= structure_factor
   v_g = jnp.sum(v_g, axis=0)  # reduce over atoms
@@ -66,7 +66,7 @@ def _potential_local_reciprocal(
 
 
 def _hamiltonian_local(
-  wave_grid: Complex[Array, "*batchs n1 n2 n3"],
+  wave_grid: Complex[Array, "*batchs x y z"],
   potential_local_grid_reciprocal,
   vol: Float,
 ) -> Complex[Array, "ns nk nb nb"]:
@@ -78,7 +78,7 @@ def _hamiltonian_local(
 
 
 def hamiltonian_local(
-  wave_grid: Complex[Array, "*batchs n1 n2 n3"],
+  wave_grid: Complex[Array, "*batchs x y z"],
   positions: Float[Array, "na 3"],
   r_vector_grid: Float[Array, "*nd d"],
   g_vector_grid: Float[Array, "*nd d"],
@@ -104,8 +104,8 @@ def hamiltonian_local(
 
 
 def _energy_local(
-  reciprocal_density_grid: Complex[Array, "*batchs n1 n2 n3"],
-  v_local_reciprocal: Complex[Array, "n1 n2 n3"],
+  reciprocal_density_grid: Complex[Array, "*batchs x y z"],
+  v_local_reciprocal: Complex[Array, "x y z"],
   vol: Float,
 ) -> Float:
   # this function is for split the potential and density from energy
@@ -118,7 +118,7 @@ def _energy_local(
 
 
 def energy_local(
-  reciprocal_density_grid: Complex[Array, "*batchs n1 n2 n3"],
+  reciprocal_density_grid: Complex[Array, "*batchs x y z"],
   positions: Float[Array, "na 3"],
   r_vector_grid: Float[Array, "*nd d"],
   g_vector_grid: Float[Array, "*nd d"],

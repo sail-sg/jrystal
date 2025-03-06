@@ -5,7 +5,7 @@ import einops
 import jax.numpy as jnp
 from jaxtyping import Int
 
-from .typing import OccupationArray
+from ._typing import OccupationArray
 from .unitary_module import unitary_matrix, unitary_matrix_param_init
 
 
@@ -20,7 +20,7 @@ def idempotent(
   num_electrons,
   num_kpts,
   spin=0,
-  restricted=True,
+  spin_restricted=True,
 ) -> OccupationArray:
   num_bands = params["w_re"].shape[0] // num_kpts
 
@@ -38,7 +38,7 @@ def idempotent(
     [o((num_electrons - spin) // 2), o((num_electrons + spin) // 2)], axis=0
   )
 
-  if restricted is False:
+  if spin_restricted is False:
     return occ
   else:
     return jnp.sum(occ, axis=0, keepdims=True)
@@ -49,7 +49,7 @@ def uniform(
   num_electrons: Int,
   spin: Int = 0,
   num_bands: Optional[Int] = None,
-  restricted: bool = True
+  spin_restricted: bool = True
 ) -> OccupationArray:
   """uniform occupation.
 
@@ -72,13 +72,13 @@ def uniform(
       num_bands (Int | None, optional): the number of bands(orbitals). If
         num_bands is not provided, then num_bands is the same as num_electrons.
         Defaults to None.
-      restricted (bool, optional): indicate of spin channel. If True, the
+      spin_restricted (bool, optional): indicate of spin channel. If True, the
         first axis of output is 2. If False, the first axis of output is 1.
         Defaults to True.
 
   Returns:
       OccupationArray: an occupation musk with shape [s, num_k, num_bands],
-        where s=2 if restricted is True, else s=1. The sum of occupation mask
+        where s=2 if spin_restricted is True, else s=1. The sum of occupation mask
         equals to num_electrons.
   """
   num_bands = num_electrons if num_bands is None else num_bands
@@ -87,7 +87,7 @@ def uniform(
   occ = occ.at[0, :, :(num_electrons + spin) // 2].set(1 / num_k)
   occ = occ.at[1, :, :(num_electrons - spin) // 2].set(1 / num_k)
 
-  if restricted:
+  if spin_restricted:
     return jnp.sum(occ, axis=0, keepdims=True)
 
   return occ
@@ -98,7 +98,7 @@ def gamma(
   num_electrons: Int,
   spin: Int = 0,
   num_bands: Optional[Int] = None,
-  restricted: bool = True
+  spin_restricted: bool = True
 ) -> OccupationArray:
   """occupation on Gamma point.
   Return a mask like this:
@@ -117,13 +117,13 @@ def gamma(
       num_bands (Int | None, optional): the number of bands(orbitals). If
         num_bands is not provided, then num_bands is the same as num_electrons.
         Defaults to None.
-      restricted (bool, optional): indicate of spin channel. If True, the
+      spin_restricted (bool, optional): indicate of spin channel. If True, the
         first axis of output is 2. If False, the first axis of output is 1.
         Defaults to True.
 
   Returns:
       OccupationArray: an occupation musk with shape [s, num_k, num_bands],
-        where s=2 if restricted is True, else s=1. The sum of occupation mask
+        where s=2 if spin_restricted is True, else s=1. The sum of occupation mask
         equals to num_electrons.
 
   """
@@ -132,7 +132,7 @@ def gamma(
   occ = occ.at[0, 0, :(num_electrons + spin) // 2].set(1)
   occ = occ.at[1, 0, :(num_electrons - spin) // 2].set(1)
 
-  if restricted:
+  if spin_restricted:
     return jnp.sum(occ, axis=0, keepdims=True)
 
   return occ

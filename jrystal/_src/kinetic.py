@@ -3,7 +3,7 @@ import jax.numpy as jnp
 from jaxtyping import Float, Array
 
 import einops
-from .typing import VectorGrid
+from ._typing import VectorGrid
 
 
 def kinetic(

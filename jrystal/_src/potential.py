@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from jax.lax import stop_gradient
 from jaxtyping import Array, Complex, Float
 
-from .typing import ScalarGrid, VectorGrid
+from ._typing import ScalarGrid, VectorGrid
 
 
 def hartree_reciprocal(
@@ -48,7 +48,7 @@ def hartree_reciprocal(
 
   """
   dim = g_vector_grid.shape[-1]
-  g_vec_square = jnp.sum(g_vector_grid**2, axis=-1)  # [N1, N2, N3]
+  g_vec_square = jnp.sum(g_vector_grid**2, axis=-1)  # [x y z]
   g_vec_square = g_vec_square.at[(0,) * dim].set(1e-16)
 
   if kohn_sham:
@@ -97,8 +97,8 @@ def hartree(
 
 
 def external_reciprocal(
-  position: Float[Array, 'num_atoms 3'],
-  charge: Float[Array, 'num_atoms'],
+  position: Float[Array, 'atom 3'],
+  charge: Float[Array, 'atom'],
   g_vector_grid: VectorGrid[Float, 3],
   vol: Float,
 ) -> ScalarGrid[Complex, 3]:
@@ -154,8 +154,8 @@ def external_reciprocal(
 
 
 def external(
-  position: Float[Array, 'num_atoms 3'],
-  charge: Float[Array, 'num_atoms'],
+  position: Float[Array, 'atom 3'],
+  charge: Float[Array, 'atom'],
   g_vector_grid: VectorGrid[Float, 3],
   vol: Float,
 ) -> ScalarGrid[Complex, 3]:
@@ -181,7 +181,7 @@ def external(
   return jnp.fft.ifftn(ext_pot_grid_rcprl, axes=range(-3, 0))
 
 
-def lda_density(density_grid: ScalarGrid[Float, 3]) -> ScalarGrid[Float, 3]:
+def _lda_density(density_grid: ScalarGrid[Float, 3]) -> ScalarGrid[Float, 3]:
   """Compute the energy density of the LDA exchange-correlation functional.
 
   .. math::
@@ -190,8 +190,6 @@ def lda_density(density_grid: ScalarGrid[Float, 3]) -> ScalarGrid[Float, 3]:
   Args:
       density_grid (ScalarGrid[Float, 3]): the electron density on real space
       grid.
-
-  NOTE: I do not understand why the code is written in this way.
 
   Returns:
     ScalarGrid[Float, 3]: lda energy density on real space grid
@@ -222,12 +220,12 @@ def xc_lda(
     v_lda = - (3 * n(r) / \pi )^{\frac 1/3 }
 
   Args:
-      density_grid (ScalarGrid[Float, 3]): the electron density on real space
+    density_grid (ScalarGrid[Float, 3]): the electron density on real space
       grid.
-      vol (Float): the volume of unit cell.
+    vol (Float): the volume of unit cell.
 
   Returns:
-      ScalarGrid[Float, 3]: the variation of the lda energy with respect to
+    ScalarGrid[Float, 3]: the variation of the lda energy with respect to
       the density.
 
   """
@@ -236,9 +234,10 @@ def xc_lda(
     density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
 
   if kohn_sham:
+    density_grid = stop_gradient(density_grid)
     output = -(density_grid * 3. / jnp.pi)**(1 / 3)
   else:
-    return lda_density(density_grid)
+    return _lda_density(density_grid)
 
   return output
 
@@ -251,7 +250,8 @@ def effective(
   vol: Float,
   split: bool = False,
   xc: str = "lda",
-  kohn_sham: bool = False
+  kohn_sham: bool = False,
+  spin_restricted: bool = True,
 ) -> Union[Tuple[Array, Array, Array], Array]:
   """
   Compute the effective potentials in real space.
@@ -270,24 +270,28 @@ def effective(
     [V_hartree, V_external, V_xc], else return the sum. Defaults to False.
     xc (str): Exchange-correlation functional. Defaults to "lda".
     kohn_sham (bool): If True, use Kohn-Sham potential. Defaults to False.
-
+    spin_restricted (bool): whether to use spin-restricted calculation. If True,
+     the output potential does not have spin axis.
 
   Returns:
     Tuple[Array, Array, Array] | Array : Hartree, external, and
       exchange-correlation potentials. If split is false, then will return
-      the sum of hartree, external and xc potentials.
+      the sum of hartree, external and xc potentials. If spin_restricted is
+      True, the output potential does not have spin axis, otherwise it has two
+      spin-axis channels.
 
   Note:
     Now only support lda potential.
 
   TODO:
-    report all xc potentials using jax-xc.
+    support all xc potentials using jax-xc.
   """
 
   dim = position.shape[-1]
 
   assert density_grid.ndim in [dim, dim + 1]  # w/w\o spin channel
-  if density_grid.ndim == dim + 1:
+
+  if spin_restricted and density_grid.ndim == dim + 1:
     density_grid = jnp.sum(density_grid, axis=0)
 
   density_grid_reciprocal = jnp.fft.fftn(density_grid, axes=range(-dim, 0))
@@ -301,10 +305,10 @@ def effective(
   if xc.strip() in ["lda", "lda_x"]:
     v_xc = xc_lda(density_grid, kohn_sham)
   else:
-    raise NotImplementedError("XC only support lda for now.")
+    raise NotImplementedError("XC only support LDA for now.")
 
   # transform to real space
-  v_hartree = jnp.fft.ifftn(v_hartree, axes=range(-dim, 0))
+  v_hartree = jnp.fft.ifftn(v_hartree, axes=range(-dim, 0)) 
   v_external = jnp.fft.ifftn(v_external, axes=range(-dim, 0))
 
   if split:

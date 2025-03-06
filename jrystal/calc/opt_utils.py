@@ -72,7 +72,7 @@ def create_freq_mask(config: JrystalConfigDict):
 def create_crystal(config: JrystalConfigDict) -> Crystal:
   _pkg_path = jr.get_pkg_path()
   path = _pkg_path + '/geometry/' + config.crystal + '.xyz'
-  crystal = Crystal.create_from_xyz_file(xyz_file=path)
+  crystal = Crystal.create_from_file(file_path=path)
   check_spin_number(crystal.num_electron, crystal.spin)
   return crystal
 

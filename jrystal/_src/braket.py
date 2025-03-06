@@ -6,7 +6,7 @@ import numpy as np
 from  typing import Union, Optional
 from jaxtyping import Array, Complex, Float
 
-from .typing import ScalarGrid
+from ._typing import ScalarGrid
 
 
 def reciprocal_braket(
@@ -90,8 +90,8 @@ def real_braket(
 
 def expectation(
   bra: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
-  # hamiltonian: Float[Array, "nk n1 n2 n3"] | Float[Array, "n1 n2 n3"],
-  hamiltonian: Float[Array, "nk n1 n2 n3"],
+  # hamiltonian: Float[Array, "nk x y z"] | Float[Array, "x y z"],
+  hamiltonian: Float[Array, "nk x y z"],
   vol: Float,
   ket: Optional[Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]]] = None,
   diagonal: bool = False,
@@ -141,15 +141,15 @@ def expectation(
 
   if hamiltonian.ndim == 3:
     if diagonal is False:
-      p = "a nk ni1 n1 n2 n3, n1 n2 n3, a nk ni2 n1 n2 n3 -> a nk ni1 ni2"
+      p = "a nk ni1 x y z, x y z, a nk ni2 x y z -> a nk ni1 ni2"
     else:
-      p = "a nk ni n1 n2 n3, n1 n2 n3, a nk ni n1 n2 n3 -> a nk ni"
+      p = "a nk ni x y z, x y z, a nk ni x y z -> a nk ni"
 
   elif hamiltonian.ndim == 4:
     if diagonal is False:
-      p = "a nk ni1 n1 n2 n3, nk n1 n2 n3, a nk ni2 n1 n2 n3 -> a nk ni1 ni2"
+      p = "a nk ni1 x y z, nk x y z, a nk ni2 x y z -> a nk ni1 ni2"
     else:
-      p = "a nk ni n1 n2 n3, nk n1 n2 n3, a nk ni n1 n2 n3 -> a nk ni"
+      p = "a nk ni x y z, nk x y z, a nk ni x y z -> a nk ni"
 
   else:
     raise ValueError(

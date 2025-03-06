@@ -17,6 +17,7 @@ xc: "lda_x"
 ################################################
 #           Pseudopotential Setting            #
 ################################################
+
 use_pseudopotential: False
 pseudopotential_file_dir: null
 # The pseudopotential file directory. If None, the code will use the default
@@ -43,7 +44,8 @@ occupation: "gamma"
 
 # smearing factor for the Fermi-Dirac distribution
 smearing: 0.0001
-# the total number of unoccupapied bands
+# the total number of unoccupapied bands. The Total number of
+# potentially-occupied bands is ceil(num_electron / 2) + empty_bands
 empty_bands: 4
 spin_restricted: True
 # whether the calculation is spin_restricted or not, ie., spin-up and spin-down
@@ -92,7 +94,7 @@ k_path_special_points: null
 # https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
 
 # "k_path_special_points": "GXMG",
-# "k_path_special_points": "LGXL",
+"k_path_special_points": "LGXL"
 num_kpoints: 60
 
 # Alternatively, the user can provide a `k_path` file containing k-path
@@ -112,6 +114,7 @@ k_path_fine_tuning_epoch: 300
 ################################################
 #              System Setting                  #
 ################################################
+
 # Random seed
 seed: 123
 

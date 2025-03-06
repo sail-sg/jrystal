@@ -9,7 +9,7 @@ from ase.dft.kpoints import monkhorst_pack
 from jax import lax
 from jaxtyping import Array, Bool, Float, Int
 
-from .typing import CellVector, ScalarGrid, VectorGrid
+from ._typing import CellVector, ScalarGrid, VectorGrid
 from .utils import fft_factor
 
 
@@ -187,7 +187,7 @@ def k_vectors(cell_vectors: CellVector,
 
   Args:
     cell_vectors: cell vectors of shape `(3, 3)`.
-    grid_sizes: `(n1, n2, n3)`.
+    grid_sizes: `(x y z)`.
 
   Returns:
     Float[Array, 'nkpts 3']: k-vectors.
@@ -211,7 +211,7 @@ def spherical_mask(
 
   Args:
     cell_vectors: cell vectors
-    grid_sizes: grid sizes `(n1, n2, n3)` of the 3D reciprocal frequency.
+    grid_sizes: grid sizes `(x y z)` of the 3D reciprocal frequency.
     cutoff_energy: cutoff energy of the frequencies.
 
   Returns:
@@ -233,7 +233,7 @@ def cubic_mask(grid_sizes: Union[List, jax.Array]) -> ScalarGrid[Bool, 3]:
   1. Why / How to mask the frequency components.
 
   Args:
-    grid_sizes: grid sizes `(n1, n2, n3)` of the 3D reciprocal frequency.
+    grid_sizes: grid sizes `(x y z)` of the 3D reciprocal frequency.
 
   Returns:
     A 3D frequency mask.
@@ -324,3 +324,21 @@ def r2g_vector_grid(
   grid_sizes = r_vector_grid.shape[:-1]
   g_vector_grid = g_vectors(cell_vectors, grid_sizes)
   return g_vector_grid
+
+
+def g2cell_vectors(g_vector_grid: Float[Array, "*nd d"]) -> CellVector:
+  """Transform the G vector grid to cell vectors.
+
+  Args:
+    g_vector_grid (Float[Array, "*nd d"]): the G vector grid.
+
+  Returns:
+    CellVector: the cell vectors.
+  """
+  
+  grid_sizes = g_vector_grid.shape[:-1]
+  cardinality = g_vectors(jnp.eye(3), grid_sizes)
+  a = g_vector_grid.reshape([-1, 3])
+  b = cardinality.reshape([-1, 3])
+  
+  return jnp.linalg.inv(jnp.linalg.inv(a.T@a)@a.T@b)

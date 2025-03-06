@@ -7,7 +7,7 @@ import numpy as np
 from jaxtyping import Array, Bool, Complex, Float
 
 from .grid import g_vectors
-from .typing import OccupationArray, ScalarGrid
+from ._typing import OccupationArray, ScalarGrid
 from .unitary_module import unitary_matrix, unitary_matrix_param_init
 from .utils import absolute_square, reshape_coefficient, volume
 
@@ -51,15 +51,7 @@ def param_init(
   2. Bloch theorum.
 
   As far as this function is concerned, it simply just returns a randomly
-<<<<<<< HEAD
-<<<<<<< HEAD
   initialized parameter of shape :code:`(num_spin, num_kpts, num_g, num_bands)`.
-=======
-  initialized parameter of shape `(num_spin, num_kpts, num_g, num_bands)`.
->>>>>>> 67db202 (update)
-=======
-  initialized parameter of shape :code:`(num_spin, num_kpts, num_g, num_bands)`.
->>>>>>> 33691b5 (update)
   The input arguments to this function is only used to determine the shape.
 
   Note that this function returns the raw parameter that can not be used
@@ -69,7 +61,6 @@ def param_init(
   tensor.
 
   Args:
-<<<<<<< HEAD
     key: random key for initializing the parameters.
     num_bands: the number of bands.
     num_kpts: the number of k points.
@@ -79,21 +70,6 @@ def param_init(
   Returns:
     A complex type raw parameter of shape
     :code:`(num_spin, num_kpts, num_g, num_bands)`.
-=======
-    key: ranodm key for initializing the parameters
-    num_bands: the number of bands.
-    num_kpts: the number of k points.
-    freq_mask: a 3D mask that denotes which frequency components are selected.
-    restricted: if :code:`True`, :code:`num_spin=2` else :code:`num_spin=1`.
-
-  Returns:
-    A complex type raw parameter of shape
-<<<<<<< HEAD
-    `(num_spin, num_kpts, num_g, num_bands)`.
->>>>>>> 67db202 (update)
-=======
-    :code:`(num_spin, num_kpts, num_g, num_bands)`.
->>>>>>> 33691b5 (update)
   """
   num_spin = 1 if restricted else 2
   num_g = np.sum(freq_mask).item()
@@ -106,8 +82,6 @@ def coeff(
 ) -> Complex[Array, "spin kpts band n1 n2 n3"]:
   r"""Create the linear coefficients to combine the frequency components.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   This function takes a raw parameter of shape
   :code:`(num_spin, num_kpts, num_g, num_bands)`, orthogonalize for the last
   two dimensions, so that the resulting tensor satisfies the unitary constraint
@@ -142,47 +116,6 @@ def coeff(
     Complex array of shape :code:`(num_spin, num_kpts, num_band, n1, n2, n3)`.
     It satisfies the unitary constraint that for any :code:`i,j`
     :code:`einsum('kabc,labc->kl', ret[i, j], ret[i, j])` is an identity matrix.
-=======
-  The `pw_param` should be created from :py:func:`param_init`, and the same
-  `freq_mask` used in :py:func:`param_init` should be used here. As mentioned
-=======
-  The :code:`pw_param` should be created from :py:func:`param_init`, and the same
-  :code:`freq_mask` used in :py:func:`param_init` should be used here. As mentioned
->>>>>>> 33691b5 (update)
-  in :py:func:`param_init`, we use linear combination over 3D fourier
-  components for creating wave functions. Some extra requirements are
-
-  1. The wave functions that has the same spin and same k component needs
-     to be orthogonal to each other.
-  2. We only activate some of the frequency components with the :code:`freq_mask`.
-
-  As the raw parameter returned from :py:func:`param_init` has the shape
-  :code:`(num_spin, num_kpts, num_g, num_bands)`, where :code:`num_g` is the number of
-  activated frequencies flattend from the activated entries in the :code:`freq_mask`
-  This function first orthogonalize over the last two dimensions and
-  reorganize the orthogonalized parameter into a 3D grid the same shape of
-  the frequency mask.
-
-  Extension reads:
-  1. Why and how to mask the frequency components.
-  2. Bloch theorum.
-
-  Args:
-    pw_param: the raw parameter, maybe created from
-    :py:func:`param_init`.
-    freq_mask: a 3D mask to select the frequency components.
-
-  Returns:
-<<<<<<< HEAD
-    Complex array of shape `(num_spin, num_kpts, num_band, n1, n2, n3)`.
-    It satisfies the unitary constraint that for any `i,j`
-    `einsum('kabc,labc->kl', ret[i, j], ret[i, j])` is an identity matrix.
->>>>>>> 67db202 (update)
-=======
-    Complex array of shape :code:`(num_spin, num_kpts, num_band, n1, n2, n3)`.
-    It satisfies the unitary constraint that for any :code:`i,j`
-    :code:`einsum('kabc,labc->kl', ret[i, j], ret[i, j])` is an identity matrix.
->>>>>>> 33691b5 (update)
   """
   coeff = unitary_matrix(pw_param, complex=True)
   coeff = jnp.swapaxes(coeff, -1, -2)
@@ -195,7 +128,6 @@ def wave_grid(
 ):
   r"""Wave function evaluated at a grid of spacial locations.
 
-<<<<<<< HEAD
   This function implements the :math:`U(r)` part of the bloch wave function.
 
   .. math::
@@ -222,109 +154,29 @@ def wave_grid(
     R = jrystal.grid.r_vectors(*args)  # (n1, n2, n3, 3)
     coefficients = ...  # (n1, n2, n3)
     vol = ...
-=======
-  Our wave functions lives in the 3D space, and we use linear combination of
-  3D fourier components to parameterize them, the parameters are the
-  linear coeffcients. A single wave function look like
 
-  .. math::
-
-    \psi(r)=\frac{1}{\sqrt{V}} \sum_G c_{G} e^{iG^\top r}
-
-  :math:`G` is the 3D frequency components, :math:`V` is the volume of the crystal
-  unit cell, which is to make sure the wave function is normalized within
-  the cell.
-
-  where :math:`c` is the linear coefficient. It combines over different :math:`G`
-  components that is generated with :py:func:`jrystal.grid.g_vectors`.
-  We can evaluate the wave function at any spatial location :math:`r` which takes
-  :math:`O(|G|)` computation. However, if we evaluate this function on a specific
-  spatial grid of size :math:`|G|`, we can be faster than :math:`O(|G|^2)` by using
-  fourier transform. IFFT gives us an :math:`O(|G|\log(|G|))` implementation of the
-  above equation. The :math:`G` and :math:`R` grid can be obtained from
-  :py:func:`jrystal.grid.g_vectors` and :py:func:`jrystal.grid.r_vectors`
-  correspondingly.
-
-<<<<<<< HEAD
-  ```python
-  G = jrystal.grid.g_vectors(*args)  # (n1, n2, n3, 3)
-  R = jrystal.grid.r_vectors(*args)  # (n1, n2, n3, 3)
-  coefficients = ...  # (n1, n2, n3)
-  vol = ...
->>>>>>> 67db202 (update)
-=======
-  .. code:: python
->>>>>>> 33691b5 (update)
-
-    G = jrystal.grid.g_vectors(*args)  # (n1, n2, n3, 3)
-    R = jrystal.grid.r_vectors(*args)  # (n1, n2, n3, 3)
-    coefficients = ...  # (n1, n2, n3)
-    vol = ...
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
     def wave_function(r):
       return (coefficients * jnp.exp(1j * G @ r)).sum() / jnp.sqrt(vol)
 
->>>>>>> 33691b5 (update)
     # The following is O(|G|^2)
     wave_at_R_naive = jax.vmap(jax.vmap(jax.vmap(wave_function)))(R)
     # The following is O(|G|log|G|)
     wave_at_R_fft = wave_grid(coefficients, vol)
-<<<<<<< HEAD
 
   As IFFT implements
 
   .. math::
 
     x_n = \frac{1}{N} \sum_{k=0}^{N-1} X_k e^{i\frac{2\pi}{N}kn}
-=======
-  # The following is O(|G|^2)
-  wave_at_R_naive = jax.vmap(jax.vmap(jax.vmap(wave_function)))(R)
-  # The following is O(|G|log|G|)
-  wave_at_R_fft = wave_grid(coefficients, vol)
-  ```
-
-  As IFFT implements
-
-  $$
-  x_n = \frac{1}{N} \sum_{k=0}^{N-1} X_k e^{i\frac{2\pi}{N}kn}
-  $$
->>>>>>> 67db202 (update)
-=======
-
-  As IFFT implements
-
-  .. math::
-
-    x_n = \frac{1}{N} \sum_{k=0}^{N-1} X_k e^{i\frac{2\pi}{N}kn}
->>>>>>> 33691b5 (update)
 
   It is a bit different from the definition of the wave function,
   if you check the code, we do two things to align them,
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   1. we multiply back the :math:`N` to cancel the :math:`\frac{1}{N}`
   factor in the IFFT (in 3D the :code:`np.prod(grid_sizes)`).
   2. we divide by the :math:`\sqrt{\Omega_\text{cell}}`.
 
   The :code:`coeff` passed to this function has shape :code:`(..., n1, n2, n3)`,
-=======
-  1. we multiply back the $N$ to cancel the $\frac{1}{N}$
-  factor in the IFFT (in 3D the `np.prod(grid_sizes)`).
-  2. we divide by the $\sqrt{V}$.
-
-  The `coeff` passed to this function has shape `(..., n1, n2, n3)`,
->>>>>>> 67db202 (update)
-=======
-  1. we multiply back the :math:`N` to cancel the :math:`\frac{1}{N}`
-  factor in the IFFT (in 3D the :code:`np.prod(grid_sizes)`).
-  2. we divide by the :math:`\sqrt{V}`.
-
-  The :code:`coeff` passed to this function has shape :code:`(..., n1, n2, n3)`,
->>>>>>> 33691b5 (update)
   it can have any leading dimension.
   It can be created using :py:func:`param_init` and :py:func:`coeff`.
   :py:func:`param_init` creates a raw parameter and :py:func:`coeff` converts
@@ -333,15 +185,7 @@ def wave_grid(
 
   Args:
     coeff: linear combination coefficients over the 3D fourier components.
-<<<<<<< HEAD
-<<<<<<< HEAD
       shape is :code:`(..., n1, n2, n3)` where :code:`(n1, n2, n3)` is the shape of the
-=======
-      shape is `(..., n1, n2, n3)` where `(n1, n2, n3)` is the shape of the
->>>>>>> 67db202 (update)
-=======
-      shape is :code:`(..., n1, n2, n3)` where :code:`(n1, n2, n3)` is the shape of the
->>>>>>> 33691b5 (update)
       3D frequency components generated
       from :py:func:`jrystal.grid.g_vectors`.
     vol: volume of the unit cell.
@@ -368,15 +212,10 @@ def density_grid(
   components. To compute the density, usually we only need to take the absolute
   square of each wave function and sum them up.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 33691b5 (update)
   .. math::
 
     \rho(r) = \sum_i |\psi_i(r)|^2
 
-<<<<<<< HEAD
   This function evaluates the density :math:`\rho(r)` as the spatial grid
   generated from the :py:func:`jrystal.grid.r_vectors`.
 
@@ -408,95 +247,22 @@ def density_grid(
       This is an option argument, when :code:`occupation=None`, we compute the density
       contribution from each :math:`k` without summing them. If :code:`occupation` is
       provided, we sum up all the density from each :math:`k` weighted by the
-=======
-=======
-  This function evaluates the density :math:`\rho(r)` as the spatial grid generated
-  from the :py:func:`jrystal.grid.r_vectors`.
-
->>>>>>> 33691b5 (update)
-  In crystals, this is a little bit more complicated. If we consider the
-  components whose period is smaller than the unit cell as :math:`G` and the
-  components whose period is larger than the unit cell as :math:`k`, the most
-  general form of wave function is
-
-  .. math::
-
-    \psi(r) = \frac{1}{\sqrt{V}} \sum_k \sum_G c_{kG} e^{i(k+G)r}
-
-  However, according to bloch theorum, which uses extra periodic constraints,
-  the parametric form of wave function can be reduced to
-
-  .. math::
-
-    \psi(r) = \frac{1}{\sqrt{V}} \sum_k d_k e^{ikr}\sum_G c_{kG} e^{iGr}
-
-  The :math:`c_{kG}` part of the parameter can be computed from :py:func:`param_init`
-  and :py:func:`coeff`. The :math:`d_k` part of the parameter we refer to
-  :py:func:`jrystal.occupation`. For calculation of density, we only need
-  the :math:`c_{kG}` and :math:`o_k=d_k^2`, which we also call :math:`o_k` the occupation over
-  different :math:`k` frequencies. It is very intuitive because density is the
-  absolute square of the wave function.
-
-  Args:
-    coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension
-      which will be summed to get the overall density.
-      Therefore the shape is :code:`(..., num_kpts, num_bands, n1, n2, n3)`.
-    vol: volume of the unit cell, a real scalar.
-    occupation: the occupation over different k frequencies.
-<<<<<<< HEAD
-      The shape is `(..., num_kpts)`, it should have the same leading dimension
-      as `coeff`.
-      This is an option argument, when `occupation=None`, we compute the density
-      contribution from each $k$ without summing them. If `occupation` is
-      provided, we sum up all the density from each $k$ weighted by the
->>>>>>> 67db202 (update)
-=======
-      The shape is :code:`(..., num_kpts, num_bands)`, it should have the same leading dimension
-      as :code:`coeff`.
-      This is an option argument, when :code:`occupation=None`, we compute the density
-      contribution from each :math:`k` without summing them. If :code:`occupation` is
-      provided, we sum up all the density from each :math:`k` weighted by the
->>>>>>> 33691b5 (update)
       occupation.
 
   Returns:
     A real valued tensor that represents the density at the spatial grid
     computed from :py:func:`jrystal.grid.r_vectors`.
-<<<<<<< HEAD
-<<<<<<< HEAD
     The shape is :code:`(n1, n2, n3)` if :code:`occupation` is provided,
     else the shape is :code:`(..., num_kpts, num_bands, n1, n2, n3)`.
-=======
-    The shape is `(n1, n2, n3)` if `occupation` is provided,
-    else the shape is `(num_kpts, n1, n2, n3)`.
->>>>>>> 67db202 (update)
-=======
-    The shape is :code:`(n1, n2, n3)` if :code:`occupation` is provided,
-    else the shape is :code:`(..., num_kpts, num_bands, n1, n2, n3)`.
->>>>>>> 33691b5 (update)
   """
   wave_grid_arr = wave_grid(coeff, vol)
   dens = absolute_square(wave_grid_arr)
 
   if occupation is not None:
-<<<<<<< HEAD
-<<<<<<< HEAD
     occ = jnp.expand_dims(occupation, range(-3, 0))
     try:
       occ = jnp.broadcast_to(occ, dens.shape)
       dens = jnp.sum(dens * occ, axis=range(occupation.ndim))
-=======
-    occupation = jnp.expand_dims(occupation, range(-3, 0))
-    try:
-      occupation = jnp.broadcast_to(occupation, dens.shape)
-      dens = jnp.sum(dens * occupation, axis=range(3))
->>>>>>> 67db202 (update)
-=======
-    occ = jnp.expand_dims(occupation, range(-3, 0))
-    try:
-      occ = jnp.broadcast_to(occ, dens.shape)
-      dens = jnp.sum(dens * occ, axis=range(occupation.ndim))
->>>>>>> 33691b5 (update)
     except ValueError:
       raise ValueError(
         "Occupation should have a leading dimension that is the same as coeff."
@@ -571,11 +337,7 @@ def wave_r(
 
   .. math::
 
-<<<<<<< HEAD
     \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iGr}
-=======
-    \psi(r) = \frac{1}{\sqrt{V}} \sum_G c_{G} e^{iGr}
->>>>>>> 33691b5 (update)
 
   the :code:`coeff` provided is the :math:`c_{G}`, the :code:`cell_vectors` is
   used to generate the grid of frequency components $G$ by calling the function
@@ -586,15 +348,7 @@ def wave_r(
   it can have leading batch dimensions.
 
   Args:
-<<<<<<< HEAD
-<<<<<<< HEAD
     r: spatial location to evaluate the wave function, shape: (3,).
-=======
-    r: spatial location to evaluate the wave function, shape: (*batch, 3).
->>>>>>> 33691b5 (update)
-=======
-    r: spatial location to evaluate the wave function, shape: (3,).
->>>>>>> c44cf0a (update)
     coeff: wave function coefficients, which has a shape of
       :code:`(..., n1, n2, n3)`.
       it can be created from :py:func:`param_init` followed by :py:func:`coeff`.
@@ -603,15 +357,7 @@ def wave_r(
 
   Returns:
     Complex tensor that represents wave functions evaluated at location r,
-<<<<<<< HEAD
-<<<<<<< HEAD
     with shape of the leading dimensions of the coeff (...).
-=======
-    with shape (*batch,).
->>>>>>> 33691b5 (update)
-=======
-    with shape of the leading dimensions of the coeff (...).
->>>>>>> c44cf0a (update)
   """
   vol = volume(cell_vectors)
   n1, n2, n3 = coeff.shape[-3:]
@@ -619,8 +365,6 @@ def wave_r(
   if g_vector_grid is None:
     g_vector_grid = g_vectors(cell_vectors, [n1, n2, n3])
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   if r.shape != (3,):
     raise ValueError("r must have shape (3,)")
   leading_dims = coeff.shape[:-3]
@@ -628,22 +372,6 @@ def wave_r(
   output = jnp.exp(1j * g_vector_grid @ r)
   output = jnp.einsum("lxyz,xyz->skb", coeff_, output)
   output = jnp.reshape(output, leading_dims)
-=======
-  batch_dims = r.shape[:-1]
-  r_ = r.reshape((-1, r.shape[-1]))
-=======
-  if r.shape != (3,):
-    raise ValueError("r must have shape (3,)")
->>>>>>> c44cf0a (update)
-  leading_dims = coeff.shape[:-3]
-  coeff_ = coeff.reshape((-1, n1, n2, n3))
-  output = jnp.exp(1j * g_vector_grid @ r)
-  output = jnp.einsum("lxyz,xyz->skb", coeff_, output)
-<<<<<<< HEAD
->>>>>>> 33691b5 (update)
-=======
-  output = jnp.reshape(output, leading_dims)
->>>>>>> c44cf0a (update)
   return output / jnp.sqrt(vol)
 
 
