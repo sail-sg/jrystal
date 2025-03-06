@@ -5,7 +5,7 @@
 A summary of the variables and arguments used in this package, along with their meanings, are shown below.
 
 
-### Physical variables
+### Physical Variables
 | math_symbol |   variable_name   |           meaning        |
 |:-----------:|:------------------|:-------------------------|
 | $\bf{A}$         |``cell_vectors``            | cell translation vector  |
@@ -32,7 +32,7 @@ A summary of the variables and arguments used in this package, along with their 
 - The postfix ``_real`` is always omitted. If a variable does not have postfix ``_reciprocal``, it is in real space.
 
 
-### Arguments and Intermediate Variable
+### Arguments and Intermediate Variables
 |  variable_name  |  meaning     |
 |:----------------|--------------|
 | ``cutoff_energy`` |cut-off energy|
