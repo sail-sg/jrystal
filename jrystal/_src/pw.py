@@ -9,7 +9,7 @@ from jaxtyping import Array, Bool, Complex, Float
 from .grid import g_vectors
 from ._typing import OccupationArray, ScalarGrid
 from .unitary_module import unitary_matrix, unitary_matrix_param_init
-from .utils import absolute_square, reshape_coefficient, volume
+from .utils import absolute_square, expand_coefficient, volume
 
 
 def param_init(
@@ -17,7 +17,7 @@ def param_init(
   num_bands: int,
   num_kpts: int,
   freq_mask: ScalarGrid[Bool, 3],
-  restricted: bool = True,
+  spin_restricted: bool = True,
 ):
   r"""Initialize the raw parameters.
 
@@ -65,13 +65,13 @@ def param_init(
     num_bands: the number of bands.
     num_kpts: the number of k points.
     freq_mask: a 3D mask that denotes which frequency components are selected.
-    restricted: if :code:`True`, :code:`num_spin=2` else :code:`num_spin=1`.
+    spin_restricted: if :code:`True`, :code:`num_spin=2` else :code:`num_spin=1`.
 
   Returns:
     A complex type raw parameter of shape
     :code:`(num_spin, num_kpts, num_g, num_bands)`.
   """
-  num_spin = 1 if restricted else 2
+  num_spin = 1 if spin_restricted else 2
   num_g = np.sum(freq_mask).item()
   shape = (num_spin, num_kpts, num_g, num_bands)
   return unitary_matrix_param_init(key, shape, complex=True)
@@ -79,7 +79,7 @@ def param_init(
 
 def coeff(
   pw_param: Union[Array, Tuple], freq_mask: ScalarGrid[Bool, 3]
-) -> Complex[Array, "spin kpts band n1 n2 n3"]:
+) -> Complex[Array, "spin kpts band x y z"]:
   r"""Create the linear coefficients to combine the frequency components.
 
   This function takes a raw parameter of shape
@@ -113,17 +113,16 @@ def coeff(
     freq_mask: a 3D mask to select the frequency components.
 
   Returns:
-    Complex array of shape :code:`(num_spin, num_kpts, num_band, n1, n2, n3)`.
+    Complex array of shape :code:`(num_spin, num_kpts, num_band, x y z)`.
     It satisfies the unitary constraint that for any :code:`i,j`
     :code:`einsum('kabc,labc->kl', ret[i, j], ret[i, j])` is an identity matrix.
   """
   coeff = unitary_matrix(pw_param, complex=True)
-  coeff = jnp.swapaxes(coeff, -1, -2)
-  return reshape_coefficient(coeff, freq_mask)
+  return expand_coefficient(coeff, freq_mask)
 
 
 def wave_grid(
-  coeff: Complex[Array, "spin kpts band n1 n2 n3"],
+  coeff: Complex[Array, "spin kpts band x y z"],
   vol: Union[float, Array],
 ):
   r"""Wave function evaluated at a grid of spacial locations.
@@ -150,9 +149,9 @@ def wave_grid(
 
   .. code:: python
 
-    G = jrystal.grid.g_vectors(*args)  # (n1, n2, n3, 3)
-    R = jrystal.grid.r_vectors(*args)  # (n1, n2, n3, 3)
-    coefficients = ...  # (n1, n2, n3)
+    G = jrystal.grid.g_vectors(*args)  # (x y z, 3)
+    R = jrystal.grid.r_vectors(*args)  # (x y z, 3)
+    coefficients = ...  # (x y z)
     vol = ...
 
     def wave_function(r):
@@ -176,7 +175,7 @@ def wave_grid(
   factor in the IFFT (in 3D the :code:`np.prod(grid_sizes)`).
   2. we divide by the :math:`\sqrt{\Omega_\text{cell}}`.
 
-  The :code:`coeff` passed to this function has shape :code:`(..., n1, n2, n3)`,
+  The :code:`coeff` passed to this function has shape :code:`(..., x y z)`,
   it can have any leading dimension.
   It can be created using :py:func:`param_init` and :py:func:`coeff`.
   :py:func:`param_init` creates a raw parameter and :py:func:`coeff` converts
@@ -185,7 +184,7 @@ def wave_grid(
 
   Args:
     coeff: linear combination coefficients over the 3D fourier components.
-      shape is :code:`(..., n1, n2, n3)` where :code:`(n1, n2, n3)` is the shape of the
+      shape is :code:`(..., x y z)` where :code:`(x y z)` is the shape of the
       3D frequency components generated
       from :py:func:`jrystal.grid.g_vectors`.
     vol: volume of the unit cell.
@@ -200,7 +199,7 @@ def wave_grid(
 
 
 def density_grid(
-  coeff: Complex[Array, "spin kpts band n1 n2 n3"],
+  coeff: Complex[Array, "spin kpts band x y z"],
   vol: Union[float, Array],
   occupation: Optional[OccupationArray] = None
 ) -> ScalarGrid[Complex, 3]:
@@ -239,7 +238,7 @@ def density_grid(
   Args:
     coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension
       which will be summed to get the overall density.
-      Therefore the shape is :code:`(..., num_kpts, num_bands, n1, n2, n3)`.
+      Therefore the shape is :code:`(..., num_kpts, num_bands, x y z)`.
     vol: volume of the unit cell, a real scalar.
     occupation: the occupation over different k frequencies.
       The shape is :code:`(..., num_kpts, num_bands)`, it should have the same leading dimension
@@ -252,8 +251,8 @@ def density_grid(
   Returns:
     A real valued tensor that represents the density at the spatial grid
     computed from :py:func:`jrystal.grid.r_vectors`.
-    The shape is :code:`(n1, n2, n3)` if :code:`occupation` is provided,
-    else the shape is :code:`(..., num_kpts, num_bands, n1, n2, n3)`.
+    The shape is :code:`(x y z)` if :code:`occupation` is provided,
+    else the shape is :code:`(..., num_kpts, num_bands, x y z)`.
   """
   wave_grid_arr = wave_grid(coeff, vol)
   dens = absolute_square(wave_grid_arr)
@@ -272,7 +271,7 @@ def density_grid(
 
 
 def density_grid_reciprocal(
-  coeff: Complex[Array, "spin kpts band n1 n2 n3"],
+  coeff: Complex[Array, "spin kpts band x y z"],
   vol: Union[float, Array],
   occupation: Optional[OccupationArray] = None
 ) -> ScalarGrid[Complex, 3]:
@@ -322,7 +321,7 @@ def density_grid_reciprocal(
 
 def wave_r(
   r: Float[Array, "3"],
-  coeff: Complex[Array, "spin kpts band n1 n2 n3"],
+  coeff: Complex[Array, "spin kpts band x y z"],
   cell_vectors: Float[Array, "3 3"],
   g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
 ) -> Complex[Array, "spin kpts band *b"]:
@@ -344,13 +343,13 @@ def wave_r(
   :py:func:`jrystal.grid.g_vectors`. The :code:`r` is the location where we
   evaluate the wave function.
 
-  The :code:`coeff` passed to this function has shape :code:`(..., n1, n2, n3)`,
+  The :code:`coeff` passed to this function has shape :code:`(..., x y z)`,
   it can have leading batch dimensions.
 
   Args:
     r: spatial location to evaluate the wave function, shape: (3,).
     coeff: wave function coefficients, which has a shape of
-      :code:`(..., n1, n2, n3)`.
+      :code:`(..., x y z)`.
       it can be created from :py:func:`param_init` followed by :py:func:`coeff`.
     cell_vectors: the cell vectors of the crystal unit cell.
     g_vector_grid: to be resolved.
@@ -360,15 +359,15 @@ def wave_r(
     with shape of the leading dimensions of the coeff (...).
   """
   vol = volume(cell_vectors)
-  n1, n2, n3 = coeff.shape[-3:]
+  x, y, z = coeff.shape[-3:]
 
   if g_vector_grid is None:
-    g_vector_grid = g_vectors(cell_vectors, [n1, n2, n3])
+    g_vector_grid = g_vectors(cell_vectors, [x, y, z])
 
   if r.shape != (3,):
     raise ValueError("r must have shape (3,)")
   leading_dims = coeff.shape[:-3]
-  coeff_ = coeff.reshape((-1, n1, n2, n3))
+  coeff_ = coeff.reshape((-1, x, y, z))
   output = jnp.exp(1j * g_vector_grid @ r)
   output = jnp.einsum("lxyz,xyz->skb", coeff_, output)
   output = jnp.reshape(output, leading_dims)
@@ -377,7 +376,7 @@ def wave_r(
 
 def density_r(
   r: Float[Array, "3"],
-  coeff: Complex[Array, "spin kpts band n1 n2 n3"],
+  coeff: Complex[Array, "spin kpts band x y z"],
   cell_vectors: Float[Array, "3 3"],
   g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
   occupation: Optional[OccupationArray] = None,
@@ -388,13 +387,13 @@ def density_r(
   This function computes the density at location :math:`r`. If occupation is
   not provided, it simply returns the absolute square of the :py:func:`wave_r`.
   If occupation is provided, the :code:`coeff` needs to have a shape of
-  :code:`(num_spin, num_kpts, num_bands, n1, n2, n3)`, the :code:`occupation`
+  :code:`(num_spin, num_kpts, num_bands, x y z)`, the :code:`occupation`
   needs to have the dimension of the :code:`(num_spin, num_kpts, num_bands)`.
 
   Args:
     r: spatial location to evaluate the density, shape: (3,).
     coeff: wave function coefficients, which has a shape of
-      :code:`(num_spin, num_kpts, num_bands, n1, n2, n3)`.
+      :code:`(num_spin, num_kpts, num_bands, x y z)`.
       it can be created from :py:func:`param_init` followed by :py:func:`coeff`.
     cell_vectors: the cell vectors of the crystal unit cell.
     g_vector_grid: the G vectors computed from
@@ -413,7 +412,7 @@ def density_r(
 
 def nabla_density_r(
   r: Float[Array, "3"],
-  coeff: Complex[Array, "spin kpts band n1 n2 n3"],
+  coeff: Complex[Array, "spin kpts band x y z"],
   cell_vectors: Float[Array, "3 3"],
   g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
   occupation: Optional[OccupationArray] = None,
@@ -425,7 +424,7 @@ def nabla_density_r(
   Args:
     r: spatial location to evaluate the density, shape: (3,).
     coeff: wave function coefficients, which has a shape of
-      :code:`(num_spin, num_kpts, num_bands, n1, n2, n3)`.
+      :code:`(num_spin, num_kpts, num_bands, x y z)`.
       it can be created from :py:func:`param_init` followed by :py:func:`coeff`.
     cell_vectors: the cell vectors of the crystal unit cell.
     g_vector_grid: the G vectors computed from
@@ -446,7 +445,7 @@ def nabla_density_r(
 
 def nabla_density_grid(
   r: Float[Array, "3"],
-  coeff: Complex[Array, "spin kpts band n1 n2 n3"],
+  coeff: Complex[Array, "spin kpts band x y z"],
   cell_vectors: Float[Array, "3 3"],
   g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
   occupation: Optional[OccupationArray] = None,
@@ -459,7 +458,7 @@ def nabla_density_grid(
   Args:
     coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension
       which will be summed to get the overall density.
-      Therefore the shape is :code:`(..., num_kpts, num_bands, n1, n2, n3)`.
+      Therefore the shape is :code:`(..., num_kpts, num_bands, x y z)`.
     vol: volume of the unit cell, a real scalar.
     occupation: the occupation over different k frequencies.
       The shape is :code:`(..., num_kpts, num_bands)`, it should have the same leading dimension
@@ -472,8 +471,8 @@ def nabla_density_grid(
   Returns:
     A real valued tensor that represents the density derivative at the spatial
     grid computed from :py:func:`jrystal.grid.r_vectors`.
-    The shape is :code:`(n1, n2, n3, 3)` if :code:`occupation` is provided,
-    else the shape is :code:`(..., num_kpts, num_bands, n1, n2, n3, 3)`.
+    The shape is :code:`(x y z, 3)` if :code:`occupation` is provided,
+    else the shape is :code:`(..., num_kpts, num_bands, x y z, 3)`.
   """
 
   r = jnp.reshape(r, (-1))
@@ -482,10 +481,10 @@ def nabla_density_grid(
     raise ValueError("r must have shape (3,)")
 
   vol = volume(cell_vectors)
-  n1, n2, n3 = coeff.shape[-3:]
+  nx, ny, nz = coeff.shape[-3:]
 
   if g_vector_grid is None:
-    g_vector_grid = g_vectors(cell_vectors, [n1, n2, n3])
+    g_vector_grid = g_vectors(cell_vectors, [nx, ny, nz])
 
   gr = jnp.dot(g_vector_grid, r)
 

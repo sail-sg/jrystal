@@ -255,32 +255,3 @@ def hamiltonian_matrix_basis(
 
   hamil_basis = jax.vmap(hamil_k)(kpts)
   return hamil_basis
-
-
-def _hamiltonian_matrix_basis(
-  freq_mask: Int[Array, "x y z"],
-  positions: Float[Array, "atom 3"],
-  charges: Int[Array, "atom"],
-  effictive_density_grid: Float[Array, "x y z"],
-  g_vector_grid: Float[Array, "x y z 3"],
-  kpts: Float[Array, "kpt 3"],
-  vol: Float,
-  xc: str = 'lda',
-  kohn_sham: bool = True,
-) -> Complex[Array, "kpt band band"]:
-  
-  v_eff = potential.effective(
-    effictive_density_grid,
-    positions,
-    charges,
-    g_vector_grid,
-    vol,
-    split=False,
-    xc=xc,
-    kohn_sham=kohn_sham
-  )
-  cell_vectors = grid.g2cell_vectors(g_vector_grid)
-  r_vecs = grid.r_vectors(cell_vectors, g_vector_grid.shape[:-1])
-  g_vec_list = jnp.reshape(g_vector_grid.at[freq_mask, :].get(), [-1, 3])
-
-  _gr = jnp.einsum("g d, *n d -> g *n", g_vec_list,)
