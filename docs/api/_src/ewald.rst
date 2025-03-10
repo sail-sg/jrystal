@@ -1,4 +1,4 @@
-Ewald
+ewald
 =====
 
 .. automodule:: jrystal._src.ewald

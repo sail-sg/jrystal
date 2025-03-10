@@ -1,4 +1,4 @@
-Pseudopotential
+pseudopotential
 ==============
 
 .. automodule:: jrystal.pseudopotential

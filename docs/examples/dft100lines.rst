@@ -1,5 +1,6 @@
+========================================
 DFT Total Energy Calculation in Less than 50 Lines
-===================================================
+========================================
 
 This tutorial demonstrates how to perform a Density Functional Theory (DFT) total energy calculation for a diamond crystal using ``jrystal``. We'll walk through each step of the calculation, from structure setup to energy optimization.
 

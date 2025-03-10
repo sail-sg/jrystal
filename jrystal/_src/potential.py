@@ -5,47 +5,40 @@ import jax.numpy as jnp
 from jax.lax import stop_gradient
 from jaxtyping import Array, Complex, Float
 
-from ._typing import ScalarGrid, VectorGrid
-
 
 def hartree_reciprocal(
-  density_grid_reciprocal: ScalarGrid[Complex, 3],
-  g_vector_grid: VectorGrid[Float, 3],
+  density_grid_reciprocal: Complex[Array, 'x y z'],
+  g_vector_grid: Float[Array, 'x y z 3'],
   kohn_sham: bool = False
-) -> ScalarGrid[Complex, 3]:
-  r"""
-  Compute the Hartree potential in reciprocal space.
+) -> Complex[Array, 'x y z']:
+  r"""Calculate the Hartree potential in reciprocal space.
 
-  This function calculates the Hartree potential evaluated at reciprocal grid
-  from the electron density in reciprocal space and reciprocal grid vectors.
-
-  The Hartree potential induced by the electron density $n(r)$ follows
-  the following Poisson equation:
+  The Hartree potential represents the classical electrostatic interaction between electrons. The calculation is performed in reciprocal space for efficiency.
+  The potential satisfies the Poisson equation:
 
   .. math::
-    \Delta V(r) = -4 \pi n(r)
+      \nabla^2 V_H(\mathbf{r}) = -4\pi \rho(\mathbf{r})
 
-  with periodic boundary condition. Applying Fourier transform to both sides,
-  one obtains their relation in reciprocal space:
+  with periodic boundary conditions. In reciprocal space, this becomes:
 
   .. math::
-    \hat{V}(G) = 4 \pi \dfrac{\hat{n}(G)}{\|G\|^2},
-    \hat{V}(0) = 0.
+      \hat{V}_H(\mathbf{G}) = 4\pi \frac{\hat{n}(\mathbf{G})}{|\mathbf{G}|^2},
+      \quad \hat{V}_H(\mathbf{0}) = 0
 
-  TODO: we may need to explain kohn_sham?
+  where:
+  
+  - :math:`\hat{V}_H(\mathbf{G})` is the Hartree potential in reciprocal space
+  - :math:`\hat{n}(\mathbf{G})` is the electron density in reciprocal space
+  - :math:`\mathbf{G}` is the reciprocal lattice vector
 
   Args:
-    density_grid_reciprocal (ScalarGrid[Complex, 3]): the electron density on
-    reciprocal space lattice.
-    g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.
-    kohn_sham (bool, optional): If True, use Kohn-Sham potential. Defaults to
-    False.
+    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in 
+      reciprocal space.
+    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
+    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
 
   Returns:
-    ScalarGrid[Complex, 3]: Hartree potential evaluated at reciprocal lattice
-    vector. If density_grid_reciprocal has batch axes, the output will
-    keep them.
-
+    Complex[Array, 'x y z']: Hartree potential in reciprocal space. If  density_grid_reciprocal has batch axes, they are preserved in the output.
   """
   dim = g_vector_grid.shape[-1]
   g_vec_square = jnp.sum(g_vector_grid**2, axis=-1)  # [x y z]
@@ -65,30 +58,33 @@ def hartree_reciprocal(
 
 
 def hartree(
-  density_grid_reciprocal: ScalarGrid[Complex, 3],
-  g_vector_grid: VectorGrid[Float, 3],
+  density_grid_reciprocal: Complex[Array, 'x y z'],
+  g_vector_grid: Float[Array, 'x y z 3'],
   kohn_sham: bool = False
-) -> ScalarGrid[Complex, 3]:
-  r"""
-  Compute the Hartree potential in real space.
+) -> Complex[Array, 'x y z']:
+  r"""Calculate the Hartree potential in real space.
 
-  This function applies inverse Fourier transform to the output of
-  :py:func:`hartree_reciprocal` to get the Hartree potential evaluated at real
-  space grid points.
+  Computes the Hartree potential by applying inverse Fourier transform to the
+  reciprocal space potential. The real-space Hartree potential represents the
+  classical electrostatic interaction between electrons:
+
+  .. math::
+      V_H(\mathbf{r}) = \mathcal{F}^{-1}[\hat{V}_H(\mathbf{G})]
+
+  where:
+  
+  - :math:`V_H(\mathbf{r})` is the Hartree potential in real space
+  - :math:`\hat{V}_H(\mathbf{G})` is the Hartree potential in reciprocal space
+  - :math:`\mathcal{F}^{-1}` denotes the inverse Fourier transform
 
   Args:
-    density_grid_reciprocal (ScalarGrid[Complex, 3]): the electron density on
-    reciprocal space lattice.
-    g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.
-    kohn_sham (bool, optional): If True, use Kohn-Sham potential. Defaults to
-    False.
-
+    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in 
+      reciprocal space.
+    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
+    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
 
   Returns:
-    ScalarGrid[Complex, 3]: Hartree potential evaluated at real space grid
-    points. If density_grid_reciprocal has batch axes, the output will
-    keep them.
-
+    Complex[Array, 'x y z']: Hartree potential in real space. If density_grid_reciprocal has batch axes, they are preserved in the output.
   """
   har_pot_grid_rcprl = hartree_reciprocal(
     density_grid_reciprocal, g_vector_grid, kohn_sham
@@ -99,43 +95,34 @@ def hartree(
 def external_reciprocal(
   position: Float[Array, 'atom 3'],
   charge: Float[Array, 'atom'],
-  g_vector_grid: VectorGrid[Float, 3],
+  g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
-) -> ScalarGrid[Complex, 3]:
-  r"""
-    Compute the external potential in reciprocal space.
+) -> Complex[Array, 'x y z']:
+  r"""Calculate the external potential in reciprocal space.
 
-    This function calculates the external potential evaluated at reciprocal
-    grid from the nucleus position, charge, reciprocal lattice vectors, and
-    crystal volume.
+  The external potential represents the Coulomb interaction between electrons
+  and nuclei. In reciprocal space, it is computed as a sum over atomic
+  contributions:
 
-    The external potential induced by the nucleus charge can be evaluated in
-    reciprocal space as:
+  .. math::
+      \hat{V}_{\text{ext}}(\mathbf{G}) = \sum_{\alpha} Z_{\alpha}
+      e^{-i\mathbf{G}\cdot\mathbf{R}_{\alpha}} v(\mathbf{G})
 
-    .. math::
-        V(G) = \sum_k s_k(G) v_k(G)
+  where:
 
-    The summation is over all atoms in the unit cell. $s_k(G)$ and $v_k(G)$ are
-    structure factor and form factor respectively and are defined as:
+  - :math:`Z_{\alpha}` is the nuclear charge of atom :math:`\alpha`
+  - :math:`\mathbf{R}_{\alpha}` is the position of atom :math:`\alpha`
+  - :math:`v(\mathbf{G}) = -4\pi/|\mathbf{G}|^2` is the Coulomb potential in reciprocal space
+  - :math:`\mathbf{G}` is the reciprocal lattice vector
 
-    .. math::
-        s_k(G) = exp(iG\tau_k)
-        v_k(G) = - \dfrac{4 \pi Z_k e^2}{\|G\|^2}
+  Args:
+    position (Float[Array, 'atom 3']): Atomic positions in the unit cell.
+    charge (Float[Array, 'atom']): Nuclear charges.
+    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
+    vol (Float): Volume of the unit cell.
 
-    where $\tau_k$ is the position of atom $k$ in the unit cell, $Z_k$ is the
-    charge of atom $k$, $G$ is the reciprocal lattice vector, and $e$ is the
-    unit charge of the electron.
-
-    Args:
-      position (VectorGrid[Float, 3]): Coordinates of atoms in a unit cell.
-      charge (VectorGrid[Float, 1]): Charges of atoms.
-      g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.
-      vol (Float): the volume of unit cell.
-
-    Returns:
-        ScalarGrid[Complex, 3]: external potential evaluated at reciprocal
-        grid points
-
+  Returns:
+    Complex[Array, 'x y z']: External potential in reciprocal space.
   """
   dim = position.shape[-1]
   g_norm_square = jnp.sum(g_vector_grid**2, axis=-1)
@@ -156,43 +143,61 @@ def external_reciprocal(
 def external(
   position: Float[Array, 'atom 3'],
   charge: Float[Array, 'atom'],
-  g_vector_grid: VectorGrid[Float, 3],
+  g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
-) -> ScalarGrid[Complex, 3]:
-  r"""
-  Compute the external potential in real space.
+) -> Complex[Array, 'x y z']:
+  r"""Calculate the external potential in real space.
 
-  This function applies inverse Fourier transform to the output of
-  :py:func:`external_reciprocal` to get the external potential evaluated at
-  real space grid points.
+  Computes the external potential by applying inverse Fourier transform to the
+  reciprocal space potential. The real-space external potential represents the
+  Coulomb interaction between electrons and nuclei:
+
+  .. math::
+      V_{\text{ext}}(\mathbf{r}) = \mathcal{F}^{-1}[\hat{V}_{\text{ext}}(\mathbf{G})]
+
+  where:
+  
+  - :math:`V_{\text{ext}}(\mathbf{r})` is the external potential in real space
+  - :math:`\hat{V}_{\text{ext}}(\mathbf{G})` is the external potential in reciprocal space
+  - :math:`\mathcal{F}^{-1}` denotes the inverse Fourier transform
 
   Args:
-      position (VectorGrid[Float, 3]): Coordinates of atoms in a unit cell.
-      charge (VectorGrid[Float, 1]): Charges of atoms.
-      g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.
-      vol (Float): the volume of unit cell.
+    position (Float[Array, 'atom 3']): Atomic positions in the unit cell.
+    charge (Float[Array, 'atom']): Nuclear charges.
+    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
+    vol (Float): Volume of the unit cell.
 
   Returns:
-      ScalarGrid[Complex, 3]: external potential evaluated at reciprocal
-      grid points
-
+    Complex[Array, 'x y z']: External potential in real space.
   """
   ext_pot_grid_rcprl = external_reciprocal(position, charge, g_vector_grid, vol)
   return jnp.fft.ifftn(ext_pot_grid_rcprl, axes=range(-3, 0))
 
 
-def _lda_density(density_grid: ScalarGrid[Float, 3]) -> ScalarGrid[Float, 3]:
-  """Compute the energy density of the LDA exchange-correlation functional.
+def _lda_density(
+  density_grid: Float[Array, '*d x y z']
+) -> Float[Array, '*d x y z']:
+  r"""Calculate the LDA exchange-correlation energy density.
+
+  Implements the Local Density Approximation (LDA) for the exchange-correlation
+  energy density in the spin-unpolarized case:
 
   .. math::
-    \epsilon_{xc} = -\dfrac{3}{4} \left(\dfrac{3}{\pi}\right)^{1/3} n(r)^{1/3}
+      \varepsilon_{xc}^{\text{LDA}}[n] = -\frac{3}{4}
+      \left(\frac{3}{\pi}\right)^{1/3} n(\mathbf{r})^{1/3}
+
+  where:
+  
+  - :math:`n(\mathbf{r})` is the electron density
+  - :math:`\varepsilon_{xc}^{\text{LDA}}` is the exchange-correlation energy density
 
   Args:
-      density_grid (ScalarGrid[Float, 3]): the electron density on real space
-      grid.
+    density_grid (Float[Array, '*d x y z']): Real-space electron density.
+      May include batch dimensions.
 
   Returns:
-    ScalarGrid[Float, 3]: lda energy density on real space grid
+    Float[Array, '*d x y z']: LDA exchange-correlation energy density.
+      Preserves any batch dimensions from the input.
   """
   t3 = 3**(0.1e1 / 0.3e1)
   t4 = jnp.pi**(0.1e1 / 0.3e1)
@@ -207,27 +212,30 @@ def _lda_density(density_grid: ScalarGrid[Float, 3]) -> ScalarGrid[Float, 3]:
 
 
 def xc_lda(
-  density_grid: ScalarGrid[Float, 3],
+  density_grid: Float[Array, 'x y z'],
   kohn_sham: bool = False
-) -> ScalarGrid[Float, 3]:
-  r"""local density approximation potential.
+) -> Float[Array, 'x y z']:
+  r"""Calculate the LDA exchange-correlation potential.
 
-  See Eq. (7.4.9) Robert G. Parr, Yang Weitao 1994
-
-  NOTE: this is a non-polarized lda potential
+  Implements the Local Density Approximation (LDA) for the exchange-correlation
+  potential in the spin-unpolarized case. The potential is obtained as the
+  functional derivative of the LDA energy:
 
   .. math::
-    v_lda = - (3 * n(r) / \pi )^{\frac 1/3 }
+      v_{xc}^{\text{LDA}}(\mathbf{r}) = -\left(\frac{3\rho(\mathbf{r})}{\pi}
+      \right)^{1/3}
+
+  where:
+  
+  - :math:`\rho(\mathbf{r})` is the electron density
+  - :math:`v_{xc}^{\text{LDA}}` is the exchange-correlation potential
 
   Args:
-    density_grid (ScalarGrid[Float, 3]): the electron density on real space
-      grid.
-    vol (Float): the volume of unit cell.
+    density_grid (Float[Array, 'x y z']): Real-space electron density.
+    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
 
   Returns:
-    ScalarGrid[Float, 3]: the variation of the lda energy with respect to
-      the density.
-
+    Float[Array, 'x y z']: LDA exchange-correlation potential.
   """
   dim = density_grid.ndim
   if dim > 3:
@@ -243,50 +251,52 @@ def xc_lda(
 
 
 def effective(
-  density_grid: ScalarGrid[Float, 3],
+  density_grid: Float[Array, 'x y z'],
   position: Float[Array, "num_atom 3"],
   charge: Float[Array, "num_atom"],
-  g_vector_grid: VectorGrid[Float, 3],
+  g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
   split: bool = False,
   xc: str = "lda",
   kohn_sham: bool = False,
   spin_restricted: bool = True,
-) -> Union[Tuple[Array, Array, Array], Array]:
-  """
-  Compute the effective potentials in real space.
+) -> Union[
+  Tuple[Float[Array, 'x y z'], Float[Array, 'x y z'], Float[Array, 'x y z']], Float[Array, 'x y z']
+]:
+  r"""Calculate the effective potential for electronic structure calculations.
+
+  The effective potential is the sum of three contributions:
 
   .. math::
-    \hat V|\psi>
-    \hat V_eff = \hat V_\{hartree} + \hat V_\{ext} + \hat V_\{xc}
+      V_{\text{eff}}(\mathbf{r}) = V_H(\mathbf{r}) + V_{\text{ext}}(\mathbf{r})
+      + V_{xc}(\mathbf{r})
+
+  where:
+
+  - :math:`V_H(\mathbf{r})` is the Hartree potential
+  - :math:`V_{\text{ext}}(\mathbf{r})` is the external (nuclear) potential
+  - :math:`V_{xc}(\mathbf{r})` is the exchange-correlation potential
+  
+  .. warning::
+    Currently supports only LDA exchange-correlation functional.
 
   Args:
-    density_grid (ScalarGrid[Float, 3]): The Hamiltonian density grid.
-    position (Array): Atomic positions.
-    charge (Array): Atomic charges.
-    g_vector_grid (VectorGrid[Float, 3]): The G vector grid.
-    vol (Float): Volume of the system.
-    split (bool): If True, return split potentials
-    [V_hartree, V_external, V_xc], else return the sum. Defaults to False.
-    xc (str): Exchange-correlation functional. Defaults to "lda".
-    kohn_sham (bool): If True, use Kohn-Sham potential. Defaults to False.
-    spin_restricted (bool): whether to use spin-restricted calculation. If True,
-     the output potential does not have spin axis.
+    density_grid (Float[Array, 'x y z']): Real-space electron density.
+    position (Float[Array, "num_atom 3"]): Atomic positions in the unit cell.
+    charge (Float[Array, "num_atom"]): Nuclear charges.
+    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
+    vol (Float): Volume of the unit cell.
+    split (bool, optional): If True, return individual potential components.
+      Defaults to False.
+    xc (str, optional): Exchange-correlation functional type. Only "lda" is
+      currently supported. Defaults to "lda".
+    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
+    spin_restricted (bool, optional): If True, use spin-restricted calculation.
+      Defaults to True.
 
   Returns:
-    Tuple[Array, Array, Array] | Array : Hartree, external, and
-      exchange-correlation potentials. If split is false, then will return
-      the sum of hartree, external and xc potentials. If spin_restricted is
-      True, the output potential does not have spin axis, otherwise it has two
-      spin-axis channels.
-
-  Note:
-    Now only support lda potential.
-
-  TODO:
-    support all xc potentials using jax-xc.
+    Union[Tuple[Array, Array, Array], Array]: If split is True, returns (Hartree, external, exchange-correlation) potentials. Otherwise returns their sum as the total effective potential.
   """
-
   dim = position.shape[-1]
 
   assert density_grid.ndim in [dim, dim + 1]  # w/w\o spin channel

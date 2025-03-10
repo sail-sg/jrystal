@@ -1,4 +1,4 @@
-Core Utilities
+utils
 =============
 
 .. automodule:: jrystal._src.utils

@@ -1,7 +1,5 @@
 import argparse
-import yaml
 import jrystal as jr
-from jrystal.config import JrystalConfigDict
 
 parser = argparse.ArgumentParser(
   prog='Jrystal', description='Command for Jrystal package.'

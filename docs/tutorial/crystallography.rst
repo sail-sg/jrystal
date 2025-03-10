@@ -38,12 +38,12 @@ The reciprocal lattice vectors, :math:`\boldsymbol{b}_1`, :math:`\boldsymbol{b}_
 .. math::
 
   \begin{align}
-    \boldsymbol{b}_1 &= 2\pi \dfrac{ \boldsymbol{a}_2 \times \boldsymbol{a}_3 }{ \vert \Omega{\text{cell}} \vert }, \\
-    \boldsymbol{b}_2 &= 2\pi \dfrac{ \boldsymbol{a}_1 \times \boldsymbol{a}_3 }{ \vert \Omega{\text{cell}} \vert }, \\
-    \boldsymbol{b}_3 &= 2\pi \dfrac{ \boldsymbol{a}_1 \times \boldsymbol{a}_2 }{ \vert \Omega{\text{cell}} \vert }, 
+    \boldsymbol{b}_1 &= 2\pi \dfrac{ \boldsymbol{a}_2 \times \boldsymbol{a}_3 }{ \Vert \Omega{\text{cell}} \Vert }, \\
+    \boldsymbol{b}_2 &= 2\pi \dfrac{ \boldsymbol{a}_1 \times \boldsymbol{a}_3 }{ \Vert \Omega{\text{cell}} \Vert }, \\
+    \boldsymbol{b}_3 &= 2\pi \dfrac{ \boldsymbol{a}_1 \times \boldsymbol{a}_2 }{ \Vert \Omega{\text{cell}} \Vert }, 
   \end{align}
 
-with the unit cell volume given by :math:`\vert \Omega_{\text{cell}} \vert = \big\vert (\boldsymbol{a}_1 \times \boldsymbol{a}_2) \cdot \boldsymbol{a}_3 \big\vert`. The reciprocal vectors satisfy the condition:
+with the unit cell volume given by :math:`\Vert \Omega_{\text{cell}} \Vert = \big\Vert (\boldsymbol{a}_1 \times \boldsymbol{a}_2) \cdot \boldsymbol{a}_3 \big\Vert`. The reciprocal vectors satisfy the condition:
 
 .. math::
 
@@ -68,18 +68,39 @@ The term :math:`\boldsymbol{k}`-points references specific locations within the 
 Bloch's theorem
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Define the translation operator $\hat{\mathbf{T}}_\mathbf{n}$ as:
-$$
+.. role:: red
+  
+    :class: red
+    
+.. raw:: html
+
+    <style>
+    .red {
+        color:red;
+    }
+    </style>
+
+:red:`[tb] I don't think this paragraph is understandable for most of the readers.`
+
+Define the translation operator :math:`\hat{\mathbf{T}}_\mathbf{n}` as:
+
+.. math::
+
   \hat{\mathbf{T}}_n\psi(\mathbf{r}) = \psi(\mathbf{r} + \mathbf{n}) 
-$$
+
 
 In crystalline system, as the externel potential is periodic, the
 Hamiltonian commutes with the translation operator, i.e.
-$$
+
+.. math::
+
   [\hat{\text{H}}, \hat{\mathbf{T}}_\mathbf{n}] = 0, \quad \forall \mathbf{n}
-$$
+
 Moreover, translation operators with different translation vector $\mathbf{n}$ trivially commute. Therefore, all these operators share the same set of eigenvector. It is well-known that the eigenvalues of the translation operators lies on the unit circle and all eigenvectors have the following form:
-$$
+
+
+.. math::
+
   \hat{\mathbf{T}}_n\psi(\mathbf{r}) = e^{-i\mathbf{k}\cdot \mathbf{n}}\psi(\mathbf{r})
-$$
-where $\psi(\mathbf{r})$ is a periodic wave function over the unit cell. Therefore, any wave function of the orbital should be a "Block wave" of the form above, this is the so-called Block's theorem.
+
+where :math:`\psi(\mathbf{r})` is a periodic wave function over the unit cell. Therefore, any wave function of the orbital should be a "Block wave" of the form above, this is the so-called Block's theorem.

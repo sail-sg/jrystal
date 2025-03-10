@@ -9,6 +9,7 @@ In this example, we will perform a self-consistent field (SCF) calculation using
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
+
   import jax
   import jax.numpy as jnp
   import jrystal as jr

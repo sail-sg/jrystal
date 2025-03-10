@@ -13,31 +13,31 @@ from .utils import absolute_square, expand_coefficient, volume
 
 
 def param_init(
-  key,
+  key: Array,
   num_bands: int,
   num_kpts: int,
-  freq_mask: ScalarGrid[Bool, 3],
+  freq_mask: Bool[Array, "x y z"],
   spin_restricted: bool = True,
-):
+) -> dict:
   r"""Initialize the raw parameters.
 
   This function generates a random tensor of shape
   :code:`(num_spin, num_kpts, num_g, num_bands)`, where :code:`num_g` is the
   number of :code:`True` items in the :code:`freq_mask`.
 
-  In planewave based calculation, a wave function is represented as a
-  linear combination of the fourier series in 3D. Therefore to create one
+  In planewave-based calculation, a wave function is represented as a
+  linear combination of the Fourier series in 3D. Therefore, to create one
   wave function we need a 3D shaped tensor to represent the mixing
-  coefficients on each of the frequency component (denoted as :code:`G`).
+  coefficients on each frequency component (denoted as :code:`G`).
   :code:`freq_mask` provides a 3D mask to decide which frequency components
   are selected, the number of selected components is denoted as :code:`num_g`.
 
-  The :code:`num_bands` & :code:`num_kpts` is a bit hard to explain, intuitively,
-  the wave functions consists of high frequency components that has a period
-  smaller than the unit cell (denoted :math:`G`) and components that has a period
+  The :code:`num_bands` & :code:`num_kpts` are a bit hard to explain. Intuitively,
+  the wave functions consist of high frequency components that have a period
+  smaller than the unit cell (denoted :math:`G`) and components that have a period
   larger than the unit cell (denoted :math:`k`).
 
-  The form of wave function under solid state
+  The form of wave function under solid state is:
 
   .. math::
 
@@ -48,28 +48,27 @@ def param_init(
 
   Extension reads:
   1. Why and how to mask the frequency components.
-  2. Bloch theorum.
+  2. Bloch theorem.
 
-  As far as this function is concerned, it simply just returns a randomly
+  As far as this function is concerned, it simply returns a randomly
   initialized parameter of shape :code:`(num_spin, num_kpts, num_g, num_bands)`.
-  The input arguments to this function is only used to determine the shape.
+  The input arguments to this function are only used to determine the shape.
 
-  Note that this function returns the raw parameter that can not be used
+  Note that this function returns the raw parameter that cannot be used
   directly to weight the frequency components, as in quantum chemistry we
   require the wave functions to be orthogonal to each other.
-  check :py:func:`coeff` for converting the raw parameter into an unitary
+  Check :py:func:`coeff` for converting the raw parameter into a unitary
   tensor.
 
   Args:
-    key: random key for initializing the parameters.
-    num_bands: the number of bands.
-    num_kpts: the number of k points.
-    freq_mask: a 3D mask that denotes which frequency components are selected.
-    spin_restricted: if :code:`True`, :code:`num_spin=2` else :code:`num_spin=1`.
+    key (Array): Random key for initializing the parameters.
+    num_bands (int): The number of bands.
+    num_kpts (int): The number of k points.
+    freq_mask (Bool[Array, "x y z"]): A 3D mask that denotes which frequency components are selected.
+    spin_restricted (bool): If :code:`True`, :code:`num_spin=2` else :code:`num_spin=1`.
 
   Returns:
-    A complex type raw parameter of shape
-    :code:`(num_spin, num_kpts, num_g, num_bands)`.
+    Complex[Array, "spin kpts num_g bands"]: A complex type raw parameter of shape :code:`(num_spin, num_kpts, num_g, num_bands)`.
   """
   num_spin = 1 if spin_restricted else 2
   num_g = np.sum(freq_mask).item()
@@ -78,44 +77,45 @@ def param_init(
 
 
 def coeff(
-  pw_param: Union[Array, Tuple], freq_mask: ScalarGrid[Bool, 3]
-) -> Complex[Array, "spin kpts band x y z"]:
+  pw_param: Union[Array, Tuple],
+  freq_mask: Bool[Array, "x y z"]
+) -> Complex[Array, "spin kpt band x y z"]:
   r"""Create the linear coefficients to combine the frequency components.
 
   This function takes a raw parameter of shape
-  :code:`(num_spin, num_kpts, num_g, num_bands)`, orthogonalize for the last
+  :code:`(num_spin, num_kpts, num_gpts, num_bands)`, orthogonalizes for the last
   two dimensions, so that the resulting tensor satisfies the unitary constraint
   :code:`einsum('kabc,labc->kl', ret[i, j], ret[i, j]) == eye(num_bands)`.
 
   The :code:`pw_param` should be created from :py:func:`param_init`, and the same
   :code:`freq_mask` used in :py:func:`param_init` should be used here. As mentioned
-  in :py:func:`param_init`, we use linear combination over 3D fourier
-  components for creating wave functions. Some extra requirements are
+  in :py:func:`param_init`, we use linear combination over 3D Fourier
+  components for creating wave functions. Some extra requirements are:
 
-  1. The wave functions that has the same spin and same k component needs
+  1. The wave functions that have the same spin and same k component need
      to be orthogonal to each other.
   2. We only activate some of the frequency components with the :code:`freq_mask`.
 
   As the raw parameter returned from :py:func:`param_init` has the shape
   :code:`(num_spin, num_kpts, num_g, num_bands)`, where :code:`num_g` is the number of
-  activated frequencies flattend from the activated entries in the :code:`freq_mask`
-  This function first orthogonalize over the last two dimensions and
-  reorganize the orthogonalized parameter into a 3D grid the same shape of
+  activated frequencies flattened from the activated entries in the :code:`freq_mask`,
+  this function first orthogonalizes over the last two dimensions and
+  reorganizes the orthogonalized parameter into a 3D grid the same shape as
   the frequency mask.
 
   Extension reads:
   1. Why and how to mask the frequency components.
-  2. Bloch theorum.
+  2. Bloch theorem.
 
   Args:
-    pw_param: the raw parameter, maybe created from
-    :py:func:`param_init`.
-    freq_mask: a 3D mask to select the frequency components.
+    pw_param (Union[Array, Tuple]): The raw parameter, maybe created from :py:func:`param_init`.
+    freq_mask (Bool[Array, "x y z"]): A 3D mask to select the frequency components.
 
   Returns:
-    Complex array of shape :code:`(num_spin, num_kpts, num_band, x y z)`.
-    It satisfies the unitary constraint that for any :code:`i,j`
-    :code:`einsum('kabc,labc->kl', ret[i, j], ret[i, j])` is an identity matrix.
+    Complex[Array, "spin kpts band x y z"]: Complex array of shape
+    :code:`(num_spin, num_kpts, num_band, x y z)`. It satisfies the unitary
+    constraint that for any :code:`i,j`, :code:`einsum('kabc,labc->kl', ret[i, j], ret[i, j])`
+    is an identity matrix.
   """
   coeff = unitary_matrix(pw_param, complex=True)
   return expand_coefficient(coeff, freq_mask)
@@ -123,17 +123,17 @@ def coeff(
 
 def wave_grid(
   coeff: Complex[Array, "spin kpts band x y z"],
-  vol: Union[float, Array],
-):
-  r"""Wave function evaluated at a grid of spacial locations.
+  vol: Float,
+) -> Complex[Array, "spin kpts band x y z"]:
+  r"""Wave function evaluated at a grid of spatial locations.
 
-  This function implements the :math:`U(r)` part of the bloch wave function.
+  This function implements the :math:`u(r)` part of the Bloch wave function:
 
   .. math::
 
-    U(r)=\frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iG^\top r}
+    u(r)=\frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iG^\top r}
 
-  :math:`G` is the 3D frequency components, :math:`\Omega_\text{cell}` is the
+  where :math:`G` is the 3D frequency components, :math:`\Omega_\text{cell}` is the
   volume of the crystal unit cell, which is to make sure the wave function is
   normalized within the cell.
 
@@ -183,14 +183,11 @@ def wave_grid(
   fourier components.
 
   Args:
-    coeff: linear combination coefficients over the 3D fourier components.
-      shape is :code:`(..., x y z)` where :code:`(x y z)` is the shape of the
-      3D frequency components generated
-      from :py:func:`jrystal.grid.g_vectors`.
-    vol: volume of the unit cell.
+    coeff (Complex[Array, "spin kpt band x y z"]): Wave function coefficients, which has a shape of :code:`(spin, kpt, band, x, y, z)`.
+    vol (float): Volume of the unit cell.
 
   Returns:
-    The result of evaluating the wave function on the specific spatial grid.
+    Complex[Array, "spin kpts band x y z"]: Wave function evaluated at the spatial grid.
   """
   grid_sizes = coeff.shape[-3:]
   wave_grid = jnp.fft.ifftn(coeff, axes=range(-3, 0))
@@ -200,14 +197,14 @@ def wave_grid(
 
 def density_grid(
   coeff: Complex[Array, "spin kpts band x y z"],
-  vol: Union[float, Array],
+  vol: Float,
   occupation: Optional[OccupationArray] = None
-) -> ScalarGrid[Complex, 3]:
+) -> ScalarGrid[Float, 3]:
   r"""Compute the density at the spatial grid.
 
   In a system with electrons, the density of the electron is the result of
-  multiple wave functions overlapping in the space. As we mention in
-  :py:func:`wave_grid`, the wave function is a linear combination of 3D fourier
+  multiple wave functions overlapping in space. As mentioned in
+  :py:func:`wave_grid`, the wave function is a linear combination of 3D Fourier
   components. To compute the density, usually we only need to take the absolute
   square of each wave function and sum them up.
 
@@ -215,11 +212,11 @@ def density_grid(
 
     \rho(r) = \sum_i |\psi_i(r)|^2
 
-  This function evaluates the density :math:`\rho(r)` as the spatial grid
-  generated from the :py:func:`jrystal.grid.r_vectors`.
+  This function evaluates the density :math:`\rho(r)` at the spatial grid
+  generated from :py:func:`jrystal.grid.r_vectors`.
 
   In crystals, this is a little bit more complicated. The form of the wave
-  function is
+  function is:
 
   .. math::
 
@@ -238,21 +235,21 @@ def density_grid(
   Args:
     coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension
       which will be summed to get the overall density.
-      Therefore the shape is :code:`(..., num_kpts, num_bands, x y z)`.
-    vol: volume of the unit cell, a real scalar.
-    occupation: the occupation over different k frequencies.
-      The shape is :code:`(..., num_kpts, num_bands)`, it should have the same leading dimension
+      Therefore the shape is :code:`(spin, kpt, band, x, y, z)`.
+    vol: Volume of the unit cell, a real scalar.
+    occupation: The occupation over different k frequencies.
+      The shape is :code:`(spin, kpt, band)`, it should have the same leading dimension
       as :code:`coeff`.
-      This is an option argument, when :code:`occupation=None`, we compute the density
+      This is an optional argument. When :code:`occupation=None`, we compute the density
       contribution from each :math:`k` without summing them. If :code:`occupation` is
       provided, we sum up all the density from each :math:`k` weighted by the
       occupation.
 
   Returns:
-    A real valued tensor that represents the density at the spatial grid
+    ScalarGrid[Float, 3]: A real-valued tensor that represents the density at the spatial grid
     computed from :py:func:`jrystal.grid.r_vectors`.
-    The shape is :code:`(x y z)` if :code:`occupation` is provided,
-    else the shape is :code:`(..., num_kpts, num_bands, x y z)`.
+    The shape is :code:`(x, y, z)` if :code:`occupation` is provided,
+    else the shape is :code:`(spin, kpt, band, x, y, z)`.
   """
   wave_grid_arr = wave_grid(coeff, vol)
   dens = absolute_square(wave_grid_arr)
@@ -264,7 +261,7 @@ def density_grid(
       dens = jnp.sum(dens * occ, axis=range(occupation.ndim))
     except ValueError:
       raise ValueError(
-        "Occupation should have a leading dimension that is the same as coeff."
+        "Occupation should have a leading dimension that is the same as coeff. "
         f"Got occupation shape: {occupation.shape}, coeff shape: {coeff.shape}"
       )
   return dens
@@ -323,40 +320,32 @@ def wave_r(
   r: Float[Array, "3"],
   coeff: Complex[Array, "spin kpts band x y z"],
   cell_vectors: Float[Array, "3 3"],
-  g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
-) -> Complex[Array, "spin kpts band *b"]:
+  g_vector_grid: Optional[Float[Array, "x y z 3"]] = None,
+) -> Complex[Array, "spin kpts band"]:
   r"""Evaluate plane wave functions at location r.
 
-  TODO(litb): I think the g_vector_grid is not necessary, we can compute it from
-    cell_vectors. Otherwise, if we specify g_vector_grid and it is not
-    compatible with cell_vectors, then we shouldn't use its vol. And also seem
-    very weird.
-
-  This function basically computes the :math:`\psi(r)` following the equation
+  This function computes the :math:`\psi(r)` following the equation:
 
   .. math::
 
     \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iGr}
 
-  the :code:`coeff` provided is the :math:`c_{G}`, the :code:`cell_vectors` is
-  used to generate the grid of frequency components $G$ by calling the function
+  The :code:`coeff` provided is the :math:`c_{G}`, the :code:`cell_vectors` is
+  used to generate the grid of frequency components :math:`G` by calling the function
   :py:func:`jrystal.grid.g_vectors`. The :code:`r` is the location where we
   evaluate the wave function.
 
-  The :code:`coeff` passed to this function has shape :code:`(..., x y z)`,
-  it can have leading batch dimensions.
-
   Args:
-    r: spatial location to evaluate the wave function, shape: (3,).
-    coeff: wave function coefficients, which has a shape of
-      :code:`(..., x y z)`.
-      it can be created from :py:func:`param_init` followed by :py:func:`coeff`.
-    cell_vectors: the cell vectors of the crystal unit cell.
-    g_vector_grid: to be resolved.
+    r: Spatial location to evaluate the wave function, shape: (3,).
+    coeff: Wave function coefficients, which has a shape of
+      :code:`(spin, kpt, band, x, y, z)`.
+      It can be created from :py:func:`param_init` followed by :py:func:`coeff`.
+    cell_vectors: The cell vectors of the crystal unit cell.
+    g_vector_grid: The G vectors computed from :py:func:`jrystal.grid.g_vectors`.
+      If None, will be computed from cell_vectors.
 
   Returns:
-    Complex tensor that represents wave functions evaluated at location r,
-    with shape of the leading dimensions of the coeff (...).
+    Complex[Array, "spin kpts band"]: Complex tensor that represents wave functions evaluated at location r.
   """
   vol = volume(cell_vectors)
   x, y, z = coeff.shape[-3:]
@@ -378,31 +367,29 @@ def density_r(
   r: Float[Array, "3"],
   coeff: Complex[Array, "spin kpts band x y z"],
   cell_vectors: Float[Array, "3 3"],
-  g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
+  g_vector_grid: Optional[Float[Array, "x y z 3"]] = None,
   occupation: Optional[OccupationArray] = None,
-):
+) -> Float:
   r"""Compute the electron density at location r.
 
-  :py:func:`wave_r` computes the electron density at location :math:`r`.
   This function computes the density at location :math:`r`. If occupation is
   not provided, it simply returns the absolute square of the :py:func:`wave_r`.
   If occupation is provided, the :code:`coeff` needs to have a shape of
-  :code:`(num_spin, num_kpts, num_bands, x y z)`, the :code:`occupation`
-  needs to have the dimension of the :code:`(num_spin, num_kpts, num_bands)`.
+  :code:`(spin, kpt, band, x, y, z)`, the :code:`occupation`
+  needs to have the dimension of :code:`(spin, kpt, band)`.
 
   Args:
-    r: spatial location to evaluate the density, shape: (3,).
-    coeff: wave function coefficients, which has a shape of
-      :code:`(num_spin, num_kpts, num_bands, x y z)`.
-      it can be created from :py:func:`param_init` followed by :py:func:`coeff`.
-    cell_vectors: the cell vectors of the crystal unit cell.
-    g_vector_grid: the G vectors computed from
-      :py:func:`jrystal.grid.g_vectors`.
-    occupation: occupation over different k frequencies.
+    r: Spatial location to evaluate the density, shape: (3,).
+    coeff: Wave function coefficients, which has a shape of
+      :code:`(spin, kpt, band, x, y, z)`.
+      It can be created from :py:func:`param_init` followed by :py:func:`coeff`.
+    cell_vectors: The cell vectors of the crystal unit cell.
+    g_vector_grid: The G vectors computed from :py:func:`jrystal.grid.g_vectors`.
+    occupation: Occupation over different k frequencies.
       Refer to :py:func:`density_grid` for more information.
 
   Returns:
-    A real scalar that represents the density at location r.
+    Float: A real scalar that represents the density at location r.
   """
   density = absolute_square(wave_r(r, coeff, cell_vectors, g_vector_grid))
   if occupation is not None:
@@ -414,29 +401,27 @@ def nabla_density_r(
   r: Float[Array, "3"],
   coeff: Complex[Array, "spin kpts band x y z"],
   cell_vectors: Float[Array, "3 3"],
-  g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
+  g_vector_grid: Optional[Float[Array, "x y z 3"]] = None,
   occupation: Optional[OccupationArray] = None,
-):
+) -> Float[Array, "3"]:
   r"""Compute the first order derivative of the density at location r.
 
-  Refer the :py:func:`density_r` for more information.
+  Refer to :py:func:`density_r` for more information.
 
   Args:
-    r: spatial location to evaluate the density, shape: (3,).
-    coeff: wave function coefficients, which has a shape of
-      :code:`(num_spin, num_kpts, num_bands, x y z)`.
-      it can be created from :py:func:`param_init` followed by :py:func:`coeff`.
-    cell_vectors: the cell vectors of the crystal unit cell.
-    g_vector_grid: the G vectors computed from
-      :py:func:`jrystal.grid.g_vectors`.
-    occupation: occupation over different k frequencies.
+    r: Spatial location to evaluate the density, shape: (3,).
+    coeff: Wave function coefficients, which has a shape of
+      :code:`(spin, kpt, band, x, y, z)`.
+      It can be created from :py:func:`param_init` followed by :py:func:`coeff`.
+    cell_vectors: The cell vectors of the crystal unit cell.
+    g_vector_grid: The G vectors computed from :py:func:`jrystal.grid.g_vectors`.
+    occupation: Occupation over different k frequencies.
       Refer to :py:func:`density_grid` for more information.
 
   Returns:
-    A :code:`(3,)` real vector that represents the density derivative at
-      location :code:`r`.
+    Float[Array, "3"]: A real vector that represents the density derivative at
+    location :code:`r`.
   """
-
   def den(r):
     return density_r(r, coeff, cell_vectors, g_vector_grid, occupation)
 
@@ -447,34 +432,30 @@ def nabla_density_grid(
   r: Float[Array, "3"],
   coeff: Complex[Array, "spin kpts band x y z"],
   cell_vectors: Float[Array, "3 3"],
-  g_vector_grid: Optional[ScalarGrid[Float, 3]] = None,
+  g_vector_grid: Optional[Float[Array, "x y z 3"]] = None,
   occupation: Optional[OccupationArray] = None,
 ) -> ScalarGrid[Float, 3]:
   r"""Compute the first order derivative of the density at a specific grid of
   spatial locations.
 
-  Refer the :py:func:`density_grid` for more information.
+  Refer to :py:func:`density_grid` for more information.
 
   Args:
-    coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension
-      which will be summed to get the overall density.
-      Therefore the shape is :code:`(..., num_kpts, num_bands, x y z)`.
-    vol: volume of the unit cell, a real scalar.
-    occupation: the occupation over different k frequencies.
-      The shape is :code:`(..., num_kpts, num_bands)`, it should have the same leading dimension
-      as :code:`coeff`.
-      This is an option argument, when :code:`occupation=None`, we compute the density
-      contribution from each :math:`k` without summing them. If :code:`occupation` is
-      provided, we sum up all the density from each :math:`k` weighted by the
-      occupation.
+    r: Spatial location to evaluate the density, shape: (3,).
+    coeff: Wave function coefficients, which has a shape of
+      :code:`(spin, kpt, band, x, y, z)`.
+      It can be created from :py:func:`param_init` followed by :py:func:`coeff`.
+    cell_vectors: The cell vectors of the crystal unit cell.
+    g_vector_grid: The G vectors computed from :py:func:`jrystal.grid.g_vectors`.
+    occupation: Occupation over different k frequencies.
+      Refer to :py:func:`density_grid` for more information.
 
   Returns:
-    A real valued tensor that represents the density derivative at the spatial
-    grid computed from :py:func:`jrystal.grid.r_vectors`.
-    The shape is :code:`(x y z, 3)` if :code:`occupation` is provided,
-    else the shape is :code:`(..., num_kpts, num_bands, x y z, 3)`.
+    ScalarGrid[Float, 3]: A real-valued tensor that represents the density derivative
+    at the spatial grid computed from :py:func:`jrystal.grid.r_vectors`.
+    The shape is :code:`(x, y, z)` if :code:`occupation` is provided,
+    else the shape is :code:`(spin, kpt, band, x, y, z)`.
   """
-
   r = jnp.reshape(r, (-1))
 
   if r.shape[0] != 3:

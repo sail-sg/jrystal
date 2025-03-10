@@ -1,4 +1,4 @@
-Constants
+constant
 ========
 
 .. automodule:: jrystal._src.const

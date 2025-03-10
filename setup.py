@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 PACKAGE_NAME = 'jrystal'
-VERSION = '0.1'
+VERSION = '0.0.1'
 CLASSIFIERS = [
   'Environment :: Console',
   'Intended Audience :: Science/Research',
@@ -36,5 +36,12 @@ setup(
   ),
   classifiers=CLASSIFIERS,
   license=LICENSE,
-  install_requires=_read_requirements()
+  author='Tianbo Li',
+  author_email='li_tianbo@live.com',
+  install_requires=_read_requirements(),
+  entry_points={
+    'console_scripts': [
+      'jrystal=main',
+    ],
+  },
 )

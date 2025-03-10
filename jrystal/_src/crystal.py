@@ -26,7 +26,10 @@ class Crystal:
   A Crystal object can be created via two methods:
   
   1. create from specifying the four core attributes: atomic numbers (charges), absolute coordinates of each atom in Bohr unit (positions), cell vectors (in Bohr unit), and the number of unpaired electrons (spin).
-  2. create from a xyz file. 
+  2. create from a geometry file. 
+
+  See :doc:`Create A Crystal Structure <../examples/crystal>` for more details.
+
   
   Examples:
 

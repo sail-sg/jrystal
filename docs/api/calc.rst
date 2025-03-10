@@ -1,4 +1,4 @@
-Calculator
+calculator
 =========
 
 .. automodule:: jrystal.calc

@@ -1,5 +1,7 @@
+========================================
 Create A Crystal Structure
-==========================
+========================================
+
 
 The :class:`Crystal` class is the fundamental building block for representing crystal structures in jrystal. It contains essential attributes and derived properties that fully describe a crystal system.
 
@@ -39,9 +41,8 @@ There are three ways to create a crystal structure:
 
 Create a crystal by directly specifying its attributes:
 
-.. eval-rst::
 
-    ```{code-cell} python
+.. code-block:: python
 
     from jrystal import Crystal
 
@@ -54,7 +55,7 @@ Create a crystal by directly specifying its attributes:
     print(crystal)
 
 
-2. From Structure Files
+1. From Structure Files
 ~~~~~~~~~~~~~~~~~~~~~
 
 Load a structure from common chemistry file formats:
