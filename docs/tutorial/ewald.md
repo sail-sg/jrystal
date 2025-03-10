@@ -61,7 +61,7 @@ It&rsquo;s Fourier representation is given by
 
 This is equivalent to treat Fourier transform as the limit of the Laplace transform.
 
-Now for any charge distribution $\rho$, we can define the Fourier transform of Coulombic potentials generated from $\rho$ as a limit, since $\lim_{\alpha  \to 0} -\frac{1}{4\pi} \nu _{\alpha }=G_{\text{coulomb}}$:
+Now for any charge distribution $\rho$, we can define the Fourier transform of Coulombic potentials generated from $\rho$ as a limit, since $\lim_{\alpha  \to 0} -\frac{1}{4\pi} \nu _{\alpha }=\frac{1}{r}$:
 
 \begin{equation}
   \tilde{V} (\vb{G})=\lim_{\alpha  \to 0}  [\widetilde{-\frac{1}{4\pi}\nu_{\alpha } \star -4\pi \rho }] (\vb{G}) =\lim_{\alpha  \to 0}  \tilde{\nu}_{\alpha } (\vb{G}) \tilde{\rho} (\vb{G})  = \lim_{\alpha  \to 0}  \frac{4\pi \tilde{\rho} (\vb{G})}{\norm{\vb{G}}^{2}+ \alpha ^{2}}.
@@ -235,26 +235,26 @@ For simplicity, consider the case where $\rho^{\text{atom}}(\vb{r})=\delta (\vb{
 Plug this into Poisson equation we get
 
 \begin{equation}
-  \nabla ^{2} [\nu _{\text{sr}}\star  n^{\text{atom}}](\vb{r})
-  =\nabla ^{2} [(\frac{1}{r} - \nu _{\text{lr}})\star  n^{\text{atom}}](\vb{r})
-  =\nabla ^{2} [\frac{1}{r} \star  n^{\text{atom}}](\vb{r}) - \nabla ^{2} [\nu _{\text{lr}} \star  n^{\text{atom}}](\vb{r})
+  \nabla ^{2} [\nu _{\text{sr}}\star  \rho^{\text{atom}}](\vb{r})
+  =\nabla ^{2} [(\frac{1}{r} - \nu _{\text{lr}})\star  \rho^{\text{atom}}](\vb{r})
+  =\nabla ^{2} [\frac{1}{r} \star  \rho^{\text{atom}}](\vb{r}) - \nabla ^{2} [\nu _{\text{lr}} \star  \rho^{\text{atom}}](\vb{r})
  = -4\pi  [\rho ^{\text{atom}}-\rho ^{g }](\vb{r})  .
 \end{equation}
 
 It is easy to see that in the general case where $\rho ^{\text{atom}}(\vb{r})=-\sum_{\ell} Z_{\ell }\delta (\vb{r}-\vb*{\tau }_{\ell })$ we have
 
 \begin{equation}
-  \nabla ^{2} [\nu _{\text{sr}}\star  n^{\text{atom}}](\vb{r})
+  \nabla ^{2} [\nu _{\text{sr}}\star  \rho^{\text{atom}}](\vb{r})
  = -4\pi  [\rho ^{\text{atom}}-\rho ^{\text{tot} }](\vb{r})  .
 \end{equation}
 
 Now this implies that
 
 \begin{equation} \label{eqn:ewald-sr}
-  \nu_{\text{sr}}\star n^{\text{atom}} - C = \frac{1}{r} \star [n^{\text{atom}}-n^{\text{tot}}]
+  \nu_{\text{sr}}\star \rho^{\text{atom}} - C = \frac{1}{r} \star [\rho^{\text{atom}}-\rho^{\text{tot}}]
 \end{equation}
 
-where the constant $C$ is the average value of $G_{\text{sr}}\star n^{\text{atom}}$, which is there due to the zero average condition of the potential. The value of $C$ can be calculated:
+where the constant $C$ is the average value of $G_{\text{sr}}\star \rho^{\text{atom}}$, which is there due to the zero average condition of the potential. The value of $C$ can be calculated:
 
 \begin{equation}
     C = \frac{1}{\Omega} \int_{\Omega }\dd{\vb{r}} [\nu _{\text{sr}}\star \rho  ^{\text{atom}}](\vb{r})
@@ -303,7 +303,7 @@ since
 \nu _{\text{lr}} \star \rho ^{\text{atom}} + \frac{1}{r} \star \rho ^{-} = V_{\text{lr}},
 \end{equation}
 
-we need to remove the interaction between $\nu_{\text{lr}} \star n^{\text{atom}}$ and the portion of $\rho^{\text{atom}}$ within $\Omega$:
+we need to remove the interaction between $\nu_{\text{lr}} \star \rho^{\text{atom}}$ and the portion of $\rho^{\text{atom}}$ within $\Omega$:
 
 \begin{equation}
     E^{\text{self}}_{\text{nuc}}
@@ -321,7 +321,7 @@ The nucleus repulsion energy can now be evaluated using Ewald summation:
 \begin{equation}
   \begin{split}
     E_{\text{nuc}}' =
- \frac{1}{2} \int_{\Omega } \dd{\vb{r}}  V_{\text{nuc}}'(\vb{r}) n^{\text{atom}}(\vb{r}) - E^{\text{self}}_{\text{nuc}}
+ \frac{1}{2} \int_{\Omega } \dd{\vb{r}}  V_{\text{nuc}}'(\vb{r}) \rho^{\text{atom}}(\vb{r}) - E^{\text{self}}_{\text{nuc}}
     = E^{\text{sr}}_{\text{nuc}} + E^{\text{lr}}_{\text{nuc}} - E^{\text{self}}_{\text{nuc}}
   \end{split}
 \end{equation}
@@ -331,7 +331,7 @@ and we have the following decomposition of the nucleus potential
 
 \begin{equation} \label{eqn:ewald-pot}
   \begin{split}
-    V_{\text{nuc}}(\vb{r}) =& (G_{\text{coulomb}} \star [n^{\text{atom}}+n^{-}])(\vb{r}) = [G_{\text{sr}}\star n^{\text{atom}} -C + V^{\text{tot}}](\vb{r}) \\
+    V_{\text{nuc}}(\vb{r}) =& (\frac{1}{r} \star [\rho^{\text{atom}}+\rho^{-}])(\vb{r}) = [G_{\text{sr}}\star \rho^{\text{atom}} -C + V^{\text{tot}}](\vb{r}) \\
   =&
      - \sum_{\ell} \sum_{\vb{n}}^{L} Z_{\ell } \frac{\text{erfc}(\eta \norm{\vb{r}- \vb*{\tau }_{\ell } - \vb{R}_{\vb{n}}})}{\norm{\vb{r} - \vb*{\tau }_{\ell} - \vb{R}_{\vb{n}}}}
      + \frac{\pi Z_{\text{tot}}}{\Omega \eta ^{2}}
