@@ -1,4 +1,4 @@
-SBT
+sbt
 ===
 
 .. automodule:: jrystal.sbt

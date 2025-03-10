@@ -1,11 +1,19 @@
 API Documentation
-===============
+==================
 
 .. toctree::
    :maxdepth: 2
 
-   core
-   pseudopotential
+   _src
    calc
-   sbt
+   crystal
+   energy
+   entropy
+   grid
+   hamiltonian
+   kinetic
+   occupation
+   potential
+   pseudopotential
+   pw
    utils

@@ -29,6 +29,10 @@ then visit `localhost:8000`.
 
 #### Run your own system.
 
+```sh
+jrystal -m energy -c config.yaml
+```
+
 You may symply modify the ```config.py``` file.
 
 

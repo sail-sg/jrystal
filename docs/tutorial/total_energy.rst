@@ -1,7 +1,7 @@
 .. _total_energy:
-
-Energy minimization with constraints
-------------------------------------
+====================================
+Total Energy Minimization
+====================================
 
 In this document, we start from the objective function of solid state DFT, starting from the abstract form and derive it until it is implementable. Solid state DFT solves the following energy minimization problem (we leave why the objective looks like this in the preliminaries of DFT and crystalgraphy)
 
