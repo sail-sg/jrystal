@@ -1,6 +1,6 @@
 .. _tutorial-differentiation:
 
-What Can Differentiation Do for Density Functional Theory
+What Can Differentiability Do for Density Functional Theory
 =======================================================
 
 

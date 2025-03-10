@@ -9,7 +9,7 @@ def kinetic_operator(
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Float[Array, "kpt 3"] = None,
 ) -> Float[Array, "kpt x y z"]:
-  r"""Compute Kinetic operator matrix element in reciprocal space.
+  r"""Compute kinetic operator matrix element in reciprocal space.
   
   This function returns the following expression:
   

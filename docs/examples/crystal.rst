@@ -55,7 +55,7 @@ Create a crystal by directly specifying its attributes:
     print(crystal)
 
 
-1. From Structure Files
+2. From Structure Files
 ~~~~~~~~~~~~~~~~~~~~~
 
 Load a structure from common chemistry file formats:
