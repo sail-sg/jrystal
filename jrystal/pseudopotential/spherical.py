@@ -1,4 +1,7 @@
-"""Functions related to spherical coordinate system. """
+"""Spherical coordinate system utilities and spherical harmonics transformations.
+
+This module provides functions for working with spherical coordinates and spherical harmonics, particularly useful for quantum mechanical calculations and pseudopotential transformations.
+"""
 import jax
 import jax.numpy as jnp
 from jax.scipy.special import sph_harm
@@ -7,14 +10,22 @@ from typing import Callable
 from .._src.utils import vmapstack
 
 
-def cartesian_to_spherical(x: Float[Array, "*nd 3"]) -> Float[Array, "*nd 3"]:
-  """Transform the cartesian coordinate to spherical one.
+def cartesian_to_spherical(x: Float[Array, "*n 3"]) -> Float[Array, "*n 3"]:
+  """Convert Cartesian coordinates to spherical coordinates.
 
-    the spherical coordinates for the origin (0, 0, 0) are (0, nan, \pi/2).
+  Transforms 3D Cartesian coordinates (x, y, z) to spherical coordinates (r, θ, φ), where:
+  
+  - r is the radial distance from the origin
+  - θ (theta) is the azimuthal angle in the x-y plane from the x-axis (0 ≤ θ < 2π)
+  - φ (phi) is the polar angle from the z-axis (0 ≤ φ ≤ π)
+
+  For the special case of the origin (0, 0, 0), returns (0, NaN, π/2).
+
+  Args:
+    x: Float[Array, "*n 3"]: Cartesian coordinates with shape (..., 3) where ... represents arbitrary batch dimensions
 
   Returns:
-      Float[Array, "*nd 3"]: the spherical coordinate (r, theta, phi)
-      theta is the azimuthal angle, and phi is the polar angle.
+    Float[Array, "*n 3"]: Spherical coordinates (r, θ, φ) with same batch shape
   """
   r = jnp.linalg.norm(x, axis=-1)  # Radial distance
 
@@ -30,23 +41,28 @@ def cartesian_to_spherical(x: Float[Array, "*nd 3"]) -> Float[Array, "*nd 3"]:
 
 def legendre_to_sph_harm(
   l: int = 0,
-) -> Callable[[Float[Array, "*batch 3"]], Float[Array, "*batch m"]]:  # noqa
-  r"""
-  Decompose the legendre polynomial into spherical harmonics:
+) -> Callable[[Float[Array, "*batch 3"]], Float[Array, "*batch m"]]:
+  """Convert Legendre polynomials to spherical harmonics decomposition.
 
-   .. math::
-     (2l+1) P_l(x^Ty) = 4\pi \sum_m Y_{l, m}(x) Y^*_{l, m}(y)
+  Implements the decomposition of Legendre polynomials into spherical harmonics according to the formula:
 
-  where l is the index for angular momentum, and Y are the sperical harmonics.
+  .. math::
+    (2l+1) P_l(x^Ty) = 4\pi \sum_m Y_{l, m}(x) Y^*_{l, m}(y)
 
-  - When we need this function?
+  where:
+  
+  - l is the angular momentum quantum number
+  - P_l is the Legendre polynomial of order l
+  - Y_{l,m} are the spherical harmonics
+  - m is the magnetic quantum number ranging from -l to +l
 
-  when we need to calculate :math:`P_l(G^T G')`. If we compute the every pair of the
-  inner products between two G vections, it is very expensive. Instead, we
-  can decompose the Legendre polynomial into spherical harmonics, and then
-  compute the spherical harmonics for each G vector and calculate the inner
-  products of these spherical harmonics. This is much faster.
+  This transformation is particularly useful for efficient computation of P_l(G^T G') in quantum mechanical calculations, as it allows replacing expensive pairwise inner products of G vectors with faster spherical harmonics calculations.
 
+  Args:
+    l (int): Angular momentum quantum number (default: 0)
+
+  Returns:
+      Callable that takes Cartesian coordinates of shape (*batch, 3) and returns spherical harmonics coefficients of shape (*batch, m), where m = 2l+1
   """
   m = jnp.arange(-l, l + 1)
   n = jnp.array([l])

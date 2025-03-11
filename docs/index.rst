@@ -79,8 +79,7 @@ Contents
 
 .. toctree::
    :maxdepth: 2
-   
-   quickstart
+
    installation
    examples/index
    tutorial/index

@@ -16,4 +16,3 @@ API Documentation
    potential
    pseudopotential
    pw
-   utils

@@ -6,41 +6,52 @@ from typing import List, Union, Optional
 from jaxtyping import Float, Array, Complex, Int
 from einops import einsum
 
-from ..._src import braket
-from ..._src._typing import OccupationArray, ScalarGrid, VectorGrid
-from ..._src import potential, energy, hamiltonian
-from ..._src.utils import wave_to_density
-from ..._src import pw
-from ..spherical import legendre_to_sph_harm
-# from ..projector import _legendre_to_sph_har
-from ..dataclass import NormConservingPseudopotential
-from ..local import (
+from .._src import braket
+from .._src._typing import OccupationArray, ScalarGrid, VectorGrid
+from .._src import potential, energy, hamiltonian
+from .._src.utils import wave_to_density
+from .._src import pw
+from .spherical import legendre_to_sph_harm
+from .local import (
   _hamiltonian_local, hamiltonian_local, _energy_local, energy_local
 )
-from ..beta import beta_sbt_grid_multi_atoms
+from .beta import beta_sbt_grid_multi_atoms
 
 
 def _potential_nonlocal_square_root(
-  position: Float[Array, 'num_atom d'],
-  g_vector_grid: Float[Array, "*nd d"],
-  k_points: Float[Array, "num_k d"],
-  r_grid: List[Float[Array, "num_r"]],
-  nonlocal_beta_grid: List[Float[Array, "num_beta num_r"]],
+  position: Float[Array, 'atom 3'],
+  g_vector_grid: Float[Array, "x y z 3"],
+  kpts: Float[Array, "kpt 3"],
+  r_grid: List[Float[Array, "r"]],
+  nonlocal_beta_grid: List[Float[Array, "beta r"]],
   nonlocal_angular_momentum: List[List[int]]
-) -> Complex[Array, "num_k num_atom num_beta *nd nphi"]:
+) -> Complex[Array, "kpt atom beta x y z phi"]:
   """
-    Square root of the nonlocal pseudopotential. The Nonlocal PP hamiltonain
-    is defined by:
+  Compute the square root of the nonlocal pseudopotential. 
+  
+  The Nonlocal pseudopotential hamiltonian is defined by:
 
-        < C | V_nl(K, K') | C >
+  .. math::
 
-    where V_nl = F D F^\dagger, where F can be obtained from this function.
+      < C | V_\\text{nl}(G, G') | C >
 
+  where :math:`V_\\text{nl} = F D F^\dagger`, where :math:`F` can be obtained from this function, and :math:`D` is the diagonal matrix of the beta functions. This function returns :math:`F`.
+    
+  Args:
+    position (Float[Array, "atom 3"]): The positions of the atoms.
+    g_vector_grid (Float[Array, "x y z 3"]): The grid of the reciprocal vectors.
+    kpts (Float[Array, "kpt 3"]): The grid of the k-points.
+    r_grid (List[Float[Array, "r"]]): The grid of the real space.
+    nonlocal_beta_grid (List[Float[Array, "beta r"]]): The grid of the beta functions.
+    nonlocal_angular_momentum (List[List[int]]): The angular momentum of the beta functions.
+
+  Returns:
+    Complex[Array, "kpt atom beta x y z phi"]: The square root of the nonlocal pseudopotential.
   """
   assert len(nonlocal_beta_grid) == len(nonlocal_angular_momentum)
 
   gk_vector_grid = jnp.expand_dims(
-    k_points, axis=(1, 2, 3)
+    kpts, axis=(1, 2, 3)
   ) + jnp.expand_dims(g_vector_grid, 0)  # [nk x y z 3]
 
   # sbt for beta function and intepolate
@@ -77,20 +88,20 @@ def _potential_nonlocal_square_root(
 
 
 def hamiltonian_nonlocal(
-  pw_coefficients: Complex[Array, "*batchs x y z"],
-  positions: Float[Array, 'na 3'],
-  g_vector_grid: Float[Array, "*nd d"],
-  k_points: Float[Array, "*nd d"],
-  pseudo_r_grid: Float[Array, "nr"],
-  nonlocal_beta_grid: Float[Array, "j nr"],
+  pw_coefficients: Complex[Array, "spin kpt band x y z"],
+  positions: Float[Array, 'atom 3'],
+  g_vector_grid: Float[Array, "x y z 3"],
+  kpts: Float[Array, "kpt 3"],
+  pseudo_r_grid: Float[Array, "r"],
+  nonlocal_beta_grid: Float[Array, "beta r"],
   nonlocal_angular_momentum: List[int],
   nonlocal_d_matrix: Float[Array, "j j"],
   vol: Float,
-) -> Complex[Array, "ns nk nb nb"]:
+) -> Complex[Array, "spin kpt band band"]:
   potential_nl_sqrt = _potential_nonlocal_square_root(
     positions,
     g_vector_grid,
-    k_points,
+    kpts,
     pseudo_r_grid,
     nonlocal_beta_grid,
     nonlocal_angular_momentum
@@ -111,13 +122,27 @@ def hamiltonian_nonlocal(
 
 
 def _hamiltonian_nonlocal(
-  pw_coefficients,
-  potential_nl_sqrt,
+  pw_coefficients: Complex[Array, "spin kpt band x y z"],
+  potential_nl_sqrt: Complex[Array, "kpt atom beta x y z phi"],
   nonlocal_d_matrix: Float[Array, "j j"],
   vol: Float,
-):
-  # this function is for seperating the potential_nl_sqrt part that may not
-  # be tracable by jax.
+) -> Complex[Array, "spin kpt band band"]:
+  """
+  Compute the nonlocal pseudopotential hamiltonian.
+  
+  .. Note::
+    This function is for seperating the :math:`\sqrt{V_{nl}}` part that may not be tracable by jax.
+  
+  Args:
+    pw_coefficients (Complex[Array, "spin kpt band x y z"]): The plane wave coefficients.
+    potential_nl_sqrt (Complex[Array, "kpt atom beta x y z phi"]): The square root of the nonlocal pseudopotential.
+    nonlocal_d_matrix (Float[Array, "j j"]): The diagonal matrix of the beta functions.
+    vol (Float): The volume of the unit cell.
+    
+  Returns:
+    Complex[Array, "spin kpt band band"]: The nonlocal pseudopotential hamiltonian.
+  """
+  
   _f_matrix = einsum(
     pw_coefficients,
     potential_nl_sqrt,
@@ -133,14 +158,28 @@ def _hamiltonian_nonlocal(
 
 
 def _energy_nonlocal(
-  pw_coefficients: Complex[Array, "*batchs x y z"],
-  potential_nl_sqrt: Array,
+  pw_coefficients: Complex[Array, "spin kpt band x y z"],
+  potential_nl_sqrt: Complex[Array, "kpt atom beta x y z phi"],
   nonlocal_d_matrix: Float[Array, "j j"],
   vol: Float,
   occupation: Optional[OccupationArray] = None,
 ) -> Float:
-  # this function is for seperating the potential_nl_sqrt part that may not
-  # be tracable by jax.
+  """
+  Compute the nonlocal pseudopotential energy.
+  
+  .. Note::
+    This function is for seperating the :math:`\sqrt{V_{nl}}` part that may not be tracable by jax.
+    
+  Args:
+    pw_coefficients (Complex[Array, "spin kpt band x y z"]): The plane wave coefficients.
+    potential_nl_sqrt (Complex[Array, "kpt atom beta x y z phi"]): The square root of the nonlocal pseudopotential.
+    nonlocal_d_matrix (Float[Array, "j j"]): The diagonal matrix of the beta functions.
+    vol (Float): The volume of the unit cell.
+    occupation (Optional[OccupationArray]): The occupation of the states.
+    
+  Returns:
+    Float: The nonlocal pseudopotential energy.
+  """
 
   hamil_nl = _hamiltonian_nonlocal(
     pw_coefficients, potential_nl_sqrt, nonlocal_d_matrix, vol
@@ -150,17 +189,32 @@ def _energy_nonlocal(
 
 
 def energy_nonlocal(
-  pw_coefficients: Complex[Array, "*batchs x y z"],
-  positions: Float[Array, 'na 3'],
-  g_vector_grid: Float[Array, "*nd d"],
-  k_vec: Float[Array, "nk 3"],
-  r_grid: Float[Array, "nr"],
-  nonlocal_beta_grid: Float[Array, "j nr"],
+  pw_coefficients: Complex[Array, "spin kpt band x y z"],
+  positions: Float[Array, 'atom 3'],
+  g_vector_grid: Float[Array, "x y z 3"],
+  k_vec: Float[Array, "kpt 3"],
+  r_grid: Float[Array, "r"],
+  nonlocal_beta_grid: Float[Array, "beta r"],
   nonlocal_angular_momentum: List[int],
   nonlocal_d_matrix: Float[Array, "j j"],
   vol: Float,
   occupation: Optional[OccupationArray] = None,
 ) -> Float:
+  """
+  Compute the nonlocal pseudopotential energy.
+  
+  Args:
+    pw_coefficients (Complex[Array, "spin kpt band x y z"]): The plane wave coefficients.
+    positions (Float[Array, "atom 3"]): The positions of the atoms.
+    g_vector_grid (Float[Array, "x y z 3"]): The grid of the reciprocal vectors.
+    k_vec (Float[Array, "kpt 3"]): The grid of the k-points.
+    r_grid (Float[Array, "r"]): The grid of the real space.
+    nonlocal_beta_grid (Float[Array, "beta r"]): The grid of the beta functions.
+
+  Returns:
+    Float: The nonlocal pseudopotential energy.
+    
+  """
   hamil_nl = hamiltonian_nonlocal(
     pw_coefficients,
     positions,
@@ -181,13 +235,26 @@ def _hamiltonian_matrix(
   potential_local_grid_reciprocal,
   potential_nonlocal_grid_sqrt,
   g_vector_grid: VectorGrid[Float, 3],
-  k_points: Float[Array, "num_k d"],
-  nonlocal_d_matrix: List[Float[Array, "num_beta num_beta"]],
+  kpts: Float[Array, "num_k d"],
+  nonlocal_d_matrix: List[Float[Array, "beta beta"]],
   vol: Float,
   xc: str = 'lda',
   kohn_sham: bool = False
 ):
-  dim = k_points.shape[-1]
+  
+  """
+  Compute the nonlocal pseudopotential hamiltonian.
+  
+  Args:
+    coefficient (Complex[Array, "spin kpt band *ndim"]): The plane wave coefficients.
+    hamiltonian_density_grid (ScalarGrid[Float, 3]): The hamiltonian density grid.
+    potential_local_grid_reciprocal (Float[Array, "nr"]): The local potential grid in reciprocal space.
+    potential_nonlocal_grid_sqrt (Complex[Array, "kpt atom beta x y z phi"]): The square root of the nonlocal pseudopotential.
+    g_vector_grid (VectorGrid[Float, 3]): The grid of the reciprocal vectors.
+    kpts (Float[Array, "num_k d"]): The grid of the k-points.
+  """
+  
+  dim = kpts.shape[-1]
   wave_grid = pw.wave_grid(coefficient, vol)
   ext_nloc = _hamiltonian_nonlocal(
     coefficient, potential_nonlocal_grid_sqrt, nonlocal_d_matrix, vol
@@ -198,7 +265,7 @@ def _hamiltonian_matrix(
     hamiltonian_density_grid, axes=range(-dim, 0)
   )
 
-  kin = hamiltonian.kinetic(g_vector_grid, k_points)
+  kin = hamiltonian.kinetic(g_vector_grid, kpts)
   h_kin = braket.expectation(
     coefficient, kin, vol, diagonal=False, mode='kinetic'
   )
@@ -220,13 +287,13 @@ def hamiltonian_matrix(
   hamiltonian_density_grid: ScalarGrid[Float, 3],
   r_vector_grid: Float[Array, "*nd d"],
   g_vector_grid: VectorGrid[Float, 3],
-  k_points: Float[Array, "num_k 3"],
+  kpts: Float[Array, "num_k 3"],
   positions: Float[Array, "num_atoms 3"],
   r_grid: Int[Array, "nr"],
   local_potential_grid: Float[Array, "nr"],
-  local_potential_charge: Int[Array, "num_atoms"],
-  nonlocal_beta_grid: List[Float[Array, "num_beta num_r"]],
-  nonlocal_d_matrix: List[Float[Array, "num_beta num_beta"]],
+  local_potential_charge: Int[Array, "atom"],
+  nonlocal_beta_grid: List[Float[Array, "beta r"]],
+  nonlocal_d_matrix: List[Float[Array, "beta beta"]],
   nonlocal_angular_momentum: List[List[int]],
   vol: Float,
   xc: str = 'lda',
@@ -238,7 +305,7 @@ def hamiltonian_matrix(
     coefficient,
     positions,
     g_vector_grid,
-    k_points,
+    kpts,
     r_grid,
     nonlocal_beta_grid,
     nonlocal_angular_momentum,
@@ -260,7 +327,7 @@ def hamiltonian_matrix(
     hamiltonian_density_grid, axes=range(-dim, 0)
   )
 
-  kin = hamiltonian.kinetic(g_vector_grid, k_points)
+  kin = hamiltonian.kinetic(g_vector_grid, kpts)
   h_kin = braket.expectation(
     coefficient, kin, vol, diagonal=False, mode='kinetic'
   )
@@ -277,18 +344,18 @@ def hamiltonian_matrix(
 
 
 def _hamiltonian_trace(
-  coefficient: Complex[Array, "spin kpoint band *ndim"],
+  coefficient: Complex[Array, "spin kpt band x y z"],
   hamiltonian_density_grid: ScalarGrid[Float, 3],
-  potential_local_grid_reciprocal,
-  potential_nonlocal_grid_sqrt,
+  potential_local_grid_reciprocal: Float[Array, "r"],
+  potential_nonlocal_grid_sqrt: Complex[Array, "kpt atom beta x y z phi"] ,
   g_vector_grid: VectorGrid[Float, 3],
-  k_points: Float[Array, "num_k 3"],
-  nonlocal_d_matrix: List[Float[Array, "num_beta num_r"]],
+  kpts: Float[Array, "kpt 3"],
+  nonlocal_d_matrix: List[Float[Array, "beta beta"]],
   vol: Float,
 ) -> Float:
-  dim = k_points.shape[-1]
+  dim = kpts.shape[-1]
   wave_grid = pw.wave_grid(coefficient, vol)
-  occupation = jnp.ones(shape=wave_grid.shape[:3], dtype=k_points.dtype)
+  occupation = jnp.ones(shape=wave_grid.shape[:3], dtype=kpts.dtype)
 
   density = wave_to_density(wave_grid, occupation)
   reciprocal_density_grid = jnp.fft.fftn(density, axes=range(-dim, 0))
@@ -318,7 +385,7 @@ def _hamiltonian_trace(
   lda = braket.expectation(wave_grid, v_lda, vol, diagonal=True, mode="real")
   h_s = jnp.sum(har + lda)
 
-  t_kin = hamiltonian.kinetic(g_vector_grid, k_points)
+  t_kin = hamiltonian.kinetic(g_vector_grid, kpts)
   kin = braket.expectation(
     coefficient, t_kin, vol, diagonal=True, mode='kinetic'
   )
@@ -328,20 +395,41 @@ def _hamiltonian_trace(
 
 
 def hamiltonian_trace(
-  coefficient: Complex[Array, "spin kpoint band *ndim"],
+  coefficient: Complex[Array, "spin kpt band x y z"],
   hamiltonian_density_grid: ScalarGrid[Float, 3],
-  r_vector_grid: Float[Array, "*nd d"],
-  g_vector_grid: VectorGrid[Float, 3],
-  k_points: Float[Array, "num_k 3"],
-  positions: Float[Array, "num_atoms 3"],
-  r_grid: Int[Array, "nr"],
-  local_potential_grid: Float[Array, "nr"],
-  local_potential_charge: Int[Array, "num_atoms"],
-  nonlocal_beta_grid: List[Float[Array, "num_beta num_r"]],
-  nonlocal_d_matrix: List[Float[Array, "num_beta num_beta"]],
+  r_vector_grid: Float[Array, "x y z 3"],
+  g_vector_grid: Float[Array, "x y z 3"],
+  kpts: Float[Array, "kpt 3"],
+  positions: Float[Array, "atom 3"],
+  r_grid: Int[Array, "r"],
+  local_potential_grid: Float[Array, "r"],
+  local_potential_charge: Int[Array, "atom"],
+  nonlocal_beta_grid: List[Float[Array, "beta r"]],
+  nonlocal_d_matrix: List[Float[Array, "beta beta"]],
   nonlocal_angular_momentum: List[List[int]],
   vol: Float,
 ):
+  """
+  Compute the trace of the hamiltonian.
+  
+  Args:
+    coefficient (Complex[Array, "spin kpt band x y z"]): The plane wave coefficients.
+    hamiltonian_density_grid (ScalarGrid[Float, 3]): The hamiltonian density grid.
+    r_vector_grid (Float[Array, "x y z 3"]): The grid of the real space.
+    g_vector_grid (Float[Array, "x y z 3"]): The grid of the reciprocal vectors.
+    kpts (Float[Array, "kpt 3"]): The grid of the k-points.
+    positions (Float[Array, "atom 3"]): The positions of the atoms.
+    r_grid (Int[Array, "r"]): The grid of the real space.
+    local_potential_grid (Float[Array, "r"]): The local potential grid.
+    local_potential_charge (Int[Array, "atom"]): The local potential charge.
+    nonlocal_beta_grid (List[Float[Array, "beta r"]]): The grid of the beta functions.
+    nonlocal_d_matrix (List[Float[Array, "beta beta"]]): The diagonal matrix of the beta functions.
+    nonlocal_angular_momentum (List[List[int]]): The angular momentum of the beta functions.
+    vol (Float): The volume of the unit cell.
+
+  Returns:
+    Float: The trace of the hamiltonian.
+  """
   dim = positions.shape[-1]
   wave_grid = pw.wave_grid(coefficient, vol)
   occupation = np.ones(shape=wave_grid.shape[:3])
@@ -357,7 +445,7 @@ def hamiltonian_trace(
     occupation,
     positions,
     g_vector_grid,
-    k_points,
+    kpts,
     r_grid,
     nonlocal_beta_grid,
     nonlocal_angular_momentum,
@@ -385,6 +473,6 @@ def hamiltonian_trace(
   v_lda = potential.xc_lda(hamiltonian_density_grid)
   lda = braket.expectation(wave_grid, v_lda, vol, diagonal=True, mode="real")
   h_s = jnp.sum(har + lda)
-  kin = energy.kinetic(g_vector_grid, k_points, coefficient, occupation)
+  kin = energy.kinetic(g_vector_grid, kpts, coefficient, occupation)
 
   return ext_nloc + ext_loc + h_s + kin
