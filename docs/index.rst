@@ -33,7 +33,7 @@ Call Graph
     </script>
 
     <!-- Render the DOT graph -->
-    <script src="/_static/graph.js"></script>
+    <script src="/_static/graph.js?v={{ now() }}"></script>
 
 
 This project is a `JAX <https://github.com/google/jax/>`_-based package for differantiable density functional theory computation of solids.
