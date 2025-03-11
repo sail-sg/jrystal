@@ -15,6 +15,7 @@ from . import occupation
 from . import potential
 from . import hamiltonian
 from . import grid
+from . import ewald
 
 from . import config
 from pathlib import Path
@@ -41,4 +42,5 @@ __all__ = [
   "entropy",
   "get_pkg_path",
   "config",
+  "ewald",
 ]
