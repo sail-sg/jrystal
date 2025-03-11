@@ -1,16 +1,15 @@
 import jax
 import jax.numpy as jnp
 from jaxtyping import Float, Array
-from ._typing import VectorGrid
 
 
 def ewald_coulomb_repulsion(
   positions: Float[Array, 'num_atoms d'],
   charges: Float[Array, 'num_atoms'],
-  g_vector_grid: VectorGrid[Float, 3],
+  g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
   ewald_eta: Float,
-  ewald_grid: VectorGrid[Float, 3],
+  ewald_grid: Float[Array, 'x y z 3'],
 ) -> Float:
   """ Ewald summation.
 

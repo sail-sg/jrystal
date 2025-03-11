@@ -10,7 +10,6 @@ from . import hamiltonian
 from . import kinetic
 from . import ewald
 from . import grid
-from . import _typing
 from . import utils
 from . import unitary_module
 from . import braket
@@ -29,7 +28,6 @@ __all__ = [
   "kinetic",
   "ewald",
   "grid",
-  "_typing",
   "utils",
   "unitary_module",
   "braket",

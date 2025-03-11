@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from .._src import energy, entropy, occupation, pw
 from ..config import JrystalConfigDict
-from ..pseudopotential import local, ncpp
+from ..pseudopotential import local, normcons
 from .opt_utils import (
   create_crystal,
   create_freq_mask,
@@ -58,7 +58,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     pseudopot.local_potential_charge,
     crystal.vol
   )
-  potential_nl = ncpp._potential_nonlocal_square_root(
+  potential_nl = normcons._potential_nonlocal_square_root(
     crystal.positions,
     g_vec,
     k_vec,
@@ -84,7 +84,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     external_local = local._energy_local(
       density_reciprocal, v_local_reciprocal=potential_loc, vol=crystal.vol
     )
-    external_nonlocal = ncpp._energy_nonlocal(
+    external_nonlocal = normcons._energy_nonlocal(
       coeff,
       potential_nl,
       pseudopot.nonlocal_d_matrix,
@@ -168,7 +168,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   external_local = local._energy_local(
     density_reciprocal, v_local_reciprocal=potential_loc, vol=crystal.vol
   )
-  external_nonlocal = ncpp._energy_nonlocal(
+  external_nonlocal = normcons._energy_nonlocal(
     coeff,
     potential_nl,
     pseudopot.nonlocal_d_matrix,

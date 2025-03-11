@@ -18,7 +18,7 @@ from .opt_utils import create_grids, create_optimizer, create_pseudopotential
 from ..config import JrystalConfigDict
 from .._src import pw, hamiltonian, occupation
 from .._src.band import get_k_path
-from ..pseudopotential import local, ncpp
+from ..pseudopotential import local, normcons
 
 
 @dataclass
@@ -62,7 +62,7 @@ def calc(
     pseudopot.local_potential_charge,
     crystal.vol
   )
-  potential_nl = ncpp._potential_nonlocal_square_root(
+  potential_nl = normcons._potential_nonlocal_square_root(
     crystal.positions,
     g_vec,
     k_vec,
@@ -100,7 +100,7 @@ def calc(
   def hamiltonian_trace(params_pw_band, kpts):
     coeff_band = pw.coeff(params_pw_band, freq_mask)
 
-    return ncpp._hamiltonian_trace(
+    return normcons._hamiltonian_trace(
       coeff_band,
       ground_state_density_grid,
       potential_loc,
@@ -177,7 +177,7 @@ def calc(
   @jax.jit
   def eig_fn(param, kpts):
     coeff_i = pw.coeff(param, freq_mask)
-    hamil_matrix = ncpp._hamiltonian_matrix(
+    hamil_matrix = normcons._hamiltonian_matrix(
       coeff_i,
       ground_state_density_grid,
       potential_loc,
