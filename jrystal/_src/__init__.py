@@ -13,6 +13,7 @@ from . import grid
 from . import _typing
 from . import utils
 from . import unitary_module
+from . import braket
 
 
 __all__ = [
@@ -31,4 +32,5 @@ __all__ = [
   "_typing",
   "utils",
   "unitary_module",
+  "braket",
 ]

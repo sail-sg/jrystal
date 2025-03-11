@@ -1,4 +1,7 @@
-"""Integration operations. """
+"""Integration operations for quantum mechanical calculations in real and reciprocal space.
+
+This module provides functions for calculating inner products (brakets) and expectation values in both real and reciprocal space, which are fundamental operations in quantum mechanics and density functional theory (DFT) calculations.
+"""
 
 import einops
 import jax.numpy as jnp
@@ -6,33 +9,37 @@ import numpy as np
 from  typing import Union, Optional
 from jaxtyping import Array, Complex, Float
 
-from ._typing import ScalarGrid
-
 
 def reciprocal_braket(
-  bra: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
-  ket: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
+  bra: Union[Complex[Array, '*n x y z'], Float[Array, '*n x y z']],
+  ket: Union[Complex[Array, '*n x y z'], Float[Array, '*n x y z']],
   vol: Float,
 ) -> Float:
-  r"""This function calculate the inner product of <f|g> in reciprocal space
+  r"""Calculate the inner product of two functions in reciprocal space.
+
+  Computes the inner product between two wavefunctions in reciprocal space using:
 
   .. math::
-    <f|g> \approx \sum_g f^*(g)r(g) * vol / N / N
+  
+    \langle f|g \rangle \approx \sum_{\mathbf{G}} f^*(\mathbf{G})g(\mathbf{G}) \frac{vol}{N^2}
 
-  where N is the number of grid size.
+  where :math:`f^*(\mathbf{G})` is the complex conjugate of :math:`f(\mathbf{G})`, :math:`N` is the number of grid points, and :math:`vol` is the real-space unit cell volume.
 
-  NOTE: in this project, hartree and external energy integral is calculated
-  in reciprocal space.
+  .. NOTE::
+    This formulation is particularly useful for calculating hartree and external energy integrals in reciprocal space, as they often have simpler forms than in real space.
 
   Args:
-      bra (ScalarGrid[Complex, 3] | ScalarGrid[Float, 3]): bra in reciprocal
-        space.
-      ket (ScalarGrid[Complex, 3] | ScalarGrid[Float, 3]): ket in reciprocal
-        space.
-      vol (Float): the volume of unit cell.
+      bra (Complex[Array, '*n x y z'] | Float[Array, '*n x y z']): Wavefunction in reciprocal space (left side of braket).
+           Shape must match ket's shape.
+      ket (Complex[Array, '*n x y z'] | Float[Array, '*n x y z']): Wavefunction in reciprocal space (right side of braket).
+           Shape must match bra's shape.
+      vol (Float): Volume of the real-space unit cell.
 
   Returns:
-      Float: the value of the inner product.
+      Float: The real-valued inner product result.
+
+  Raises:
+      ValueError: If bra and ket shapes do not match.
   """
   if bra.shape != ket.shape:
     raise ValueError(
@@ -52,29 +59,34 @@ def reciprocal_braket(
 
 
 def real_braket(
-  bra: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
-  ket: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
+  bra: Union[Complex[Array, '*n x y z'], Float[Array, '*n x y z']],
+  ket: Union[Complex[Array, '*n x y z'], Float[Array, '*n x y z']],
   vol: Float,
 ) -> Float:
-  r"""This function calculate the inner product of <f|g> in real space
+  r"""Calculate the inner product of two functions in real space.
+
+  Computes the inner product between two wavefunctions in real space using:
 
   .. math::
-    <f|g> \approx \sum_r f^*(r)r(r) * vol / N
 
-  where N is the number of grid size.
+    \langle f|g \rangle \approx \sum_{\mathbf{r}} f^*(\mathbf{r})g(\mathbf{r}) \frac{vol}{N}
 
-  NOTE: in this project, exchange-correlation energy integral is calculated
-  in real space.
+  where :math:`f^*(\mathbf{r})` is the complex conjugate of :math:`f(\mathbf{r})`, :math:`N` is the number of grid points, and :math:`vol` is the unit cell volume.
+
+  .. NOTE::
+
+    This formulation is commonly used in planewave DFT for calculating exchange-correlation energy integrals, which are typically evaluated in real space for efficiency.
 
   Args:
-      bra (ScalarGrid[Complex, 3] | ScalarGrid[Float, 3]): bra in reciprocal
-        space.
-      ket (ScalarGrid[Complex, 3] | ScalarGrid[Float, 3]): ket in reciprocal
-        space.
-      vol (Float): the volume of unit cell.
+      bra (Complex[Array, '*n x y z'] | Float[Array, '*n x y z']): Wavefunction in real space (left side of braket). Shape must match ket's shape.
+      ket (Complex[Array, '*n x y z'] | Float[Array, '*n x y z']): Wavefunction in real space (right side of braket). Shape must match bra's shape.
+      vol (Float): Volume of the unit cell.
 
   Returns:
-      Float: the value of the inner product.
+      Float: The real-valued inner product result.
+
+  Raises:
+      ValueError: If bra and ket shapes do not match.
   """
   if bra.shape != ket.shape:
     raise ValueError(
@@ -89,33 +101,51 @@ def real_braket(
 
 
 def expectation(
-  bra: Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]],
-  # hamiltonian: Float[Array, "nk x y z"] | Float[Array, "x y z"],
-  hamiltonian: Float[Array, "nk x y z"],
+  bra: Union[Complex[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band x y z']],
+  hamiltonian: Union[Complex[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band x y z']],
   vol: Float,
-  ket: Optional[Union[ScalarGrid[Complex, 3], ScalarGrid[Float, 3]]] = None,
+  ket: Optional[Union[Complex[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band x y z']]] = None,
   diagonal: bool = False,
   mode: str = 'real'
 ) -> Array:
-  """calculate the expectation of a hamiltonian operator in real space.
+  r"""Calculate the expectation value of a Hamiltonian operator.
 
-  See: https://en.wikipedia.org/wiki/Expectation_value_(quantum_mechanics)
+  Computes matrix elements of the form:
 
   .. math::
-    expectation_ij = <bra_i | hamil | ket_j>
+
+    E_{ij} = \langle \psi_i | \hat{H} | \psi_j \rangle \approx \sum_{\mathbf{q}} \psi_i^*(\mathbf{q}) \hat{H}(\mathbf{q}) \psi_j(\mathbf{q}) \frac{vol}{N^p}
+
+  where :math:`\psi_i` and :math:`\psi_j` are wavefunctions, :math:`\hat{H}` is the Hamiltonian operator, :math:`\mathbf{q}` represents either real (:math:`\mathbf{r}`) or reciprocal (:math:`\mathbf{G}`) space coordinates, and :math:`p` depends on the mode:
+  
+  - For real space: :math:`p = 1`
+  - For reciprocal space: :math:`p = 2` (includes Parseval factor)
+  - For kinetic terms: :math:`p = 0`
+
+  For more details on expectation values in quantum mechanics, see:
+  https://en.wikipedia.org/wiki/Expectation_value_(quantum_mechanics)
 
   Args:
-      bra (ScalarGrid): _description_
-      hamiltonian (ComplexGrid): _description_
-      vol (Float): volume of unit cell.
-      ket (ComplexGrid, optional): the . Defaults to None.
-      diagonal (bool, optional): if true, only calculate the diagonal elements.
-      Defaults to False.
-      mode (string, optional): options are 'real', 'reciprocal', 'kinetic'.
-        There will be respective integral factors for different mode.
+      bra (Complex[Array, 'spin kpt band x y z'] | Float[Array, 'spin kpt band x y z']): Left wavefunction in the expectation value calculation.
+           Must have shape (spin, kpt, band, x, y, z).
+      hamiltonian (Complex[Array, 'spin kpt band x y z'] | Float[Array, 'spin kpt band x y z']): Hamiltonian operator matrix.
+           Must have shape (spin, kpt, band, x, y, z).
+      vol (Float): Volume of the unit cell.
+      ket (Complex[Array, 'spin kpt band x y z'] | Float[Array, 'spin kpt band x y z']): Right wavefunction. If None, uses the bra wavefunction (for diagonal elements).
+           Must have same shape as bra if provided.
+      diagonal (bool): If True, only compute diagonal elements :math:`E_{ii}`.
+           If False, compute full matrix :math:`E_{ij}`.
+      mode (str): Integration mode determining the normalization factors:
+          - 'real': Real space integration (:math:`vol/N`)
+          - 'reciprocal': Reciprocal space (includes :math:`1/N` Parseval factor)
+          - 'kinetic': Special case with unit factor
 
   Returns:
-      Float: _description_
+      Array: Array of expectation values. Shape depends on diagonal parameter:
+
+      - If diagonal=True: shape (spin, kpt, band)
+      - If diagonal=False: shape (spin, kpt, band, band)
+
   """
   ket = bra if ket is None else ket
   assert bra.ndim == 6
