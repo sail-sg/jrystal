@@ -1,4 +1,5 @@
-"""Band structure calculation. """
+"""Band Structure Calculator. """
+
 import jax
 import jax.numpy as jnp
 import optax
@@ -22,8 +23,17 @@ from .._src.band import get_k_path
 
 @dataclass
 class BandStructureOutput:
+  """Output of the band structure calculation. 
+  
+  Args:
+    config (JrystalConfigDict): Configuration for the calculation.
+    params_pw (dict): Parameters for the plane wave basis.
+    ground_state_energy_output (GroundStateEnergyOutput): The output of the ground state energy calculation.
+    k_path (jax.Array): The K-path.
+    band_structure (jax.Array): The band structure.
+  """
   config: JrystalConfigDict
-  params_pw: jax.Array
+  params_pw: dict
   ground_state_energy_output: GroundStateEnergyOutput
   k_path: jax.Array
   band_structure: jax.Array
@@ -33,6 +43,16 @@ def calc(
   config: JrystalConfigDict,
   ground_state_energy_output: Optional[GroundStateEnergyOutput] = None
 ) -> BandStructureOutput:
+  """Calculate the band structure of a crystal.
+
+  Args:
+      config (JrystalConfigDict): The configuration for the calculation.
+      ground_state_energy_output (Optional[GroundStateEnergyOutput], optional): The output of the ground state energy calculation. Defaults to None.
+
+  Returns:
+      BandStructureOutput: The band structure output of the crystal.
+  """
+  
   set_env_params(config)
   key = jax.random.PRNGKey(config.seed)
   crystal = create_crystal(config)
@@ -188,4 +208,10 @@ def calc(
   logging.info(f"results is saved in {save_file}")
   jnp.save(save_file, eigen_values)
 
-  return eigen_values
+  return BandStructureOutput(
+    config=config,
+    params_pw=params_pw_band,
+    ground_state_energy_output=ground_state_energy_output,
+    k_path=k_path,
+    band_structure=eigen_values,
+  )

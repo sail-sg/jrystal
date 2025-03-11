@@ -2,4 +2,4 @@ calculator
 =========
 
 .. automodule:: jrystal.calc
-   :members: 
+   :members:

@@ -22,14 +22,31 @@ from .opt_utils import (
 
 @dataclass
 class GroundStateEnergyOutput:
+  """Output of the ground state energy calculation. 
+
+  Args:
+    config (JrystalConfigDict): Configuration for the calculation.
+    params_pw (dict): Parameters for the plane wave basis.
+    params_occ (dict): Parameters for the occupation.
+    total_energy (Union[float, jax.Array]): Total energy of the crystal.
+    total_energy_history (List[float]): The optimization history of the total energy.
+  """
   config: JrystalConfigDict
-  params_pw: jax.Array
-  params_occ: jax.Array
+  params_pw: dict
+  params_occ: dict
   total_energy: Union[float, jax.Array]
   total_energy_history: List[float]
 
 
 def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
+  """Calculate the ground state energy of a crystal.
+
+  Args:
+    config (JrystalConfigDict): Configuration for the calculation.
+
+  Returns:
+    GroundStateEnergyOutput: The ground state energy of the crystal.
+  """
   # Initialize and Prepare variables.
   set_env_params(config)
   key = jax.random.PRNGKey(config.seed)
