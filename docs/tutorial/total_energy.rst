@@ -105,13 +105,46 @@ The kinetic energy is then reduced to the following using the property that :mat
 The External Energy
 ^^^^^^^^^^^^^^^^^^^
 
+Denote the atomic point charge within the unit cell as
+
+.. math::
+
+   \begin{equation}
+   \rho ^{\text{atom}}(\vb{r})=-\sum_{\ell} Z_{\ell }\delta (\vb{r}-\vb*{\tau }_{\ell })
+   \end{equation}
+
+The Coulombic potential generated from this charge is
+
+.. math::
+
+   \begin{equation}
+   \begin{split}
+   V_{\text{ext}}(\vb{r}) =& \rho ^{\text{atom}}  \star \frac{1}{r}
+   = \int_{\Omega + \vb{R} } \dd{\vb{r}'} \frac{1}{\norm{\vb{r} - \vb{r}'}} \left( -\sum_{\ell} Z_{\ell }\delta (\vb{r}'-\vb*{\tau }_{\ell }) \right) \\
+   =&  - \sum_{\vb{R}} \sum_{\ell} Z_{\ell } \frac{1}{\norm{\vb{r}  - \vb*{\tau }_{\ell } - \vb{R}}}
+   \end{split}
+   \end{equation}
+
+where :math:`\vb{R}` is a Bravais lattice vector. Its reciprocal representation is given by (see :doc:`ewald` for derivation)
+
+.. math::
+
+  \begin{equation}
+    \tilde{V}_{\text{ext}} (\vb{G})
+    = -\sum_{\ell} \frac{4\pi Z_{\ell } e^{-\text{i} \vb{G} ^{\top} \vb*{\tau }_{\ell}}}{\norm{\vb{G}}^{2}}.
+  \end{equation}
+
+Now by Parseval's theorem we have
+
 .. math::
 
    \begin{align}
-   E_\text{ext}[\rho] &= -\sum_\ell \int_{\Omega} \rho(r) \frac{Z_\ell}{r-\tau_\ell}dr \\
-   &= - 4\pi  \sum_{\boldsymbol{G}_\boldsymbol{n} \neq \boldsymbol{0}}  \tilde{\rho}  (\boldsymbol{G}_\boldsymbol{n}) \sum_\ell e^{ \text{i}\boldsymbol{G}_\boldsymbol{n} \tau_\ell}  \dfrac{Z_\ell}{ \Vert \boldsymbol{G}_\boldsymbol{n} \Vert^2}
+   E_\text{ext}[\rho] &=  \int_{\Omega} \rho(\vb{r}) V_{\text{ext}}(\vb{r}) \dd{\vb{r}} \\
+   &= \sum_{\vb{G}\neq \vb{0}}  \tilde{V} _{\text{ext}}(\vb{G})^{*} \tilde{\rho} (\vb{G}) \\
+   &= - 4\pi  \sum_{\vb{G} \neq \vb{0}}  \tilde{\rho}  (\vb{G}) \sum_\ell e^{ -\text{i}\vb{G}^\top \vb*{\tau}_\ell}  \dfrac{Z_\ell}{ \Vert \vb{G} \Vert^2}
    \end{align}
 
+where the :math:`\vb{G}=0` term is removed due to neutral charge requirement (TODO: add doc on this).
 
 The Hartree Energy
 ^^^^^^^^^^^^^^^^^^
