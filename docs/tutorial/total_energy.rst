@@ -108,8 +108,8 @@ The External Energy
 .. math::
 
    \begin{align}
-   E_\text{ext}[\rho] &= -\sum_a \int_{\Omega} \rho(r) \frac{Z_a}{r-R_a}dr \\
-   &= - 4\pi  \sum_{\boldsymbol{G}_\boldsymbol{n} \neq \boldsymbol{0}}  \tilde{\rho}  (\boldsymbol{G}_\boldsymbol{n}) \sum_\ell e^{ \text{i}\boldsymbol{G}_\boldsymbol{n} \tau_\ell}  \dfrac{q_\ell}{ \Vert \boldsymbol{G}_\boldsymbol{n} \Vert^2}
+   E_\text{ext}[\rho] &= -\sum_\ell \int_{\Omega} \rho(r) \frac{Z_\ell}{r-\tau_\ell}dr \\
+   &= - 4\pi  \sum_{\boldsymbol{G}_\boldsymbol{n} \neq \boldsymbol{0}}  \tilde{\rho}  (\boldsymbol{G}_\boldsymbol{n}) \sum_\ell e^{ \text{i}\boldsymbol{G}_\boldsymbol{n} \tau_\ell}  \dfrac{Z_\ell}{ \Vert \boldsymbol{G}_\boldsymbol{n} \Vert^2}
    \end{align}
 
 
