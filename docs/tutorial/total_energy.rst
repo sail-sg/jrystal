@@ -101,11 +101,34 @@ The kinetic energy is then reduced to the following using the property that :mat
    =& \frac{1}{2}\sum_i\sum_{k}\sum_G f_{ik} c_{ikG}^2\|k+G\|^2
    \end{align}
 
+Reciprocal representation of the Coulombic potential
+^^^^^^^^^^^^^^^^^^
+
+The Coulombic potential generated from a charge :math:`\rho` is
+
+.. math::
+
+   \begin{equation}
+   \begin{split}
+   V(\vb{r}) =& \rho   \star \frac{1}{r}
+   = \int_{\Omega + \vb{R} } \dd{\vb{r}'} \frac{1}{\norm{\vb{r} - \vb{r}'}} \rho(\vb{r}') \\
+   \end{split}
+   \end{equation}
+
+where :math:`\vb{R}` is a Bravais lattice vector.
+Its reciprocal representation is given by (see :doc:`ewald` for derivation)
+
+.. math::
+
+  \begin{equation}
+    \tilde{V} (\vb{G})
+    =  \frac{4\pi \tilde{\rho}(\vb{G})}{\norm{\vb{G}}^{2}}.
+  \end{equation}
 
 The External Energy
 ^^^^^^^^^^^^^^^^^^^
 
-Denote the atomic point charge within the unit cell as
+The atomic point charge within the unit cell is
 
 .. math::
 
@@ -113,24 +136,13 @@ Denote the atomic point charge within the unit cell as
    \rho ^{\text{atom}}(\vb{r})=-\sum_{\ell} Z_{\ell }\delta (\vb{r}-\vb*{\tau }_{\ell })
    \end{equation}
 
-The Coulombic potential generated from this charge is
 
-.. math::
-
-   \begin{equation}
-   \begin{split}
-   V_{\text{ext}}(\vb{r}) =& \rho ^{\text{atom}}  \star \frac{1}{r}
-   = \int_{\Omega + \vb{R} } \dd{\vb{r}'} \frac{1}{\norm{\vb{r} - \vb{r}'}} \left( -\sum_{\ell} Z_{\ell }\delta (\vb{r}'-\vb*{\tau }_{\ell }) \right) \\
-   =&  - \sum_{\vb{R}} \sum_{\ell} Z_{\ell } \frac{1}{\norm{\vb{r}  - \vb*{\tau }_{\ell } - \vb{R}}}
-   \end{split}
-   \end{equation}
-
-where :math:`\vb{R}` is a Bravais lattice vector. Its reciprocal representation is given by (see :doc:`ewald` for derivation)
+Therefore its reciprocal representation is given by
 
 .. math::
 
   \begin{equation}
-    \tilde{V}_{\text{ext}} (\vb{G})
+    \tilde{V}_{\text{ext}}(\vb{G})
     = -\sum_{\ell} \frac{4\pi Z_{\ell } e^{-\text{i} \vb{G} ^{\top} \vb*{\tau }_{\ell}}}{\norm{\vb{G}}^{2}}.
   \end{equation}
 
@@ -149,6 +161,11 @@ where the :math:`\vb{G}=0` term is removed due to neutral charge requirement (TO
 The Hartree Energy
 ^^^^^^^^^^^^^^^^^^
 
+Again using Parseval's theorem we have
+
 .. math::
 
-   E_\text{har}[\rho] = \frac{1}{2}\int_\Omega dr \int dr'\rho(r)\frac{1}{r-r'}\rho(r')
+   \begin{equation}
+   E_\text{har}[\rho] = \frac{1}{2} \int_\Omega \rho(\vb{r}) \left( \rho \star \frac{1}{r} \right) \dd{\vb{r}}
+   = \frac{1}{2} \sum_{\vb{G}\neq 0} \tilde{\rho}(\vb{G}) \frac{4\pi \tilde{\rho}(\vb{G})}{\norm{\vb{G}}^{2}}
+   \end{equation}
