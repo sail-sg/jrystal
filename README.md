@@ -3,42 +3,42 @@ A JAX-based Differentiable Density Functional Theory Framework for Materials
 
 ## Core Features
 
-  <div style="display: flex; align-items: center; justify-content: center; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
+  <div style="display: flex; align-items: left; justify-content: left; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
   margin-bottom: 10px; margin-top: 10px;">
-    <div style="flex: 1; padding-right: 30px; display: flex; justify-content: center;">
-      <img src="docs/_static/images/feature-AD.png" alt="feature-AD" style="width: 80%; align-self: center;">
+    <div style="flex: 1; padding-right: 30px; display: flex; justify-content: left;">
+      <img src="docs/_static/images/feature-AD.png" alt="feature-AD" style="width: 80%; align-self: left;">
     </div>
-    <div style="flex: 4; padding-right: 10px; display: flex; align-items: center;">
+    <div style="flex: 4; padding-right: 10px; display: flex; align-items: left;">
       <p style="font-size: 18px; margin: 0;"> <b>Differentiable:</b> Leveraging JAX's automatic differentiation for efficient gradient computation of quantum properties, enabling straightforward optimization workflows. </p>
     </div>
   </div>
 
-  <div style="display: flex; align-items: center; justify-content: center; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
+  <div style="display: flex; align-items: left; justify-content: left; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
   margin-bottom: 10px; margin-top: 10px;">
-    <div style="flex: 1; padding-right: 30px; display: flex; justify-content: center;">
-      <img src="docs/_static/images/feature-gpu.png" alt="feature-AD" style="width: 80%; align-self: center;">
+    <div style="flex: 1; padding-right: 30px; display: flex; justify-content: left;">
+      <img src="docs/_static/images/feature-gpu.png" alt="feature-AD" style="width: 80%; align-self: left;">
     </div>
-    <div style="flex: 4; padding-right: 10px; display: flex; align-items: center;">
+    <div style="flex: 4; padding-right: 10px; display: flex; align-items: left;">
       <p style="font-size: 18px; margin: 0;"> <b>GPU-Accelerated:</b> Optimized for modern GPU architectures, delivering high-performance quantum calculations with automatic hardware acceleration. </p>
     </div>
   </div>
     
-  <div style="display: flex; align-items: center; justify-content: center; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
+  <div style="display: flex; align-items: left; justify-content: left; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
   margin-bottom: 10px; margin-top: 10px;">
-    <div style="flex: 1; padding-right: 30px; display: flex; justify-content: center;">
-      <img src="docs/_static/images/feature-solid.png" alt="feature-solid" style="width: 80%; align-self: center;">
+    <div style="flex: 1; padding-right: 30px; display: flex; justify-content: left;">
+      <img src="docs/_static/images/feature-solid.png" alt="feature-solid" style="width: 80%; align-self: left;">
     </div>
-    <div style="flex: 4; padding-right: 10px; display: flex; align-items: center;">
+    <div style="flex: 4; padding-right: 10px; display: flex; align-items: left;">
       <p style="font-size: 18px; margin: 0;"> <b>Solid-State Calculation:</b> Full-featured framework for periodic systems using plane wave basis sets, supporting precise electronic structure calculations of crystalline materials. </p>
     </div>
   </div>
   
-  <div style="display: flex; align-items: center; justify-content: center; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
+  <div style="display: flex; align-items: left; justify-content: left; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
   margin-bottom: 10px; margin-top: 10px;">
-    <div style="flex: 1; padding-right: 30px; display: flex; justify-content: center;">
-      <img src="docs/_static/images/feature-total.png" alt="feature-solid" style="width: 80%; align-self: center;">
+    <div style="flex: 1; padding-right: 30px; display: flex; justify-content: left;">
+      <img src="docs/_static/images/feature-total.png" alt="feature-solid" style="width: 80%; align-self: left;">
     </div>
-    <div style="flex: 4; padding-right: 10px; display: flex; align-items: center;">
+    <div style="flex: 4; padding-right: 10px; display: flex; align-items: left;">
       <p style="font-size: 18px; margin: 0;"> <b>Direct Optimization:</b> A direct minimization approach that avoids SCF iterations, enabling smooth convergence and natural integration of machine learning methods, and advanced quantum chemistry methods into density functional theory calculations. </p>
     </div>
   </div>
@@ -89,40 +89,40 @@ Jrystal has been benchmarked against Quantum ESPRESSO for various materials. Bel
 
 ### All-electron Calculations
 
-<div align="center">
-  <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+<div align="left">
+  <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: left;">
     <div style="flex: 1; min-width: 300px;">
       <img src="docs/_static/images/band_ae/si_ae.png" alt="Silicon (Si) Band Structure" width="100%"/>
-      <p align="center">Silicon (Si)</p>
+      <p align="left">Silicon (Si)</p>
     </div>
     <div style="flex: 1; min-width: 300px;">
       <img src="docs/_static/images/band_ae/al_ae.png" alt="Aluminum (Al) Band Structure" width="100%"/>
-      <p align="center">Aluminum (Al)</p>
+      <p align="left">Aluminum (Al)</p>
     </div>
   </div>
-  <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+  <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: left;">
     <div style="flex: 1; min-width: 300px;">
       <img src="docs/_static/images/band_ae/graphene_ae.png" alt="Graphene Band Structure" width="100%"/>
-      <p align="center">Graphene</p>
+      <p align="left">Graphene</p>
     </div>
     <div style="flex: 1; min-width: 300px;">
       <img src="docs/_static/images/band_ae/na_ae.png" alt="Sodium (Na) Band Structure" width="100%"/>
-      <p align="center">Sodium (Na)</p>
+      <p align="left">Sodium (Na)</p>
     </div>
   </div>
 </div>
 
 ### Norm-conserving Pseudopotential Calculations
 
-<div align="center">
-  <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+<div align="left">
+  <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: left;">
     <div style="flex: 1; min-width: 300px;">
       <img src="docs/_static/images/band_nc/si.png" alt="Silicon (Si) Band Structure" width="100%"/>
-      <p align="center">Silicon (Si)</p>
+      <p align="left">Silicon (Si)</p>
     </div>
     <div style="flex: 1; min-width: 300px;">
       <img src="docs/_static/images/band_nc/al.png" alt="Aluminum (Al) Band Structure" width="100%"/>
-      <p align="center">Aluminum (Al)</p>
+      <p align="left">Aluminum (Al)</p>
     </div>
   </div>
 </div>
@@ -135,7 +135,7 @@ Jrystal has been benchmarked against Quantum ESPRESSO for various materials. Bel
 
 This project is developed by [SEA AI LAB (SAIL)](https://sail.sea.com/) with theoretical support from [NUS I-FIM](https://ifim.nus.edu.sg/).
 
-<div align="center">
+<div align="left">
   <img src="docs/images/sail_logo.png" alt="SAIL Logo" width="300" style="margin-right: 40px"/>
   <img src="docs/images/ifim_logo.png" alt="I-FIM Logo" width="300"/>
 </div>
