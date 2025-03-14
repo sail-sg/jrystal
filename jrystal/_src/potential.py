@@ -13,13 +13,8 @@ def hartree_reciprocal(
 ) -> Complex[Array, 'x y z']:
   r"""Calculate the Hartree potential in reciprocal space.
 
-  The Hartree potential represents the classical electrostatic interaction between electrons. The calculation is performed in reciprocal space for efficiency.
-  The potential satisfies the Poisson equation:
-
-  .. math::
-      \nabla^2 V_H(\mathbf{r}) = -4\pi \rho(\mathbf{r})
-
-  with periodic boundary conditions. In reciprocal space, this becomes:
+  The Hartree potential represents the classical electrostatic interaction between electrons.
+  In reciprocal space, it obeys the following equation:
 
   .. math::
       \hat{V}_H(\mathbf{G}) = 4\pi \frac{\hat{n}(\mathbf{G})}{|\mathbf{G}|^2},
@@ -30,6 +25,9 @@ def hartree_reciprocal(
   - :math:`\hat{V}_H(\mathbf{G})` is the Hartree potential in reciprocal space
   - :math:`\hat{n}(\mathbf{G})` is the electron density in reciprocal space
   - :math:`\mathbf{G}` is the reciprocal lattice vector
+
+  Please also refer to the tutorial :doc:`Total Energy Minimization <../tutorial/total_energy>`
+  for more details.
 
   Args:
     density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in 
@@ -258,6 +256,7 @@ def effective(
   xc: str = "lda",
   kohn_sham: bool = False,
   spin_restricted: bool = True,
+
 ) -> Union[Tuple[
   Float[Array, 'x y z'], Float[Array, 'x y z'], Float[Array, 'x y z']],
            Float[Array, 'x y z']]:

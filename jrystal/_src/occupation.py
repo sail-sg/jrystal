@@ -142,7 +142,7 @@ def uniform(
       spin_restricted (bool, optional): Indicate spin channel. If True, the first axis of output is 1. If False, the first axis of output is 2. Defaults to True.
 
   Returns:
-      Float[Array, 'spin kpt band']: An occupation array with shape [num_spin, num_k, num_bands], where num_spin=1 if ``spin_restricted`` is True, else num_spin=2. The sum of occupation array equals to num_electrons.
+      Float[Array, 'spin kpt band']: An occupation array with shape [num_spin, num_k, num_bands], where num_spin=1 if ``spin_restricted`` is True, else num_spin=2. The sum of occupation array equals to ``num_electrons``.
   """
   num_bands = num_electrons if num_bands is None else num_bands
 
@@ -163,7 +163,7 @@ def gamma(
   num_bands: Optional[int] = None,
   spin_restricted: bool = True
 ) -> Float[Array, 'spin kpt band']:
-  """Calculate occupation numbers for Gamma point sampling.
+  r"""Calculate occupation numbers for Gamma point sampling.
 
   This function returns an occupation array where electrons are placed only at the Gamma point (first :math:`k`-point). For the Gamma point, occupation is 1 for occupied bands and 0 for unoccupied bands. All other :math:`k`-points have zero occupation.
 
@@ -171,12 +171,12 @@ def gamma(
 
   .. math::
 
-    \\begin{pmatrix}
-    1 & 1 & 1 & 0 & \\cdots & 0 \\\\
-    0 & 0 & 0 & 0 & \\cdots & 0 \\\\
-    \\vdots & \\vdots & \\vdots & \\vdots & \\ddots & \\vdots \\\\
-    0 & 0 & 0 & 0 & \\cdots & 0
-    \\end{pmatrix}
+    \begin{pmatrix}
+    1 & 1 & 1 & 0 & \cdots & 0 \\
+    0 & 0 & 0 & 0 & \cdots & 0 \\
+    \vdots & \vdots & \vdots & \vdots & \ddots & \vdots \\
+    0 & 0 & 0 & 0 & \cdots & 0
+    \end{pmatrix}
 
   Args:
       num_k (int): The number of k-points.
@@ -190,7 +190,7 @@ def gamma(
           Defaults to True.
 
   Returns:
-      Float[Array, 'spin kpt band']: An occupation array with shape [num_spin, num_k, num_bands], where :math:`\text{num_spin}=1` if ``spin_restricted`` is True, else :math:`\text{num_spin}=2`. The sum of occupation array equals to :math:`\text{num_electrons}`.
+      Float[Array, 'spin kpt band']: An occupation array with shape [num_spin, num_k, num_bands], where num_spin=1 if ``spin_restricted`` is True, else num_spin=2. The sum of occupation array equals to ``num_electrons``.
   """
   num_bands = num_electrons if num_bands is None else num_bands
   occ = jnp.zeros([2, num_k, num_bands])

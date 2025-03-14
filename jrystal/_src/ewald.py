@@ -13,9 +13,9 @@ def ewald_coulomb_repulsion(
   ewald_eta: Float,
   ewald_grid: Float[Array, 'x y z 3'],
 ) -> Float:
-  """ Calculate the Coulomb repulsion energy using Ewald summation method.
+  """ Calculate the nuclei repulsion energy using Ewald summation method.
 
-  This function computes the Coulomb repulsion energy for a periodic system using the Ewald summation technique, which splits the calculation into real and reciprocal space contributions. The method provides an efficient way to handle long-range Coulomb interactions in periodic systems.
+  This function computes the nuclei repulsion energy for a periodic system using the Ewald summation technique, which splits the calculation into real and reciprocal space contributions. The method provides an efficient way to handle long-range Coulomb interactions in periodic systems.
 
   .. note::
     Further reading:

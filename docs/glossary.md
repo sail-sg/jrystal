@@ -21,8 +21,8 @@ The physical quantities in the table below are evaluated on the mesh grid in rea
 | $\bf{B}$         |``cell_vectors_reciprocal``      | Reciprocal lattice vectors|
 |$\rho(\bf{r})$     |``density_grid``       | Electronic charge density in real space    |
 |$\tilde\rho(\bf{G})$ |``density_grid_reciprocal`` | Electronic charge density in reciprocal space |
-|$\psi({\bf{r}})$     |``wave_grid``       | Electronic wavefunction on grid points in real space    |
-|$\tilde\psi(\bf{G})$|``wave_grid_reciprocal`` | Electronic wavefunction on grid points in reciprocal space |
+|$\psi({\bf{r}})$     |``wave_grid``       | Electronic wavefunction in real space    |
+|$\tilde\psi(\bf{G})$|``wave_grid_reciprocal`` | Electronic wavefunction in reciprocal space |
 |$\boldsymbol{\varepsilon}_{i}$| ``eigenvalues`` | Single-particle eigenvalues of the Hamiltonian matrix |
 |$h_{ij}$| ``hamiltonian`` | Single-particle Hamiltonian matrix |
 |$c$  |``coefficient``,  <br /> (``coeff``) |  Plane wave expansion coefficients. <br /> Shape: ``[spin, kpts, band, x, y, z]``|
@@ -45,11 +45,11 @@ The physical quantities in the table below are evaluated on the mesh grid in rea
 | ``grid_sizes``  | Number of grid points along each direction for both $k$ and $G$ points|
 | ``k_grid_sizes``| Number of k-points along each direction for Brillouin zone sampling|
 | ``position``   | Atomic positions in real-space coordinates |
-| ``charge``     | Atomic charge vector |
+| ``charge``     | Nuclear charge |
 | ``ewald_eta``      | Ewald summation convergence parameter $\eta$|
 | ``ewald_cut``      | Cutoff energy for Ewald summation. The higher the cutoff energy, the more accurate the Ewald summation, but the slower the calculation.|
 | ``num_band`` | Number of electronic bands (usually equals the number of electrons)|
 | ``num_k``    | Total number of k-points in the calculation |
 | ``num_g``    | Total number of G-vectors in the plane wave basis |
-| ``vol``    | Volume of the crystallographic unit cell|
+| ``vol``    | Volume of the crystal unit cell|
 | ``spin``    | Number of spin channels (1 for non-spin-polarized, 2 for spin-polarized calculations)|
