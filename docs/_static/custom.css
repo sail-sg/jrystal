@@ -24,7 +24,7 @@ a.doc-link text {
 }
 
 .project-subtitle {
-    font-size: 1.5rem !important;  /* Adjust this value as needed */
+    font-size: 1.25rem !important;  /* Adjust this value as needed */
     font-weight: normal !important;
     margin: 1rem 0 !important;
     font-family: var(--pst-font-family-base) !important;  /* Uses theme's base font */

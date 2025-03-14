@@ -2,4 +2,4 @@ potential
 =========
 
 .. automodule:: jrystal.potential
-   :members: 
+   :members:

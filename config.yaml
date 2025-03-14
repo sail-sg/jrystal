@@ -5,7 +5,7 @@
 # Code will load the "$CRYSTAL.xyz" file in the geometry directory if
 # crystal name is provided, otherwise the code will read the from the path
 # specified by "crystal_file_path_path".
-crystal: "diamond"
+crystal: "si"
 crystal_file_path_path: null
 
 ################################################
@@ -27,15 +27,15 @@ pseudopotential_file_dir: null
 #       Planewave Hyper-parameters             #
 ################################################
 
-g_grid_mask_method: "spherical"
-# g_grid_mask_method can be either "cubic" or "spherical".
+freq_mask_method: "spherical"
+# freq_mask_method can be either "cubic" or "spherical".
 # For "cubic", the cutoff cannot be assigned, but will be estimated.
 # Only for "spherical" method, the cutoff_energy argument is valid.
 
 # cutoff energy in Hartree
 cutoff_energy: 40
 # grid sizes for the FFT grid
-grid_sizes: 24
+grid_sizes: 48
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
 k_grid_sizes: 1
 # Occupation method
@@ -46,7 +46,7 @@ occupation: "gamma"
 smearing: 0.0001
 # the total number of unoccupapied bands. The Total number of
 # potentially-occupied bands is ceil(num_electron / 2) + empty_bands
-empty_bands: 4
+empty_bands: 8
 spin_restricted: True
 # whether the calculation is spin_restricted or not, ie., spin-up and spin-down
 # electrons share the same spatial orbitals.
@@ -62,7 +62,7 @@ ewald_args:
 epoch: 10000
 optimizer: "adam"
 optimizer_args:
-  learning_rate: 0.001
+  learning_rate: 0.01
 
 # arguments for the optimizer. Please refer to optax documentation.
 # https://optax.readthedocs.io/en/latest/api/optimizers.html
@@ -93,7 +93,6 @@ k_path_special_points: null
 # For more details, refer to:
 # https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
 
-# "k_path_special_points": "GXMG",
 "k_path_special_points": "LGXL"
 num_kpoints: 60
 
@@ -102,7 +101,7 @@ num_kpoints: 60
 # where each row represents the relative coordinates of a k-point in
 # reciprocal space.
 k_path_file: null
-band_structure_epoch: 5000
+band_structure_epoch: 10000
 
 # Flag indicating whether fine-tuning is enabled.
 # If True, the optimization will start with the first k-point,

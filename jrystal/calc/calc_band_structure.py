@@ -19,7 +19,7 @@ from .opt_utils import create_grids, create_optimizer
 from ..config import JrystalConfigDict
 from .._src import pw, hamiltonian, occupation
 from .._src.band import get_k_path
-
+from .._src.crystal import Crystal
 
 @dataclass
 class BandStructureOutput:
@@ -27,12 +27,14 @@ class BandStructureOutput:
   
   Args:
     config (JrystalConfigDict): Configuration for the calculation.
+    crystal (Crystal): The crystal object.
     params_pw (dict): Parameters for the plane wave basis.
     ground_state_energy_output (GroundStateEnergyOutput): The output of the ground state energy calculation.
     k_path (jax.Array): The K-path.
     band_structure (jax.Array): The band structure.
   """
   config: JrystalConfigDict
+  crystal: Crystal
   params_pw: dict
   ground_state_energy_output: GroundStateEnergyOutput
   k_path: jax.Array
@@ -52,7 +54,9 @@ def calc(
   Returns:
       BandStructureOutput: The band structure output of the crystal.
   """
-  
+  if config.use_pseudopotential:
+    raise RuntimeError("This calculator does not support pseudopotential. It only supports all electron calculations. For norm-conserving pseudopotential calculations, please use the `calc_band_structure_normcons.calc` function.")
+
   set_env_params(config)
   key = jax.random.PRNGKey(config.seed)
   crystal = create_crystal(config)
@@ -205,11 +209,12 @@ def calc(
   # eigen_values = jnp.vstack(eigen_values)
   logging.info("===> Eigen decomposition done.")
   save_file = ''.join(crystal.symbol) + "_band_structure.npy"
-  logging.info(f"results is saved in {save_file}")
+  logging.info(f"Results saved in {save_file}")
   jnp.save(save_file, eigen_values)
 
   return BandStructureOutput(
     config=config,
+    crystal=crystal,
     params_pw=params_pw_band,
     ground_state_energy_output=ground_state_energy_output,
     k_path=k_path,

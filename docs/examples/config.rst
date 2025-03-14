@@ -51,7 +51,7 @@ The configuration file must be in YAML format and contain the following sections
 
 **Planewave Basis Settings**
 
-- ``g_grid_mask_method``: Grid masking methodology:
+- ``freq_mask_method``: Grid masking methodology:
     - ``cubic``: Employs cubic grid masking
     - ``spherical``: Employs spherical grid masking with user-defined cutoff
 - ``cutoff_energy``: Planewave kinetic energy cutoff in Hartree (required for ``spherical`` method)

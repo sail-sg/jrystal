@@ -8,7 +8,7 @@ class JrystalConfigDict(ConfigDict):
   crystal_file_path_path: Optional[str]
   use_pseudopotential: bool
   pseudopotential_file_dir: Optional[str]
-  g_grid_mask_method: str
+  freq_mask_method: str
   cutoff_energy: float
   grid_sizes: Union[int, List[int], Tuple[int]]
   k_grid_sizes: Union[int, List[int], Tuple[int]]
@@ -42,12 +42,12 @@ default_config = {
   "xc": "lda_x",
   "use_pseudopotential": False,
   "pseudopotential_file_dir": None,
-  "g_grid_mask_method": "spherical",
+  "freq_mask_method": "spherical",
   "cutoff_energy": 100,
   "grid_sizes": 64,
   "k_grid_sizes": 3,
   "occupation": "fermi-dirac",
-  "smearing": 0.0001,
+  "smearing": 0.001,
   "empty_bands": 8,
   "spin_restricted": True,
   "ewald_args": {
@@ -58,7 +58,7 @@ default_config = {
   "optimizer_args": {
     "learning_rate": 1e-2
   },
-  "scheduler": "adam",
+  "scheduler": None,
   "convergence_condition": 1e-8,
   "band_structure_empty_bands": 8,
   "k_path_special_points": None,

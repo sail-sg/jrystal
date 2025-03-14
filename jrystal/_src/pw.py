@@ -76,7 +76,8 @@ def param_init(
 
 
 def coeff(
-  pw_param: Union[Array, Tuple], freq_mask: Bool[Array, 'x y z']
+  pw_param: Union[dict, Array, Tuple],
+  freq_mask: Bool[Array, 'x y z']
 ) -> Complex[Array, 'spin kpt band x y z']:
   r'''Create the linear coefficients to combine the frequency components.
 

@@ -119,7 +119,7 @@ def external(
 
 def kinetic(
   g_vector_grid: Float[Array, 'x y z 3'],
-  k_vector_grid: Float[Array, 'x y z 3'],
+  kpts: Float[Array, 'kpt 3'],
   coeff_grid: Complex[Array, 'spin kpt band x y z'],
   occupation: Optional[Float[Array, 'spin kpt band']] = None
 ) -> Union[Float, Float[Array, "spin kpt band"]]:
@@ -141,13 +141,11 @@ def kinetic(
 
   Args:
     g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
-    k_vector_grid (Float[Array, 'x y z 3']): k-points in reciprocal space.
+    kpts (Float[Array, 'kpt 3']): k-points in reciprocal space.
     coeff_grid (Complex[Array, 'spin kpt band x y z']): Plane wave coefficients.
-    occupation (Float[Array, 'spin kpt band'], optional): Occupation numbers.
-      If provided, returns the total kinetic energy weighted by occupations.
+    occupation (Float[Array, 'spin kpt band'], optional): Occupation numbers. If provided, returns the total kinetic energy weighted by occupations.
 
   Returns:
-
     Union[Float, Float[Array, "spin kpt band"]]: If occupation is provided, returns the total kinetic energy. Otherwise, returns the kinetic energy for each state.
   """
 
@@ -155,7 +153,7 @@ def kinetic(
 
   _g = jnp.expand_dims(g_vector_grid, axis=range(3))
   _k = jnp.expand_dims(
-    k_vector_grid, axis=[0] + [i + 2 for i in range(dim + 1)]
+    kpts, axis=[0] + [i + 2 for i in range(dim + 1)]
   )
   e_kin = jnp.sum((_g + _k)**2, axis=-1)  # [1, nk, ni, x y z]
   e_kin = jnp.sum(e_kin * absolute_square(coeff_grid), axis=range(3, dim + 3))
@@ -257,11 +255,12 @@ def total_energy(
   Hartree, and exchange-correlation terms:
 
   .. math::
-      E_{\text{tot}} = E_{\text{kin}} + E_{\text{ext}} + E_H + E_{\text{xc}}
+  
+    E_{\\text{tot}} = E_{\\text{kin}} + E_{\\text{ext}} + E_H + E_{xc}
 
   .. warning::
-      This function does not include the nuclear-nuclear repulsion (Ewald) energy.
-      For the complete total energy, the Ewald term must be added separately.
+  
+    This function does not include the nuclear-nuclear repulsion (Ewald) energy. For the complete total energy, the Ewald term must be added separately.
 
   Args:
     coefficient (Complex[Array, "spin kpts band x y z"]): Plane wave coefficients.

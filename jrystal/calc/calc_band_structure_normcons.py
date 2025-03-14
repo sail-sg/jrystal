@@ -10,14 +10,15 @@ from dataclasses import dataclass
 from absl import logging
 from tqdm import tqdm
 
-from .calc_ground_state_energy import calc as energy_calc
-from .calc_ground_state_energy import GroundStateEnergyOutput
+from .calc_ground_state_energy_normcons import calc as energy_calc
+from .calc_ground_state_energy_normcons import GroundStateEnergyOutput
 from .opt_utils import set_env_params, create_crystal, create_freq_mask
 from .opt_utils import create_grids, create_optimizer, create_pseudopotential
 
 from ..config import JrystalConfigDict
 from .._src import pw, hamiltonian, occupation
 from .._src.band import get_k_path
+from .._src.crystal import Crystal
 from ..pseudopotential import local, normcons
 
 
@@ -27,12 +28,14 @@ class BandStructureOutput:
   
   Args:
     config (JrystalConfigDict): The configuration for the calculation.
+    crystal (Crystal): The crystal object.
     params_pw (dict): Parameters for the plane wave basis.
     ground_state_energy_output (GroundStateEnergyOutput): The output of the ground state energy calculation.
     k_path (jax.Array): The K-path.
     band_structure (jax.Array): The band structure.
   """
   config: JrystalConfigDict
+  crystal: Crystal
   params_pw: dict
   ground_state_energy_output: GroundStateEnergyOutput
   k_path: jax.Array
@@ -73,7 +76,6 @@ def calc(
   pseudopot = create_pseudopotential(config)
   potential_loc = local._potential_local_reciprocal(
     crystal.positions,
-    r_vec,
     g_vec,
     pseudopot.r_grid,
     pseudopot.local_potential_grid,
@@ -132,7 +134,7 @@ def calc(
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
   num_bands = ceil(crystal.num_electron / 2) + config.band_structure_empty_bands
-  params_pw_band = pw.param_init(key, num_bands, k_path.shape[0], freq_mask)
+  params_pw_band = pw.param_init(key, num_bands, 1, freq_mask)
   opt_state = optimizer.init(params_pw_band)
 
   # define update function
@@ -206,16 +208,6 @@ def calc(
       crystal.vol
     )
 
-    hamil_matrix = hamiltonian.hamiltonian_matrix(
-      coeff_i,
-      crystal.positions,
-      crystal.charges,
-      ground_state_density_grid,
-      g_vec,
-      kpts,
-      crystal.vol,
-      xc
-    )
     return jnp.linalg.eigvalsh(hamil_matrix[0])
 
   iters = tqdm(range(len(params_kpoint_list)))
@@ -229,11 +221,12 @@ def calc(
   eigen_values = jnp.vstack(eigen_values)
   logging.info("===> Eigen decomposition done.")
   save_file = ''.join(crystal.symbol) + "_band_structure.npy"
-  logging.info(f"results is saved in {save_file}")
+  logging.info(f"Results saved in {save_file}")
   jnp.save(save_file, eigen_values)
 
   return BandStructureOutput(
     config=config,
+    crystal=crystal,
     params_pw=params_pw_band,
     ground_state_energy_output=ground_state_energy_output,
     k_path=k_path,

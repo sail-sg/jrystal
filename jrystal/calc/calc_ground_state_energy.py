@@ -8,6 +8,7 @@ import optax
 from absl import logging
 from tqdm import tqdm
 
+from .._src.crystal import Crystal
 from .._src import energy, entropy, occupation, pw
 from ..config import JrystalConfigDict
 from .opt_utils import (
@@ -26,12 +27,14 @@ class GroundStateEnergyOutput:
 
   Args:
     config (JrystalConfigDict): Configuration for the calculation.
+    crystal (Crystal): The crystal object.
     params_pw (dict): Parameters for the plane wave basis.
     params_occ (dict): Parameters for the occupation.
     total_energy (Union[float, jax.Array]): Total energy of the crystal.
     total_energy_history (List[float]): The optimization history of the total energy.
   """
   config: JrystalConfigDict
+  crystal: Crystal
   params_pw: dict
   params_occ: dict
   total_energy: Union[float, jax.Array]
@@ -47,6 +50,11 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   Returns:
     GroundStateEnergyOutput: The ground state energy of the crystal.
   """
+  
+  # check if using correct calculator.
+  if config.use_pseudopotential:
+    raise RuntimeError("This calculator does not support pseudopotential. It only supports all electron calculations. For norm-conserving pseudopotential calculations, please use the `calc_ground_state_energy_normcons.calc` function.")
+  
   # Initialize and Prepare variables.
   set_env_params(config)
   key = jax.random.PRNGKey(config.seed)
@@ -154,13 +162,13 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   )
   lda = energy.xc_lda(density, crystal.vol)
 
-  logging.info(f"Hartree Energy: {hartree:.4f}")
-  logging.info(f"External Energy: {external:.4f}")
-  logging.info(f"LDA Energy: {lda:.4f}")
-  logging.info(f"Kinetic Energy: {kinetic:.4f}")
-  logging.info(f"Nuclear repulsion Energy: {ew:.4f}")
-  logging.info(f"Total Energy: {etot+ew:.4f}")
+  logging.info(f"Hartree Energy: {hartree:.4f} Ha")
+  logging.info(f"External Energy: {external:.4f} Ha")
+  logging.info(f"LDA Energy: {lda:.4f} Ha")
+  logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
+  logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
+  logging.info(f"Total Energy: {etot+ew:.4f} Ha")
 
   return GroundStateEnergyOutput(
-    config, params["pw"], params["occ"], etot + ew, []
+    config, crystal,params["pw"], params["occ"], etot + ew, []
   )

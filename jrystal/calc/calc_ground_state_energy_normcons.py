@@ -8,6 +8,7 @@ import optax
 from absl import logging
 from tqdm import tqdm
 
+from .._src.crystal import Crystal
 from .._src import energy, entropy, occupation, pw
 from ..config import JrystalConfigDict
 from ..pseudopotential import local, normcons
@@ -28,12 +29,14 @@ class GroundStateEnergyOutput:
   
   Args:
     config (JrystalConfigDict): The configuration for the calculation.
+    crystal (Crystal): The crystal object.
     params_pw (dict): Parameters for the plane wave basis.
     params_occ (dict): Parameters for the occupation.
     total_energy (Union[float, jax.Array]): The total energy of the crystal.
     total_energy_history (List[float]): The optimization history of the total energy.
   """
   config: JrystalConfigDict
+  crystal: Crystal
   params_pw: dict
   params_occ: dict
   total_energy: Union[float, jax.Array]
@@ -68,7 +71,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   pseudopot = create_pseudopotential(config)
   potential_loc = local._potential_local_reciprocal(
     crystal.positions,
-    r_vec,
     g_vec,
     pseudopot.r_grid,
     pseudopot.local_potential_grid,
@@ -195,14 +197,14 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
   lda = energy.xc_lda(density, crystal.vol)
 
-  logging.info(f"Hartree Energy: {hartree:.4f}")
-  logging.info(f"External (local) Energy: {external_local:.4f}")
-  logging.info(f"External (nonlocal) Energy: {external_nonlocal:.4f}")
-  logging.info(f"LDA Energy: {lda:.4f}")
-  logging.info(f"Kinetic Energy: {kinetic:.4f}")
-  logging.info(f"Nuclear repulsion Energy: {ew:.4f}")
-  logging.info(f"Total Energy: {etot+ew:.4f}")
+  logging.info(f"Hartree Energy: {hartree:.4f} Ha")
+  logging.info(f"External (local) Energy: {external_local:.4f} Ha")
+  logging.info(f"External (nonlocal) Energy: {external_nonlocal:.4f} Ha")
+  logging.info(f"LDA Energy: {lda:.4f} Ha")
+  logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
+  logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
+  logging.info(f"Total Energy: {etot+ew:.4f} Ha")
 
   return GroundStateEnergyOutput(
-    config, params["pw"], params["occ"], etot + ew, []
+    config, crystal, params["pw"], params["occ"], etot + ew, []
   )

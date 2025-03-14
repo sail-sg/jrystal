@@ -6,7 +6,7 @@ from typing import List, Optional
 from jaxtyping import Float, Array, Complex, Int
 from einops import einsum
 
-from .._src import braket
+from .._src import braket, kinetic
 from .._src import potential, energy, hamiltonian
 from .._src.utils import wave_to_density
 from .._src import pw
@@ -264,7 +264,7 @@ def _hamiltonian_matrix(
     hamiltonian_density_grid, axes=range(-dim, 0)
   )
 
-  kin = hamiltonian.kinetic(g_vector_grid, kpts)
+  kin = kinetic.kinetic_operator(g_vector_grid, kpts)
   h_kin = braket.expectation(
     coefficient, kin, vol, diagonal=False, mode='kinetic'
   )
@@ -326,7 +326,7 @@ def hamiltonian_matrix(
     hamiltonian_density_grid, axes=range(-dim, 0)
   )
 
-  kin = hamiltonian.kinetic(g_vector_grid, kpts)
+  kin = kinetic.kinetic_operator(g_vector_grid, kpts)
   h_kin = braket.expectation(
     coefficient, kin, vol, diagonal=False, mode='kinetic'
   )
@@ -384,7 +384,7 @@ def _hamiltonian_trace(
   lda = braket.expectation(wave_grid, v_lda, vol, diagonal=True, mode="real")
   h_s = jnp.sum(har + lda)
 
-  t_kin = hamiltonian.kinetic(g_vector_grid, kpts)
+  t_kin = kinetic.kinetic_operator(g_vector_grid, kpts)
   kin = braket.expectation(
     coefficient, t_kin, vol, diagonal=True, mode='kinetic'
   )

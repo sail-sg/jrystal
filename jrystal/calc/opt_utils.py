@@ -19,6 +19,7 @@ from ..config import JrystalConfigDict
 
 
 def set_env_params(config: JrystalConfigDict):
+  jax.config.update("jax_debug_nans", True)
 
   if config.verbose:
     logging.set_verbosity(logging.INFO)
@@ -47,15 +48,15 @@ def parse_args(config: JrystalConfigDict) -> JrystalConfigDict:
 def create_freq_mask(config: JrystalConfigDict):
   crystal = create_crystal(config)
   grid_sizes = proper_grid_size(config.grid_sizes)
-  logging.info(f"grid_mask_method: {config.g_grid_mask_method}")
+  logging.info(f"freq_mask_method: {config.freq_mask_method}")
 
-  if config.g_grid_mask_method == "cubic":
+  if config.freq_mask_method == "cubic":
     mask = np.array(cubic_mask(grid_sizes))
     max_cutoff = estimate_max_cutoff_energy(crystal.cell_vectors, mask)
     logging.info(f"maxmum cutoff: {max_cutoff:.2f} Ha")
     logging.info(f"number of g points: {np.sum(mask)}")
 
-  elif config.g_grid_mask_method == "spherical":
+  elif config.freq_mask_method == "spherical":
     mask = spherical_mask(
       crystal.cell_vectors, grid_sizes, config.cutoff_energy
     )
@@ -64,7 +65,7 @@ def create_freq_mask(config: JrystalConfigDict):
     logging.info(f"number of g points: {np.sum(mask)}")
 
   else:
-    raise ValueError("g_grid_mask_method must be either cubic or spherical.")
+    raise ValueError("freq_mask_method must be either cubic or spherical.")
 
   return mask
 
@@ -93,8 +94,8 @@ def create_grids(config: JrystalConfigDict):
   k_grid_sizes = proper_grid_size(config.k_grid_sizes)
   g_vector_grid = g_vectors(crystal.cell_vectors, grid_sizes)
   r_vector_grid = r_vectors(crystal.cell_vectors, grid_sizes)
-  k_vector_grid = k_vectors(crystal.cell_vectors, k_grid_sizes)
-  return g_vector_grid, r_vector_grid, k_vector_grid
+  kpts = k_vectors(crystal.cell_vectors, k_grid_sizes)
+  return g_vector_grid, r_vector_grid, kpts
 
 
 def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
