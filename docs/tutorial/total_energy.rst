@@ -101,21 +101,71 @@ The kinetic energy is then reduced to the following using the property that :mat
    =& \frac{1}{2}\sum_i\sum_{k}\sum_G f_{ik} c_{ikG}^2\|k+G\|^2
    \end{align}
 
+Reciprocal representation of the Coulombic potential
+^^^^^^^^^^^^^^^^^^
+
+The Coulombic potential generated from a charge :math:`\rho` is
+
+.. math::
+
+   \begin{equation}
+   \begin{split}
+   V(\vb{r}) =& \rho   \star \frac{1}{r}
+   = \int_{\Omega + \vb{R} } \dd{\vb{r}'} \frac{1}{\norm{\vb{r} - \vb{r}'}} \rho(\vb{r}') \\
+   \end{split}
+   \end{equation}
+
+where :math:`\vb{R}` is a Bravais lattice vector.
+Its reciprocal representation is given by (see :doc:`ewald` for derivation)
+
+.. math::
+
+  \begin{equation}
+    \tilde{V} (\vb{G})
+    =  \frac{4\pi \tilde{\rho}(\vb{G})}{\norm{\vb{G}}^{2}}.
+  \end{equation}
 
 The External Energy
 ^^^^^^^^^^^^^^^^^^^
 
+The atomic point charge within the unit cell is
+
+.. math::
+
+   \begin{equation}
+   \rho ^{\text{atom}}(\vb{r})=-\sum_{\ell} Z_{\ell }\delta (\vb{r}-\vb*{\tau }_{\ell })
+   \end{equation}
+
+
+Therefore its reciprocal representation is given by
+
+.. math::
+
+  \begin{equation}
+    \tilde{V}_{\text{ext}}(\vb{G})
+    = -\sum_{\ell} \frac{4\pi Z_{\ell } e^{-\text{i} \vb{G} ^{\top} \vb*{\tau }_{\ell}}}{\norm{\vb{G}}^{2}}.
+  \end{equation}
+
+Now by Parseval's theorem we have
+
 .. math::
 
    \begin{align}
-   E_\text{ext}[\rho] &= -\sum_a \int_{\Omega} \rho(r) \frac{Z_a}{r-R_a}dr \\
-   &= - 4\pi  \sum_{\boldsymbol{G}_\boldsymbol{n} \neq \boldsymbol{0}}  \tilde{\rho}  (\boldsymbol{G}_\boldsymbol{n}) \sum_\ell e^{ \text{i}\boldsymbol{G}_\boldsymbol{n} \tau_\ell}  \dfrac{q_\ell}{ \Vert \boldsymbol{G}_\boldsymbol{n} \Vert^2}
+   E_\text{ext}[\rho] &=  \int_{\Omega} \rho(\vb{r}) V_{\text{ext}}(\vb{r}) \dd{\vb{r}} \\
+   &= \sum_{\vb{G}\neq \vb{0}}  \tilde{V} _{\text{ext}}(\vb{G})^{*} \tilde{\rho} (\vb{G}) \\
+   &= - 4\pi  \sum_{\vb{G} \neq \vb{0}}  \tilde{\rho}  (\vb{G}) \sum_\ell e^{ -\text{i}\vb{G}^\top \vb*{\tau}_\ell}  \dfrac{Z_\ell}{ \Vert \vb{G} \Vert^2}
    \end{align}
 
+where the :math:`\vb{G}=0` term is removed due to neutral charge requirement (TODO: add doc on this). The reciprocal density :math:`\tilde{\rho} (\vb{G})` can be calculated effciently using FFT (see :func:`jrystal.pw.density_grid_reciprocal`).
 
 The Hartree Energy
 ^^^^^^^^^^^^^^^^^^
 
+Again using Parseval's theorem we have
+
 .. math::
 
-   E_\text{har}[\rho] = \frac{1}{2}\int_\Omega dr \int dr'\rho(r)\frac{1}{r-r'}\rho(r')
+   \begin{equation}
+   E_\text{har}[\rho] = \frac{1}{2} \int_\Omega \rho(\vb{r}) \left( \rho \star \frac{1}{r} \right) \dd{\vb{r}}
+   = \frac{1}{2} \sum_{\vb{G}\neq 0} \tilde{\rho}(\vb{G}) \frac{4\pi \tilde{\rho}(\vb{G})}{\norm{\vb{G}}^{2}}
+   \end{equation}
