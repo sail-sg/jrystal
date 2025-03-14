@@ -11,26 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Planewave module."""
 
 from ._src.pw import (
-    param_init,
-    coeff,
-    wave_grid,
-    density_grid,
-    density_grid_reciprocal,
-    wave_r,
-    density_grid,
+  param_init,
+  coeff,
+  wave_grid,
+  density_grid,
+  density_grid_reciprocal,
+  wave_r,
 )
 
-
 __all__ = [
-    "param_init",
-    "coeff",
-    "wave_grid",
-    "density_grid",
-    "density_grid_reciprocal",
-    "wave_r",
-    "density_grid",
+  "param_init",
+  "coeff",
+  "wave_grid",
+  "density_grid",
+  "density_grid_reciprocal",
+  "wave_r",
 ]

@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Spherical coordinate system utilities and spherical harmonics transformations.
 
 This module provides functions for working with spherical coordinates and spherical harmonics, particularly useful for quantum mechanical calculations and pseudopotential transformations.
@@ -24,7 +23,8 @@ from typing import Callable
 from .._src.utils import vmapstack
 
 
-def cartesian_to_spherical(x: Float[Array, "*n 3"], eps = 1e-10) -> Float[Array, "*n 3"]:
+def cartesian_to_spherical(x: Float[Array, "*n 3"],
+                           eps=1e-10) -> Float[Array, "*n 3"]:
   """Convert Cartesian coordinates to spherical coordinates.
 
   Transforms 3D Cartesian coordinates (x, y, z) to spherical coordinates (r, θ, φ), where:
@@ -42,8 +42,8 @@ def cartesian_to_spherical(x: Float[Array, "*n 3"], eps = 1e-10) -> Float[Array,
     Float[Array, "*n 3"]: Spherical coordinates (r, θ, φ) with same batch shape
   """
   r = jnp.linalg.norm(x, axis=-1)  # Radial distance
-  r = jnp.where(r==0., eps, r)
-  
+  r = jnp.where(r == 0., eps, r)
+
   # Polar angle (phi)
   phi = jnp.arccos(jnp.clip(x[2] / r, -1.0, 1.0))
 

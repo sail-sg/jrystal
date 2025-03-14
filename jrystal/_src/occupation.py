@@ -11,19 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Occupation module."""
 import einops
-import jax
 import jax.numpy as jnp
 from typing import Optional
 from jaxtyping import Float, Array
 from .unitary_module import unitary_matrix, unitary_matrix_param_init
 
 
-def idempotent_param_init(
-  key: Array, num_bands: int, num_kpts: int
-) -> dict:
+def idempotent_param_init(key: Array, num_bands: int, num_kpts: int) -> dict:
   r"""Initialize the parameters for the idempotent occupation.
   
   This function is an implementation of the method proposed in:
@@ -56,7 +52,7 @@ def idempotent_param_init(
       dict: A dictionary containing the initialized parameters.
 
   """
-  
+
   return unitary_matrix_param_init(
     key, [num_bands * num_kpts, num_bands * num_kpts], complex=False
   )

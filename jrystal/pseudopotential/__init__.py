@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """The pseudopotential module.
 
 .. warning::
@@ -31,7 +30,6 @@ from . import normcons
 from . import interpolate
 from . import spherical
 from . import beta
-
 
 __all__ = [
   "dataclass",

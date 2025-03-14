@@ -11,9 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Potential functions."""
-
 
 from ._src.potential import (
   hartree_reciprocal,
@@ -23,7 +21,6 @@ from ._src.potential import (
   xc_lda,
   effective,
 )
-
 
 __all__ = [
   "hartree_reciprocal",

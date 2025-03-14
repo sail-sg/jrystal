@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Functions for dealing with beta functions. """
 import jax.numpy as jnp
 from typing import List
@@ -93,7 +92,6 @@ def beta_sbt_grid_multi_atoms(
     Cubic spline interpolation is not implemented in JAX. This function uses ``NumPy`` and is not differentiable.
 
   """
-    
 
   output = []
   for r, b, l in zip(r_grid, nonlocal_beta_grid, nonlocal_angular_momentum):

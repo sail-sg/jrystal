@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Energy functions. """
 from typing import Optional, Union
 
@@ -166,9 +165,7 @@ def kinetic(
   dim = g_vector_grid.shape[-1]
 
   _g = jnp.expand_dims(g_vector_grid, axis=range(3))
-  _k = jnp.expand_dims(
-    kpts, axis=[0] + [i + 2 for i in range(dim + 1)]
-  )
+  _k = jnp.expand_dims(kpts, axis=[0] + [i + 2 for i in range(dim + 1)])
   e_kin = jnp.sum((_g + _k)**2, axis=-1)  # [1, nk, ni, x y z]
   e_kin = jnp.sum(e_kin * absolute_square(coeff_grid), axis=range(3, dim + 3))
 
@@ -296,7 +293,7 @@ def total_energy(
   """
 
   wave_grid_arr = pw.wave_grid(coefficient, vol)
-  
+
   occupation = jnp.ones(
     shape=coefficient.shape[:3]
   ) if occupation is None else occupation

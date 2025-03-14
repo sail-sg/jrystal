@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Hessian for Complex-Valued Functions. """
 import jax
 import jax.numpy as jnp
@@ -19,7 +18,7 @@ from typing import Callable
 
 
 def complex_hessian(
-  f: Callable[[jnp.ndarray], jnp.ndarray], 
+  f: Callable[[jnp.ndarray], jnp.ndarray],
   primal: jnp.ndarray,
 ) -> jnp.ndarray:
   """Compute the Hessian of a complex-valued function at a point. 
@@ -48,5 +47,8 @@ def complex_hessian(
 
   # x = jnp.ones(dim, dtype=dtype)
   return jnp.array(
-    [hessian_vec_prod(primal, jnp.eye(dim, dtype=dtype)[i]) for i in range(dim)]
-    )
+    [
+      hessian_vec_prod(primal, jnp.eye(dim, dtype=dtype)[i])
+      for i in range(dim)
+    ]
+  )

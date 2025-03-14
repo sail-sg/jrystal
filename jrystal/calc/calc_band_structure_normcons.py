@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Band Structure Calculator. """
 import jax
 import jax.numpy as jnp
@@ -30,7 +29,7 @@ from .opt_utils import set_env_params, create_crystal, create_freq_mask
 from .opt_utils import create_grids, create_optimizer, create_pseudopotential
 
 from ..config import JrystalConfigDict
-from .._src import pw, hamiltonian, occupation
+from .._src import pw, occupation
 from .._src.band import get_k_path
 from .._src.crystal import Crystal
 from ..pseudopotential import local, normcons

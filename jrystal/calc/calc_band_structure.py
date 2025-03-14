@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Band Structure Calculator. """
 
 import jax
@@ -34,6 +33,7 @@ from ..config import JrystalConfigDict
 from .._src import pw, hamiltonian, occupation
 from .._src.band import get_k_path
 from .._src.crystal import Crystal
+
 
 @dataclass
 class BandStructureOutput:
@@ -69,7 +69,9 @@ def calc(
       BandStructureOutput: The band structure output of the crystal.
   """
   if config.use_pseudopotential:
-    raise RuntimeError("This calculator does not support pseudopotential. It only supports all electron calculations. For norm-conserving pseudopotential calculations, please use the `calc_band_structure_normcons.calc` function.")
+    raise RuntimeError(
+      "This calculator does not support pseudopotential. It only supports all electron calculations. For norm-conserving pseudopotential calculations, please use the `calc_band_structure_normcons.calc` function."
+    )
 
   set_env_params(config)
   key = jax.random.PRNGKey(config.seed)

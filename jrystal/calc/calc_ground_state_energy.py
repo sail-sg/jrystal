@@ -64,11 +64,13 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   Returns:
     GroundStateEnergyOutput: The ground state energy of the crystal.
   """
-  
+
   # check if using correct calculator.
   if config.use_pseudopotential:
-    raise RuntimeError("This calculator does not support pseudopotential. It only supports all electron calculations. For norm-conserving pseudopotential calculations, please use the `calc_ground_state_energy_normcons.calc` function.")
-  
+    raise RuntimeError(
+      "This calculator does not support pseudopotential. It only supports all electron calculations. For norm-conserving pseudopotential calculations, please use the `calc_ground_state_energy_normcons.calc` function."
+    )
+
   # Initialize and Prepare variables.
   set_env_params(config)
   key = jax.random.PRNGKey(config.seed)
@@ -97,7 +99,13 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     coeff = pw.coeff(params_pw, freq_mask)
     occ = get_occupation(params_occ)
     return energy.total_energy(
-      coeff, crystal.positions, crystal.charges, g_vec, k_vec, crystal.vol, occ,
+      coeff,
+      crystal.positions,
+      crystal.charges,
+      g_vec,
+      k_vec,
+      crystal.vol,
+      occ,
       kohn_sham=False,
     )
 
@@ -184,5 +192,5 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Total Energy: {etot+ew:.4f} Ha")
 
   return GroundStateEnergyOutput(
-    config, crystal,params["pw"], params["occ"], etot + ew, []
+    config, crystal, params["pw"], params["occ"], etot + ew, []
   )

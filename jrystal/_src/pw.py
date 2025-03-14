@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 '''Planewave module.'''
 from typing import Optional, Tuple, Union
 
@@ -90,8 +89,7 @@ def param_init(
 
 
 def coeff(
-  pw_param: Union[dict, Array, Tuple],
-  freq_mask: Bool[Array, 'x y z']
+  pw_param: Union[dict, Array, Tuple], freq_mask: Bool[Array, 'x y z']
 ) -> Complex[Array, 'spin kpt band x y z']:
   r'''Create the linear coefficients to combine the frequency components.
 

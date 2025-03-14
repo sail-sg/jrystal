@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Unitary matrix module.
 
@@ -68,7 +67,11 @@ def unitary_matrix(params: Dict[str, Array], complex: bool = False) -> Array:
   return orthogonal_columns
 
 
-def unitary_matrix_param_init(key: Array, shape: Union[tuple, List[int]], complex: bool = True) -> Dict[str, Array]:
+def unitary_matrix_param_init(
+  key: Array,
+  shape: Union[tuple, List[int]],
+  complex: bool = True
+) -> Dict[str, Array]:
   """Initialize parameters for generating a unitary matrix.
 
   This function creates the necessary parameters to construct a unitary matrix

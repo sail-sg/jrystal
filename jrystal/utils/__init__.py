@@ -20,3 +20,13 @@ from .._src.utils import (
   expand_coefficient,
   squeeze_coefficient,
 )
+
+
+__all__ = [
+  'safe_real',
+  'vmapstack',
+  'wave_to_density',
+  'wave_to_density_reciprocal',
+  'expand_coefficient',
+  'squeeze_coefficient',
+]

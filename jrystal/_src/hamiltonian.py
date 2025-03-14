@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Hamiltonian matrix operations for quantum mechanical calculations.
 
 This module provides functions to compute Hamiltonian matrix elements and related quantities in a plane wave basis. The Hamiltonian includes both kinetic and effective potential terms, supporting both standard and Kohn-Sham DFT calculations.
@@ -19,11 +18,11 @@ This module provides functions to compute Hamiltonian matrix elements and relate
 
 import jax
 import jax.numpy as jnp
-from jaxtyping import Float, Array, Int, Complex, Bool
-from typing import Optional, Union
+from jaxtyping import Float, Array, Int, Complex
+from typing import Union
 
 from .kinetic import kinetic_operator
-from . import pw, braket, potential, utils, grid
+from . import pw, braket, potential, utils
 from .hessian import complex_hessian
 
 
@@ -102,7 +101,7 @@ def hamiltonian_matrix_trace(
   kohn_sham: bool = True,
   keep_kpts_axis: bool = False,
   keep_spin_axis: bool = False,
-) -> Union[Float, Float[Array, "spin"],  Float[Array, "spin kpt"]]:
+) -> Union[Float, Float[Array, "spin"], Float[Array, "spin kpt"]]:
   r"""Calculate the trace of the Hamiltonian matrix.
 
   The trace is computed as:
@@ -157,7 +156,7 @@ def hamiltonian_matrix_trace(
   t_kin = kinetic_operator(g_vector_grid, kpts)
   f_kin = braket.expectation(
     band_coefficient, t_kin, vol, diagonal=True, mode='kinetic'
-  )       #  [spin, kpt, band]
+  )  # [spin, kpt, band]
 
   hamil_trace = (f_eff + f_kin).real
   if not keep_kpts_axis:
@@ -232,11 +231,12 @@ def hamiltonian_matrix(
       )
 
       return 0.5 * jnp.sum(band_energies).astype(band_coefficient.dtype)
+
     x = jnp.ones(num_bands, dtype=band_coefficient.dtype)
     return complex_hessian(efun, x)
 
   h1 = jax.vmap(hamil_k, in_axes=(0, 1), out_axes=0)(kpts, band_coefficient)
-  return h1   #  shape: [kpt, band, band]
+  return h1  # shape: [kpt, band, band]
 
 
 def _hamiltonian_matrix_basis(
@@ -268,9 +268,9 @@ def _hamiltonian_matrix_basis(
   Returns:
     Complex[Array, "kpt band band"]: Complex array of shape [kpt, band, band] containing the Hamiltonian matrix elements in the plane wave basis at each k-point.
   """
-  
+
   num_basis = jnp.sum(freq_mask)
-  
+
   if g_vector_grid.dtype == jnp.float64:
     _dtype = jnp.complex128
   elif g_vector_grid.dtype == jnp.float32:

@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Potentials."""
 from typing import Tuple, Union
 
@@ -270,7 +269,6 @@ def effective(
   xc: str = "lda",
   kohn_sham: bool = False,
   spin_restricted: bool = True,
-
 ) -> Union[Tuple[
   Float[Array, 'x y z'], Float[Array, 'x y z'], Float[Array, 'x y z']],
            Float[Array, 'x y z']]:

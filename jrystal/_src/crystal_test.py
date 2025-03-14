@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Test for crystal.py"""
 
 from absl.testing import absltest, parameterized
@@ -42,8 +41,8 @@ class _TestModules(parameterized.TestCase):
     )
     self.reciprocal_vectors = np.array(
       [
-        [-0.93221149, 0.93221149, 0.93221149],
-        [0.93221149, -0.93221149, 0.93221149],
+        [-0.93221149, 0.93221149,
+         0.93221149], [0.93221149, -0.93221149, 0.93221149],
         [0.93221149, 0.93221149, -0.93221149]
       ]
     )

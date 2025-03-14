@@ -69,6 +69,9 @@ docstyle: doc-install
 doc: doc-install
 	cd docs && make html && cd _build/html && python3 -m http.server
 
+doc-build: doc-install
+	cd docs && make html
+
 doc-dev: doc-install
 	sphinx-autobuild --watch jrystal docs docs/_build/html
 

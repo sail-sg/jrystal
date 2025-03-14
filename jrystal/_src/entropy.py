@@ -11,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """ Entropy functions. """
 import jax.numpy as jnp
 from jaxtyping import Float, Array
 
 
-def fermi_dirac(occupation: Float[Array, 'spin kpt band'], eps: float = 1e-8) -> Float:
+def fermi_dirac(
+  occupation: Float[Array, 'spin kpt band'], eps: float = 1e-8
+) -> Float:
   r"""Compute the entropy corresponding to Fermi-Dirac distribution.
 
   The entropy is defined as:

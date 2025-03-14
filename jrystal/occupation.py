@@ -11,19 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """ Occupation functions. """
 
 from ._src.occupation import (
-    idempotent_param_init,
-    idempotent,
-    uniform,
-    gamma,
+  idempotent_param_init,
+  idempotent,
+  uniform,
+  gamma,
 )
 
 __all__ = [
-    "idempotent_param_init",
-    "idempotent",
-    "uniform",
-    "gamma",
+  "idempotent_param_init",
+  "idempotent",
+  "uniform",
+  "gamma",
 ]

@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """The Crystal class.
 
 This module establishes the interface for the crystal structure. It's important
@@ -151,7 +150,7 @@ class Crystal:
 
   @staticmethod
   def create_from_symbols(
-    symbols: str, 
+    symbols: str,
     positions: Union[List[List], Float[Array, "num_atom 3"]],
     cell_vectors: Float[Array, "3 3"],
   ):

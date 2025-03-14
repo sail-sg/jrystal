@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Local potential functions for plane waves. """
 import numpy as np
 import jax.numpy as jnp
@@ -48,7 +47,7 @@ def _potential_local_reciprocal(
   Returns:
       Complex[Array, "x y z"]: The local potential in reciprocal space.
   """
-  
+
   # v_loc = (v_loc + Z/r) - Z/r   where v_loc is always negative
 
   # First part v1 = (v_loc + Z/r)

@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """The Crystal class.
 
 This module establishes the interface for the crystal structure. It's important
@@ -19,7 +18,6 @@ to note that all values are presented in ATOMIC UNITS inside, specifically
 hartree for energy and Bohr for length. The input positions of atoms should be
 in angstrom.
 """
-
 
 from ._src.crystal import Crystal
 

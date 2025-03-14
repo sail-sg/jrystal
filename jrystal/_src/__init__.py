@@ -28,7 +28,6 @@ from . import utils
 from . import unitary_module
 from . import braket
 
-
 __all__ = [
   "band",
   "pw",

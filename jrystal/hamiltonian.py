@@ -11,17 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Hamiltonian operations."""
 
-
-from ._src.hamiltonian import (
-    hamiltonian_matrix,
-    hamiltonian_matrix_trace
-)
-
+from ._src.hamiltonian import (hamiltonian_matrix, hamiltonian_matrix_trace)
 
 __all__ = [
-    "hamiltonian_matrix",
-    "hamiltonian_matrix_trace",
+  "hamiltonian_matrix",
+  "hamiltonian_matrix_trace",
 ]

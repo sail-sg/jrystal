@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Utility functions for optimization. """
 import jax
 import numpy as np
@@ -37,12 +36,12 @@ def set_env_params(config: JrystalConfigDict):
 
   if config.verbose:
     logging.set_verbosity(logging.INFO)
-    logging.info(f'Versbose mode is on.')
+    logging.info('Versbose mode is on.')
     if config.jax_enable_x64:
-      logging.info(f"Precision: Double (64 bit).")
+      logging.info("Precision: Double (64 bit).")
   else:
     logging.set_verbosity(logging.WARNING)
-    logging.warning(f'Versbose mode is off.')
+    logging.warning('Versbose mode is off.')
 
   jax.config.update("jax_enable_x64", config.jax_enable_x64)
 

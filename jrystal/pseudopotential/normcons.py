@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Norm Conserving Pseudopotential for Plane Waves. """
 import numpy as np
 import jax
@@ -21,7 +20,7 @@ from jaxtyping import Float, Array, Complex, Int
 from einops import einsum
 
 from .._src import braket, kinetic
-from .._src import potential, energy, hamiltonian
+from .._src import potential, energy
 from .._src.utils import wave_to_density
 from .._src import pw
 from .spherical import legendre_to_sph_harm
@@ -155,7 +154,7 @@ def _hamiltonian_nonlocal(
   Returns:
     Complex[Array, "spin kpt band band"]: The nonlocal pseudopotential hamiltonian.
   """
-  
+
   _f_matrix = einsum(
     pw_coefficients,
     potential_nl_sqrt,
@@ -254,7 +253,6 @@ def _hamiltonian_matrix(
   xc: str = 'lda',
   kohn_sham: bool = False
 ):
-  
   """
   Compute the nonlocal pseudopotential hamiltonian.
   
@@ -266,7 +264,7 @@ def _hamiltonian_matrix(
     g_vector_grid (VectorGrid[Float, 3]): The grid of the reciprocal vectors.
     kpts (Float[Array, "num_k d"]): The grid of the k-points.
   """
-  
+
   dim = kpts.shape[-1]
   wave_grid = pw.wave_grid(coefficient, vol)
   ext_nloc = _hamiltonian_nonlocal(
@@ -360,7 +358,7 @@ def _hamiltonian_trace(
   coefficient: Complex[Array, "spin kpt band x y z"],
   hamiltonian_density_grid: Float[Array, "x y z"],
   potential_local_grid_reciprocal: Float[Array, "r"],
-  potential_nonlocal_grid_sqrt: Complex[Array, "kpt atom beta x y z phi"] ,
+  potential_nonlocal_grid_sqrt: Complex[Array, "kpt atom beta x y z phi"],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Float[Array, "kpt 3"],
   nonlocal_d_matrix: List[Float[Array, "beta beta"]],

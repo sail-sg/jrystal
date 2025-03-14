@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Integration operations for quantum mechanical calculations in real and reciprocal space.
 
 This module provides functions for calculating inner products (brakets) and expectation values in both real and reciprocal space, which are fundamental operations in quantum mechanics and density functional theory (DFT) calculations.
@@ -20,7 +19,7 @@ This module provides functions for calculating inner products (brakets) and expe
 import einops
 import jax.numpy as jnp
 import numpy as np
-from  typing import Union, Optional
+from typing import Union, Optional
 from jaxtyping import Array, Complex, Float
 
 
@@ -115,10 +114,13 @@ def real_braket(
 
 
 def expectation(
-  bra: Union[Complex[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band x y z']],
-  hamiltonian: Union[Complex[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band x y z']],
+  bra: Union[Complex[Array, 'spin kpt band x y z'],
+             Float[Array, 'spin kpt band x y z']],
+  hamiltonian: Union[Complex[Array, 'spin kpt band x y z'],
+                     Float[Array, 'spin kpt band x y z']],
   vol: Float,
-  ket: Optional[Union[Complex[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band x y z']]] = None,
+  ket: Optional[Union[Complex[Array, 'spin kpt band x y z'],
+                      Float[Array, 'spin kpt band x y z']]] = None,
   diagonal: bool = False,
   mode: str = 'real'
 ) -> Array:

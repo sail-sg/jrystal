@@ -11,26 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Energy functions."""
 
 from ._src.energy import (
-    hartree,
-    external,
-    kinetic,
-    xc_lda,
-    total_energy,
-    band_energy,
-    nuclear_repulsion
+  hartree,
+  external,
+  kinetic,
+  xc_lda,
+  total_energy,
+  band_energy,
+  nuclear_repulsion
 )
 
-
 __all__ = [
-    "hartree",
-    "external",
-    "kinetic",
-    "xc_lda",
-    "total_energy",
-    "band_energy",
-    "nuclear_repulsion",
+  "hartree",
+  "external",
+  "kinetic",
+  "xc_lda",
+  "total_energy",
+  "band_energy",
+  "nuclear_repulsion",
 ]

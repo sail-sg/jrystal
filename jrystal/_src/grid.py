@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 '''Grid operations for crystalline systems.
 
 This module provides functions for working with real and reciprocal space grids in crystalline systems.
@@ -92,8 +91,8 @@ def _half_frequency_pad_to(
 
 
 def _vector_grid(
-  basis: Float[Array, 'd'], 
-  grid_sizes: Union[Tuple, List, Int[Array, 'd']], 
+  basis: Float[Array, 'd'],
+  grid_sizes: Union[Tuple, List, Int[Array, 'd']],
   normalize: bool = False
 ) -> Float[Array, 'x y z d']:
   '''This is a shared function that is used by :code:`g_vectors`
@@ -121,7 +120,7 @@ def _vector_grid(
 
 
 def g_vectors(
-  cell_vectors: Float[Array, '3 3'], 
+  cell_vectors: Float[Array, '3 3'],
   grid_sizes: Union[Tuple, List, Int[Array, 'd']]
 ) -> Float[Array, 'x y z 3']:
   r'''Generate G-vectors (reciprocal space vectors) for a given crystal cell.
@@ -151,7 +150,7 @@ def g_vectors(
 
 
 def r_vectors(
-  cell_vectors: Float[Array, '3 3'], 
+  cell_vectors: Float[Array, '3 3'],
   grid_sizes: Union[Tuple, List, Int[Array, '3']]
 ) -> Float[Array, 'x y z 3']:
   r'''Generate R-vectors (real space position vectors) for a given crystal cell.
@@ -294,9 +293,7 @@ def spherical_mask(
   return mask
 
 
-def cubic_mask(
-  grid_sizes: Union[List, jax.Array]
-) -> Bool[Array, 'x y z']:
+def cubic_mask(grid_sizes: Union[List, jax.Array]) -> Bool[Array, 'x y z']:
   r'''Create a cubic mask for frequency components in reciprocal space.
   
   Generates a mask that enables only certain frequency components in a
@@ -366,6 +363,7 @@ def grid_vector_radius(grid_vector: Float[Array, 'x y z 3']):
   Returns:
     Float[Array, 'x y z']: Array of vector magnitudes with shape matching all but the last dimension of the input.
   '''
+
   def radius(r):
     return jnp.sqrt(jnp.sum(r**2))
 
@@ -447,7 +445,7 @@ def g2cell_vectors(
   cardinality = g_vectors(jnp.eye(3), grid_sizes)
   a = g_vector_grid.reshape([-1, 3])
   b = cardinality.reshape([-1, 3])
-  return jnp.linalg.inv(jnp.linalg.inv(a.T@a)@a.T@b)
+  return jnp.linalg.inv(jnp.linalg.inv(a.T @ a) @ a.T @ b)
 
 
 def r2cell_vectors(
@@ -469,4 +467,4 @@ def r2cell_vectors(
   grid_sizes = r_vector_grid.shape[:-1]
   r = r_vector_grid.reshape((-1, 3))
   d = r_vectors(jnp.eye(3), grid_sizes).reshape((-1, 3))
-  return jnp.linalg.inv(d.T@d)@d.T@r
+  return jnp.linalg.inv(d.T @ d) @ d.T @ r
