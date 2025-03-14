@@ -1,6 +1,6 @@
 SHELL          = /bin/bash
 PROJECT_NAME   = jrystal
-PROJECT_FOLDER = $(PROJECT_NAME) third_party
+PROJECT_FOLDER = $(PROJECT_NAME)
 PYTHON_FILES   = $(shell find . -type f -name "*.py" -not -path '*/.venv/*')
 COMMIT_HASH    = $(shell git log -1 --format=%h)
 COPYRIGHT      = "Garena Online Private Limited"
@@ -23,7 +23,7 @@ py-format-install:
 mypy-install:
 	$(call check_install, mypy)
 
-addlicense-install: go-install
+addlicense-install:
 	command -v addlicense || go install github.com/google/addlicense@latest
 
 doc-install:
