@@ -89,31 +89,113 @@ Call Graph
 This project is a `JAX <https://github.com/google/jax/>`_-based package for differantiable density functional theory computation of solids.
 
 
-Getting Started
-###############
+Installation
+------------
 
-Currently we support the following calculation methods:
-
-* vanilla self-consistent field method.
-* stochastic self-consistent field method.
-* stochasic gradient-based optimizers supported by `Optax <https://optax.readthedocs.io/en/latest/>`_.
+You may install directly from GitHub, using the following command. This can be used to obtain the most recent version of Optax:
 
 
-Examples
-########
+.. code-block:: console
+
+   pip install git+https://github.com/sail-sg/jrystal.git
+
+If you want to install the package in development mode, you can use the following command. This allows you to modify the source code and have the changes take effect without you having to rebuild and reinstall.
+
+.. code-block:: console
+  
+  git clone git@github.com:sail-sg/jrystal.git
+  cd jrystal
+  pip install -e .
+
+For more installation instructions, please refer to the :doc:`installation <installation>` page.
 
 
-Theory
-########
-We include a detailed mathematical derivation of density functional theory from scratch, which is useful for those who do not have related background. 
+
+Run with Command Line
+---------------------
+
+Once ``jrystal`` is installed, you can run it with the following command.
+
+.. code-block:: bash
+
+  jrystal -m energy -c config.yaml
 
 
-Support 
--------
+The ``-m`` or ``--mode`` option is used to specify the mode to run. Currently, we support two modes: ``energy`` and ``band``.
+
+- ``energy``: compute the ground state energy of a system.
+- ``band``: compute the band structure of a system.
+
+The ``-c`` or ``--config`` option is used to specify the configuration file. If it is not provided, the program will look for the file named ``config.yaml`` in the current directory. You may modify the ``config.yaml`` file to customize the calculation.
+
+
+
+Band Structure Benchmark
+------------------------
+
+We provide a benchmark for the band structure calculation of bulk silicon, graphene, aluminum, and sodium with Quantum ESPRESSO for both all-electron and norm-conserving pseudopotentials.
+
+All-electron calculation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :widths: 50 50
+   :header-rows: 0
+
+   * - .. figure:: _static/images/band_ae/si_ae.png
+          :width: 100%
+          :align: center
+          :alt: Image 1
+
+          Silicon (Si)
+
+     - .. figure:: _static/images/band_ae/al_ae.png
+          :width: 100%
+          :align: center
+          :alt: Image 2
+
+          Aluminum (Al)
+
+   * - .. figure:: _static/images/band_ae/graphene_ae.png
+          :width: 100%
+          :align: center
+          :alt: Image 3
+
+          Graphene
+
+     - .. figure:: _static/images/band_ae/na_ae.png
+          :width: 100%
+          :align: center
+          :alt: Image 4
+
+          Sodium (Na)
+
+
+Norm-conserving Psuedopotential calculation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :widths: 50 50
+   :header-rows: 0
+  
+   * - .. figure:: _static/images/band_nc/si.png
+          :width: 100%
+          :align: center
+          :alt: Image 1
+
+          Silicon (Si)
+
+     - .. figure:: _static/images/band_nc/al.png
+          :width: 100%
+          :align: center
+          :alt: Image 2
+
+          Aluminum (Al)
+
 
 
 The Team
-########
+--------
 
 This project is developed by `SEA AI LAB (SAIL) <https://sail.sea.com/>`_. We are also grateful to researchers from `NUS I-FIM <https://ifim.nus.edu.sg/>`_ for contributing ideas and theoretical support.  
 
@@ -127,17 +209,47 @@ This project is developed by `SEA AI LAB (SAIL) <https://sail.sea.com/>`_. We ar
 
 
 Citation
-########
+--------
+
+If you find this project useful, please cite this repo:
+
 
 .. code-block:: console
+  
+  @article{jrystal,
+    author = {Li, Tianbo and Shi, Zekun and Zhao, Jiaxi and Dale, Stephen Gregory and Vignale, Giovanni and Neto, AH Castro and Novoselov, Kostya S and Lin, Min},
+    title = {Jrystal: A JAX-based Differentiable Density Functional Theory Framework for Materials},
+    year = {2025},
+    url = {https://github.com/sail-sg/jrystal}
+  }
 
-TODO: add citation here
+We also have two preprints that you may find helpful:
 
+.. code-block:: console
+  
+  @inproceedings{ml4ps2024,
+    title = {Jrystal: A JAX-based Differentiable Density Functional Theory Framework for Materials},
+    author = {Li, Tianbo and Shi, Zekun and Dale, Stephen Gregory and Vignale, Giovanni and Lin, Min},
+    booktitle = {Machine Learning and the Physical Sciences Workshop at NeurIPS 2024},
+    year = {2024},
+  }
+
+and
+
+.. code-block:: console
+  
+  @article{li2024diagonalization,
+    title={Diagonalization without Diagonalization: A Direct Optimization Approach for Solid-State Density Functional Theory},
+    author={Li, Tianbo and Lin, Min and Dale, Stephen and Shi, Zekun and Neto, AH Castro and Novoselov, Kostya S and Vignale, Giovanni},
+    journal={arXiv preprint arXiv:2411.05033},
+    year={2024}
+  }
 
 
 License
 -------
 
+This project is licensed under the `Apache License 2.0 <https://www.apache.org/licenses/LICENSE-2.0>`_.
 
 
 Contents
