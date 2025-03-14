@@ -156,7 +156,7 @@ Now by Parseval's theorem we have
    &= - 4\pi  \sum_{\vb{G} \neq \vb{0}}  \tilde{\rho}  (\vb{G}) \sum_\ell e^{ -\text{i}\vb{G}^\top \vb*{\tau}_\ell}  \dfrac{Z_\ell}{ \Vert \vb{G} \Vert^2}
    \end{align}
 
-where the :math:`\vb{G}=0` term is removed due to neutral charge requirement (TODO: add doc on this).
+where the :math:`\vb{G}=0` term is removed due to neutral charge requirement (TODO: add doc on this). The reciprocal density :math:`\tilde{\rho} (\vb{G})` can be calculated effciently using FFT (see :func:`jrystal.pw.density_grid_reciprocal`).
 
 The Hartree Energy
 ^^^^^^^^^^^^^^^^^^
