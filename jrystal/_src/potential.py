@@ -209,10 +209,8 @@ def _lda_density(
   return res
 
 
-def xc_lda(
-  density_grid: Float[Array, 'x y z'],
-  kohn_sham: bool = False
-) -> Float[Array, 'x y z']:
+def xc_lda(density_grid: Float[Array, 'x y z'],
+           kohn_sham: bool = False) -> Float[Array, 'x y z']:
   r"""Calculate the LDA exchange-correlation potential.
 
   Implements the Local Density Approximation (LDA) for the exchange-correlation
@@ -258,10 +256,11 @@ def effective(
   xc: str = "lda",
   kohn_sham: bool = False,
   spin_restricted: bool = True,
-) -> Union[
-  Tuple[Float[Array, 'x y z'], Float[Array, 'x y z'], Float[Array, 'x y z']], Float[Array, 'x y z']
-]:
-  r"""Calculate the effective potential in real space.
+
+) -> Union[Tuple[
+  Float[Array, 'x y z'], Float[Array, 'x y z'], Float[Array, 'x y z']],
+           Float[Array, 'x y z']]:
+  r"""Calculate the effective potential for electronic structure calculations.
 
   The effective potential is the sum of three contributions:
 
@@ -316,7 +315,7 @@ def effective(
     raise NotImplementedError("XC only support LDA for now.")
 
   # transform to real space
-  v_hartree = jnp.fft.ifftn(v_hartree, axes=range(-dim, 0)) 
+  v_hartree = jnp.fft.ifftn(v_hartree, axes=range(-dim, 0))
   v_external = jnp.fft.ifftn(v_external, axes=range(-dim, 0))
 
   if split:

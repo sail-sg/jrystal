@@ -76,8 +76,7 @@ def param_init(
 
 
 def coeff(
-  pw_param: Union[Array, Tuple],
-  freq_mask: Bool[Array, 'x y z']
+  pw_param: Union[Array, Tuple], freq_mask: Bool[Array, 'x y z']
 ) -> Complex[Array, 'spin kpt band x y z']:
   r'''Create the linear coefficients to combine the frequency components.
 
@@ -259,31 +258,33 @@ def density_grid_reciprocal(
   coeff: Complex[Array, 'spin kpt band x y z'],
   vol: Union[float, Array],
   occupation: Optional[Float[Array, 'spin kpt band']] = None
-) -> Union[Complex[Array, 'spin kpt band x y z'], Complex[Array, 'spin kpt band']]:
+) -> Union[Complex[Array, 'spin kpt band x y z'],
+           Complex[Array, 'spin kpt band']]:
   r'''Fourier transform of the density grid.
 
   In a system with electrons, the density of the electron is the result of
   multiple wave functions overlapping in the space. As we mention in
   :py:func:`wave_grid`, the wave function is a linear combination of 3D fourier
   components. To compute the density, usually we only need to take the absolute
-  square of each wave function and sum them up.
+  square of each wave function :math:`\psi_i`, multiply by the occupation :math:`f_i`
+  and sum them up:
 
   .. math::
 
-    \rho(r) = \sum_i |\psi_i(r)|^2
+    \rho(\vb{r}) = \sum_i f_i |\psi_i(\vb{r})|^2
 
-  :py:func:`density_grid` computes the density :math:`\rho(r)` at the spatial grid
+  :py:func:`density_grid` computes the density :math:`\rho(\vb{r})` at the spatial grid
   generated from :py:func:`jrystal.grid.r_vectors`.
 
-  The fourier transformation of :math:`\rho(r)` is
+  The discrete fourier transformation of :math:`\rho(\vb{r})` is
 
   .. math::
 
-    \tilde{\rho}(G) = \int \rho(r) e^{-iGr} dr
+    \tilde{\rho}(\vb{G}) = \frac{1}{\Omega} \int_\Omega \rho(\vb{r}) e^{-\text{i} \vb{G}^\top \vb{r}} \dd{\vb{r}}
 
   We can also evaluate the :math:`\tilde{\rho}(G)` at any :math:`G`, but this function
   computes the :math:`\tilde{\rho}(G)` evaluated at the grid generated from
-  :py:func:`jrystal.grid.g_vectors`. It is equivalent to computing the :math:`\rho(r)`
+  :py:func:`jrystal.grid.g_vectors`. It is equivalent to computing the :math:`\rho(\vb{r})`
   at :py:func:`jrystal.grid.r_vectors` and then do the discrete fourier
   transform.
 
@@ -410,6 +411,7 @@ def nabla_density_r(
     Float[Array, '3']: A real vector that represents the density derivative at
     location :code:`r`.
   '''
+
   def den(r):
     return density_r(r, coeff, cell_vectors, g_vector_grid, occupation)
 
