@@ -20,7 +20,7 @@ def hartree(
   vol: Float,
   kohn_sham: bool = False
 ) -> Float:
-  r"""Calculate the Hartree energy in reciprocal space.
+  r"""Calculate the Hartree energy.
 
   The Hartree energy represents the classical electrostatic interaction between
   electrons. The calculation is performed in reciprocal space for efficiency.
@@ -35,7 +35,11 @@ def hartree(
 
   .. math::
   
-      E_H = 2\pi \sum_{\mathbf{G}} \frac{|\hat{\rho}(\mathbf{G})|^2}{|\mathbf{G}|^2}
+      E_H = \frac{1}{2}\sum_{\mathbf{G}} \hat{\rho}(\mathbf{G})\hat{V}_{H}(\mathbf{G})
+      = 2\pi \sum_{\mathbf{G}} \frac{|\hat{\rho}(\mathbf{G})|^2}{|\mathbf{G}|^2}
+
+  Please also refer to the tutorial :doc:`Total Energy Minimization <../tutorial/total_energy>`
+  for more details.
 
   Args:
     density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in 
@@ -70,18 +74,20 @@ def external(
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float
 ) -> Float:
-  r"""Calculate the external potential energy in reciprocal space.
+  r"""Calculate the external potential energy.
 
   The external potential energy is computed using Parseval's identity,
   expressing the real-space integral as a sum over reciprocal lattice vectors:
 
   .. math::
-      E = \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G}) \sum_{\alpha} Z_{\alpha} 
+      E = \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G})\hat{V}_{\text{ext}}(\mathbf{G}) = 
+      \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G}) \sum_{\alpha} Z_{\alpha} 
       \exp(-i\mathbf{G}\cdot\mathbf{R}_{\alpha}) v(\mathbf{G})
 
   where:
 
   - :math:`\hat{\rho}(\mathbf{G})` is the Fourier transform of the electron density, i.e. the density in reciprocal space.
+  - :math:`\hat{V}_{\text{ext}}(\mathbf{G})` is the external potential in reciprocal space
   - :math:`Z_{\alpha}` is the nuclear charge of atom :math:`\alpha`
   - :math:`\mathbf{R}_{\alpha}` is the position of atom :math:`\alpha`
   - :math:`v(\mathbf{G})` is the Fourier transform of the Coulomb potential
@@ -117,9 +123,9 @@ def kinetic(
   coeff_grid: Complex[Array, 'spin kpt band x y z'],
   occupation: Optional[Float[Array, 'spin kpt band']] = None
 ) -> Union[Float, Float[Array, "spin kpt band"]]:
-  r"""Calculate the kinetic energy of plane wave states.
+  r"""Calculate the kinetic energy.
 
-  For plane wave basis functions, the kinetic energy operator is diagonal in
+  For plane wave basis, the kinetic energy operator is diagonal in
   reciprocal space. The kinetic energy is computed as:
 
   .. math::
@@ -210,7 +216,7 @@ def nuclear_repulsion(
   ewald_eta: float,
   ewald_cutoff: float,
 ) -> Float:
-  """Compute the nuclear repulsion energy using Ewald summation.
+  r"""Compute the nuclear repulsion energy using Ewald summation.
 
   This function calculates the nuclear-nuclear repulsion energy in periodic systems
   using the Ewald summation technique.
@@ -245,13 +251,13 @@ def total_energy(
   xc: str = 'lda',
   split: bool = False,
 ) -> Union[Float, Tuple[Float, Float, Float, Float]]:
-  """Calculate the total electronic energy of the system.
+  r"""Calculate the total electronic energy of the system.
 
   Computes the total energy as the sum of kinetic, external potential,
   Hartree, and exchange-correlation terms:
 
   .. math::
-      E_{\text{tot}} = E_{\text{kin}} + E_{\text{ext}} + E_H + E_{xc}
+      E_{\text{tot}} = E_{\text{kin}} + E_{\text{ext}} + E_H + E_{\text{xc}}
 
   .. warning::
       This function does not include the nuclear-nuclear repulsion (Ewald) energy.
@@ -321,7 +327,7 @@ def band_energy(
       \hat{T} + \hat{V}_{\text{eff}} | \psi_{n\mathbf{k}} \rangle
 
   where :math:`\hat{T}` is the kinetic energy operator and
-  :math:`\hat{V}_{\text{eff}}` is the effective potential.
+  :math:`\hat{V}_{\text{eff}}` is the effective potential operator.
 
   Args:
     coefficient (Complex[Array, "spin kpt band x y z"]): Plane wave coefficients.

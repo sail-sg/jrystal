@@ -15,9 +15,9 @@ def kinetic_operator(
   
   .. math::
   
-    \Vert \mathbf{G} + \mathbf{k} \Vert^2 / 2.
+    \Vert \mathbf{G} + \mathbf{k} \Vert^2 / 2,
   
-  This function is used to calculate the kinetic energy matrix element evaluated at each k-point and reciprocal lattice vector which will be contracted with the coefficient matrix to obtain the kinetic energy.
+  the kinetic energy matrix element evaluated at each k-point and reciprocal lattice vector which will be contracted with the coefficient matrix to obtain the kinetic energy.
     
   Args:
       g_vector_grid (VectorGrid[Float, 3]): reciprocal lattice vector.

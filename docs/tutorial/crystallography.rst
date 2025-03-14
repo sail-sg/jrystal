@@ -38,12 +38,12 @@ The reciprocal lattice vectors, :math:`\boldsymbol{b}_1`, :math:`\boldsymbol{b}_
 .. math::
 
   \begin{align}
-    \boldsymbol{b}_1 &= 2\pi \dfrac{ \boldsymbol{a}_2 \times \boldsymbol{a}_3 }{ \Vert \Omega{\text{cell}} \Vert }, \\
-    \boldsymbol{b}_2 &= 2\pi \dfrac{ \boldsymbol{a}_1 \times \boldsymbol{a}_3 }{ \Vert \Omega{\text{cell}} \Vert }, \\
-    \boldsymbol{b}_3 &= 2\pi \dfrac{ \boldsymbol{a}_1 \times \boldsymbol{a}_2 }{ \Vert \Omega{\text{cell}} \Vert }, 
+    \boldsymbol{b}_1 &= 2\pi \dfrac{ \boldsymbol{a}_2 \times \boldsymbol{a}_3 }{ \Vert \Omega\Vert }, \\
+    \boldsymbol{b}_2 &= 2\pi \dfrac{ \boldsymbol{a}_1 \times \boldsymbol{a}_3 }{ \Vert \Omega \Vert }, \\
+    \boldsymbol{b}_3 &= 2\pi \dfrac{ \boldsymbol{a}_1 \times \boldsymbol{a}_2 }{ \Vert \Omega \Vert }, 
   \end{align}
 
-with the unit cell volume given by :math:`\Vert \Omega_{\text{cell}} \Vert = \big\Vert (\boldsymbol{a}_1 \times \boldsymbol{a}_2) \cdot \boldsymbol{a}_3 \big\Vert`. The reciprocal vectors satisfy the condition:
+with the unit cell volume given by :math:`\Vert \Omega \Vert = \big\Vert (\boldsymbol{a}_1 \times \boldsymbol{a}_2) \cdot \boldsymbol{a}_3 \big\Vert`. The reciprocal vectors satisfy the condition:
 
 .. math::
 
@@ -80,9 +80,23 @@ Bloch's theorem
     }
     </style>
 
-:red:`[tb] I don't think this paragraph is understandable for most of the readers.`
+Bloch's theorem is a fundamental result in solid-state physics that describes the
+behaviors of the electronic wavefunction in periodic potential: the electronic wavefunction
+:math:`\psi` in a periodic potential is a Bloch state, meaning that it can be written in the form:
 
-Define the translation operator :math:`\hat{\mathbf{T}}_\mathbf{n}` as:
+.. math::
+
+  \psi(\mathbf{r}) = e^{i\mathbf{k}\cdot \mathbf{r}}u(\mathbf{r})
+
+where :math:`u(\mathbf{r})` has the same periodicity as the atomic structure of the crystal, i.e.
+:math:`u(\mathbf{r + a}) = u(\mathbf{r})`, where :math:`\mathbf{a}` is any lattice vector of the crystal.
+:math:`\mathbf{k}` is unique in the first Brillouin zone.
+Bloch's theorem emphasizes the importance of the periodicity of the crystal structure as well as the
+k-points in the Brillouin zone.
+
+We provide a brief proof of Bloch's theorem below:
+
+Define the translation operator :math:`\hat{\mathbf{T}}_\mathbf{n}` acting on the wavefunctions as:
 
 .. math::
 
@@ -94,13 +108,32 @@ Hamiltonian commutes with the translation operator, i.e.
 
 .. math::
 
-  [\hat{\text{H}}, \hat{\mathbf{T}}_\mathbf{n}] = 0, \quad \forall \mathbf{n}
+  [\hat{\text{H}}, \hat{\mathbf{T}}_\mathbf{n}] := \hat{\text{H}}\hat{\mathbf{T}}_\mathbf{n}
+  - \hat{\mathbf{T}}_\mathbf{n}\hat{\text{H}} = 0, \quad \forall \ \mathbf{n} \text{ is a lattice vector}
 
-Moreover, translation operators with different translation vector $\mathbf{n}$ trivially commute. Therefore, all these operators share the same set of eigenvector. It is well-known that the eigenvalues of the translation operators lies on the unit circle and all eigenvectors have the following form:
+Moreover, translation operators with different translation vectors :math:`\mathbf{n}_i` trivially commute.
+By linear algebra theory, all these operators share the same set of eigenvector. Moreover, the normalization
+condition of the wavefunction requires that
+
+.. math::
+
+  |\lambda_n|^2\int_{\Omega}\psi^*(\mathbf{r})\psi(\mathbf{r})d\mathbf{r} = \int_{\Omega}(\hat{\mathbf{T}}_\mathbf{n}\psi)^*(\mathbf{r})\hat{\mathbf{T}}_\mathbf{n}\psi(\mathbf{r})d\mathbf{r} 
+  = \int_{\Omega}\psi^*(\mathbf{r})\psi(\mathbf{r})d\mathbf{r} = 1
+
+Therefore, the eigenvalues :math:`\lambda_{\mathbf{n}}` has unit module. All eigen-wavefunctions have the
+following form:
 
 
 .. math::
 
-  \hat{\mathbf{T}}_n\psi(\mathbf{r}) = e^{-i\mathbf{k}\cdot \mathbf{n}}\psi(\mathbf{r})
+  \psi(\mathbf{r} + \mathbf{n}) = \hat{\mathbf{T}}_n\psi(\mathbf{r}) 
+  = e^{-i\mathbf{k}\cdot \mathbf{n}}\psi(\mathbf{r}), \quad \forall \ \mathbf{n} \text{ is a lattice vector}
 
-where :math:`\psi(\mathbf{r})` is a periodic wave function over the unit cell. Therefore, any wave function of the orbital should be a "Block wave" of the form above, this is the so-called Block's theorem.
+Therefore, define :math:`u(\mathbf{r}) = e^{i\mathbf{k}\cdot \mathbf{r}}\psi(\mathbf{r})`, one has
+
+.. math:: 
+
+  u(\mathbf{r} + \mathbf{n}) = e^{i\mathbf{k}\cdot (\mathbf{r} + \mathbf{n})}\psi(\mathbf{r} + \mathbf{a}) 
+  = e^{i\mathbf{k}\cdot \mathbf{r}}\psi(\mathbf{r}) = u(\mathbf{r}), \quad \forall \ \mathbf{n} \text{ is a lattice vector}
+
+which is the periodic function stated in the Bloch's theorem.

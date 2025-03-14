@@ -4,7 +4,7 @@ from jaxtyping import Float, Array
 
 
 def fermi_dirac(occupation: Float[Array, 'spin kpt band'], eps: float = 1e-8) -> Float:
-  r"""Compute the entropy corresponding to fermi-dirac distribution.
+  r"""Compute the entropy corresponding to Fermi-Dirac distribution.
 
   The entropy is defined as:
 
@@ -26,7 +26,7 @@ def fermi_dirac(occupation: Float[Array, 'spin kpt band'], eps: float = 1e-8) ->
       eps(float): Machine epsilon to prevent numerical instabilities. Default: 1e-8
 
   Returns:
-      Float: The entropy value corresponding to the fermi-dirac distribution.
+      Float: The entropy value corresponding to the Fermi-Dirac distribution.
   """
   num_spin, num_k, _ = occupation.shape
 
