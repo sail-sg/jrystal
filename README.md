@@ -1,6 +1,8 @@
 # Jrystal
 A JAX-based Differentiable Density Functional Theory Framework for Materials
 
+[**Reference docs**](https://sail-sg.github.io/jrystal/)
+
 ## Core Features
 
 <img src="docs/_static/images/feature-AD.png" alt="feature-AD" width="64" align="left"/>
