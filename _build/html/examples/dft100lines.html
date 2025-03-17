@@ -1,0 +1,635 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>DFT Total Energy Calculation in Less than 50 Lines &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/graph.js?v=9f5096e4"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'examples/dft100lines';</script>
+    <link rel="icon" href="../_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Band Structure Calculation" href="band_structure.html" />
+    <link rel="prev" title="Create A Crystal Structure" href="crystal.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="../_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorial/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/band_structure.html">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/ewald.html">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/examples/dft100lines.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>DFT Total Energy Calculation in Less than 50 Lines</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-crystal-structure-setup">Step 1: Crystal Structure Setup</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-define-calculation-grids">Step 2: Define Calculation Grids</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-initialize-wavefunctions-and-occupation-numbers">Step 3: Initialize Wavefunctions and Occupation Numbers</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-total-energy-function">Step 4: Total Energy Function</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-5-energy-optimization">Step 5: Energy Optimization</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="dft-total-energy-calculation-in-less-than-50-lines">
+<h1>DFT Total Energy Calculation in Less than 50 Lines<a class="headerlink" href="#dft-total-energy-calculation-in-less-than-50-lines" title="Link to this heading">#</a></h1>
+<p>This tutorial demonstrates how to perform a Density Functional Theory (DFT) total energy calculation for a diamond crystal using <code class="docutils literal notranslate"><span class="pre">jrystal</span></code>. We’ll walk through each step of the calculation, from structure setup to energy optimization.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In this example, we perform a <strong>spin_restricted</strong> <strong>all-electron</strong> calculation to find the ground state energy of a diamond crystal.</p>
+</div>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">#</a></h2>
+<p>Before starting, ensure you have:</p>
+<ul class="simple">
+<li><p>Basic understanding of DFT concepts</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">jrystal</span></code> and <code class="docutils literal notranslate"><span class="pre">jax</span></code> installed</p></li>
+</ul>
+</section>
+<section id="step-1-crystal-structure-setup">
+<h2>Step 1: Crystal Structure Setup<a class="headerlink" href="#step-1-crystal-structure-setup" title="Link to this heading">#</a></h2>
+<p>First, we need to create an object that contains the information about the crystal structure. <code class="docutils literal notranslate"><span class="pre">jrystal</span></code> manages this using a <code class="docutils literal notranslate"><span class="pre">Crystal</span></code> object:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jrystal</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jr</span>
+
+<span class="c1"># Create a diamond structure</span>
+<span class="n">charges</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">])</span>
+<span class="n">positions</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mf">0.84251071</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.84251071</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.84251071</span><span class="p">],</span>
+                <span class="p">[</span> <span class="mf">0.84251071</span><span class="p">,</span>  <span class="mf">0.84251071</span><span class="p">,</span>  <span class="mf">0.84251071</span><span class="p">]])</span>
+
+<span class="n">cell_vectors</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span>        <span class="p">,</span> <span class="mf">3.37004284</span><span class="p">,</span> <span class="mf">3.37004284</span><span class="p">],</span>
+                <span class="p">[</span><span class="mf">3.37004284</span><span class="p">,</span> <span class="mf">0.</span>        <span class="p">,</span> <span class="mf">3.37004284</span><span class="p">],</span>
+                <span class="p">[</span><span class="mf">3.37004284</span><span class="p">,</span> <span class="mf">3.37004284</span><span class="p">,</span> <span class="mf">0.</span>        <span class="p">]])</span>
+
+<span class="n">crystal</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">Crystal</span><span class="p">(</span><span class="n">charges</span><span class="o">=</span><span class="n">charges</span><span class="p">,</span> <span class="n">positions</span><span class="o">=</span><span class="n">positions</span><span class="p">,</span> <span class="n">cell_vectors</span><span class="o">=</span><span class="n">cell_vectors</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="step-2-define-calculation-grids">
+<h2>Step 2: Define Calculation Grids<a class="headerlink" href="#step-2-define-calculation-grids" title="Link to this heading">#</a></h2>
+<p>DFT calculations require two types of grids for calculating energy integrals:</p>
+<ul class="simple">
+<li><p>G-vectors (reciprocal space)</p></li>
+<li><p>K-points (Brillouin zone sampling)</p></li>
+</ul>
+<p>We also need a Fourier transform frequency cutoff mask:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set grid parameters</span>
+<span class="n">grid_size</span> <span class="o">=</span> <span class="p">[</span><span class="mi">48</span><span class="p">,</span> <span class="mi">48</span><span class="p">,</span> <span class="mi">48</span><span class="p">]</span>  <span class="c1"># Real and reciprocal space grid</span>
+<span class="n">kpt_grid</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>      <span class="c1"># k-point sampling</span>
+
+<span class="c1"># Generate grids</span>
+<span class="n">g_vecs</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">g_vectors</span><span class="p">(</span><span class="n">crystal</span><span class="o">.</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="o">=</span><span class="n">grid_size</span><span class="p">)</span>
+<span class="n">k_vecs</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">k_vectors</span><span class="p">(</span><span class="n">crystal</span><span class="o">.</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="o">=</span><span class="n">kpt_grid</span><span class="p">)</span>
+
+<span class="c1"># Create frequency cutoff mask (100 Ha cutoff energy)</span>
+<span class="n">freq_mask</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">spherical_mask</span><span class="p">(</span>
+        <span class="n">cell_vectors</span><span class="o">=</span><span class="n">crystal</span><span class="o">.</span><span class="n">cell_vectors</span><span class="p">,</span>
+        <span class="n">grid_sizes</span><span class="o">=</span><span class="n">grid_size</span><span class="p">,</span>
+        <span class="n">cutoff_energy</span><span class="o">=</span><span class="mi">100</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="step-3-initialize-wavefunctions-and-occupation-numbers">
+<h2>Step 3: Initialize Wavefunctions and Occupation Numbers<a class="headerlink" href="#step-3-initialize-wavefunctions-and-occupation-numbers" title="Link to this heading">#</a></h2>
+<p>We need to initialize two sets of parameters:
+- Plane wave coefficients for wavefunctions
+- Occupation numbers for electron filling</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set random seed for reproducibility</span>
+<span class="n">key</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">PRNGKey</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">key1</span><span class="p">,</span> <span class="n">key2</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+<span class="c1"># Initialize parameters</span>
+<span class="n">num_bands</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="c1"># Diamond has 12 electrons (2 atoms × 6 electrons)</span>
+<span class="c1"># We use 12 bands to include some empty states</span>
+<span class="c1"># For spin_restricted calculations, with 2 electrons per band, 12 bands are sufficient</span>
+
+<span class="c1"># Initialize plane wave coefficients</span>
+<span class="n">param_pw</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">param_init</span><span class="p">(</span>
+        <span class="n">key1</span><span class="p">,</span>
+        <span class="n">num_bands</span><span class="o">=</span><span class="n">num_bands</span><span class="p">,</span>
+        <span class="n">num_kpts</span><span class="o">=</span><span class="n">k_vecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">freq_mask</span><span class="o">=</span><span class="n">freq_mask</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">jrystal</span></code> provides three methods for handling occupation:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">idempotent</span></code>: Fermi-Dirac distributed occupation numbers</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gamma</span></code>: Occupation only at the Gamma point</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uniform</span></code>: Uniform occupation across all bands</p></li>
+</ul>
+<p>Only <code class="docutils literal notranslate"><span class="pre">idempotent</span></code> is optimizable; the other two are fixed. Here we use <code class="docutils literal notranslate"><span class="pre">idempotent</span></code>. For more details, see the <a class="reference internal" href="../tutorial/occupation.html#occupation"><span class="std std-ref">How Do We Deal with Occupation Numbers in Direct Optimization?</span></a> tutorial.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize occupation numbers</span>
+<span class="n">param_occ</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">occupation</span><span class="o">.</span><span class="n">idempotent_param_init</span><span class="p">(</span>
+        <span class="n">key</span><span class="o">=</span><span class="n">key2</span><span class="p">,</span>
+        <span class="n">num_bands</span><span class="o">=</span><span class="n">num_bands</span><span class="p">,</span>
+        <span class="n">num_kpts</span><span class="o">=</span><span class="n">k_vecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="step-4-total-energy-function">
+<h2>Step 4: Total Energy Function<a class="headerlink" href="#step-4-total-energy-function" title="Link to this heading">#</a></h2>
+<p>To find the ground state energy of the diamond crystal, we need to define a function that computes the total energy with respect to our optimizable parameters. We can construct this using the <code class="docutils literal notranslate"><span class="pre">energy</span></code> module:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">total_energy</span><span class="p">(</span><span class="n">param_pw</span><span class="p">,</span> <span class="n">param_occ</span><span class="p">):</span>
+        <span class="c1"># Calculate occupation numbers</span>
+        <span class="n">occ</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">occupation</span><span class="o">.</span><span class="n">idempotent</span><span class="p">(</span>
+                <span class="n">param_occ</span><span class="p">,</span>
+                <span class="n">num_electrons</span><span class="o">=</span><span class="n">crystal</span><span class="o">.</span><span class="n">num_electron</span><span class="p">,</span>
+                <span class="n">num_kpts</span><span class="o">=</span><span class="n">k_vecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Generate coefficients</span>
+        <span class="n">coeff</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">coeff</span><span class="p">(</span><span class="n">param_pw</span><span class="p">,</span> <span class="n">freq_mask</span><span class="p">)</span>
+
+        <span class="c1"># Calculate total energy with LDA exchange-correlation</span>
+        <span class="k">return</span> <span class="n">jr</span><span class="o">.</span><span class="n">energy</span><span class="o">.</span><span class="n">total_energy</span><span class="p">(</span>
+                <span class="n">coeff</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">positions</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">charges</span><span class="p">,</span>
+                <span class="n">g_vecs</span><span class="p">,</span> <span class="n">k_vecs</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">vol</span><span class="p">,</span> <span class="n">occ</span><span class="p">,</span>
+                <span class="n">xc</span><span class="o">=</span><span class="s2">&quot;lda&quot;</span>
+        <span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="step-5-energy-optimization">
+<h2>Step 5: Energy Optimization<a class="headerlink" href="#step-5-energy-optimization" title="Link to this heading">#</a></h2>
+<p>Now we set up the optimizer using <code class="docutils literal notranslate"><span class="pre">optax</span></code> and create the optimization loop:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">optax</span>
+
+<span class="c1"># Initialize Adam optimizer</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">optax</span><span class="o">.</span><span class="n">adam</span><span class="p">(</span><span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+<span class="n">opt_state</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">init</span><span class="p">((</span><span class="n">param_pw</span><span class="p">,</span> <span class="n">param_occ</span><span class="p">))</span>
+
+<span class="c1"># Define update step (JIT-compiled for speed)</span>
+<span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="n">param_pw</span><span class="p">,</span> <span class="n">param_occ</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">):</span>
+        <span class="n">e_tot</span><span class="p">,</span> <span class="n">grads</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">value_and_grad</span><span class="p">(</span><span class="n">total_energy</span><span class="p">)((</span><span class="n">param_pw</span><span class="p">,</span> <span class="n">param_occ</span><span class="p">))</span>
+        <span class="n">updates</span><span class="p">,</span> <span class="n">opt_state</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">grads</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">)</span>
+        <span class="n">param_pw</span><span class="p">,</span> <span class="n">param_occ</span> <span class="o">=</span> <span class="n">optax</span><span class="o">.</span><span class="n">apply_updates</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">param_pw</span><span class="p">,</span> <span class="n">param_occ</span><span class="p">),</span> <span class="n">updates</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">e_tot</span><span class="p">,</span> <span class="p">(</span><span class="n">param_pw</span><span class="p">,</span> <span class="n">param_occ</span><span class="p">),</span> <span class="n">opt_state</span>
+
+<span class="c1"># Run optimization</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting optimization...&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1000</span><span class="p">):</span>
+        <span class="n">e_tot</span><span class="p">,</span> <span class="p">(</span><span class="n">param_pw</span><span class="p">,</span> <span class="n">param_occ</span><span class="p">),</span> <span class="n">opt_state</span> <span class="o">=</span> <span class="n">update</span><span class="p">(</span>
+                <span class="n">param_pw</span><span class="p">,</span> <span class="n">param_occ</span><span class="p">,</span> <span class="n">opt_state</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Step </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">:</span><span class="s2">4d</span><span class="si">}</span><span class="s2"> | Total Energy: </span><span class="si">{</span><span class="n">e_tot</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> Ha&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The optimization will run for 1000 steps, printing the energy every 100 steps. You should see the total energy converge to a minimum value.</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="crystal.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Create A Crystal Structure</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="band_structure.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Band Structure Calculation</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-crystal-structure-setup">Step 1: Crystal Structure Setup</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-define-calculation-grids">Step 2: Define Calculation Grids</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-initialize-wavefunctions-and-occupation-numbers">Step 3: Initialize Wavefunctions and Occupation Numbers</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-total-energy-function">Step 4: Total Energy Function</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-5-energy-optimization">Step 5: Energy Optimization</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

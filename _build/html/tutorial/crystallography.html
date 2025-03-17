@@ -1,0 +1,562 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>An Introduction to Crystallography &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/graph.js?v=9f5096e4"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'tutorial/crystallography';</script>
+    <link rel="icon" href="../_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Understanding Variable Shapes in jrystal" href="array_shape.html" />
+    <link rel="prev" title="Tutorials" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="../_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="band_structure.html">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ewald.html">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/tutorial/crystallography.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>An Introduction to Crystallography</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#crystal-structure">Crystal Structure</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#bravais-lattices">Bravais Lattices</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reciprocal-space">Reciprocal space</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#brillouin-zone-and-k-path-sampling">Brillouin zone and k-path sampling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#bloch-s-theorem">Bloch’s theorem</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="an-introduction-to-crystallography">
+<h1>An Introduction to Crystallography<a class="headerlink" href="#an-introduction-to-crystallography" title="Link to this heading">#</a></h1>
+<p>Crystallography is the study of how atoms, ions, or molecules are arranged in solids. This field forms the basis for understanding material properties and is integral to disciplines such as materials science, solid-state physics, and even computer science—especially when it comes to simulating or designing new materials. This guide introduces the essential concepts of crystallography in clear, accessible language for those who may be new to material science.</p>
+<section id="crystal-structure">
+<h2>Crystal Structure<a class="headerlink" href="#crystal-structure" title="Link to this heading">#</a></h2>
+<p>At the heart of crystallography is the crystal structure: the orderly, repeating arrangement of the building blocks (atoms, ions, or molecules) within a solid. This ordered structure results in translational symmetry, meaning that the pattern repeats itself at regular intervals throughout the material. For instance, metals like copper and aluminum typically adopt a face-centered cubic (FCC) structure, whereas iron and tungsten often form a body-centered cubic (BCC) lattice. These different arrangements affect properties such as strength, conductivity, and melting point.</p>
+<a class="reference internal image-reference" href="../_images/bccfcc.png"><img alt="../_images/bccfcc.png" class="align-center" src="../_images/bccfcc.png" style="width: 50%;" />
+</a>
+</section>
+<section id="bravais-lattices">
+<h2>Bravais Lattices<a class="headerlink" href="#bravais-lattices" title="Link to this heading">#</a></h2>
+<p>To simplify the study of these repeating patterns, crystallographers use the concept of the Bravais lattice. In three-dimensional space, the positions of lattice points—which represent the repeating units of the crystal—are generated by three basic vectors, <span class="math notranslate nohighlight">\(\boldsymbol{a}_1\)</span>, <span class="math notranslate nohighlight">\(\boldsymbol{a}_2\)</span>, and <span class="math notranslate nohighlight">\(\boldsymbol{a}_3\)</span>. Mathematically, any lattice point is described by:</p>
+<div class="math notranslate nohighlight">
+\[\boldsymbol{R}_{\boldsymbol{m}} = m_1 \boldsymbol{a}_1 + m_2 \boldsymbol{a}_2 + m_3 \boldsymbol{a}_3,\]</div>
+<p>where <span class="math notranslate nohighlight">\(m_1\)</span>, <span class="math notranslate nohighlight">\(m_2\)</span>, <span class="math notranslate nohighlight">\(m_3\)</span> are integers. This formulation allows us to focus on a single repeating unit—the unit cell—rather than the entire, complex assembly of atoms.</p>
+<a class="reference internal image-reference" href="../_images/lattice.png"><img alt="../_images/lattice.png" class="align-center" src="../_images/lattice.png" style="width: 50%;" />
+</a>
+</section>
+<section id="reciprocal-space">
+<h2>Reciprocal space<a class="headerlink" href="#reciprocal-space" title="Link to this heading">#</a></h2>
+<p>In addition to describing a crystal in real space, it is often useful to study its properties in reciprocal space. This alternate viewpoint maps the periodicity of the crystal into a space of spatial frequencies. In reciprocal space, each vector corresponds to a wavevector of plane waves—these could represent electrons, X-rays, or other probing waves interacting with the crystal. The mathematical relationship between the real-space lattice and its reciprocal counterpart is key to understanding diffraction patterns, a fundamental tool in crystallography.</p>
+<p>The reciprocal lattice vectors, <span class="math notranslate nohighlight">\(\boldsymbol{b}_1\)</span>, <span class="math notranslate nohighlight">\(\boldsymbol{b}_2\)</span>, and <span class="math notranslate nohighlight">\(\boldsymbol{b}_3\)</span>, are defined as:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align}
+  \boldsymbol{b}_1 &amp;= 2\pi \dfrac{ \boldsymbol{a}_2 \times \boldsymbol{a}_3 }{ \Vert \Omega\Vert }, \\
+  \boldsymbol{b}_2 &amp;= 2\pi \dfrac{ \boldsymbol{a}_1 \times \boldsymbol{a}_3 }{ \Vert \Omega \Vert }, \\
+  \boldsymbol{b}_3 &amp;= 2\pi \dfrac{ \boldsymbol{a}_1 \times \boldsymbol{a}_2 }{ \Vert \Omega \Vert },
+\end{align}\end{split}\]</div>
+<p>with the unit cell volume given by <span class="math notranslate nohighlight">\(\Vert \Omega \Vert = \big\Vert (\boldsymbol{a}_1 \times \boldsymbol{a}_2) \cdot \boldsymbol{a}_3 \big\Vert\)</span>. The reciprocal vectors satisfy the condition:</p>
+<div class="math notranslate nohighlight">
+\[\boldsymbol{b}_i \cdot \boldsymbol{a}j = 2\pi \delta{ij},\]</div>
+<p>where <span class="math notranslate nohighlight">\(\delta_{ij}\)</span> is the Kronecker delta.</p>
+</section>
+<section id="brillouin-zone-and-k-path-sampling">
+<h2>Brillouin zone and k-path sampling<a class="headerlink" href="#brillouin-zone-and-k-path-sampling" title="Link to this heading">#</a></h2>
+<p>The Brillouin zone is the <em>Wigner-Seitz primitive cell</em> in the reciprocal lattice of a crystalline material. It defines the range of wave vectors in a crystal’s reciprocal space that provide a comprehensive representation of its electronic properties. The periodic nature of a crystal lattice leads to a periodicity in the reciprocal space as well. As a result of this periodicity, the electronic properties of a crystal within any Brillouin zone are equivalent to those in the first Brillouin zone. Thus, by focusing solely on the first Brillouin zone, one can comprehensively understand and describe the electronic properties of the crystal.</p>
+<p>The term <span class="math notranslate nohighlight">\(\boldsymbol{k}\)</span>-points references specific locations within the Brillouin zone in the reciprocal space. Given that electron behavior in a periodic crystal spans the entire Brillouin zone, there’s a requisite to sample this space to encompass all potential electron momenta. However, the combination of periodicity and symmetry negates the need to assess properties at every position within the zone. Instead, a valid chosen subset of <span class="math notranslate nohighlight">\(\boldsymbol{k}\)</span>-points provides an efficient sampling mechanism.</p>
+<a class="reference internal image-reference" href="../_images/kpath.png"><img alt="../_images/kpath.png" class="align-center" src="../_images/kpath.png" style="width: 50%;" />
+</a>
+</section>
+<section id="bloch-s-theorem">
+<h2>Bloch’s theorem<a class="headerlink" href="#bloch-s-theorem" title="Link to this heading">#</a></h2>
+<style>
+.red {
+    color:red;
+}
+</style><p>Bloch’s theorem is a fundamental result in solid-state physics that describes the
+behaviors of the electronic wavefunction in periodic potential: the electronic wavefunction
+<span class="math notranslate nohighlight">\(\psi\)</span> in a periodic potential is a Bloch state, meaning that it can be written in the form:</p>
+<div class="math notranslate nohighlight">
+\[\psi(\mathbf{r}) = e^{i\mathbf{k}\cdot \mathbf{r}}u(\mathbf{r})\]</div>
+<p>where <span class="math notranslate nohighlight">\(u(\mathbf{r})\)</span> has the same periodicity as the atomic structure of the crystal, i.e.
+<span class="math notranslate nohighlight">\(u(\mathbf{r + a}) = u(\mathbf{r})\)</span>, where <span class="math notranslate nohighlight">\(\mathbf{a}\)</span> is any lattice vector of the crystal.
+<span class="math notranslate nohighlight">\(\mathbf{k}\)</span> is unique in the first Brillouin zone.
+Bloch’s theorem emphasizes the importance of the periodicity of the crystal structure as well as the
+k-points in the Brillouin zone.</p>
+<p>We provide a brief proof of Bloch’s theorem below:</p>
+<p>Define the translation operator <span class="math notranslate nohighlight">\(\hat{\mathbf{T}}_\mathbf{n}\)</span> acting on the wavefunctions as:</p>
+<div class="math notranslate nohighlight">
+\[\hat{\mathbf{T}}_n\psi(\mathbf{r}) = \psi(\mathbf{r} + \mathbf{n})\]</div>
+<p>In crystalline system, as the externel potential is periodic, the
+Hamiltonian commutes with the translation operator, i.e.</p>
+<div class="math notranslate nohighlight">
+\[[\hat{\text{H}}, \hat{\mathbf{T}}_\mathbf{n}] := \hat{\text{H}}\hat{\mathbf{T}}_\mathbf{n}
+- \hat{\mathbf{T}}_\mathbf{n}\hat{\text{H}} = 0, \quad \forall \ \mathbf{n} \text{ is a lattice vector}\]</div>
+<p>Moreover, translation operators with different translation vectors <span class="math notranslate nohighlight">\(\mathbf{n}_i\)</span> trivially commute.
+By linear algebra theory, all these operators share the same set of eigenvector. Moreover, the normalization
+condition of the wavefunction requires that</p>
+<div class="math notranslate nohighlight">
+\[|\lambda_n|^2\int_{\Omega}\psi^*(\mathbf{r})\psi(\mathbf{r})d\mathbf{r} = \int_{\Omega}(\hat{\mathbf{T}}_\mathbf{n}\psi)^*(\mathbf{r})\hat{\mathbf{T}}_\mathbf{n}\psi(\mathbf{r})d\mathbf{r}
+= \int_{\Omega}\psi^*(\mathbf{r})\psi(\mathbf{r})d\mathbf{r} = 1\]</div>
+<p>Therefore, the eigenvalues <span class="math notranslate nohighlight">\(\lambda_{\mathbf{n}}\)</span> has unit module. All eigen-wavefunctions have the
+following form:</p>
+<div class="math notranslate nohighlight">
+\[\psi(\mathbf{r} + \mathbf{n}) = \hat{\mathbf{T}}_n\psi(\mathbf{r})
+= e^{-i\mathbf{k}\cdot \mathbf{n}}\psi(\mathbf{r}), \quad \forall \ \mathbf{n} \text{ is a lattice vector}\]</div>
+<p>Therefore, define <span class="math notranslate nohighlight">\(u(\mathbf{r}) = e^{i\mathbf{k}\cdot \mathbf{r}}\psi(\mathbf{r})\)</span>, one has</p>
+<div class="math notranslate nohighlight">
+\[u(\mathbf{r} + \mathbf{n}) = e^{i\mathbf{k}\cdot (\mathbf{r} + \mathbf{n})}\psi(\mathbf{r} + \mathbf{a})
+= e^{i\mathbf{k}\cdot \mathbf{r}}\psi(\mathbf{r}) = u(\mathbf{r}), \quad \forall \ \mathbf{n} \text{ is a lattice vector}\]</div>
+<p>which is the periodic function stated in the Bloch’s theorem.</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Tutorials</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="array_shape.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#crystal-structure">Crystal Structure</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#bravais-lattices">Bravais Lattices</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reciprocal-space">Reciprocal space</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#brillouin-zone-and-k-path-sampling">Brillouin zone and k-path sampling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#bloch-s-theorem">Bloch’s theorem</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,754 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Jrystal &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/graph.js?v=9f5096e4"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
+    <link rel="icon" href="_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="#">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tutorial/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/band_structure.html">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/ewald.html">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/index.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Jrystal</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#core-features">Core Features</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#call-graph">Call Graph</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-with-command-line">Run with Command Line</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#band-structure-benchmark">Band Structure Benchmark</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#all-electron-calculation">All-electron calculation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#norm-conserving-psuedopotential-calculation">Norm-conserving Psuedopotential calculation</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-team">The Team</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#citation">Citation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contents">Contents</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="jrystal">
+<h1>Jrystal<a class="headerlink" href="#jrystal" title="Link to this heading">#</a></h1>
+<p class="project-subtitle">A JAX-based Differentiable Density Functional Theory Framework for Materials.</p>
+<section id="core-features">
+<h2>Core Features<a class="headerlink" href="#core-features" title="Link to this heading">#</a></h2>
+<div style="display: flex; align-items: center; justify-content: center; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
+margin-bottom: 10px; margin-top: 10px;">
+  <div style="flex: 1; padding-right: 30px; display: flex; justify-content: center;">
+    <img src="_static/images/feature-AD.png" alt="feature-AD" style="width: 80%; align-self: center;">
+  </div>
+  <div style="flex: 4; padding-right: 10px; display: flex; align-items: center;">
+    <p style="font-size: 18px; margin: 0;"> <b>Differentiable:</b> Leveraging JAX's automatic differentiation for efficient gradient computation of quantum properties, enabling straightforward optimization workflows. </p>
+  </div>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: center; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
+margin-bottom: 10px; margin-top: 10px;">
+  <div style="flex: 1; padding-right: 30px; display: flex; justify-content: center;">
+    <img src="_static/images/feature-gpu.png" alt="feature-AD" style="width: 80%; align-self: center;">
+  </div>
+  <div style="flex: 4; padding-right: 10px; display: flex; align-items: center;">
+    <p style="font-size: 18px; margin: 0;"> <b>GPU-Accelerated:</b> Optimized for modern GPU architectures, delivering high-performance quantum calculations with automatic hardware acceleration. </p>
+  </div>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: center; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
+margin-bottom: 10px; margin-top: 10px;">
+  <div style="flex: 1; padding-right: 30px; display: flex; justify-content: center;">
+    <img src="_static/images/feature-solid.png" alt="feature-solid" style="width: 80%; align-self: center;">
+  </div>
+  <div style="flex: 4; padding-right: 10px; display: flex; align-items: center;">
+    <p style="font-size: 18px; margin: 0;"> <b>Solid-State Calculation:</b> Full-featured framework for periodic systems using plane wave basis sets, supporting precise electronic structure calculations of crystalline materials. </p>
+  </div>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: center; margin-left: 10px; margin-right: 40px; padding: 10px; border: 0px solid #ddd; border-radius: 8px;
+margin-bottom: 10px; margin-top: 10px;">
+  <div style="flex: 1; padding-right: 30px; display: flex; justify-content: center;">
+    <img src="_static/images/feature-total.png" alt="feature-solid" style="width: 80%; align-self: center;">
+  </div>
+  <div style="flex: 4; padding-right: 10px; display: flex; align-items: center;">
+    <p style="font-size: 18px; margin: 0;"> <b>Direct Optimization:</b> A direct minimization approach that avoids SCF iterations, enabling smooth convergence and natural integration of machine learning methods, and advanced quantum chemistry methods into density functional theory calculations. </p>
+  </div>
+</div></section>
+<section id="call-graph">
+<h2>Call Graph<a class="headerlink" href="#call-graph" title="Link to this heading">#</a></h2>
+<!-- Container for the graph -->
+<div id="graph" style="text-align: center;"></div>
+
+<!-- Load required libraries (using CDN here) -->
+<script src="//d3js.org/d3.v7.min.js"></script>
+<script src="https://unpkg.com/@hpcc-js/wasm@2.20.0/dist/graphviz.umd.js"></script>
+<script src="https://unpkg.com/d3-graphviz@5.6.0/build/d3-graphviz.js"></script>
+
+<!-- Add MathJax with SVG output -->
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']]
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};
+</script>
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+</script>
+
+<!-- Render the DOT graph -->
+<script src="/_static/graph.js?v={{ now() }}"></script><p>This project is a <a class="reference external" href="https://github.com/google/jax/">JAX</a>-based package for differantiable density functional theory computation of solids.</p>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
+<p>You may install directly from GitHub, using the following command. This can be used to obtain the most recent version of Optax:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">pip install git+https://github.com/sail-sg/jrystal.git</span>
+</pre></div>
+</div>
+<p>If you want to install the package in development mode, you can use the following command. This allows you to modify the source code and have the changes take effect without you having to rebuild and reinstall.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">git clone git@github.com:sail-sg/jrystal.git</span>
+<span class="go">cd jrystal</span>
+<span class="go">pip install -e .</span>
+</pre></div>
+</div>
+<p>For more installation instructions, please refer to the <a class="reference internal" href="installation.html"><span class="doc">installation</span></a> page.</p>
+</section>
+<section id="run-with-command-line">
+<h2>Run with Command Line<a class="headerlink" href="#run-with-command-line" title="Link to this heading">#</a></h2>
+<p>Once <code class="docutils literal notranslate"><span class="pre">jrystal</span></code> is installed, you can run it with the following command.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>jrystal<span class="w"> </span>-m<span class="w"> </span>energy<span class="w"> </span>-c<span class="w"> </span>config.yaml
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">-m</span></code> or <code class="docutils literal notranslate"><span class="pre">--mode</span></code> option is used to specify the mode to run. Currently, we support two modes: <code class="docutils literal notranslate"><span class="pre">energy</span></code> and <code class="docutils literal notranslate"><span class="pre">band</span></code>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">energy</span></code>: compute the ground state energy of a system.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">band</span></code>: compute the band structure of a system.</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">-c</span></code> or <code class="docutils literal notranslate"><span class="pre">--config</span></code> option is used to specify the configuration file. If it is not provided, the program will look for the file named <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> in the current directory. You may modify the <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> file to customize the calculation.</p>
+</section>
+<section id="band-structure-benchmark">
+<h2>Band Structure Benchmark<a class="headerlink" href="#band-structure-benchmark" title="Link to this heading">#</a></h2>
+<p>We provide a benchmark for the band structure calculation of bulk silicon, graphene, aluminum, and sodium with Quantum ESPRESSO for both all-electron and norm-conserving pseudopotentials.</p>
+<section id="all-electron-calculation">
+<h3>All-electron calculation<a class="headerlink" href="#all-electron-calculation" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 50.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="_images/si_ae.png"><img alt="Image 1" src="_images/si_ae.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Silicon (Si)</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</td>
+<td><figure class="align-center" id="id2">
+<a class="reference internal image-reference" href="_images/al_ae.png"><img alt="Image 2" src="_images/al_ae.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Aluminum (Al)</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</td>
+</tr>
+<tr class="row-even"><td><figure class="align-center" id="id3">
+<a class="reference internal image-reference" href="_images/graphene_ae.png"><img alt="Image 3" src="_images/graphene_ae.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Graphene</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</td>
+<td><figure class="align-center" id="id4">
+<a class="reference internal image-reference" href="_images/na_ae.png"><img alt="Image 4" src="_images/na_ae.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Sodium (Na)</span><a class="headerlink" href="#id4" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="norm-conserving-psuedopotential-calculation">
+<h3>Norm-conserving Psuedopotential calculation<a class="headerlink" href="#norm-conserving-psuedopotential-calculation" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 50.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><figure class="align-center" id="id5">
+<a class="reference internal image-reference" href="_images/si.png"><img alt="Image 1" src="_images/si.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Silicon (Si)</span><a class="headerlink" href="#id5" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</td>
+<td><figure class="align-center" id="id6">
+<a class="reference internal image-reference" href="_images/al.png"><img alt="Image 2" src="_images/al.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Aluminum (Al)</span><a class="headerlink" href="#id6" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+<section id="the-team">
+<h2>The Team<a class="headerlink" href="#the-team" title="Link to this heading">#</a></h2>
+<p>This project is developed by <a class="reference external" href="https://sail.sea.com/">SEA AI LAB (SAIL)</a>. We are also grateful to researchers from <a class="reference external" href="https://ifim.nus.edu.sg/">NUS I-FIM</a> for contributing ideas and theoretical support.</p>
+<a class="reference internal image-reference" href="_images/sail_logo.png"><img alt="Alternative text" src="_images/sail_logo.png" style="width: 300px;" />
+</a>
+<a class="reference internal image-reference" href="_images/ifim_logo.png"><img alt="Alternative text" src="_images/ifim_logo.png" style="width: 300px;" />
+</a>
+</section>
+<section id="citation">
+<h2>Citation<a class="headerlink" href="#citation" title="Link to this heading">#</a></h2>
+<p>If you find this project useful, please cite our preprints:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">@inproceedings{ml4ps2024,</span>
+<span class="go">  title = {Jrystal: A JAX-based Differentiable Density Functional Theory Framework for Materials},</span>
+<span class="go">  author = {Li, Tianbo and Shi, Zekun and Dale, Stephen Gregory and Vignale, Giovanni and Lin, Min},</span>
+<span class="go">  booktitle = {Machine Learning and the Physical Sciences Workshop at NeurIPS 2024},</span>
+<span class="go">  year = {2024},</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+<p>and</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">@article{li2024diagonalization,</span>
+<span class="go">  title={Diagonalization without Diagonalization: A Direct Optimization Approach for Solid-State Density Functional Theory},</span>
+<span class="go">  author={Li, Tianbo and Lin, Min and Dale, Stephen and Shi, Zekun and Neto, AH Castro and Novoselov, Kostya S and Vignale, Giovanni},</span>
+<span class="go">  journal={arXiv preprint arXiv:2411.05033},</span>
+<span class="go">  year={2024}</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+</section>
+<section id="license">
+<h2>License<a class="headerlink" href="#license" title="Link to this heading">#</a></h2>
+<p>This project is licensed under the <a class="reference external" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>.</p>
+</section>
+<section id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Link to this heading">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installation-guide">Installation Guide</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples/index.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial/index.html">Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/band_structure.html">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial/ewald.html">Ewald Summation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/potential.html">potential</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/pseudopotential.html">pseudopotential</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/pw.html">planewave</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Feature Roadmap and Contribution Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="roadmap.html#feature-roadmap">Feature Roadmap</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html#contribution-guide">Contribution Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="roadmap.html#career-opportunities">Career Opportunities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="glossary.html#variable-names-and-meanings">Variable Names and Meanings</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="right-next"
+       href="installation.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Installation</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#core-features">Core Features</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#call-graph">Call Graph</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-with-command-line">Run with Command Line</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#band-structure-benchmark">Band Structure Benchmark</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#all-electron-calculation">All-electron calculation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#norm-conserving-psuedopotential-calculation">Norm-conserving Psuedopotential calculation</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-team">The Team</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#citation">Citation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contents">Contents</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

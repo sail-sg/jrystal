@@ -1,0 +1,31 @@
+/* _static/custom.css */
+g.node.dim, g.edge.dim {
+    opacity: 0.3;
+}
+
+g.node.active, g.edge.active {
+    opacity: 1;
+}
+
+a.doc-link {
+    z-index: 1000 !important;
+    pointer-events: all !important;
+}
+
+a.doc-link text {
+    font-size: 20px;
+    fill: blue;
+    cursor: pointer;
+}
+
+.navbar-brand img {
+    max-height: 168px !important;  /* Adjust this value to your preferred size */
+    width: auto;
+}
+
+.project-subtitle {
+    font-size: 1.25rem !important;  /* Adjust this value as needed */
+    font-weight: normal !important;
+    margin: 1rem 0 !important;
+    font-family: var(--pst-font-family-base) !important;  /* Uses theme's base font */
+}
