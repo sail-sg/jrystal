@@ -211,19 +211,8 @@ This project is developed by `SEA AI LAB (SAIL) <https://sail.sea.com/>`_. We ar
 Citation
 --------
 
-If you find this project useful, please cite this repo:
+If you find this project useful, please cite our preprints:
 
-
-.. code-block:: console
-  
-  @software{jrystal,
-    author = {Li, Tianbo and Shi, Zekun and Zhao, Jiaxi and Dale, Stephen Gregory and Vignale, Giovanni and Neto, AH Castro and Novoselov, Kostya S and Lin, Min},
-    title = {Jrystal: A JAX-based Differentiable Density Functional Theory Framework for Materials},
-    year = {2025},
-    url = {https://github.com/sail-sg/jrystal}
-  }
-
-We also have two preprints that you may find helpful:
 
 .. code-block:: console
   
