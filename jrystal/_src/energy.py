@@ -216,6 +216,35 @@ def xc_lda(
   return e_lda * vol / num_grid
 
 
+def xc_pbe(
+  density_grid: Float[Array, 'x y z'],
+  vol: Float,
+  kohn_sham: bool = False
+) -> Float:
+  r"""Calculate the PBE exchange-correlation energy.
+
+  Args:
+    density_grid (Float[Array, 'x y z']): Real-space electron density.
+    vol (Float): Unit cell volume.
+    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
+
+  Returns:
+    Float: PBE exchange-correlation energy.
+  """
+
+  assert density_grid.ndim in [3, 4]
+
+  if density_grid.ndim == 4:  # have spin channel
+    density_grid = jnp.sum(density_grid, axis=0)
+
+  num_grid = jnp.prod(jnp.array(density_grid.shape))
+  pbe_density = potential.xc_pbe(density_grid, kohn_sham)
+  e_pbe = jnp.sum(pbe_density * density_grid)
+  e_pbe = safe_real(e_pbe)
+
+  return e_pbe * vol / num_grid
+
+
 def nuclear_repulsion(
   position: Float[Array, 'atom 3'],
   charge: Float[Array, 'atom'],
@@ -306,6 +335,8 @@ def total_energy(
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
   if xc == 'lda':
     e_xc = xc_lda(density_grid, vol, kohn_sham)
+  elif xc == 'pbe':
+    e_xc = xc_pbe(density_grid, vol, kohn_sham)  
   else:
     raise NotImplementedError(f"xc {xc} is not supported yet.")
 
