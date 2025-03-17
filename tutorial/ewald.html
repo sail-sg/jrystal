@@ -1,0 +1,781 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Ewald Summation &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/graph.js?v=9f5096e4"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'tutorial/ewald';</script>
+    <link rel="icon" href="../_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="API Documentation" href="../api/index.html" />
+    <link rel="prev" title="Band Structure" href="band_structure.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="../_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="band_structure.html">Band Structure</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/tutorial/ewald.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Ewald Summation</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#nucleus-energy">Nucleus energy</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reciprocal-space-representation-via-the-yukawa-kernel">Reciprocal space representation via the Yukawa kernel</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Ewald summation</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#long-range-potential">Long range potential</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interpretation-as-screening-by-a-gaussian-charge">Interpretation as screening by a Gaussian charge</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#long-range-part-is-the-coulombic-potential-generated-via-a-gaussian-charge-distribution">Long-range part is the Coulombic potential generated via a Gaussian charge distribution</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#short-range-part">Short-range part</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#long-range-part">Long-range part</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="ewald-summation">
+<h1>Ewald Summation<a class="headerlink" href="#ewald-summation" title="Link to this heading">#</a></h1>
+<p><a id="org20fe6c3"></a></p>
+<section id="nucleus-energy">
+<h2>Nucleus energy<a class="headerlink" href="#nucleus-energy" title="Link to this heading">#</a></h2>
+<p>Denote the atomic point charge within the unit cell as</p>
+<div class="amsmath math notranslate nohighlight" id="equation-6354f4dc-3b9c-42c2-954b-7330f453f60d">
+<span class="eqno">(1)<a class="headerlink" href="#equation-6354f4dc-3b9c-42c2-954b-7330f453f60d" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\rho ^{\text{atom}}(\vb{r})=-\sum_{\ell} Z_{\ell }\delta (\vb{r}-\vb*{\tau }_{\ell })
+\end{equation}\]</div>
+<p>The Coulombic potential generated from this charge is</p>
+<div class="amsmath math notranslate nohighlight" id="equation-1e3d9084-05d2-4cee-938b-54015fc28e0d">
+<span class="eqno">(2)<a class="headerlink" href="#equation-1e3d9084-05d2-4cee-938b-54015fc28e0d" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\begin{split}
+V_{\text{ext}}(\vb{r}) =&amp; \rho ^{\text{atom}}  \star \frac{1}{r}
+= \int_{\Omega + \vb{R} } \dd{\vb{r}'} \frac{1}{\norm{\vb{r} - \vb{r}'}} \left( -\sum_{\ell} Z_{\ell }\delta (\vb{r}'-\vb*{\tau }_{\ell }) \right) \\
+=&amp;  - \sum_{\vb{R}} \sum_{\ell} Z_{\ell } \frac{1}{\norm{\vb{r}  - \vb*{\tau }_{\ell } - \vb{R}}}
+\end{split}
+\end{equation}\]</div>
+<p>The nucleus energy is then</p>
+<div class="amsmath math notranslate nohighlight" id="equation-80e3f7b0-4bd7-46de-ba9d-7fdc942b569a">
+<span class="eqno">(3)<a class="headerlink" href="#equation-80e3f7b0-4bd7-46de-ba9d-7fdc942b569a" title="Permalink to this equation">#</a></span>\[\begin{equation}
+E_{\text{nuc}}
+= \frac{1}{2} \braket{V_{\text{ext}}}{\rho ^{\text{atom}}}
+=- \frac{1}{2}\sum_{\vb{R}} \sum_{\ell'} \sum_{\ell} Z_{\ell '}Z_{\ell } \frac{1}{\norm{\vb*{\tau }_{\ell' }  - \vb*{\tau }_{\ell } - \vb{R}}}
+\end{equation}\]</div>
+<p>where the <span class="math notranslate nohighlight">\(1 / 2\)</span> factor prevents double counting.</p>
+<p>There are two problem with the above formula:</p>
+<ol class="arabic simple">
+<li><p>In practical calculation the summation over <span class="math notranslate nohighlight">\(\vb{R}\)</span> is truncated to a finite sized Bravais lattice, which need to be very big for the energy to converge</p></li>
+<li><p>An uniform negative background charge <span class="math notranslate nohighlight">\(\rho^{-}=\vb{Z}_{\text{tot}} / \Omega\)</span> is required for the energy to be convergent, which is hard to apply in real space.</p></li>
+</ol>
+<p><a id="org06b5c9e"></a></p>
+</section>
+<section id="reciprocal-space-representation-via-the-yukawa-kernel">
+<h2>Reciprocal space representation via the Yukawa kernel<a class="headerlink" href="#reciprocal-space-representation-via-the-yukawa-kernel" title="Link to this heading">#</a></h2>
+<p>The Fourier space representation of the electrostatic potential can then be determined by the Poisson equation in Fourier space:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-7c17098a-3e88-448a-b3b9-5856689b57fd">
+<span class="eqno">(4)<a class="headerlink" href="#equation-7c17098a-3e88-448a-b3b9-5856689b57fd" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \nabla ^{2} V(\vb{r}) = -4\pi \rho (\vb{r}) \Rightarrow
+  -\norm{\vb{G}}^{2} \tilde{V} (\vb{G}) = -4\pi \tilde{\rho} (\vb{G}) \Rightarrow
+  \tilde{V} (\vb{G}) = \frac{4\pi}{\norm{\vb{G}}^{2}} \tilde{\rho}  (\vb{G}).
+\end{equation}\]</div>
+<p>Note that at <span class="math notranslate nohighlight">\(\vb{G}=\vb{0}\)</span> we have a singularity, so this ill-defined.</p>
+<p>To fix this, we introduce the Yukawa kernel <span class="math notranslate nohighlight">\(\nu_{\alpha }(r)=\frac{e^{-\alpha r}}{r}\)</span>, which represents a screened Coulomb interaction.
+It’s Fourier representation is given by</p>
+<div class="amsmath math notranslate nohighlight" id="equation-55239359-de35-41b3-b66d-e9093ab30fdd">
+<span class="eqno">(5)<a class="headerlink" href="#equation-55239359-de35-41b3-b66d-e9093ab30fdd" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\tilde{\nu} ^{\alpha }(\vb{G})= \int_{\mathbb{R}^{3}} \dd{\vb{r}} \nu_{\alpha }(\vb{r}) e^{-\text{i} \vb{G} \cdot \vb{r}} = \dfrac{4\pi}{\norm{\vb{G}}^2 + \alpha^2}.
+\end{equation}\]</div>
+<p>This is equivalent to treat Fourier transform as the limit of the Laplace transform.</p>
+<p>Now for any charge distribution <span class="math notranslate nohighlight">\(\rho\)</span>, we can define the Fourier transform of Coulombic potentials generated from <span class="math notranslate nohighlight">\(\rho\)</span> as a limit, since <span class="math notranslate nohighlight">\(\lim_{\alpha  \to 0} -\frac{1}{4\pi} \nu _{\alpha }=\frac{1}{r}\)</span>:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-bfb357d0-df63-4a87-bc42-0b17d429fc36">
+<span class="eqno">(6)<a class="headerlink" href="#equation-bfb357d0-df63-4a87-bc42-0b17d429fc36" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \tilde{V} (\vb{G})=\lim_{\alpha  \to 0}  [\widetilde{-\frac{1}{4\pi}\nu_{\alpha } \star -4\pi \rho }] (\vb{G}) =\lim_{\alpha  \to 0}  \tilde{\nu}_{\alpha } (\vb{G}) \tilde{\rho} (\vb{G})  
+  = \lim_{\alpha  \to 0}  \frac{4\pi \tilde{\rho} (\vb{G})}{\norm{\vb{G}}^{2}+ \alpha ^{2}}.
+\end{equation}\]</div>
+<p>Note that this formula implies that the Coulombic potential generated by a neutral charge distribution has zero average, since <span class="math notranslate nohighlight">\(\tilde{\rho}(\vb{0})=0\)</span> implies <span class="math notranslate nohighlight">\(\tilde{V}(\vb{0})=0\)</span>.</p>
+<p><span class="math notranslate nohighlight">\(V_{\text{ext}}\)</span> can now be represented in the reciprocal space via the Yukawa kernel:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-5427f606-ad09-429b-b3e9-53a7810c8d08">
+<span class="eqno">(7)<a class="headerlink" href="#equation-5427f606-ad09-429b-b3e9-53a7810c8d08" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \tilde{V}_{\text{ext}} (\vb{G}) =\lim_{\alpha  \to 0}  \tilde{\nu}_{\alpha } (\vb{G}) \tilde{\rho}^{\text{atom}} (\vb{G})
+= -\lim_{\alpha  \to 0}  \sum_{\ell} \frac{4\pi Z_{\ell } e^{-\text{i} \vb{G} ^{\top} \vb*{\tau }_{\ell}}}{\norm{\vb{G}}^{2}+ \alpha ^{2}}
+=  -\sum_{\ell} \frac{ 4\pi Z_{\ell } e^{-\text{i} \vb{G} ^{\top} \vb*{\tau }_{\ell}}}{\norm{\vb{G}}^{2}}.
+\end{equation}\]</div>
+<p>Now since</p>
+<div class="amsmath math notranslate nohighlight" id="equation-18da19f7-f492-49d9-9d77-11ed33cd390e">
+<span class="eqno">(8)<a class="headerlink" href="#equation-18da19f7-f492-49d9-9d77-11ed33cd390e" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\tilde{\rho}  ^{\text{atom}}(\vb{G}) = - \sum_{\ell } Z_{\ell } e^{-\text{i} \vb{G}^{\top} \vb*{\tau }_{\ell }}
+\end{equation}\]</div>
+<p>by Parseval’s theorem we have</p>
+<div class="amsmath math notranslate nohighlight" id="equation-eedc783c-7dfa-4da1-83a9-1bbdd71b99ca">
+<span class="eqno">(9)<a class="headerlink" href="#equation-eedc783c-7dfa-4da1-83a9-1bbdd71b99ca" title="Permalink to this equation">#</a></span>\[\begin{equation}
+E_{\text{nuc}} = \sum_{\vb{G}\neq \vb{0}}  \tilde{V} _{\text{ext}}(\vb{G})^{*} \tilde{\rho} ^{\text{atom}}(\vb{G})
+= \sum_{\vb{G}\neq \vb{0}}  \sum_{\ell ,\ell '} \frac{1}{\norm{\vb{G}}^{2}} e^{-\text{i} \vb{G}^{\top} (\vb*{\tau }_{\ell } - \vb*{\tau }_{\ell '})}
+\end{equation}\]</div>
+<p>where the exclusion of the <span class="math notranslate nohighlight">\(\vb{G}=\vb{0}\)</span> term is equivalent to applying the uniform background charge. However, it still converges slowly in terms of the g grid size.</p>
+<p><a id="orge44cddf"></a></p>
+</section>
+<section id="id1">
+<h2>Ewald summation<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
+<p>The idea of Ewald summation is to do summation in both the real and the reciprocal space, where the Coulombic kernel is broken up into a short-range term that converges fast in real space, and a long-range term that converges fast in the reciprocal space. Intuitively, why this works is that the long-range terms will by definition have lower frequency.</p>
+<p>Specifically, the Coulombic kernel is decomposed as follows</p>
+<div class="amsmath math notranslate nohighlight" id="equation-b84bd004-cea4-49ea-89cb-13a7e45a7212">
+<span class="eqno">(10)<a class="headerlink" href="#equation-b84bd004-cea4-49ea-89cb-13a7e45a7212" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \frac{1}{r} = \underbrace{\text{erfc}(\eta r) \frac{1}{r}}_{\nu _{\text{sr}}} + \underbrace{\text{erf}(\eta r) \frac{1}{r}}_{\nu _{\text{lr}}}
+\end{equation}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\nu_{\text{sr}}, \nu _{\text{lr}}\)</span> are the short-range and the long-range kernel respectively.</p>
+<p><a id="org11ad7bc"></a></p>
+<section id="long-range-potential">
+<h3>Long range potential<a class="headerlink" href="#long-range-potential" title="Link to this heading">#</a></h3>
+<p>Obviously <span class="math notranslate nohighlight">\(\nu_{\text{sr}}\)</span> decays exponentially in the real space. We need to show that the long-range kernel decays fast in the reciprocal space.</p>
+<p>The long range potential is given by</p>
+<div class="amsmath math notranslate nohighlight" id="equation-420ba19c-bab6-4cac-b663-4d604be9c3fc">
+<span class="eqno">(11)<a class="headerlink" href="#equation-420ba19c-bab6-4cac-b663-4d604be9c3fc" title="Permalink to this equation">#</a></span>\[\begin{equation}
+V_{\text{lr}}(\vb{r}) = \rho ^{\text{atom}} \star \nu _{\text{lr}} = - \sum_{\ell } \frac{Z_{\ell } \text{erf}(\eta \norm{ \vb{r} - \vb*{\tau }_{\ell }})}{\norm{\vb{r} - \vb*{\tau }_{\ell }}}
+\end{equation}\]</div>
+<p>The long-range part will be evaluated in the reciprocal space. First, we derive the Fourier transform of the long-range kernel calculated analytically using the same trick as Yukawa, which treats Fourier transform as the limit of Laplace transform:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-aff94eb2-8793-448e-80f6-5faeb1d584b9">
+<span class="eqno">(12)<a class="headerlink" href="#equation-aff94eb2-8793-448e-80f6-5faeb1d584b9" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\begin{aligned}
+\tilde{\nu }^\alpha_{\text{lr}} (\vb{G})= \int_{\mathbb{R}^{3}} \dd{\vb{r}} \nu _{\text{lr}} (\vb{r}) e^{-\alpha r} e^{-\text{i} \vb{G} \cdot \vb{r}}
+=&amp; \dfrac{2 \pi }{\text{i} G }  \left[ -\frac{e^{(\frac{\alpha+ \text{i} G}{2\eta })^2 }}{\text{i} G + \alpha } + \frac{e^{(\frac{\alpha- \text{i} G}{2\eta })^2 }}{-\text{i} G + \alpha } \right].
+\end{aligned}
+\end{equation}\]</div>
+<p>where <span class="math notranslate nohighlight">\(G=\norm{\vb{G}}\)</span>, and in the last equality we have used square completion trick with the Gaussian integrals. For <span class="math notranslate nohighlight">\(\vb{G}\neq 0\)</span>, we can take <span class="math notranslate nohighlight">\(\alpha \to 0\)</span> and get</p>
+<div class="amsmath math notranslate nohighlight" id="equation-2e543c84-d142-49df-8239-966de2123804">
+<span class="eqno">(13)<a class="headerlink" href="#equation-2e543c84-d142-49df-8239-966de2123804" title="Permalink to this equation">#</a></span>\[\begin{equation}
+    \tilde{\nu }_{\text{lr}}(\vb{G})  = \lim_{\alpha  \to 0}  \tilde{\nu }_{\text{lr}}^\alpha(\vb{G})
+    = \dfrac{2 \pi }{\text{i} G }  \left[ \frac{e^{(\frac{ \text{i} G}{2\eta })^2 }}{\text{i} G  } - \frac{e^{(\frac{ -\text{i} G}{2\eta })^2 }}{-\text{i} G } \right]
+    = \dfrac{4 \pi }{ G^2 }  \exp {\frac{-G^2}{4\eta^2 } }.
+\end{equation}\]</div>
+<p>and the long-range potential for is then given by</p>
+<div class="amsmath math notranslate nohighlight" id="equation-21132b98-3967-41c4-8b70-7693d513f757">
+<span class="eqno">(14)<a class="headerlink" href="#equation-21132b98-3967-41c4-8b70-7693d513f757" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\tilde{V} _{\text{lr}}(\vb{G}) = \widetilde{[\nu_{\text{lr}} \star \rho^{\text{atom}}]}(\vb{G}) = \tilde{\nu} _{\text{lr}}(\vb{G})^{*} \tilde{\rho} ^{\text{atom}}(\vb{G})
+= \dfrac{4 \pi }{ G^2 }  \exp {\frac{-G^2}{4\eta^2 } } e^{-\text{i} \vb{G} ^\top \vb*{\tau }_{\ell }}
+\end{equation}\]</div>
+<p>which decays exponentially instead of polynomially.</p>
+<p><a id="orgfc27e29"></a></p>
+</section>
+</section>
+<section id="interpretation-as-screening-by-a-gaussian-charge">
+<h2>Interpretation as screening by a Gaussian charge<a class="headerlink" href="#interpretation-as-screening-by-a-gaussian-charge" title="Link to this heading">#</a></h2>
+<p>Although we have shown that this decomposition of the Coulomb kernel yields two fast converging terms, we haven’t handle the neutral charge requirement. The perspective on kernel decomposition is not very helpful in this aspect. Instead, we need to interpret the <strong>Ewald summation as screening by a Gaussian charge</strong>.</p>
+<p>Specifically, we will show that Ewald summation split the neutralized atomic charge distribution <span class="math notranslate nohighlight">\(\rho^{\text{atom}}+ \rho ^{-}\)</span> into two part: (a) the atomic charge distribution neutralized by a Gaussian charge distribution <span class="math notranslate nohighlight">\(\rho^{\text{tot}}\)</span>; (b) the Gaussian charge distribution neutralized by the uniform background charge <span class="math notranslate nohighlight">\(\rho^{-}\)</span>. The Coulombic potential generated by these two charge distributions corresponds to the short-range and the long-range part:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-bcbed3f3-8b2f-4438-9a94-203e16585e3c">
+<span class="eqno">(15)<a class="headerlink" href="#equation-bcbed3f3-8b2f-4438-9a94-203e16585e3c" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \begin{split}
+    V_{\text{nuc}}
+    =&amp; \frac{1}{r} \star  [\rho ^{\text{atom}} + \rho ^{-}] \\
+     =&amp;  \frac{1}{r} \star  [(\rho ^{\text{atom}}-\rho ^{\text{tot}}) + (\rho ^{\text{tot}} + \rho ^{-})] \\
+    =&amp; (\nu_{\text{sr}} \star  \rho ^{\text{atom}} - C) + (\nu_{\text{lr}}\star  \rho ^{\text{atom}} + \frac{1}{r} \star \rho^{-}).
+  \end{split}
+\end{equation}\]</div>
+<p><a id="org117c8f1"></a></p>
+<section id="long-range-part-is-the-coulombic-potential-generated-via-a-gaussian-charge-distribution">
+<h3>Long-range part is the Coulombic potential generated via a Gaussian charge distribution<a class="headerlink" href="#long-range-part-is-the-coulombic-potential-generated-via-a-gaussian-charge-distribution" title="Link to this heading">#</a></h3>
+<p>Consider the positive Gaussian charge distribution</p>
+<div class="amsmath math notranslate nohighlight" id="equation-a5210626-943c-4983-bff6-d647f56acc0f">
+<span class="eqno">(16)<a class="headerlink" href="#equation-a5210626-943c-4983-bff6-d647f56acc0f" title="Permalink to this equation">#</a></span>\[\begin{equation}
+ \rho ^{g}(\vb{r}) = -(\pi  /\eta^{2} )^{-\frac{3}{2}} \exp (- \eta^{2} \norm{\vb{r}}^{2})
+\end{equation}\]</div>
+<p>whose Fourier space representation is</p>
+<div class="amsmath math notranslate nohighlight" id="equation-7d1cf781-7fa5-46c3-9c6c-91c126c4d6d9">
+<span class="eqno">(17)<a class="headerlink" href="#equation-7d1cf781-7fa5-46c3-9c6c-91c126c4d6d9" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\tilde{\rho } ^{g}(\vb{G}) = - \frac{1}{\Omega } \exp (-\frac{\norm{\vb{G}}^{2}}{4 \eta ^{2} } ).
+\end{equation}\]</div>
+<p>Now consider the adding such Gaussian charge distribution at each atom’s site in the crystal, the total charge distribution is:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-117a3af7-4280-41b0-bb71-59cd550a5c04">
+<span class="eqno">(18)<a class="headerlink" href="#equation-117a3af7-4280-41b0-bb71-59cd550a5c04" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:n-tot-real}
+    \rho ^{\text{tot}}(\vb{r})
+    =  \sum_{\ell  } \sum_{\vb{n}}^{\infty } Z_{\ell } \rho ^{g}(\vb{r}- \vb*{\tau }_{\ell } - \vb{R}_{\vb{n}})
+    = - (\pi  /\eta^{2} )^{-\frac{3}{2}}  \sum_{\ell  } \sum_{\vb{n}}^{\infty } Z_{\ell } \exp (-\eta ^{2} \norm{\vb{r}- \vb*{\tau }_{\ell } - \vb{R}_{\vb{n}}}^{2})
+\end{equation}\]</div>
+<p>whose Fourier space representation is</p>
+<div class="amsmath math notranslate nohighlight" id="equation-d66ddf67-d414-4bc5-bbbe-4e39c6728ac1">
+<span class="eqno">(19)<a class="headerlink" href="#equation-d66ddf67-d414-4bc5-bbbe-4e39c6728ac1" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:n-tot-fourier}
+\tilde{\rho }^{\text{tot}}(\vb{G})
+    = -\frac{1}{\Omega }\sum_{\ell  }  Z_{\ell } e^{-\text{i} \vb{G}\cdot  \vb*{\tau }_{\ell }} \exp (-\frac{\norm{\vb{G}}^{2}}{4 \eta ^{2} } )
+\end{equation}\]</div>
+<p>From the previous section, the <strong>Coulombic potential</strong> generated by <span class="math notranslate nohighlight">\(\rho ^{\text{tot}}\)</span> is</p>
+<div class="amsmath math notranslate nohighlight" id="equation-588bd379-e1b6-4051-959f-f5c619c9d40f">
+<span class="eqno">(20)<a class="headerlink" href="#equation-588bd379-e1b6-4051-959f-f5c619c9d40f" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \tilde{V}^{\text{tot}}(\vb{G}) = \left\{\begin{array}{cc}
+    \frac{4\pi}{\norm{\vb{G}}^{2}} \tilde{\rho }^{\text{tot}}(\vb{G}), &amp; \vb{G}\neq \vb{0}, \\
+    0, &amp; \vb{G}= \vb{0}, \\
+  \end{array}\right.
+\end{equation}\]</div>
+<p>therefore for the case of <span class="math notranslate nohighlight">\(\vb{G}\neq \vb{0}\)</span></p>
+<div class="amsmath math notranslate nohighlight" id="equation-abf73860-9ce9-4d88-8fcf-7d759b78e558">
+<span class="eqno">(21)<a class="headerlink" href="#equation-abf73860-9ce9-4d88-8fcf-7d759b78e558" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \hat{V}^{\text{tot}}(\vb{G})
+  =-    \frac{1}{\Omega } \sum_{\vb{G}\neq 0} \sum_{\ell } Z_{\ell } \frac{4\pi}{\norm{\vb{G}}^{2}}  \exp (-\frac{\norm{\vb{G}}^{2}}{4 \eta ^{2} } ) e^{-\text{i}\vb{G}^{\top}  \vb*{\tau }_{\ell }} = \tilde{V} _{\text{lr}}(\vb{G}).
+\end{equation}\]</div>
+<p>where removing the <span class="math notranslate nohighlight">\(\vb{G}=\vb{0}\)</span> term is equivalent to screening by uniform charge. Therefore</p>
+<div class="amsmath math notranslate nohighlight" id="equation-cefc5d60-1ce2-46d8-8bc6-5135960c9285">
+<span class="eqno">(22)<a class="headerlink" href="#equation-cefc5d60-1ce2-46d8-8bc6-5135960c9285" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\nu _{\text{lr}} \star \rho ^{\text{atom}} + \frac{1}{r} \star \rho ^{-} = V_{\text{lr}} = V^{\text{tot}} = \frac{1}{r} \star  [\rho^{\text{tot}} + \rho^{-}]
+\end{equation}\]</div>
+<p>which says the long-range potential is the Coulombic potential generated via a neutralized Gaussian charge distribution <span class="math notranslate nohighlight">\(\rho^{\text{tot}} + \rho ^-\)</span>.</p>
+<p><a id="orgc396f13"></a></p>
+</section>
+<section id="short-range-part">
+<h3>Short-range part<a class="headerlink" href="#short-range-part" title="Link to this heading">#</a></h3>
+<p>For simplicity, consider the case where <span class="math notranslate nohighlight">\(\rho^{\text{atom}}(\vb{r})=\delta (\vb{r})\)</span>, i.e. a system where there’s a unit positive charge at the origin. Then</p>
+<div class="amsmath math notranslate nohighlight" id="equation-69da5d2e-9a4f-44a3-83d5-043c62921742">
+<span class="eqno">(23)<a class="headerlink" href="#equation-69da5d2e-9a4f-44a3-83d5-043c62921742" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \nabla ^{2} \left[ \nu_{\text{lr}} \star \rho ^{\text{atom}}  \right] =  \nabla ^{2} \left[\text{erf}(\eta \norm{\vb{r}}) \frac{1}{ \norm{\vb{r}}}\right]
+     = -4\pi [-\rho^{g}(\vb{r})].
+\end{equation}\]</div>
+<p>Plug this into Poisson equation we get</p>
+<div class="amsmath math notranslate nohighlight" id="equation-4144900d-4990-43b7-b3b5-41a21692c965">
+<span class="eqno">(24)<a class="headerlink" href="#equation-4144900d-4990-43b7-b3b5-41a21692c965" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \nabla ^{2} [\nu _{\text{sr}}\star  \rho^{\text{atom}}](\vb{r})
+  =\nabla ^{2} [(\frac{1}{r} - \nu _{\text{lr}})\star  \rho^{\text{atom}}](\vb{r})
+  =\nabla ^{2} [\frac{1}{r} \star  \rho^{\text{atom}}](\vb{r}) - \nabla ^{2} [\nu _{\text{lr}} \star  \rho^{\text{atom}}](\vb{r})
+ = -4\pi  [\rho ^{\text{atom}}-\rho ^{g }](\vb{r})  .
+\end{equation}\]</div>
+<p>It is easy to see that in the general case where <span class="math notranslate nohighlight">\(\rho ^{\text{atom}}(\vb{r})=-\sum_{\ell} Z_{\ell }\delta (\vb{r}-\vb*{\tau }_{\ell })\)</span> we have</p>
+<div class="amsmath math notranslate nohighlight" id="equation-039ed5b8-b654-4370-918e-c91a80053a9c">
+<span class="eqno">(25)<a class="headerlink" href="#equation-039ed5b8-b654-4370-918e-c91a80053a9c" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \nabla ^{2} [\nu _{\text{sr}}\star  \rho^{\text{atom}}](\vb{r})
+ = -4\pi  [\rho ^{\text{atom}}-\rho ^{\text{tot} }](\vb{r})  .
+\end{equation}\]</div>
+<p>Now this implies that</p>
+<div class="amsmath math notranslate nohighlight" id="equation-fda02d02-02d9-4ab4-9a94-7569fead41a3">
+<span class="eqno">(26)<a class="headerlink" href="#equation-fda02d02-02d9-4ab4-9a94-7569fead41a3" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:ewald-sr}
+  \nu_{\text{sr}}\star \rho^{\text{atom}} - C = \frac{1}{r} \star [\rho^{\text{atom}}-\rho^{\text{tot}}]
+\end{equation}\]</div>
+<p>where the constant <span class="math notranslate nohighlight">\(C\)</span> is the average value of <span class="math notranslate nohighlight">\(G_{\text{sr}}\star \rho^{\text{atom}}\)</span>, which is there due to the zero average condition of the potential. The value of <span class="math notranslate nohighlight">\(C\)</span> can be calculated:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-1fb492dc-81a8-48f0-91a7-b9a08090a412">
+<span class="eqno">(27)<a class="headerlink" href="#equation-1fb492dc-81a8-48f0-91a7-b9a08090a412" title="Permalink to this equation">#</a></span>\[\begin{equation}
+    C = \frac{1}{\Omega} \int_{\Omega }\dd{\vb{r}} [\nu _{\text{sr}}\star \rho  ^{\text{atom}}](\vb{r})
+    = -\frac{\pi }{\Omega \eta ^{2}}.
+\end{equation}\]</div>
+<p>We see that <strong>this construction converts the hard-to-apply charge neutral correct in real space to just a zero average condition of the potential</strong>.</p>
+<p>Now we can calculate the short-range part of the nucleus energy via a real space summation:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-8029df25-d055-4e55-b4f5-4f44ce7e0463">
+<span class="eqno">(28)<a class="headerlink" href="#equation-8029df25-d055-4e55-b4f5-4f44ce7e0463" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\begin{split}
+  E_{\text{nuc}}^{\text{sr}} =&amp; \frac{1}{2} \int_{\Omega } \dd{\vb{r}} [\nu _{\text{sr}}\star \rho ^{\text{atom}}-C](\vb{r}) \rho ^{\text{atom}}(\vb{r}). \\
+  \approx&amp; \frac{1}{2} \sum_{\ell, \ell'} \sum_{\vb{n}}^{L} Z_{\ell }Z_{\ell '} \frac{\text{erfc}(\eta \norm{\vb*{\tau }_{\ell }- \vb*{\tau }_{\ell' } - \vb{R}_{\vb{n}}})}{\norm{\vb*{\tau }_{\ell } - \vb*{\tau }_{\ell' } - \vb{R}_{\vb{n}}}} - \frac{\pi Z_{\text{tot}}^{2}}{2\Omega \eta ^{2}}.
+\end{split}
+\end{equation}\]</div>
+<p>where <span class="math notranslate nohighlight">\(L\)</span> is the Ewald lattice. Furthermore, terms with <span class="math notranslate nohighlight">\(\ell =\ell '\)</span> are excluded when <span class="math notranslate nohighlight">\(\vb{n}=\vb{0}\)</span> to remove self-interaction.</p>
+<p><a id="org8ed67da"></a></p>
+</section>
+<section id="long-range-part">
+<h3>Long-range part<a class="headerlink" href="#long-range-part" title="Link to this heading">#</a></h3>
+<p>The long-range contribution is</p>
+<div class="amsmath math notranslate nohighlight" id="equation-35bd10ac-b59b-47ac-a490-d8d52cce4d05">
+<span class="eqno">(29)<a class="headerlink" href="#equation-35bd10ac-b59b-47ac-a490-d8d52cce4d05" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  E_{\text{nuc}}^{\text{lr}} = \frac{1}{2} \int_{\Omega } \dd{\vb{r}} V_{\text{lr}}(\vb{r})
+  \rho ^{\text{atom}}(\vb{r}) = \frac{1}{2} \sum_{\vb{G}\neq \vb{0}} \tilde{V}_{\text{lr}} (\vb{G})^* \tilde{\rho}^{\text{atom}}(\vb{G}).
+\end{equation}\]</div>
+<p>It <strong>decays fast in the reciprocal space</strong>. So with a reasonably small reciprocal mesh <span class="math notranslate nohighlight">\(L'\)</span>, we can calculate the long-range contribution to energy:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-5d7584e3-2ec5-4e45-a7e4-cae7b43fa898">
+<span class="eqno">(30)<a class="headerlink" href="#equation-5d7584e3-2ec5-4e45-a7e4-cae7b43fa898" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \begin{aligned}
+    E^{\text{lr}}_{\text{nuc}}
+    \approx&amp; \frac{1}{2\Omega } \sum_{\vb{G}\neq \vb{0}}^{L'} \sum_{\ell } \sum_{\ell' } Z_{\ell } Z_{\ell'} \frac{4\pi}{\norm{\vb{G}}^{2}}  \exp (-\frac{\norm{\vb{G}}^{2}}{4 \eta ^{2} } ) e^{\text{i}\vb{G} \cdot (\vb*{\tau }_{\ell '}-\vb*{\tau }_{\ell })} \\
+    =&amp; \frac{2\pi }{\Omega } \sum_{\vb{G}\neq \vb{0}}^{L'} \frac{1}{\norm{\vb{G}}^{2}}  \exp (-\frac{\norm{\vb{G}}^{2}}{4 \eta ^{2} } ) \left[\sum_{\ell }  Z_{\ell }  e^{\text{i}\vb{G} \cdot \vb*{\tau }_{\ell }} \right]^{2}.
+  \end{aligned}
+\end{equation}\]</div>
+<p>We also need to remove the self-interaction for the long-range part like in the short-range part. Specifically,
+since</p>
+<div class="amsmath math notranslate nohighlight" id="equation-ad9e9715-3a19-481e-9470-ddb5e87e3a5e">
+<span class="eqno">(31)<a class="headerlink" href="#equation-ad9e9715-3a19-481e-9470-ddb5e87e3a5e" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\nu _{\text{lr}} \star \rho ^{\text{atom}} + \frac{1}{r} \star \rho ^{-} = V_{\text{lr}},
+\end{equation}\]</div>
+<p>we need to remove the interaction between <span class="math notranslate nohighlight">\(\nu_{\text{lr}} \star \rho^{\text{atom}}\)</span> and the portion of <span class="math notranslate nohighlight">\(\rho^{\text{atom}}\)</span> within <span class="math notranslate nohighlight">\(\Omega\)</span>:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-21915e51-ea4a-44ed-8183-11f94646083c">
+<span class="eqno">(32)<a class="headerlink" href="#equation-21915e51-ea4a-44ed-8183-11f94646083c" title="Permalink to this equation">#</a></span>\[\begin{equation}
+    E^{\text{self}}_{\text{nuc}}
+    = \frac{1}{2} \int_{\Omega}\dd{\vb{r}} [\nu _{\text{lr}} \star  \rho ^{\text{atom}}](\vb{r}) \rho ^{\text{atom}}(\vb{r})
+    = \sum_{\ell }  Z_{\ell }^{2} \eta  / \sqrt{\pi}.
+\end{equation}\]</div>
+<p><a id="orgc40a9b7"></a></p>
+</section>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading">#</a></h2>
+<p>The nucleus repulsion energy can now be evaluated using Ewald summation:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-99e4f2d7-c4f2-42b1-9081-1a67bedf3958">
+<span class="eqno">(33)<a class="headerlink" href="#equation-99e4f2d7-c4f2-42b1-9081-1a67bedf3958" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \begin{split}
+    E_{\text{nuc}}' =
+ \frac{1}{2} \int_{\Omega } \dd{\vb{r}}  V_{\text{nuc}}'(\vb{r}) \rho^{\text{atom}}(\vb{r}) - E^{\text{self}}_{\text{nuc}}
+    = E^{\text{sr}}_{\text{nuc}} + E^{\text{lr}}_{\text{nuc}} - E^{\text{self}}_{\text{nuc}}
+  \end{split}
+\end{equation}\]</div>
+<p>where <span class="math notranslate nohighlight">\(V_{\text{nuc}}',E_{\text{nuc}}'\)</span> means we have incorporated self-interaction correction,
+and we have the following decomposition of the nucleus potential</p>
+<div class="amsmath math notranslate nohighlight" id="equation-83299489-27c5-46f6-bbcf-9126afa06790">
+<span class="eqno">(34)<a class="headerlink" href="#equation-83299489-27c5-46f6-bbcf-9126afa06790" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:ewald-pot}
+  \begin{split}
+    V_{\text{nuc}}(\vb{r}) =&amp; (\frac{1}{r} \star [\rho^{\text{atom}}+\rho^{-}])(\vb{r}) = [G_{\text{sr}}\star \rho^{\text{atom}} -C + V^{\text{tot}}](\vb{r}) \\
+  =&amp;
+     - \sum_{\ell} \sum_{\vb{n}}^{L} Z_{\ell } \frac{\text{erfc}(\eta \norm{\vb{r}- \vb*{\tau }_{\ell } - \vb{R}_{\vb{n}}})}{\norm{\vb{r} - \vb*{\tau }_{\ell} - \vb{R}_{\vb{n}}}}
+     + \frac{\pi Z_{\text{tot}}}{\Omega \eta ^{2}}
+     - \frac{1}{\Omega } \sum_{\vb{G}\neq 0} \sum_{\ell } Z_{\ell } \frac{4\pi}{\norm{\vb{G}}^{2}}  \exp (-\frac{\norm{\vb{G}}^{2}}{4 \eta ^{2} } ) e^{\text{i}\vb{G} \cdot (\vb{r}-\vb*{\tau }_{\ell })}.
+  \end{split}
+\end{equation}\]</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="band_structure.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Band Structure</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../api/index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">API Documentation</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#nucleus-energy">Nucleus energy</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reciprocal-space-representation-via-the-yukawa-kernel">Reciprocal space representation via the Yukawa kernel</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Ewald summation</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#long-range-potential">Long range potential</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interpretation-as-screening-by-a-gaussian-charge">Interpretation as screening by a Gaussian charge</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#long-range-part-is-the-coulombic-potential-generated-via-a-gaussian-charge-distribution">Long-range part is the Coulombic potential generated via a Gaussian charge distribution</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#short-range-part">Short-range part</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#long-range-part">Long-range part</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

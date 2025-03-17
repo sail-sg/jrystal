@@ -1,0 +1,222 @@
+digraph G {
+  graph [page="8,6", size="8, 6", ratio=fill]
+  node [shape=box]
+  cellvec [label="cell vectors", style="filled", fillcolor=lightgoldenrodyellow]
+  spin [label="spin", style="filled", fillcolor=lightgoldenrodyellow]
+  position [label="position", style="filled", fillcolor=lightgoldenrodyellow]
+  charge [label="charge", style="filled", fillcolor=lightgoldenrodyellow]
+  cutoff [label="cutoff energy", style="filled", fillcolor=lightgoldenrodyellow]
+  
+  v_local [label="V_local", style="filled", fillcolor=lightgoldenrodyellow]
+  v_nonlocal [label="V_nonlocal", style="filled", fillcolor=lightgoldenrodyellow]
+  
+  coeff [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>PW coefficients</TD></TR><TR><TD>ψ<SUB>G</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightskyblue]
+  param_coeff [label="param_coeff", style="filled", fillcolor=lightcoral]
+  
+  occupation [label="occupation", style="filled", fillcolor=lightskyblue]
+  param_occ [label="param_occupation", style="filled", fillcolor=lightcoral]
+  
+  wave_r [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>wave_grid</TD></TR><TR><TD>ψ(r)</TD></TR></TABLE>>]
+  dens_r [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>density_grid</TD></TR><TR><TD>ρ(r)</TD></TR></TABLE>>]
+  dens_g [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>density_grid_reciprocal</TD></TR><TR><TD>ρ(G)</TD></TR></TABLE>>]
+  
+  vol [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>volume</TD></TR><TR><TD>Ω</TD></TR></TABLE>>]
+  gpts [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>g-vectors</TD></TR><TR><TD>G</TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  kpts [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>k-vectors</TD></TR><TR><TD>k</TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  total_charge [label="total_charges"]
+  
+  e_har [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>E_hartree</TD></TR><TR><TD>E<SUB>H</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  e_ext [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>E_external</TD></TR><TR><TD>E<SUB>ext</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  e_xc [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>E_xc</TD></TR><TR><TD>E<SUB>xc</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  e_kin [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>E_kinetic</TD></TR><TR><TD>E<SUB>kin</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  e_ewald [label="E_Ewald", style="filled", fillcolor=lightgoldenrodyellow]
+  e_total [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>E_total</TD></TR><TR><TD>E<SUB>total</SUB></TD></TR></TABLE>>, style="filled", fillcolor=lightgoldenrodyellow]
+  
+  v_har [label="V_hartree", style="filled", fillcolor=lightgoldenrodyellow]
+  v_xc [label="V_xc", style="filled", fillcolor=lightgoldenrodyellow]
+  v_ext [label="V_external", style="filled", fillcolor=lightgoldenrodyellow]
+  grid_size [label = "grid_size", style="filled", fillcolor=lightgoldenrodyellow]
+  
+  hamil_matrix [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>hamiltonian</TD></TR><TR><TD>H</TD></TR></TABLE>>]
+  hamil_matrix_diag [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>hamiltonian(diagonal)</TD></TR><TR><TD>H<SUB>diag</SUB></TD></TR></TABLE>>]
+  
+  band_structure [label=<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>band_structure</TD></TR><TR><TD>ε<SUB>nk</SUB></TD></TR></TABLE>>]
+  
+  ####################################################
+  
+  param_coeff -> coeff [label="QR&Reshape"]
+  coeff -> wave_r [label="iFFT"]
+  
+  wave_r -> dens_r
+  dens_r -> dens_g [label="FFT"]
+  
+  cellvec -> freq_mask [style=dashed]
+  cutoff -> freq_mask [style=dashed]
+  
+  param_occ -> occupation [label="QR"]
+  
+  subgraph cluster_ewald {
+    label="ewald"
+    shape=box
+    style=dashed
+    color=darkred
+    // ewald_eta, ewald_cutoff
+    ewald_eta [label="ewald_eta", style="filled", fillcolor=lightgoldenrodyellow]
+    ewald_cutoff [label="ewald_cutoff", style="filled", fillcolor=lightgoldenrodyellow]
+  }
+  
+  ewald_eta -> e_ewald
+  ewald_cutoff -> e_ewald
+  
+  subgraph cluster_pp {
+    label="Pseudopotential"
+    shape=box
+    style=filled
+    fillcolor=lightblue
+    v_local; v_nonlocal
+  }
+  
+  subgraph cluster_potential {
+    label="Effective Potential"
+    shape=box
+    style=dashed
+    color=darkred
+    v_har
+    v_xc
+    v_ext
+  }
+  
+  subgraph cluster_cry {
+    label="Crystal"
+    shape=box
+    style=dashed
+    color=darkred
+    vol;
+    total_charge
+    subgraph cluster_crystal {
+      label="Crystal"
+      shape=box
+      style=filled
+      fillcolor="lightblue"
+      cellvec; charge; position; spin
+    }
+  }
+  
+  subgraph cluster_pot {
+    label="Effective Potential"
+    shape=box
+    style=dashed
+    color=darkred
+    v_har
+    v_xc
+    v_ext
+  }
+  
+  subgraph cluster_grid {
+    label="grid"
+    shape=box
+    style=dashed
+    color=darkred
+    gpts; kpts; grid_size; freq_mask
+  }
+  
+  subgraph cluster_energies {
+    label="energies"
+    shape=box
+    style=dashed
+    color=darkred
+    e_har; e_ext; e_xc; e_kin; e_ewald; e_total;
+  }
+  
+  subgraph cluster_pw {
+    label="Planewave"
+    shape=box
+    style=dashed
+    color=darkred
+    coeff; param_coeff; wave_r; dens_r; dens_g;
+    coeff -> dens_r
+    coeff -> dens_g
+  }
+  
+  subgraph cluster_occ {
+    label="Occupation"
+    shape=box
+    style=dashed
+    color=darkred
+    occupation; param_occ
+  }
+  
+  
+  gpts -> e_ewald
+  position -> e_ewald
+  charge -> e_ewald
+  
+  charge -> total_charge
+  cellvec -> vol
+    
+  vol -> e_ext
+  vol -> e_har
+  vol -> e_xc
+  vol -> e_kin
+  vol -> e_ewald
+  
+  v_local -> v_ext [style=dashed, color=darkgreen]
+  v_nonlocal -> v_ext [style=dashed, color=darkgreen]
+  
+  v_ext -> e_ext
+  dens_g -> e_ext
+  
+  position -> v_ext [color=darkslateblue]
+  charge -> v_ext [color=darkslateblue]
+  gpts -> v_ext [color=darkslateblue]
+  
+  cellvec -> gpts
+  grid_size -> gpts
+  grid_size -> kpts
+  cellvec -> kpts
+  
+  grid_size -> coeff
+  occupation -> dens_r
+  
+  grid_size -> occupation
+  
+  spin -> occupation
+  total_charge -> occupation
+  
+  
+  v_har -> e_har
+  gpts -> v_har
+  
+  dens_g -> v_har
+  dens_g -> e_har
+  // gpts -> e_har
+  dens_r -> v_xc [label = " JAX_XC"]
+  dens_r -> e_xc
+  v_xc -> e_xc  
+
+  
+  gpts -> e_kin
+  kpts -> e_kin
+  coeff -> e_kin
+  
+  e_har -> e_total
+  e_ext -> e_total
+  e_xc -> e_total
+  e_kin -> e_total
+  e_ewald -> e_total
+  
+  freq_mask -> wave_r
+  
+  e_total -> hamil_matrix [label=" hessian"]
+  
+  hamil_matrix -> band_structure [label=" eigendecomposition"]
+  
+  occupation -> Entropy
+  
+  Entropy -> E_free
+  e_total -> E_free
+  temperature -> E_free
+  
+  e_total -> hamil_matrix_diag [label=" Laplacian(?)"]
+  
+}

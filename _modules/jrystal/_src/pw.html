@@ -1,0 +1,891 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jrystal._src.pw &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/graph.js?v=9f5096e4"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jrystal/_src/pw';</script>
+    <link rel="icon" href="../../../_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="../../../_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../tutorial/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/band_structure.html">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/ewald.html">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../../../glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jrystal._src.pw</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2025 Garena Online Private Limited</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&#39;&#39;&#39;Planewave module.&#39;&#39;&#39;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Bool</span><span class="p">,</span> <span class="n">Complex</span><span class="p">,</span> <span class="n">Float</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">g_vectors</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.unitary_module</span><span class="w"> </span><span class="kn">import</span> <span class="n">unitary_matrix</span><span class="p">,</span> <span class="n">unitary_matrix_param_init</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute_square</span><span class="p">,</span> <span class="n">expand_coefficient</span><span class="p">,</span> <span class="n">volume</span>
+
+
+<div class="viewcode-block" id="param_init">
+<a class="viewcode-back" href="../../../api/pw.html#jrystal.pw.param_init">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">param_init</span><span class="p">(</span>
+  <span class="n">key</span><span class="p">:</span> <span class="n">Array</span><span class="p">,</span>
+  <span class="n">num_bands</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+  <span class="n">num_kpts</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+  <span class="n">freq_mask</span><span class="p">:</span> <span class="n">Bool</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
+  <span class="n">spin_restricted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Initialize the raw parameters.</span>
+
+<span class="sd">  This function generates a random tensor of shape</span>
+<span class="sd">  :code:`(num_spin, num_kpts, num_g, num_bands)`, where :code:`num_g` is the</span>
+<span class="sd">  number of :code:`True` items in the :code:`freq_mask`.</span>
+
+<span class="sd">  In planewave-based calculation, a wave function is represented as a</span>
+<span class="sd">  linear combination of the Fourier series in 3D. Therefore, to create one</span>
+<span class="sd">  wave function we need a 3D shaped tensor to represent the mixing</span>
+<span class="sd">  coefficients on each frequency component (denoted as :code:`G`).</span>
+<span class="sd">  :code:`freq_mask` provides a 3D mask to decide which frequency components</span>
+<span class="sd">  are selected, the number of selected components is denoted as :code:`num_g`.</span>
+
+<span class="sd">  The :code:`num_bands` &amp; :code:`num_kpts` are a bit hard to explain. Intuitively,</span>
+<span class="sd">  the wave functions consist of high frequency components that have a period</span>
+<span class="sd">  smaller than the unit cell (denoted :math:`G`) and components that have a period</span>
+<span class="sd">  larger than the unit cell (denoted :math:`k`).</span>
+
+<span class="sd">  The form of wave function under solid state is:</span>
+
+<span class="sd">  .. math::</span>
+
+<span class="sd">    \psi(r) = e^{ikr}\sum_G c_{kG} e^{iGr}</span>
+
+<span class="sd">  This function generates a raw parameter, which after processing by</span>
+<span class="sd">  :py:func:`coeff` can be used as the :math:`c_{kG}` part of the above equation.</span>
+
+<span class="sd">  Extension reads:</span>
+<span class="sd">  1. Why and how to mask the frequency components.</span>
+<span class="sd">  2. Bloch theorem.</span>
+
+<span class="sd">  As far as this function is concerned, it simply returns a randomly</span>
+<span class="sd">  initialized parameter of shape :code:`(num_spin, num_kpts, num_g, num_bands)`.</span>
+<span class="sd">  The input arguments to this function are only used to determine the shape.</span>
+
+<span class="sd">  Note that this function returns the raw parameter that cannot be used</span>
+<span class="sd">  directly to weight the frequency components, as in quantum chemistry we</span>
+<span class="sd">  require the wave functions to be orthogonal to each other.</span>
+<span class="sd">  Check :py:func:`coeff` for converting the raw parameter into a unitary</span>
+<span class="sd">  tensor.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    key (Array): Random key for initializing the parameters.</span>
+<span class="sd">    num_bands (int): The number of bands.</span>
+<span class="sd">    num_kpts (int): The number of k points.</span>
+<span class="sd">    freq_mask (Bool[Array, &#39;x y z&#39;]): A 3D mask that denotes which frequency components are selected.</span>
+<span class="sd">    spin_restricted (bool): If :code:`True`, :code:`num_spin=2` else :code:`num_spin=1`.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Complex[Array, &#39;spin kpt gpt band&#39;]: A complex type raw parameter of shape :code:`(num_spin, num_kpts, num_g, num_bands)`.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">num_spin</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">spin_restricted</span> <span class="k">else</span> <span class="mi">2</span>
+  <span class="n">num_g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">freq_mask</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+  <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_spin</span><span class="p">,</span> <span class="n">num_kpts</span><span class="p">,</span> <span class="n">num_g</span><span class="p">,</span> <span class="n">num_bands</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">unitary_matrix_param_init</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="nb">complex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="coeff">
+<a class="viewcode-back" href="../../../api/pw.html#jrystal.pw.coeff">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">coeff</span><span class="p">(</span>
+  <span class="n">pw_param</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">],</span> <span class="n">freq_mask</span><span class="p">:</span> <span class="n">Bool</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Create the linear coefficients to combine the frequency components.</span>
+
+<span class="sd">  This function takes a raw parameter of shape</span>
+<span class="sd">  :code:`(num_spin, num_kpts, num_gpts, num_bands)`, orthogonalizes for the last</span>
+<span class="sd">  two dimensions, so that the resulting tensor satisfies the unitary constraint</span>
+<span class="sd">  :code:`einsum(&#39;kabc,labc-&gt;kl&#39;, ret[i, j], ret[i, j]) == eye(num_bands)`.</span>
+
+<span class="sd">  The :code:`pw_param` should be created from :py:func:`param_init`, and the same</span>
+<span class="sd">  :code:`freq_mask` used in :py:func:`param_init` should be used here. As mentioned</span>
+<span class="sd">  in :py:func:`param_init`, we use linear combination over 3D Fourier</span>
+<span class="sd">  components for creating wave functions. Some extra requirements are:</span>
+
+<span class="sd">  1. The wave functions that have the same spin and same k component need</span>
+<span class="sd">     to be orthogonal to each other.</span>
+<span class="sd">  2. We only activate some of the frequency components with the :code:`freq_mask`.</span>
+
+<span class="sd">  As the raw parameter returned from :py:func:`param_init` has the shape</span>
+<span class="sd">  :code:`(num_spin, num_kpts, num_g, num_bands)`, where :code:`num_g` is the number of</span>
+<span class="sd">  activated frequencies flattened from the activated entries in the :code:`freq_mask`,</span>
+<span class="sd">  this function first orthogonalizes over the last two dimensions and</span>
+<span class="sd">  reorganizes the orthogonalized parameter into a 3D grid the same shape as</span>
+<span class="sd">  the frequency mask.</span>
+
+<span class="sd">  Extension reads:</span>
+<span class="sd">  1. Why and how to mask the frequency components.</span>
+<span class="sd">  2. Bloch theorem.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    pw_param (Union[Array, Tuple]): The raw parameter, maybe created from :py:func:`param_init`.</span>
+<span class="sd">    freq_mask (Bool[Array, &#39;x y z&#39;]): A 3D mask to select the frequency components.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Complex[Array, &#39;spin kpt band x y z&#39;]: Complex array of shape</span>
+<span class="sd">    :code:`(num_spin, num_kpts, num_band, x y z)`. It satisfies the unitary</span>
+<span class="sd">    constraint that for any :code:`i,j`, :code:`einsum(&#39;kabc,labc-&gt;kl&#39;, ret[i, j], ret[i, j])`</span>
+<span class="sd">    is an identity matrix.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">coeff</span> <span class="o">=</span> <span class="n">unitary_matrix</span><span class="p">(</span><span class="n">pw_param</span><span class="p">,</span> <span class="nb">complex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">expand_coefficient</span><span class="p">(</span><span class="n">coeff</span><span class="p">,</span> <span class="n">freq_mask</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="wave_grid">
+<a class="viewcode-back" href="../../../api/pw.html#jrystal.pw.wave_grid">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">wave_grid</span><span class="p">(</span>
+  <span class="n">coeff</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Wave function evaluated at a grid of spatial locations.</span>
+
+<span class="sd">  This function implements the :math:`u(r)` part of the Bloch wave function:</span>
+
+<span class="sd">  .. math::</span>
+
+<span class="sd">    u(r)=\frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iG^\top r}</span>
+
+<span class="sd">  where :math:`G` is the 3D frequency components, :math:`\Omega_\text{cell}` is the</span>
+<span class="sd">  volume of the crystal unit cell, which is to make sure the wave function is</span>
+<span class="sd">  normalized within the cell.</span>
+
+<span class="sd">  where :math:`c` is the linear coefficient. It combines over different</span>
+<span class="sd">  :math:`G` components that is generated with :py:func:`jrystal.grid.g_vectors`.</span>
+<span class="sd">  We can evaluate the wave function at any spatial location :math:`r` which takes</span>
+<span class="sd">  :math:`O(|G|)` computation. However, if we evaluate this function on a specific</span>
+<span class="sd">  spatial grid of size :math:`|G|`, we can be faster than :math:`O(|G|^2)` by using</span>
+<span class="sd">  fourier transform. IFFT gives us an :math:`O(|G|\log(|G|))` implementation of the</span>
+<span class="sd">  above equation. The :math:`G` and :math:`R` grid can be obtained from</span>
+<span class="sd">  :py:func:`jrystal.grid.g_vectors` and :py:func:`jrystal.grid.r_vectors`</span>
+<span class="sd">  correspondingly.</span>
+
+<span class="sd">  .. code:: python</span>
+
+<span class="sd">    G = jrystal.grid.g_vectors(*args)  # (x y z, 3)</span>
+<span class="sd">    R = jrystal.grid.r_vectors(*args)  # (x y z, 3)</span>
+<span class="sd">    coefficients = ...  # (x y z)</span>
+<span class="sd">    vol = ...</span>
+
+<span class="sd">    def wave_function(r):</span>
+<span class="sd">      return (coefficients * jnp.exp(1j * G @ r)).sum() / jnp.sqrt(vol)</span>
+
+<span class="sd">    # The following is O(|G|^2)</span>
+<span class="sd">    wave_at_R_naive = jax.vmap(jax.vmap(jax.vmap(wave_function)))(R)</span>
+<span class="sd">    # The following is O(|G|log|G|)</span>
+<span class="sd">    wave_at_R_fft = wave_grid(coefficients, vol)</span>
+
+<span class="sd">  As IFFT implements</span>
+
+<span class="sd">  .. math::</span>
+
+<span class="sd">    x_n = \frac{1}{N} \sum_{k=0}^{N-1} X_k e^{i\frac{2\pi}{N}kn}</span>
+
+<span class="sd">  It is a bit different from the definition of the wave function,</span>
+<span class="sd">  if you check the code, we do two things to align them,</span>
+
+<span class="sd">  1. we multiply back the :math:`N` to cancel the :math:`\frac{1}{N}`</span>
+<span class="sd">  factor in the IFFT (in 3D the :code:`np.prod(grid_sizes)`).</span>
+<span class="sd">  2. we divide by the :math:`\sqrt{\Omega_\text{cell}}`.</span>
+
+<span class="sd">  The :code:`coeff` passed to this function has shape :code:`(..., x y z)`,</span>
+<span class="sd">  it can have any leading dimension.</span>
+<span class="sd">  It can be created using :py:func:`param_init` and :py:func:`coeff`.</span>
+<span class="sd">  :py:func:`param_init` creates a raw parameter and :py:func:`coeff` converts</span>
+<span class="sd">  that parameter into coefficients that are used to linearly weight the 3D</span>
+<span class="sd">  fourier components.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    coeff (Complex[Array, &#39;spin kpt band x y z&#39;]): Wave function coefficients, which has a shape of :code:`(spin, kpt, band, x, y, z)`.</span>
+<span class="sd">    vol (float): Volume of the unit cell.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Complex[Array, &#39;spin kpt band x y z&#39;]: Wave function evaluated at the spatial grid.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">grid_sizes</span> <span class="o">=</span> <span class="n">coeff</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span>
+  <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">coeff</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+  <span class="n">wave_grid</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">vol</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">wave_grid</span></div>
+
+
+
+<div class="viewcode-block" id="density_grid">
+<a class="viewcode-back" href="../../../api/pw.html#jrystal.pw.density_grid">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">density_grid</span><span class="p">(</span>
+  <span class="n">coeff</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Compute the density at the spatial grid.</span>
+
+<span class="sd">  In a system with electrons, the density of the electron is the result of</span>
+<span class="sd">  multiple wave functions overlapping in space. As mentioned in</span>
+<span class="sd">  :py:func:`wave_grid`, the wave function is a linear combination of 3D Fourier</span>
+<span class="sd">  components. To compute the density, usually we only need to take the absolute</span>
+<span class="sd">  square of each wave function and sum them up.</span>
+
+<span class="sd">  .. math::</span>
+
+<span class="sd">    \rho(r) = \sum_i |\psi_i(r)|^2</span>
+
+<span class="sd">  This function evaluates the density :math:`\rho(r)` at the spatial grid</span>
+<span class="sd">  generated from :py:func:`jrystal.grid.r_vectors`.</span>
+
+<span class="sd">  In crystals, this is a little bit more complicated. The form of the wave</span>
+<span class="sd">  function is:</span>
+
+<span class="sd">  .. math::</span>
+
+<span class="sd">    \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} e^{ikr} \sum_G c_{kG}</span>
+<span class="sd">    e^{iGr}</span>
+
+<span class="sd">  The :math:`c_{kG}` can be computed from :py:func:`param_init`</span>
+<span class="sd">  and :py:func:`coeff`. For calculation of density, we only need</span>
+<span class="sd">  the :math:`c_{kG}` and the occupation :math:`o_k` over :math:`k`.</span>
+
+<span class="sd">  .. math::</span>
+
+<span class="sd">    \rho(r) = \frac{1}{\Omega_\text{cell}} e^{ikr} \sum_G c_{kG}</span>
+<span class="sd">    e^{iGr}</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension which will be summed to get the overall density. Therefore the shape is :code:`(spin, kpt, band, x, y, z)`.</span>
+<span class="sd">    vol: Volume of the unit cell, a real scalar.</span>
+<span class="sd">    occupation: The occupation over different k frequencies. The shape is :code:`(spin, kpt, band)`, it should have the same leading dimension as :code:`coeff`. This is an optional argument. When :code:`occupation=None`, we compute the density contribution from each :math:`k` without summing them. If :code:`occupation` is provided, we sum up all the density from each :math:`k` weighted by the occupation.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Union[Float[Array, &quot;spin kpt band x y z&quot;], Float[Array, &quot;spin kpt band&quot;]]: A real-valued tensor that represents the density at the spatial grid computed from :py:func:`jrystal.grid.r_vectors`. The shape is :code:`(x, y, z)` if :code:`occupation` is provided, else the shape is :code:`(spin, kpt, band, x, y, z)`.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">wave_grid_arr</span> <span class="o">=</span> <span class="n">wave_grid</span><span class="p">(</span><span class="n">coeff</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
+  <span class="n">dens</span> <span class="o">=</span> <span class="n">absolute_square</span><span class="p">(</span><span class="n">wave_grid_arr</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">occupation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">occ</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">occupation</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">occ</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">occ</span><span class="p">,</span> <span class="n">dens</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+      <span class="n">dens</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dens</span> <span class="o">*</span> <span class="n">occ</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="n">occupation</span><span class="o">.</span><span class="n">ndim</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="s1">&#39;Occupation should have a leading dimension that is the same as coeff. &#39;</span>
+        <span class="sa">f</span><span class="s1">&#39;Got occupation shape: </span><span class="si">{</span><span class="n">occupation</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1">, coeff shape: </span><span class="si">{</span><span class="n">coeff</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1">&#39;</span>
+      <span class="p">)</span>
+  <span class="k">return</span> <span class="n">dens</span></div>
+
+
+
+<div class="viewcode-block" id="density_grid_reciprocal">
+<a class="viewcode-back" href="../../../api/pw.html#jrystal.pw.density_grid_reciprocal">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">density_grid_reciprocal</span><span class="p">(</span>
+  <span class="n">coeff</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Array</span><span class="p">],</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+           <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Fourier transform of the density grid.</span>
+
+<span class="sd">  In a system with electrons, the density of the electron is the result of</span>
+<span class="sd">  multiple wave functions overlapping in the space. As we mention in</span>
+<span class="sd">  :py:func:`wave_grid`, the wave function is a linear combination of 3D fourier</span>
+<span class="sd">  components. To compute the density, usually we only need to take the absolute</span>
+<span class="sd">  square of each wave function :math:`\psi_i`, multiply by the occupation :math:`f_i`</span>
+<span class="sd">  and sum them up:</span>
+
+<span class="sd">  .. math::</span>
+
+<span class="sd">    \rho(\vb{r}) = \sum_i f_i |\psi_i(\vb{r})|^2</span>
+
+<span class="sd">  :py:func:`density_grid` computes the density :math:`\rho(\vb{r})` at the spatial grid</span>
+<span class="sd">  generated from :py:func:`jrystal.grid.r_vectors`.</span>
+
+<span class="sd">  The discrete fourier transformation of :math:`\rho(\vb{r})` is</span>
+
+<span class="sd">  .. math::</span>
+
+<span class="sd">    \tilde{\rho}(\vb{G}) = \frac{1}{\Omega} \int_\Omega \rho(\vb{r}) e^{-\text{i} \vb{G}^\top \vb{r}} \dd{\vb{r}}</span>
+
+<span class="sd">  We can also evaluate the :math:`\tilde{\rho}(G)` at any :math:`G`, but this function</span>
+<span class="sd">  computes the :math:`\tilde{\rho}(G)` evaluated at the grid generated from</span>
+<span class="sd">  :py:func:`jrystal.grid.g_vectors`. It is equivalent to computing the :math:`\rho(\vb{r})`</span>
+<span class="sd">  at :py:func:`jrystal.grid.r_vectors` and then do the discrete fourier</span>
+<span class="sd">  transform.</span>
+
+<span class="sd">  Since this function is just composing FFT with :py:func:`density_grid`,</span>
+<span class="sd">  we refer you to :py:func:`density_grid` for more details.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    coeff: coefficients of the wave functions.</span>
+<span class="sd">    vol: volume of the unit cell.</span>
+<span class="sd">    occupation: occupation over the different :math:`k` components, see more in</span>
+<span class="sd">      :py:func:`density_grid`.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    A complex valued tensor representing :math:`\tilde{\rho}(G)` evaluated at :math:`G`</span>
+<span class="sd">    generated from :py:func:`jrystal.grid.g_vectors`.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">dens</span> <span class="o">=</span> <span class="n">density_grid</span><span class="p">(</span><span class="n">coeff</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">dens</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="wave_r">
+<a class="viewcode-back" href="../../../api/pw.html#jrystal.pw.wave_r">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">wave_r</span><span class="p">(</span>
+  <span class="n">r</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3&#39;</span><span class="p">],</span>
+  <span class="n">coeff</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Evaluate plane wave functions at location r.</span>
+
+<span class="sd">  This function computes the :math:`\psi(r)` following the equation:</span>
+
+<span class="sd">  .. math::</span>
+
+<span class="sd">    \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iGr}</span>
+
+<span class="sd">  The :code:`coeff` provided is the :math:`c_{G}`, the :code:`cell_vectors` is</span>
+<span class="sd">  used to generate the grid of frequency components :math:`G` by calling the function</span>
+<span class="sd">  :py:func:`jrystal.grid.g_vectors`. The :code:`r` is the location where we</span>
+<span class="sd">  evaluate the wave function.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    r: Spatial location to evaluate the wave function, shape: (3,).</span>
+<span class="sd">    coeff: Wave function coefficients, which has a shape of</span>
+<span class="sd">      :code:`(spin, kpt, band, x, y, z)`.</span>
+<span class="sd">      It can be created from :py:func:`param_init` followed by :py:func:`coeff`.</span>
+<span class="sd">    cell_vectors: The cell vectors of the crystal unit cell.</span>
+<span class="sd">    g_vector_grid: The G vectors computed from :py:func:`jrystal.grid.g_vectors`.</span>
+<span class="sd">      If None, will be computed from cell_vectors.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Complex[Array, &#39;spin kpt band&#39;]: Complex tensor that represents wave functions evaluated at location r.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">vol</span> <span class="o">=</span> <span class="n">volume</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">)</span>
+  <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">coeff</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span>
+
+  <span class="k">if</span> <span class="n">g_vector_grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">g_vector_grid</span> <span class="o">=</span> <span class="n">g_vectors</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">])</span>
+
+  <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,):</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;r must have shape (3,)&#39;</span><span class="p">)</span>
+  <span class="n">leading_dims</span> <span class="o">=</span> <span class="n">coeff</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+  <span class="n">coeff_</span> <span class="o">=</span> <span class="n">coeff</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">))</span>
+  <span class="n">output</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">g_vector_grid</span> <span class="o">@</span> <span class="n">r</span><span class="p">)</span>
+  <span class="n">output</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;lxyz,xyz-&gt;skb&#39;</span><span class="p">,</span> <span class="n">coeff_</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+  <span class="n">output</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">leading_dims</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">output</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">vol</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">density_r</span><span class="p">(</span>
+  <span class="n">r</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3&#39;</span><span class="p">],</span>
+  <span class="n">coeff</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Compute the electron density at location r.</span>
+
+<span class="sd">  This function computes the density at location :math:`r`. If occupation is</span>
+<span class="sd">  not provided, it simply returns the absolute square of the :py:func:`wave_r`.</span>
+<span class="sd">  If occupation is provided, the :code:`coeff` needs to have a shape of</span>
+<span class="sd">  :code:`(spin, kpt, band, x, y, z)`, the :code:`occupation`</span>
+<span class="sd">  needs to have the dimension of :code:`(spin, kpt, band)`.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    r: Spatial location to evaluate the density, shape: (3,).</span>
+<span class="sd">    coeff: Wave function coefficients, which has a shape of</span>
+<span class="sd">      :code:`(spin, kpt, band, x, y, z)`.</span>
+<span class="sd">      It can be created from :py:func:`param_init` followed by :py:func:`coeff`.</span>
+<span class="sd">    cell_vectors: The cell vectors of the crystal unit cell.</span>
+<span class="sd">    g_vector_grid: The G vectors computed from :py:func:`jrystal.grid.g_vectors`.</span>
+<span class="sd">    occupation: Occupation over different k frequencies.</span>
+<span class="sd">      Refer to :py:func:`density_grid` for more information.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float: A real scalar that represents the density at location r.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">density</span> <span class="o">=</span> <span class="n">absolute_square</span><span class="p">(</span><span class="n">wave_r</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">coeff</span><span class="p">,</span> <span class="n">cell_vectors</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">))</span>
+  <span class="k">if</span> <span class="n">occupation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">density</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">density</span> <span class="o">*</span> <span class="n">occupation</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">density</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">nabla_density_r</span><span class="p">(</span>
+  <span class="n">r</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3&#39;</span><span class="p">],</span>
+  <span class="n">coeff</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Compute the first order derivative of the density at location r.</span>
+
+<span class="sd">  Refer to :py:func:`density_r` for more information.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    r: Spatial location to evaluate the density, shape: (3,).</span>
+<span class="sd">    coeff: Wave function coefficients, which has a shape of</span>
+<span class="sd">      :code:`(spin, kpt, band, x, y, z)`.</span>
+<span class="sd">      It can be created from :py:func:`param_init` followed by :py:func:`coeff`.</span>
+<span class="sd">    cell_vectors: The cell vectors of the crystal unit cell.</span>
+<span class="sd">    g_vector_grid: The G vectors computed from :py:func:`jrystal.grid.g_vectors`.</span>
+<span class="sd">    occupation: Occupation over different k frequencies.</span>
+<span class="sd">      Refer to :py:func:`density_grid` for more information.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &#39;3&#39;]: A real vector that represents the density derivative at</span>
+<span class="sd">    location :code:`r`.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">den</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">density_r</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">coeff</span><span class="p">,</span> <span class="n">cell_vectors</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">jax</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">den</span><span class="p">)(</span><span class="n">r</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">nabla_density_grid</span><span class="p">(</span>
+  <span class="n">r</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3&#39;</span><span class="p">],</span>
+  <span class="n">coeff</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band&quot;</span><span class="p">]]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Compute the first order derivative of the density at a specific grid of</span>
+<span class="sd">  spatial locations.</span>
+
+<span class="sd">  Refer to :py:func:`density_grid` for more information.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    r: Spatial location to evaluate the density, shape: (3,).</span>
+<span class="sd">    coeff: Wave function coefficients, which has a shape of</span>
+<span class="sd">      :code:`(spin, kpt, band, x, y, z)`.</span>
+<span class="sd">      It can be created from :py:func:`param_init` followed by :py:func:`coeff`.</span>
+<span class="sd">    cell_vectors: The cell vectors of the crystal unit cell.</span>
+<span class="sd">    g_vector_grid: The G vectors computed from :py:func:`jrystal.grid.g_vectors`.</span>
+<span class="sd">    occupation: Occupation over different k frequencies.</span>
+<span class="sd">      Refer to :py:func:`density_grid` for more information.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Union[Float[Array, &quot;spin kpt band x y z&quot;], Float[Array, &quot;spin kpt band&quot;]]: A real-valued tensor that represents the density derivative at the spatial grid computed from :py:func:`jrystal.grid.r_vectors`. The shape is :code:`(x, y, z)` if :code:`occupation` is provided, else the shape is :code:`(spin, kpt, band, x, y, z)`.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">r</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+  <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;r must have shape (3,)&#39;</span><span class="p">)</span>
+
+  <span class="n">vol</span> <span class="o">=</span> <span class="n">volume</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">)</span>
+  <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span> <span class="o">=</span> <span class="n">coeff</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span>
+
+  <span class="k">if</span> <span class="n">g_vector_grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">g_vector_grid</span> <span class="o">=</span> <span class="n">g_vectors</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="p">[</span><span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="p">])</span>
+
+  <span class="n">gr</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+
+  <span class="n">cosgr</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">gr</span><span class="p">)</span>
+  <span class="n">singr</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">gr</span><span class="p">)</span>
+  <span class="n">cr</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">coeff</span><span class="p">)</span>
+  <span class="n">ci</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">coeff</span><span class="p">)</span>
+
+  <span class="n">rcos</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;skbxyz,xyz-&gt;skbxyz&#39;</span><span class="p">,</span> <span class="n">cr</span><span class="p">,</span> <span class="n">cosgr</span><span class="p">)</span>
+  <span class="n">rsin</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;skbxyz,xyz-&gt;skbxyz&#39;</span><span class="p">,</span> <span class="n">cr</span><span class="p">,</span> <span class="n">singr</span><span class="p">)</span>
+  <span class="n">icos</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;skbxyz,xyz-&gt;skbxyz&#39;</span><span class="p">,</span> <span class="n">ci</span><span class="p">,</span> <span class="n">cosgr</span><span class="p">)</span>
+  <span class="n">isin</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;skbxyz,xyz-&gt;skbxyz&#39;</span><span class="p">,</span> <span class="n">ci</span><span class="p">,</span> <span class="n">singr</span><span class="p">)</span>
+
+  <span class="n">o1</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">rcos</span> <span class="o">-</span> <span class="n">isin</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+  <span class="n">o1</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">o1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+  <span class="n">o2</span> <span class="o">=</span> <span class="o">-</span><span class="n">jnp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;skbxyz,xyzd-&gt;skbd&#39;</span><span class="p">,</span> <span class="n">rsin</span> <span class="o">+</span> <span class="n">icos</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">)</span>
+  <span class="n">o3</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">rsin</span> <span class="o">+</span> <span class="n">icos</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+  <span class="n">o3</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">o3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+  <span class="n">o4</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;skbxyz,xyzd-&gt;skbd&#39;</span><span class="p">,</span> <span class="n">rcos</span> <span class="o">-</span> <span class="n">isin</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">)</span>
+
+  <span class="n">output</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">o1</span> <span class="o">*</span> <span class="n">o2</span> <span class="o">+</span> <span class="n">o3</span> <span class="o">*</span> <span class="n">o4</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">occupation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">occupation</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">occupation</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">output</span> <span class="o">*</span> <span class="n">occupation</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span> <span class="o">/</span> <span class="n">vol</span>
+
+  <span class="k">return</span> <span class="n">output</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

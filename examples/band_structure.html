@@ -1,0 +1,716 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Band Structure Calculation &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/graph.js?v=9f5096e4"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'examples/band_structure';</script>
+    <link rel="icon" href="../_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Command Line Interface and Configuration" href="config.html" />
+    <link rel="prev" title="DFT Total Energy Calculation in Less than 50 Lines" href="dft100lines.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="../_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorial/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/band_structure.html">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/ewald.html">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/examples/band_structure.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Band Structure Calculation</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-ground-state-calculation">Step 1: Ground State Calculation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-computing-kohn-sham-eigenvalues">Step 2: Computing Kohn-Sham Eigenvalues</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-band-structure-along-a-k-path">Step 3: Band Structure Along a K-path</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-computing-the-full-band-structure">Step 4: Computing the Full Band Structure</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="band-structure-calculation">
+<h1>Band Structure Calculation<a class="headerlink" href="#band-structure-calculation" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A theoretical derivation of band structure calculations can be found in the tutorial <a class="reference internal" href="../tutorial/band_structure.html"><span class="doc">Band Structure</span></a>.</p>
+</div>
+<p>This tutorial demonstrates how to calculate the electronic band structure of a diamond crystal using <cite>jrystal</cite>. Band structure calculations typically involve two steps:</p>
+<ol class="arabic simple">
+<li><p>Computing the ground state electron density</p></li>
+<li><p>Using this density to solve the Kohn-Sham equations at different k-points</p></li>
+</ol>
+<p>We’ll focus primarily on the second step, showing how to calculate the band structure after obtaining the ground state density.</p>
+<section id="step-1-ground-state-calculation">
+<h2>Step 1: Ground State Calculation<a class="headerlink" href="#step-1-ground-state-calculation" title="Link to this heading">#</a></h2>
+<p>First, let’s calculate the ground state properties of our diamond crystal.</p>
+<p>Import the required packages:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jrystal</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jr</span>
+</pre></div>
+</div>
+<p>Configure the calculation parameters:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">config</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>  <span class="c1"># load default configuration.</span>
+<span class="n">config</span><span class="o">.</span><span class="n">crystal</span> <span class="o">=</span> <span class="s2">&quot;diamond&quot;</span>
+<span class="c1"># The crystal structure will be loaded from &quot;geometry/diamond.xyz&quot;</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">cutoff_energy</span> <span class="o">=</span> <span class="mi">100</span>   <span class="c1"># Approximately 2700 eV</span>
+<span class="n">config</span><span class="o">.</span><span class="n">grid_sizes</span> <span class="o">=</span> <span class="mi">48</span>       <span class="c1"># 48x48x48 FFT mesh grid</span>
+<span class="n">config</span><span class="o">.</span><span class="n">epoch</span> <span class="o">=</span> <span class="mi">10000</span>
+<span class="n">config</span><span class="o">.</span><span class="n">k_grid_sizes</span> <span class="o">=</span> <span class="mi">1</span>      <span class="c1"># Single K point (Gamma point)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">smearing</span> <span class="o">=</span> <span class="mf">0.0001</span>
+<span class="n">config</span><span class="o">.</span><span class="n">optimizer_args</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;learning_rate&quot;</span><span class="p">:</span> <span class="mf">1e-3</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Calculate the total energy:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">total_energy_output</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">calc</span><span class="o">.</span><span class="n">energy</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now compute the ground state electron density:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">crystal</span> <span class="o">=</span> <span class="n">total_energy_output</span><span class="o">.</span><span class="n">crystal</span>
+<span class="n">freq_mask</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">spherical_mask</span><span class="p">(</span>
+  <span class="n">crystal</span><span class="o">.</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">jr</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">proper_grid_size</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">grid_sizes</span><span class="p">),</span> <span class="n">config</span><span class="o">.</span><span class="n">cutoff_energy</span>
+<span class="p">)</span>
+<span class="n">params_pw</span> <span class="o">=</span> <span class="n">total_energy_output</span><span class="o">.</span><span class="n">params_pw</span>
+<span class="n">coeff</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">coeff</span><span class="p">(</span><span class="n">params_pw</span><span class="p">,</span> <span class="n">freq_mask</span><span class="p">)</span>
+
+<span class="n">params_occ</span> <span class="o">=</span> <span class="n">total_energy_output</span><span class="o">.</span><span class="n">params_occ</span>
+<span class="n">occupation</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">occupation</span><span class="o">.</span><span class="n">idempotent</span><span class="p">(</span><span class="n">params_occ</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">num_electron</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">density_grid</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">density_grid</span><span class="p">(</span><span class="n">coeff</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">vol</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="step-2-computing-kohn-sham-eigenvalues">
+<h2>Step 2: Computing Kohn-Sham Eigenvalues<a class="headerlink" href="#step-2-computing-kohn-sham-eigenvalues" title="Link to this heading">#</a></h2>
+<p>Let’s start by calculating the eigenvalues at the Gamma point (k = 0). First, we need to set up our calculation grid:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">g_vecs</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">g_vectors</span><span class="p">(</span><span class="n">crystal</span><span class="o">.</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">jr</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">proper_grid_size</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">grid_sizes</span><span class="p">))</span>
+<span class="n">kpts</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">k_vectors</span><span class="p">(</span><span class="n">crystal</span><span class="o">.</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">jr</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">proper_grid_size</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">k_grid_sizes</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Now we can compute the Kohn-Sham Hamiltonian matrix:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">hamil_matrix</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">hamiltonian</span><span class="o">.</span><span class="n">hamiltonian_matrix</span><span class="p">(</span>
+  <span class="n">coeff</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">positions</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">charges</span><span class="p">,</span> <span class="n">density_grid</span><span class="p">,</span> <span class="n">g_vecs</span><span class="p">,</span> <span class="n">kpts</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">vol</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The resulting Hamiltonian matrix has an interesting structure:</p>
+<a class="reference internal image-reference" href="../_images/band_gamma.png"><img alt="../_images/band_gamma.png" class="align-center" src="../_images/band_gamma.png" style="width: 400px;" />
+</a>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>According to our research paper <a class="reference internal" href="#li2024">Li2024</a>, the Hamiltonian matrix self-diagonalizes during free energy minimization. However, you might notice this matrix isn’t fully diagonal. This occurs because of electron occupation degeneracy in the core regions (occupation = 1) and high-energy bands (occupation = 0).</p>
+</div>
+<p>Let’s examine the occupation numbers:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">occupation</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span><span class="mf">0.</span>  <span class="p">,</span> <span class="mf">0.</span>  <span class="p">,</span> <span class="mf">0.</span>  <span class="p">,</span> <span class="mf">0.</span>  <span class="p">,</span> <span class="mf">0.</span>  <span class="p">,</span> <span class="mf">0.</span>  <span class="p">,</span> <span class="mf">0.07</span><span class="p">,</span> <span class="mf">0.09</span><span class="p">,</span> <span class="mf">1.89</span><span class="p">,</span> <span class="mf">1.96</span><span class="p">,</span> <span class="mf">1.99</span><span class="p">,</span> <span class="mf">2.</span>  <span class="p">,</span> <span class="mf">2.</span>  <span class="p">,</span> <span class="mf">2.</span>  <span class="p">]</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The value of 2 appears because in spin-restricted calculations, each band can hold two electrons with opposite spins.</p>
+</div>
+<p>To get the Kohn-Sham eigenvalues, we simply need to diagonalize the Hamiltonian matrix:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">evals_gamma</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">hamil_matrix</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">evals_gamma</span><span class="p">)</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span><span class="o">-</span><span class="mf">7.67813799</span><span class="p">,</span> <span class="o">-</span><span class="mf">7.65829657</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.13900975</span><span class="p">,</span>  <span class="mf">0.60935214</span><span class="p">,</span>  <span class="mf">0.61061926</span><span class="p">,</span>
+      <span class="mf">0.61237885</span><span class="p">,</span>  <span class="mf">0.79693345</span><span class="p">,</span>  <span class="mf">0.80341756</span><span class="p">,</span>  <span class="mf">2.39194797</span><span class="p">,</span>  <span class="mf">4.57702582</span><span class="p">,</span>
+      <span class="mf">7.81532253</span><span class="p">,</span> <span class="mf">17.31096626</span><span class="p">,</span> <span class="mf">19.20340566</span><span class="p">,</span> <span class="mf">56.55011329</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>We can calculate the band gap at the Gamma point:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">band_gap</span> <span class="o">=</span> <span class="p">(</span><span class="n">evals_gamma</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">-</span> <span class="n">evals_gamma</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="o">*</span> <span class="n">jr</span><span class="o">.</span><span class="n">_src</span><span class="o">.</span><span class="n">const</span><span class="o">.</span><span class="n">HARTREE2EV</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The band gap at Gamma point is </span><span class="si">{</span><span class="n">band_gap</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> eV.&quot;</span><span class="p">)</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="n">The</span> <span class="n">band</span> <span class="n">gap</span> <span class="n">at</span> <span class="n">Gamma</span> <span class="n">point</span> <span class="ow">is</span> <span class="mf">5.0220</span> <span class="n">eV</span><span class="o">.</span>
+</pre></div>
+</div>
+</section>
+<section id="step-3-band-structure-along-a-k-path">
+<h2>Step 3: Band Structure Along a K-path<a class="headerlink" href="#step-3-band-structure-along-a-k-path" title="Link to this heading">#</a></h2>
+<p>To compute the full band structure, we need to calculate eigenvalues along a path through the Brillouin zone. This presents a challenge: we don’t have converged coefficients for k-points that weren’t in our original k-mesh.</p>
+<p>We solve this using two strategies:
+1. For each new k-point, we minimize the Hamiltonian matrix trace using the ground state density
+2. We use the parameters from the previous k-point as initial values for the next point, improving convergence efficiency</p>
+<p>Let’s implement this approach:</p>
+<p>First, generate a k-path through high-symmetry points (Γ → X → L → Γ):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">k_path</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">_src</span><span class="o">.</span><span class="n">band</span><span class="o">.</span><span class="n">get_k_path</span><span class="p">(</span><span class="n">crystal</span><span class="o">.</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s2">&quot;GXLG&quot;</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">k_path</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">])</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[[</span> <span class="mf">0.00000000e+00</span>  <span class="mf">0.00000000e+00</span>  <span class="mf">0.00000000e+00</span><span class="p">]</span>
+<span class="p">[</span><span class="o">-</span><span class="mf">5.89079908e-18</span>  <span class="mf">5.48359699e-02</span>  <span class="mf">1.28296930e-17</span><span class="p">]</span>
+<span class="p">[</span><span class="o">-</span><span class="mf">1.17815982e-17</span>  <span class="mf">1.09671940e-01</span>  <span class="mf">2.56593860e-17</span><span class="p">]</span>
+<span class="p">[</span><span class="o">-</span><span class="mf">3.26677455e-17</span>  <span class="mf">1.64507910e-01</span>  <span class="mf">3.26677455e-17</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>Now let’s set up our optimization for the first k-point (Γ). We’ll define a trace function:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">hamil_trace</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+  <span class="n">coeff</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">coeff</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">freq_mask</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">jr</span><span class="o">.</span><span class="n">hamiltonian</span><span class="o">.</span><span class="n">hamiltonian_matrix_trace</span><span class="p">(</span>
+      <span class="n">coeff</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">positions</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">charges</span><span class="p">,</span> <span class="n">density_grid</span><span class="p">,</span>
+      <span class="n">g_vecs</span><span class="p">,</span> <span class="n">k_path</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">],</span> <span class="n">crystal</span><span class="o">.</span><span class="n">vol</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="o">=</span><span class="kc">True</span>
+  <span class="p">)</span>
+</pre></div>
+</div>
+<p>Set up the optimizer and create the optimization loop:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">optax</span>
+
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">optax</span><span class="o">.</span><span class="n">adam</span><span class="p">(</span><span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+<span class="n">opt_state</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1000</span><span class="p">):</span>
+  <span class="n">grad</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">hamil_trace</span><span class="p">)(</span><span class="n">params</span><span class="p">)</span>
+  <span class="n">updates</span><span class="p">,</span> <span class="n">opt_state</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">grad</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">)</span>
+  <span class="n">params</span> <span class="o">=</span> <span class="n">optax</span><span class="o">.</span><span class="n">apply_updates</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">updates</span><span class="p">)</span>
+
+  <span class="n">params_pw</span> <span class="o">=</span> <span class="n">total_energy_output</span><span class="o">.</span><span class="n">params_pw</span>
+
+<span class="c1"># Define update step (JIT-compiled for speed)</span>
+<span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="n">params_pw</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">):</span>
+        <span class="n">e_tot</span><span class="p">,</span> <span class="n">grads</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">value_and_grad</span><span class="p">(</span><span class="n">hamil_trace</span><span class="p">)(</span><span class="n">params_pw</span><span class="p">)</span>
+        <span class="n">updates</span><span class="p">,</span> <span class="n">opt_state</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">grads</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">)</span>
+        <span class="n">params_pw</span> <span class="o">=</span> <span class="n">optax</span><span class="o">.</span><span class="n">apply_updates</span><span class="p">(</span><span class="n">params_pw</span><span class="p">,</span> <span class="n">updates</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">e_tot</span><span class="p">,</span> <span class="n">params_pw</span><span class="p">,</span> <span class="n">opt_state</span>
+
+<span class="c1"># Run optimization</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting optimization...&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10000</span><span class="p">):</span>
+    <span class="n">e_tot</span><span class="p">,</span> <span class="n">params_pw</span><span class="p">,</span> <span class="n">opt_state</span> <span class="o">=</span> <span class="n">update</span><span class="p">(</span><span class="n">params_pw</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Step </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">:</span><span class="s2">4d</span><span class="si">}</span><span class="s2"> | Hamiltonian Trace: </span><span class="si">{</span><span class="n">e_tot</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> Ha&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>After optimization, compute the eigenvalues at the first k-point:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">coeff</span><span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">coeff</span><span class="p">(</span><span class="n">params_pw</span><span class="p">,</span> <span class="n">freq_mask</span><span class="p">)</span>
+<span class="n">hamil_matrix</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">hamiltonian</span><span class="o">.</span><span class="n">hamiltonian_matrix</span><span class="p">(</span>
+  <span class="n">coeff</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">positions</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">charges</span><span class="p">,</span> <span class="n">density_grid</span><span class="p">,</span> <span class="n">g_vecs</span><span class="p">,</span> <span class="n">k_path</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">],</span> <span class="n">crystal</span><span class="o">.</span><span class="n">vol</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="n">evals_0</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">hamil_matrix</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">evals_0</span><span class="p">)</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span><span class="o">-</span><span class="mf">7.67815119</span><span class="p">,</span> <span class="o">-</span><span class="mf">7.65829707</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.13902394</span><span class="p">,</span>  <span class="mf">0.60937034</span><span class="p">,</span>  <span class="mf">0.61061365</span><span class="p">,</span>
+      <span class="mf">0.61238018</span><span class="p">,</span>  <span class="mf">0.79523348</span><span class="p">,</span>  <span class="mf">0.79585523</span><span class="p">,</span>  <span class="mf">0.79619886</span><span class="p">,</span>  <span class="mf">1.26561079</span><span class="p">,</span>
+      <span class="mf">1.32554965</span><span class="p">,</span>  <span class="mf">1.54347084</span><span class="p">,</span>  <span class="mf">1.54436551</span><span class="p">,</span>  <span class="mf">1.5456989</span> <span class="p">]</span>
+</pre></div>
+</div>
+<p>Let’s compare these eigenvalues with our earlier total energy calculation:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">total_energy_output</span><span class="o">.</span><span class="n">evals_gamma</span><span class="p">)</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span><span class="o">-</span><span class="mf">7.67813799</span><span class="p">,</span> <span class="o">-</span><span class="mf">7.65829657</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.13900975</span><span class="p">,</span>  <span class="mf">0.60935214</span><span class="p">,</span>  <span class="mf">0.61061926</span><span class="p">,</span>
+      <span class="mf">0.61237885</span><span class="p">,</span>  <span class="mf">0.79693345</span><span class="p">,</span>  <span class="mf">0.80341756</span><span class="p">,</span>  <span class="mf">2.39194797</span><span class="p">,</span>  <span class="mf">4.57702582</span><span class="p">,</span>
+      <span class="mf">7.81532253</span><span class="p">,</span> <span class="mf">17.31096626</span><span class="p">,</span> <span class="mf">19.20340566</span><span class="p">,</span> <span class="mf">56.55011329</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Notice that the lower eigenvalues match well, while higher energy values differ. This occurs because during the total energy calculation, high-energy bands quickly converge to zero occupation, stopping their coefficient updates.</p>
+</section>
+<section id="step-4-computing-the-full-band-structure">
+<h2>Step 4: Computing the Full Band Structure<a class="headerlink" href="#step-4-computing-the-full-band-structure" title="Link to this heading">#</a></h2>
+<p>Now we’ll calculate eigenvalues for all k-points along our path. First, define a helper function:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">get_evals</span><span class="p">(</span><span class="n">k_idx</span><span class="p">,</span> <span class="n">params_pw</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">hamil_trace</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+      <span class="n">coeff</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">coeff</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">freq_mask</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">jr</span><span class="o">.</span><span class="n">hamiltonian</span><span class="o">.</span><span class="n">hamiltonian_matrix_trace</span><span class="p">(</span>
+          <span class="n">coeff</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">positions</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">charges</span><span class="p">,</span> <span class="n">density_grid</span><span class="p">,</span>
+          <span class="n">g_vecs</span><span class="p">,</span> <span class="n">k_path</span><span class="p">[</span><span class="n">k_idx</span><span class="p">:(</span><span class="n">k_idx</span><span class="o">+</span><span class="mi">1</span><span class="p">)],</span> <span class="n">crystal</span><span class="o">.</span><span class="n">vol</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="o">=</span><span class="kc">True</span>
+      <span class="p">)</span>
+  <span class="n">opt_state</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">params_pw</span><span class="p">)</span>
+  <span class="n">coeff</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">coeff</span><span class="p">(</span><span class="n">params_pw</span><span class="p">,</span> <span class="n">freq_mask</span><span class="p">)</span>
+  <span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="n">params_pw</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">):</span>
+          <span class="n">e_tot</span><span class="p">,</span> <span class="n">grads</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">value_and_grad</span><span class="p">(</span><span class="n">hamil_trace</span><span class="p">)(</span><span class="n">params_pw</span><span class="p">)</span>
+          <span class="n">updates</span><span class="p">,</span> <span class="n">opt_state</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">grads</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">)</span>
+          <span class="n">params_pw</span> <span class="o">=</span> <span class="n">optax</span><span class="o">.</span><span class="n">apply_updates</span><span class="p">(</span><span class="n">params_pw</span><span class="p">,</span> <span class="n">updates</span><span class="p">)</span>
+          <span class="k">return</span> <span class="n">e_tot</span><span class="p">,</span> <span class="n">params_pw</span><span class="p">,</span> <span class="n">opt_state</span>
+
+  <span class="c1"># Run optimization</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">500</span><span class="p">):</span>
+      <span class="n">e_tot</span><span class="p">,</span> <span class="n">params_pw</span><span class="p">,</span> <span class="n">opt_state</span> <span class="o">=</span> <span class="n">update</span><span class="p">(</span><span class="n">params_pw</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">)</span>
+
+  <span class="n">coeff</span><span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">coeff</span><span class="p">(</span><span class="n">params_pw</span><span class="p">,</span> <span class="n">freq_mask</span><span class="p">)</span>
+  <span class="n">hamil_matrix</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">hamiltonian</span><span class="o">.</span><span class="n">hamiltonian_matrix</span><span class="p">(</span>
+      <span class="n">coeff</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">positions</span><span class="p">,</span> <span class="n">crystal</span><span class="o">.</span><span class="n">charges</span><span class="p">,</span> <span class="n">density_grid</span><span class="p">,</span> <span class="n">g_vecs</span><span class="p">,</span> <span class="n">k_path</span><span class="p">[</span><span class="n">k_idx</span><span class="p">:(</span><span class="n">k_idx</span><span class="o">+</span><span class="mi">1</span><span class="p">)],</span> <span class="n">crystal</span><span class="o">.</span><span class="n">vol</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="o">=</span><span class="kc">True</span>
+  <span class="p">)</span>
+
+  <span class="n">evals</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">hamil_matrix</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+  <span class="k">return</span> <span class="n">evals</span><span class="p">,</span> <span class="n">params_pw</span>
+</pre></div>
+</div>
+<p>Calculate eigenvalues for all k-points:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">evals_list</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">k_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">k_path</span><span class="p">)):</span>
+  <span class="n">evals</span><span class="p">,</span> <span class="n">params_pw</span> <span class="o">=</span> <span class="n">get_evals</span><span class="p">(</span><span class="n">k_idx</span><span class="p">,</span> <span class="n">params_pw</span><span class="p">)</span>
+  <span class="n">evals_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">evals</span><span class="p">)</span>
+
+
+<span class="n">band_structure</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">evals_list</span><span class="p">)</span><span class="o">*</span><span class="n">jr</span><span class="o">.</span><span class="n">_src</span><span class="o">.</span><span class="n">const</span><span class="o">.</span><span class="n">HARTREE2EV</span>
+</pre></div>
+</div>
+<p>The resulting band structure shows a clear band gap:</p>
+<a class="reference internal image-reference" href="../_images/bands.png"><img alt="../_images/bands.png" class="align-center" src="../_images/bands.png" style="width: 400px;" />
+</a>
+<section id="references">
+<h3>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h3>
+<div role="list" class="citation-list">
+<div class="citation" id="li2024" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>Li2024<span class="fn-bracket">]</span></span>
+<p>Li, Tianbo, et al. “Diagonalization without Diagonalization: A Direct Optimization Approach for Solid-State Density Functional Theory.” arXiv preprint arXiv:2411.05033 (2024).</p>
+</div>
+</div>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="dft100lines.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">DFT Total Energy Calculation in Less than 50 Lines</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="config.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Command Line Interface and Configuration</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-ground-state-calculation">Step 1: Ground State Calculation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-computing-kohn-sham-eigenvalues">Step 2: Computing Kohn-Sham Eigenvalues</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-band-structure-along-a-k-path">Step 3: Band Structure Along a K-path</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-computing-the-full-band-structure">Step 4: Computing the Full Band Structure</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,730 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jrystal._src.utils &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/graph.js?v=9f5096e4"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jrystal/_src/utils';</script>
+    <link rel="icon" href="../../../_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="../../../_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../tutorial/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/band_structure.html">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/ewald.html">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../../../glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jrystal._src.utils</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2025 Garena Online Private Limited</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;Utility functions.&quot;&quot;&quot;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Bool</span><span class="p">,</span> <span class="n">Complex</span><span class="p">,</span> <span class="n">Float</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">const</span>
+
+
+<div class="viewcode-block" id="safe_real">
+<a class="viewcode-back" href="../../../api/_src/utils.html#jrystal._src.utils.safe_real">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">safe_real</span><span class="p">(</span><span class="n">array</span><span class="p">:</span> <span class="n">Array</span><span class="p">,</span> <span class="n">tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-8</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Safely converts a complex array to real by checking imaginary components.</span>
+
+<span class="sd">    Attempts to convert a complex array to real by verifying that all imaginary</span>
+<span class="sd">    components are effectively zero (within specified tolerance). This is useful</span>
+<span class="sd">    for numerical computations where results should be real but may have tiny</span>
+<span class="sd">    imaginary components due to floating point errors.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        array (Array): Input array that may be real or complex.</span>
+<span class="sd">        tol (float): Tolerance threshold for considering imaginary components as zero. Defaults to 1e-8.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Array: The real component of the input if imaginary parts are within</span>
+<span class="sd">            tolerance, otherwise the original array.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the array has imaginary components larger than the</span>
+<span class="sd">            specified tolerance.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: python</span>
+<span class="sd">      </span>
+<span class="sd">      x = 1.0 + 1e-10j</span>
+<span class="sd">      safe_real(x)  # Returns 1.0</span>
+<span class="sd">      y = 1.0 + 1.0j  </span>
+<span class="sd">      safe_real(y)  # Raises ValueError</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">jnp</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">array</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">jnp</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">array</span><span class="o">.</span><span class="n">imag</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">tol</span><span class="p">):</span>  <span class="c1"># Adjust tolerance as needed</span>
+      <span class="k">return</span> <span class="n">array</span><span class="o">.</span><span class="n">real</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Array has non-zero imaginary part&quot;</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">array</span></div>
+
+
+
+<div class="viewcode-block" id="vmapstack">
+<a class="viewcode-back" href="../../../api/_src/utils.html#jrystal._src.utils.vmapstack">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">vmapstack</span><span class="p">(</span><span class="n">times</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Recursively applies JAX&#39;s vmap function to vectorize operations over multiple dimensions.</span>
+
+<span class="sd">    Creates a decorator that applies JAX&#39;s vmap transformation multiple times to a function, enabling vectorized operations over multiple batch dimensions. This is particularly useful for handling multi-dimensional batch processing in neural network operations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        times (int): Number of vmap applications. Should match the number of batch dimensions to be processed.</span>
+<span class="sd">        args (List[Dict]): Optional list of dictionaries containing vmap configuration for each application. Each dictionary can contain standard vmap arguments like in_axes, out_axes, axis_size, etc. Defaults to None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Callable: A decorator function that transforms the input function by applying vmap the specified number of times.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the length of args does not match the specified number of</span>
+<span class="sd">            vmap applications (times).</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: python</span>
+<span class="sd">      </span>
+<span class="sd">      @vmapstack(2)</span>
+<span class="sd">      def f(x):</span>
+<span class="sd">          return x * 2</span>
+<span class="sd">      # f can now handle 2 batch dimensions</span>
+<span class="sd">      x = jnp.ones((3, 4, 5))  # 2 batch dims (3,4) with input dim 5</span>
+<span class="sd">      result = f(x)  # Shape will be (3, 4, 5)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">args</span><span class="p">:</span>
+      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">!=</span> <span class="n">times</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+          <span class="sa">f</span><span class="s1">&#39;the length of args (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span><span class="si">}</span><span class="s1">) is not the same &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;of times (</span><span class="si">{</span><span class="n">times</span><span class="si">}</span><span class="s1">).&#39;</span>
+        <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">times</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">args</span><span class="p">:</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="o">**</span><span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">f</span>
+
+  <span class="k">return</span> <span class="n">decorator</span></div>
+
+
+
+<div class="viewcode-block" id="absolute_square">
+<a class="viewcode-back" href="../../../api/_src/utils.html#jrystal._src.utils.absolute_square">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">absolute_square</span><span class="p">(</span><span class="n">array</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;...&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;...&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Computes the squared magnitude of complex numbers in an array.</span>
+
+<span class="sd">    Calculates :math:`|z|^2` for each complex number :math:`z` in the input array by multiplying each element with its complex conjugate. This operation preserves the array shape while converting complex values to their real squared magnitudes.</span>
+<span class="sd">    </span>
+<span class="sd">    .. note::</span>
+<span class="sd">        This is equivalent to :math:`(Re(z))^2 + (Im(z))^2` for each complex number :math:`z`, but is computed using complex conjugate multiplication for better numerical stability.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: python</span>
+<span class="sd">      </span>
+<span class="sd">      x = 3 + 4j</span>
+<span class="sd">      absolute_square(x)  # Returns 25.0 (|3 + 4j|² = 3² + 4² = 25)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        array (Complex[Array, &#39;...&#39;] ): Complex-valued array of any shape. The &#39;...&#39; notation indicates arbitrary dimensions are supported.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Real-valued array of the same shape as input, containing the squared</span>
+<span class="sd">        magnitudes of the complex values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">array</span><span class="p">)</span> <span class="o">*</span> <span class="n">array</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="volume">
+<a class="viewcode-back" href="../../../api/_src/utils.html#jrystal._src.utils.volume">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">volume</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Calculates the volume of a parallelepiped defined by three cell vectors.</span>
+
+<span class="sd">    Computes the volume of a unit cell in a crystal structure by calculating the</span>
+<span class="sd">    determinant of the matrix formed by the three cell vectors. The absolute value of the determinant gives the volume of the parallelepiped.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">        The volume is calculated as :math:`|det(A)|` where :math:`A` is the matrix of cell vectors. This gives the volume of the parallelepiped formed by the three vectors regardless of their orientation.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: python</span>
+<span class="sd">      </span>
+<span class="sd">      # For a cubic cell of side length 2</span>
+<span class="sd">      vectors = jnp.array([[2., 0., 0.],</span>
+<span class="sd">                           [0., 2., 0.],</span>
+<span class="sd">                           [0., 0., 2.]])</span>
+<span class="sd">      volume(vectors)  # Returns 8.0</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cell_vectors (Float[Array, &#39;3 3&#39;]): A 3x3 matrix where each row represents a cell vector of the crystal structure. The vectors should be given in consistent units (e.g., Bohr radii or Angstroms).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Float: The volume of the unit cell (in cubic units of the input vectors).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="wave_to_density">
+<a class="viewcode-back" href="../../../api/_src/utils.html#jrystal._src.utils.wave_to_density">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">wave_to_density</span><span class="p">(</span>
+  <span class="n">wave_grid</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+  <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Computes electron density from wave functions in real space.</span>
+
+<span class="sd">    Calculates the electron density by taking the absolute square of wave functions and optionally applying occupation numbers. The density can be computed for the full grid or reduced along specified dimensions.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        wave_grid (Complex[Array, &#39;spin kpt band x y z&#39;]): Complex wave function values on a real-space grid. The array has dimensions for spin, k-points, bands, and spatial coordinates (x,y,z).</span>
+<span class="sd">        occupation (Optional[Float[Array, &#39;spin kpt band&#39;]]): Optional occupation numbers for each state (spin, k-point, band). If provided, the density will be weighted by these values. Defaults to None.</span>
+<span class="sd">        axis (Optional[Union[int, Tuple, List]]): Optional specification of axes along which to sum the density when applying occupation numbers. If None, sums over spin, k-points, and bands (first three dimensions). Defaults to None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Union[Float[Array, &#39;spin kpt band x y z&#39;], Float[Array, &#39;spin kpt band&#39;]]: The electron density grid. If occupation is None, the density grid has the same shape as the input wave_grid. If occupation is provided, the density grid is reduced along the specified axes after applying occupation weights.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the shapes of wave_grid and occupation are incompatible for broadcasting.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="n">dens</span> <span class="o">=</span> <span class="n">absolute_square</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">)</span>
+  <span class="n">axis</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">wave_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">3</span><span class="p">)</span> <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">axis</span>
+
+  <span class="k">if</span> <span class="n">occupation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">occupation</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">occupation</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+      <span class="n">dens</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dens</span> <span class="o">*</span> <span class="n">occupation</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;wave_grid&#39;s shape (</span><span class="si">{</span><span class="n">wave_grid</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">) and occupation&#39;s shape &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">occupation</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">) cannot align.&quot;</span>
+      <span class="p">)</span>
+  <span class="k">return</span> <span class="n">dens</span></div>
+
+
+
+<div class="viewcode-block" id="wave_to_density_reciprocal">
+<a class="viewcode-back" href="../../../api/_src/utils.html#jrystal._src.utils.wave_to_density_reciprocal">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">wave_to_density_reciprocal</span><span class="p">(</span>
+  <span class="n">wave_grid</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+  <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Computes electron density from wave functions in reciprocal space.</span>
+
+<span class="sd">    Calculates the electron density by first computing the real-space density</span>
+<span class="sd">    and then performing a Fourier transform to obtain the reciprocal space</span>
+<span class="sd">    representation. This is useful for operations that are more efficient in</span>
+<span class="sd">    reciprocal space, such as computing the Hartree potential.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        wave_grid (Complex[Array, &#39;spin kpt band x y z&#39;]): Complex wave function values on a real-space grid. The array has dimensions for spin, k-points, bands, and spatial coordinates (x,y,z).</span>
+<span class="sd">        occupation (Optional[Float[Array, &#39;spin kpt band&#39;]]): Optional occupation numbers for each state (spin, k-point, band). If provided, the density will be weighted by these values. Defaults to None.</span>
+<span class="sd">        axis (Optional[Union[int, Tuple, List]]): Optional specification of axes along which to sum the density when applying occupation numbers. If None, sums over spin, k-points, and bands (first three dimensions). Defaults to None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Union[Float[Array, &#39;spin kpt band x y z&#39;], Float[Array, &#39;spin kpt band&#39;]]: The electron density grid in reciprocal space. If occupation is None, the density grid has the same shape as the input wave_grid. If occupation is provided, the density grid is reduced along the specified axes after applying occupation weights.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="n">dens</span> <span class="o">=</span> <span class="n">wave_to_density</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">occupation</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">dens</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="fft_factor">
+<a class="viewcode-back" href="../../../api/_src/utils.html#jrystal._src.utils.fft_factor">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fft_factor</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Finds the smallest valid FFT size that is &gt;= n.</span>
+
+<span class="sd">    Determines the smallest number greater than or equal to n that can be</span>
+<span class="sd">    factored as </span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">    </span>
+<span class="sd">        \\text{FFT size} = 2^a \\times 3^b \\times 5^c \\times 7^d \\times 11^e \\times 13^f</span>
+<span class="sd">    </span>
+<span class="sd">    where :math:`e` and :math:`f` are either 0 or 1.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        n (int): The minimum size needed for the FFT grid.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: The smallest valid FFT size &gt;= n that satisfies the prime factorization requirements.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If n &gt; 2048, as the implementation is limited to sizes below this threshold.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+  <span class="n">fftw_factors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">const</span><span class="o">.</span><span class="n">CUFFT_FACTORS</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">2048</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The grid number </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> is too large!&quot;</span><span class="p">)</span>
+  <span class="n">delta_n</span> <span class="o">=</span> <span class="p">(</span><span class="n">fftw_factors</span> <span class="o">-</span> <span class="n">n</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+  <span class="n">output</span> <span class="o">=</span> <span class="n">fftw_factors</span><span class="p">[</span><span class="n">delta_n</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">output</span></div>
+
+
+
+<div class="viewcode-block" id="expand_coefficient">
+<a class="viewcode-back" href="../../../api/_src/utils.html#jrystal._src.utils.expand_coefficient">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">expand_coefficient</span><span class="p">(</span>
+  <span class="n">coeff_compact</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band gpt&quot;</span><span class="p">],</span>
+  <span class="n">mask</span><span class="p">:</span> <span class="n">Bool</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Expands compact coefficients into a full grid using a boolean mask.</span>
+
+<span class="sd">    Transforms coefficients from a compact representation (where only significant points are stored) to a full grid representation by placing the coefficients at positions specified by a boolean mask. This is useful for converting between storage-efficient and computation-friendly representations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        coeff_compact (Complex[Array, &quot;spin kpt band gpt&quot;]): Compact coefficient array with dimensions for spin, k-points, bands, and grid points.</span>
+<span class="sd">        mask (Bool[Array, &#39;x y z&#39;]): Boolean mask indicating valid grid points in the expanded representation. The number of True values must match the last dimension of coeff_compact.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Complex[Array, &quot;spin kpt band x y z&quot;]: The expanded coefficient array with dimensions matching the batch dimensions of coeff_compact (spin, kpt, band) followed by the spatial dimensions of the mask (x, y, z).</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">        The function first swaps the last two axes of the input coefficients to align with the expected output format, then creates a zero-filled array of the target shape and places the coefficients at the masked positions.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="n">coeff_compact</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">coeff_compact</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+  <span class="n">coeff_shape</span> <span class="o">=</span> <span class="n">coeff_compact</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+    <span class="n">coeff_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">coeff_compact</span><span class="o">.</span><span class="n">dtype</span>
+  <span class="p">)</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">coeff_compact</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="squeeze_coefficient">
+<a class="viewcode-back" href="../../../api/_src/utils.html#jrystal._src.utils.squeeze_coefficient">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">squeeze_coefficient</span><span class="p">(</span>
+  <span class="n">coeff</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
+  <span class="n">mask</span><span class="p">:</span> <span class="n">Bool</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt gpt band&quot;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Compresses coefficients by extracting values at masked positions.</span>
+
+<span class="sd">    Performs the inverse operation of expand_coefficient by extracting values</span>
+<span class="sd">    from positions specified by a boolean mask and arranging them in a compact</span>
+<span class="sd">    format. The output is transposed to have grid points before bands for</span>
+<span class="sd">    efficient computation.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">        The function extracts values at masked positions and then swaps the last two axes to arrange the output as (spin, kpt, gpt, band) rather than (spin, kpt, band, gpt).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        coeff (Complex[Array, &quot;spin kpt band x y z&quot;]): Full coefficient array with dimensions for spin, k-points, bands, and spatial coordinates (x, y, z).</span>
+<span class="sd">        mask (Bool[Array, &quot;spin kpt band x y z&quot;]): Boolean mask of the same shape as coeff indicating which positions should be included in the compact representation.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Complex[Array, &quot;spin kpt gpt band&quot;]: Compact coefficient array with dimensions (spin, kpt, gpt, band), where gpt represents the number of True values in the mask.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="n">coeff_compact</span> <span class="o">=</span> <span class="n">coeff</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">coeff_compact</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="check_spin_number">
+<a class="viewcode-back" href="../../../api/_src/utils.html#jrystal._src.utils.check_spin_number">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_spin_number</span><span class="p">(</span><span class="n">num_electrons</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">spin</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Validates that the spin number is compatible with electron count.</span>
+
+<span class="sd">    Checks if the specified spin number (number of unpaired electrons) is</span>
+<span class="sd">    physically possible given the total number of electrons. The spin number</span>
+<span class="sd">    and total electron count must have the same parity (both odd or both even).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        num_electrons (int): Total number of electrons in the system.</span>
+<span class="sd">        spin (int): Number of unpaired electrons (spin number).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the spin number is not valid for the given number</span>
+<span class="sd">            of electrons (i.e., if they have different parity).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">num_electrons</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">!=</span> <span class="n">spin</span> <span class="o">%</span> <span class="mi">2</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;spin number is not valid for the system. &quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

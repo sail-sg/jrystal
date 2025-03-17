@@ -1,0 +1,501 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jrystal.sbt.sbt &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/graph.js?v=9f5096e4"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jrystal/sbt/sbt';</script>
+    <link rel="icon" href="../../../_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="../../../_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../tutorial/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/band_structure.html">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/ewald.html">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../../../glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jrystal.sbt.sbt</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2025 Garena Online Private Limited</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;Spherical Bessel Transform. &quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Float</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.pysbt</span><span class="w"> </span><span class="kn">import</span> <span class="n">pyNumSBT</span>
+
+
+<div class="viewcode-block" id="sbt">
+<a class="viewcode-back" href="../../../api/sbt.html#jrystal.sbt.sbt">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sbt</span><span class="p">(</span>
+  <span class="n">r_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;num_r&quot;</span><span class="p">],</span>
+  <span class="n">f_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;num_r&quot;</span><span class="p">],</span>
+  <span class="n">l</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="n">kmax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+  <span class="n">norm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;num_r&quot;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;num_r&quot;</span><span class="p">]]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Spherical Bessel Transform.</span>
+
+<span class="sd">  ..math::</span>
+<span class="sd">    g(k) = int_0^\infty f(r) j_l(r) r^2 dr</span>
+
+<span class="sd">  Warning:</span>
+<span class="sd">    This function is a wrapper of pysbt. It is not differentiable.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    r_grid (Float[Array, &quot;num_r&quot;]): the r grid corresponding to the function.</span>
+<span class="sd">    f_grid (Float[Array, &quot;num_r&quot;]): the function values.</span>
+<span class="sd">    l (int, optional): Angular momentum. Defaults to 0.</span>
+<span class="sd">    kmax (float, optional): Maximum k value. Defaults to 100.</span>
+<span class="sd">    norm (bool, optional): Whether to normalize the output. Defaults to False.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Tuple[Float[Array, &quot;num_r&quot;], Float[Array, &quot;num_r&quot;]]: A tuple of (k_grid,</span>
+<span class="sd">      transformed_f_grid). k_grid is a 1d-array, and transformed_f_grid is the</span>
+<span class="sd">      transformed function values.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">r_grid</span> <span class="o">=</span> <span class="n">r_grid</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">result_type</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">r_grid</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+  <span class="n">f_grid</span> <span class="o">=</span> <span class="n">f_grid</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">result_type</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">f_grid</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">_sbt</span><span class="p">(</span><span class="n">r_grid</span><span class="p">,</span> <span class="n">f_grid</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="n">l</span><span class="p">,</span> <span class="n">kmax</span><span class="o">=</span><span class="n">kmax</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">):</span>  <span class="c1"># noqa</span>
+    <span class="n">ss</span> <span class="o">=</span> <span class="n">pyNumSBT</span><span class="p">(</span><span class="n">r_grid</span><span class="p">,</span> <span class="n">kmax</span><span class="o">=</span><span class="n">kmax</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span>
+      <span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ss</span><span class="o">.</span><span class="n">kk</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">result_type</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">r_grid</span><span class="o">.</span><span class="n">dtype</span><span class="p">)),</span>
+      <span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
+        <span class="n">ss</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">f_grid</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="n">l</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">),</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">result_type</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">r_grid</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+      <span class="p">)</span>
+    <span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">_sbt</span><span class="p">(</span><span class="n">r_grid</span><span class="p">,</span> <span class="n">f_grid</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="n">l</span><span class="p">,</span> <span class="n">kmax</span><span class="o">=</span><span class="n">kmax</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="batched_sbt">
+<a class="viewcode-back" href="../../../api/sbt.html#jrystal.sbt.batched_sbt">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">batched_sbt</span><span class="p">(</span>
+  <span class="n">r_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;ngrid&quot;</span><span class="p">],</span>
+  <span class="n">f_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;nbatch ngrid&quot;</span><span class="p">],</span>
+  <span class="n">l</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+  <span class="n">kmax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+  <span class="n">norm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;batched spherical bessel transform for multiple functions.</span>
+
+<span class="sd">    sbt: g(k) = int_0^\infty f(r) j_l(r) r^2 dr</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    r_grid (Float[Array, &quot;ngrid&quot;]): the r grid corresponding to the function.</span>
+<span class="sd">    f_grid (Float[Array, &quot;nbatch ngrid&quot;]): a batch of the function values.</span>
+<span class="sd">    l (Union[int, List[int]]): Angular momentum. If l is a list, the length</span>
+<span class="sd">      must be the same as the number of batches.</span>
+<span class="sd">    kmax (float, optional): Maximum k value. Defaults to 100.</span>
+<span class="sd">    norm (bool, optional): Whether to normalize the output. Defaults to False.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Tuple: A tuple of (k_grid, batched_transformed_f_grid). k_grid is a</span>
+<span class="sd">    1d-array, and batched_transformed_f_grid is BxN shaped, where B is the</span>
+<span class="sd">    number of batches and N is the number of grid point.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">li</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">f_grid</span><span class="p">,</span> <span class="n">l</span><span class="p">):</span>
+      <span class="n">k</span><span class="p">,</span> <span class="n">g</span> <span class="o">=</span> <span class="n">sbt</span><span class="p">(</span><span class="n">r_grid</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="n">li</span><span class="p">,</span> <span class="n">kmax</span><span class="o">=</span><span class="n">kmax</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">)</span>
+      <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">f_grid</span><span class="p">:</span>
+      <span class="n">k</span><span class="p">,</span> <span class="n">g</span> <span class="o">=</span> <span class="n">sbt</span><span class="p">(</span><span class="n">r_grid</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="n">l</span><span class="p">,</span> <span class="n">kmax</span><span class="o">=</span><span class="n">kmax</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">)</span>
+      <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\&#39;</span><span class="s2">l</span><span class="se">\&#39;</span><span class="s2"> must be a integer or a list of int&quot;</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">k</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">output</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sbt_hankel</span><span class="p">(</span><span class="n">r_grid</span><span class="p">,</span> <span class="n">f_grid</span><span class="p">,</span> <span class="n">l</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">kmax</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">):</span>  <span class="c1"># noqa</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;spherical bessel transform via Hankel transform.</span>
+
+<span class="sd">  NOTE: this function is less stable than pysbt. Use `sbt` instead.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">dln</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">r_grid</span><span class="p">)))</span>
+  <span class="n">initial</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">kmax</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">r_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">r_grid</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+  <span class="n">offset</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fhtoffset</span><span class="p">(</span><span class="n">dln</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">l</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">initial</span><span class="o">=</span><span class="n">initial</span><span class="p">)</span>
+  <span class="n">fht</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fht</span><span class="p">(</span>
+    <span class="n">f_grid</span> <span class="o">*</span> <span class="p">(</span><span class="n">r_grid</span><span class="o">**</span><span class="mf">1.5</span><span class="p">),</span> <span class="n">dln</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">l</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">r_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+  <span class="p">)</span>
+  <span class="n">k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">r_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">dln</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">fht</span> <span class="o">/</span> <span class="p">(</span><span class="n">k</span><span class="o">**</span><span class="mf">1.5</span><span class="p">),</span> <span class="n">k</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

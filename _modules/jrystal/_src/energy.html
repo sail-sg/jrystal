@@ -1,0 +1,772 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jrystal._src.energy &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/graph.js?v=9f5096e4"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jrystal/_src/energy';</script>
+    <link rel="icon" href="../../../_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="../../../_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../tutorial/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/band_structure.html">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/ewald.html">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../../../glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jrystal._src.energy</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2025 Garena Online Private Limited</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;Energy functions. &quot;&quot;&quot;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Complex</span><span class="p">,</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Int</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">braket</span><span class="p">,</span> <span class="n">potential</span><span class="p">,</span> <span class="n">pw</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.ewald</span><span class="w"> </span><span class="kn">import</span> <span class="n">ewald_coulomb_repulsion</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">translation_vectors</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">absolute_square</span><span class="p">,</span> <span class="n">safe_real</span><span class="p">,</span> <span class="n">wave_to_density</span><span class="p">,</span> <span class="n">wave_to_density_reciprocal</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="hartree">
+<a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.hartree">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">hartree</span><span class="p">(</span>
+  <span class="n">density_grid_reciprocal</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the Hartree energy.</span>
+
+<span class="sd">  The Hartree energy represents the classical electrostatic interaction between</span>
+<span class="sd">  electrons. The calculation is performed in reciprocal space for efficiency.</span>
+<span class="sd">  The Hartree potential in reciprocal space is given by:</span>
+
+<span class="sd">  .. math::</span>
+
+<span class="sd">      \hat{V}_H(\mathbf{G}) = 4\pi \frac{\hat{\rho}(\mathbf{G})}{|\mathbf{G}|^2},</span>
+<span class="sd">      \quad \hat{V}_H(\mathbf{0}) = 0</span>
+
+<span class="sd">  The Hartree energy is computed as:</span>
+
+<span class="sd">  .. math::</span>
+<span class="sd">  </span>
+<span class="sd">      E_H = \frac{1}{2}\sum_{\mathbf{G}} \hat{\rho}(\mathbf{G})\hat{V}_{H}(\mathbf{G})</span>
+<span class="sd">      = 2\pi \sum_{\mathbf{G}} \frac{|\hat{\rho}(\mathbf{G})|^2}{|\mathbf{G}|^2}</span>
+
+<span class="sd">  Please also refer to the tutorial :doc:`Total Energy Minimization &lt;../tutorial/total_energy&gt;`</span>
+<span class="sd">  for more details.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    density_grid_reciprocal (Complex[Array, &#39;x y z&#39;]): Electron density in </span>
+<span class="sd">      reciprocal space.</span>
+<span class="sd">    g_vector_grid (Float[Array, &#39;x y z 3&#39;]): Grid of G-vectors in reciprocal space.</span>
+<span class="sd">    vol (Float): Unit cell volume.</span>
+<span class="sd">    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float: Hartree energy.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">dim</span> <span class="o">=</span> <span class="n">g_vector_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+  <span class="k">if</span> <span class="n">density_grid_reciprocal</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="n">dim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">density_grid_reciprocal</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">density_grid_reciprocal</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+  <span class="n">v_hartree_reciprocal</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">hartree_reciprocal</span><span class="p">(</span>
+    <span class="n">density_grid_reciprocal</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kohn_sham</span>
+  <span class="p">)</span>
+
+  <span class="n">hartree_energy</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">reciprocal_braket</span><span class="p">(</span>
+    <span class="n">v_hartree_reciprocal</span><span class="p">,</span> <span class="n">density_grid_reciprocal</span><span class="p">,</span> <span class="n">vol</span>
+  <span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">safe_real</span><span class="p">(</span><span class="n">hartree_energy</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="external">
+<a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.external">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">external</span><span class="p">(</span>
+  <span class="n">density_grid_reciprocal</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
+  <span class="n">position</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;atom 3&#39;</span><span class="p">],</span>
+  <span class="n">charge</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;atom&#39;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the external potential energy.</span>
+
+<span class="sd">  The external potential energy is computed using Parseval&#39;s identity,</span>
+<span class="sd">  expressing the real-space integral as a sum over reciprocal lattice vectors:</span>
+
+<span class="sd">  .. math::</span>
+<span class="sd">      E = \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G})\hat{V}_{\text{ext}}(\mathbf{G}) = </span>
+<span class="sd">      \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G}) \sum_{\alpha} Z_{\alpha} </span>
+<span class="sd">      \exp(-i\mathbf{G}\cdot\mathbf{R}_{\alpha}) v(\mathbf{G})</span>
+
+<span class="sd">  where:</span>
+
+<span class="sd">  - :math:`\hat{\rho}(\mathbf{G})` is the Fourier transform of the electron density, i.e. the density in reciprocal space.</span>
+<span class="sd">  - :math:`\hat{V}_{\text{ext}}(\mathbf{G})` is the external potential in reciprocal space</span>
+<span class="sd">  - :math:`Z_{\alpha}` is the nuclear charge of atom :math:`\alpha`</span>
+<span class="sd">  - :math:`\mathbf{R}_{\alpha}` is the position of atom :math:`\alpha`</span>
+<span class="sd">  - :math:`v(\mathbf{G})` is the Fourier transform of the Coulomb potential</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    density_grid_reciprocal (Complex[Array, &#39;x y z&#39;]): Electron density in </span>
+<span class="sd">      reciprocal space.</span>
+<span class="sd">    position (Float[Array, &#39;atom 3&#39;]): Atomic positions in the unit cell.</span>
+<span class="sd">    charge (Float[Array, &#39;atom&#39;]): Nuclear charges.</span>
+<span class="sd">    g_vector_grid (Float[Array, &#39;x y z 3&#39;]): Grid of G-vectors in reciprocal space.</span>
+<span class="sd">    vol (Float): Unit cell volume.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float: External potential energy.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">dim</span> <span class="o">=</span> <span class="n">g_vector_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="k">if</span> <span class="n">density_grid_reciprocal</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="n">dim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">density_grid_reciprocal</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">density_grid_reciprocal</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+  <span class="n">v_external_reciprocal</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">external_reciprocal</span><span class="p">(</span>
+    <span class="n">position</span><span class="p">,</span> <span class="n">charge</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">vol</span>
+  <span class="p">)</span>
+  <span class="n">external_energy</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">reciprocal_braket</span><span class="p">(</span>
+    <span class="n">v_external_reciprocal</span><span class="p">,</span> <span class="n">density_grid_reciprocal</span><span class="p">,</span> <span class="n">vol</span>
+  <span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">safe_real</span><span class="p">(</span><span class="n">external_energy</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="kinetic">
+<a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.kinetic">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">kinetic</span><span class="p">(</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">],</span>
+  <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;kpt 3&#39;</span><span class="p">],</span>
+  <span class="n">coeff_grid</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">,</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band&quot;</span><span class="p">]]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the kinetic energy.</span>
+
+<span class="sd">  For plane wave basis, the kinetic energy operator is diagonal in</span>
+<span class="sd">  reciprocal space. The kinetic energy is computed as:</span>
+
+<span class="sd">  .. math::</span>
+<span class="sd">      E_{\text{kin}} = \frac{1}{2} \sum_{\mathbf{G}} </span>
+<span class="sd">      |\mathbf{k} + \mathbf{G}|^2 |c_{n\mathbf{k}}(\mathbf{G})|^2</span>
+
+<span class="sd">  where:</span>
+<span class="sd">  </span>
+<span class="sd">  - :math:`\mathbf{k}` is the k-point vector</span>
+<span class="sd">  - :math:`\mathbf{G}` is the reciprocal lattice vector</span>
+<span class="sd">  - :math:`c_{n\mathbf{k}}(\mathbf{G})` are the plane wave coefficients</span>
+<span class="sd">  - :math:`n` is the band index</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    g_vector_grid (Float[Array, &#39;x y z 3&#39;]): Grid of G-vectors in reciprocal space.</span>
+<span class="sd">    kpts (Float[Array, &#39;kpt 3&#39;]): k-points in reciprocal space.</span>
+<span class="sd">    coeff_grid (Complex[Array, &#39;spin kpt band x y z&#39;]): Plane wave coefficients.</span>
+<span class="sd">    occupation (Float[Array, &#39;spin kpt band&#39;], optional): Occupation numbers. If provided, returns the total kinetic energy weighted by occupations.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Union[Float, Float[Array, &quot;spin kpt band&quot;]]: If occupation is provided, returns the total kinetic energy. Otherwise, returns the kinetic energy for each state.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">dim</span> <span class="o">=</span> <span class="n">g_vector_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+  <span class="n">_g</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+  <span class="n">_k</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">kpts</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+  <span class="n">e_kin</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">_g</span> <span class="o">+</span> <span class="n">_k</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># [1, nk, ni, x y z]</span>
+  <span class="n">e_kin</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">e_kin</span> <span class="o">*</span> <span class="n">absolute_square</span><span class="p">(</span><span class="n">coeff_grid</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">dim</span> <span class="o">+</span> <span class="mi">3</span><span class="p">))</span>
+
+  <span class="k">if</span> <span class="n">occupation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">e_kin</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">e_kin</span> <span class="o">*</span> <span class="n">occupation</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">e_kin</span> <span class="o">/=</span> <span class="mi">2</span>
+
+  <span class="k">return</span> <span class="n">safe_real</span><span class="p">(</span><span class="n">e_kin</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="xc_lda">
+<a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.xc_lda">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">xc_lda</span><span class="p">(</span>
+  <span class="n">density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the LDA exchange-correlation energy.</span>
+
+<span class="sd">  Implements the Local Density Approximation (LDA) for the exchange-correlation</span>
+<span class="sd">  energy in the spin-unpolarized case. The exchange energy in LDA is given by:</span>
+
+<span class="sd">  .. math::</span>
+<span class="sd">      E_x^{\text{LDA}}[\rho] = -\frac{3}{4}\left(\frac{3}{\pi}\right)^{1/3}</span>
+<span class="sd">      \int \rho(\mathbf{r})^{4/3} d\mathbf{r}</span>
+
+<span class="sd">  Note that this implementation includes both exchange and correlation terms,</span>
+<span class="sd">  though only the exchange term is shown in the equation above.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    density_grid (Float[Array, &#39;x y z&#39;]): Real-space electron density.</span>
+<span class="sd">    vol (Float): Unit cell volume.</span>
+<span class="sd">    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float: LDA exchange-correlation energy.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">assert</span> <span class="n">density_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+
+  <span class="k">if</span> <span class="n">density_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>  <span class="c1"># have spin channel</span>
+    <span class="n">density_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+  <span class="n">num_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">density_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+  <span class="n">lda_density</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">)</span>
+  <span class="n">e_lda</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">lda_density</span> <span class="o">*</span> <span class="n">density_grid</span><span class="p">)</span>
+  <span class="n">e_lda</span> <span class="o">=</span> <span class="n">safe_real</span><span class="p">(</span><span class="n">e_lda</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">e_lda</span> <span class="o">*</span> <span class="n">vol</span> <span class="o">/</span> <span class="n">num_grid</span></div>
+
+
+
+<div class="viewcode-block" id="nuclear_repulsion">
+<a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.nuclear_repulsion">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">nuclear_repulsion</span><span class="p">(</span>
+  <span class="n">position</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;atom 3&#39;</span><span class="p">],</span>
+  <span class="n">charge</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;atom&#39;</span><span class="p">],</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">ewald_eta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+  <span class="n">ewald_cutoff</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute the nuclear repulsion energy using Ewald summation.</span>
+
+<span class="sd">  This function calculates the nuclear-nuclear repulsion energy in periodic systems</span>
+<span class="sd">  using the Ewald summation technique.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    position (Float[Array, &#39;atom 3&#39;]): Coordinates of atoms in a unit cell.</span>
+<span class="sd">    charge (Float[Array, &#39;atom&#39;]): Nuclear charges of atoms.</span>
+<span class="sd">    cell_vectors (Float[Array, &#39;3 3&#39;]): Unit cell vectors.</span>
+<span class="sd">    g_vector_grid (Float[Array, &#39;x y z 3&#39;]): Grid of G-vectors in reciprocal space.</span>
+<span class="sd">    vol (Float): Volume of the unit cell.</span>
+<span class="sd">    ewald_eta (float): Ewald splitting parameter.</span>
+<span class="sd">    ewald_cutoff (float): Real-space cutoff for Ewald summation.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float: Nuclear-nuclear repulsion energy.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">ewald_grid</span> <span class="o">=</span> <span class="n">translation_vectors</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">ewald_cutoff</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">ewald_coulomb_repulsion</span><span class="p">(</span>
+    <span class="n">position</span><span class="p">,</span> <span class="n">charge</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">ewald_eta</span><span class="p">,</span> <span class="n">ewald_grid</span>
+  <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="total_energy">
+<a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.total_energy">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">total_energy</span><span class="p">(</span>
+  <span class="n">coefficient</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpts band x y z&quot;</span><span class="p">],</span>
+  <span class="n">position</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom 3&quot;</span><span class="p">],</span>
+  <span class="n">charge</span><span class="p">:</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom&quot;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
+  <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
+  <span class="n">split</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Float</span><span class="p">,</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Float</span><span class="p">]]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the total electronic energy of the system.</span>
+
+<span class="sd">  Computes the total energy as the sum of kinetic, external potential,</span>
+<span class="sd">  Hartree, and exchange-correlation terms:</span>
+
+<span class="sd">  .. math::</span>
+<span class="sd">  </span>
+<span class="sd">    E_{\\text{tot}} = E_{\\text{kin}} + E_{\\text{ext}} + E_H + E_{xc}</span>
+
+<span class="sd">  .. warning::</span>
+<span class="sd">  </span>
+<span class="sd">    This function does not include the nuclear-nuclear repulsion (Ewald) energy. For the complete total energy, the Ewald term must be added separately.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    coefficient (Complex[Array, &quot;spin kpts band x y z&quot;]): Plane wave coefficients.</span>
+<span class="sd">    position (Float[Array, &quot;atom 3&quot;]): Atomic positions in the unit cell.</span>
+<span class="sd">    charge (Int[Array, &quot;atom&quot;]): Nuclear charges.</span>
+<span class="sd">    g_vector_grid (Float[Array, &quot;x y z 3&quot;]): Grid of G-vectors in reciprocal space.</span>
+<span class="sd">    kpts (Float[Array, &quot;kpt 3&quot;]): k-points in reciprocal space.</span>
+<span class="sd">    vol (Float): Unit cell volume.</span>
+<span class="sd">    occupation (Float[Array, &quot;spin kpt band&quot;], optional): Occupation numbers.</span>
+<span class="sd">      If not provided, all states are considered fully occupied.</span>
+<span class="sd">    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.</span>
+<span class="sd">    xc (str, optional): Exchange-correlation functional type. Defaults to &#39;lda&#39;.</span>
+<span class="sd">    split (bool, optional): If True, return individual energy components. Defaults to False.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Union[Float, Tuple[Float, Float, Float, Float]]: If split is False, returns</span>
+<span class="sd">      the total electronic energy. If split is True, returns the individual</span>
+<span class="sd">      components (kinetic, external, Hartree, exchange-correlation).</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">wave_grid_arr</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">wave_grid</span><span class="p">(</span><span class="n">coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
+
+  <span class="n">occupation</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span>
+    <span class="n">shape</span><span class="o">=</span><span class="n">coefficient</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span>
+  <span class="p">)</span> <span class="k">if</span> <span class="n">occupation</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">occupation</span>
+
+  <span class="n">density_grid</span> <span class="o">=</span> <span class="n">wave_to_density</span><span class="p">(</span><span class="n">wave_grid_arr</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
+  <span class="n">density_grid_rec</span> <span class="o">=</span> <span class="n">wave_to_density_reciprocal</span><span class="p">(</span><span class="n">wave_grid_arr</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
+
+  <span class="n">e_kin</span> <span class="o">=</span> <span class="n">kinetic</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kpts</span><span class="p">,</span> <span class="n">coefficient</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
+  <span class="n">e_ext</span> <span class="o">=</span> <span class="n">external</span><span class="p">(</span><span class="n">density_grid_rec</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">charge</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
+  <span class="n">e_har</span> <span class="o">=</span> <span class="n">hartree</span><span class="p">(</span><span class="n">density_grid_rec</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">xc</span> <span class="o">==</span> <span class="s1">&#39;lda&#39;</span><span class="p">:</span>
+    <span class="n">e_xc</span> <span class="o">=</span> <span class="n">xc_lda</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;xc </span><span class="si">{</span><span class="n">xc</span><span class="si">}</span><span class="s2"> is not supported yet.&quot;</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">split</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">e_kin</span><span class="p">,</span> <span class="n">e_ext</span><span class="p">,</span> <span class="n">e_har</span><span class="p">,</span> <span class="n">e_xc</span>
+
+  <span class="k">return</span> <span class="n">e_kin</span> <span class="o">+</span> <span class="n">e_ext</span> <span class="o">+</span> <span class="n">e_har</span> <span class="o">+</span> <span class="n">e_xc</span></div>
+
+
+
+<div class="viewcode-block" id="band_energy">
+<a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.band_energy">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">band_energy</span><span class="p">(</span>
+  <span class="n">coefficient</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
+  <span class="n">position</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom 3&quot;</span><span class="p">],</span>
+  <span class="n">charge</span><span class="p">:</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom&quot;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
+  <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band&quot;</span><span class="p">],</span>
+  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda&#39;</span>
+<span class="p">):</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the energy eigenvalues for each electronic state.</span>
+
+<span class="sd">  Computes the energy eigenvalues by evaluating the expectation value of the</span>
+<span class="sd">  single-particle Hamiltonian for each state:</span>
+
+<span class="sd">  .. math::</span>
+<span class="sd">  </span>
+<span class="sd">      \varepsilon_{n\mathbf{k}} = \langle \psi_{n\mathbf{k}} |</span>
+<span class="sd">      \hat{T} + \hat{V}_{\text{eff}} | \psi_{n\mathbf{k}} \rangle</span>
+
+<span class="sd">  where :math:`\hat{T}` is the kinetic energy operator and</span>
+<span class="sd">  :math:`\hat{V}_{\text{eff}}` is the effective potential operator.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    coefficient (Complex[Array, &quot;spin kpt band x y z&quot;]): Plane wave coefficients.</span>
+<span class="sd">    position (Float[Array, &quot;atom 3&quot;]): Atomic positions in the unit cell.</span>
+<span class="sd">    charge (Int[Array, &quot;atom&quot;]): Nuclear charges.</span>
+<span class="sd">    g_vector_grid (Float[Array, &quot;x y z 3&quot;]): Grid of G-vectors in reciprocal space.</span>
+<span class="sd">    kpts (Float[Array, &quot;kpt 3&quot;]): k-points in reciprocal space.</span>
+<span class="sd">    vol (Float): Unit cell volume.</span>
+<span class="sd">    occupation (Float[Array, &quot;spin kpt band&quot;]): Occupation numbers.</span>
+<span class="sd">    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.</span>
+<span class="sd">    xc (str, optional): Exchange-correlation functional type. Defaults to &#39;lda&#39;.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &quot;spin kpt band&quot;]: Energy eigenvalues for each electronic state.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">density_grid_sum</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">density_grid</span><span class="p">(</span><span class="n">coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
+  <span class="n">density_per_band</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">density_grid</span><span class="p">(</span><span class="n">coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
+  <span class="n">v_eff</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">effective</span><span class="p">(</span>
+    <span class="n">density_grid_sum</span><span class="p">,</span>
+    <span class="n">position</span><span class="p">,</span>
+    <span class="n">charge</span><span class="p">,</span>
+    <span class="n">g_vector_grid</span><span class="p">,</span>
+    <span class="n">vol</span><span class="p">,</span>
+    <span class="n">split</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">xc</span><span class="o">=</span><span class="n">xc</span><span class="p">,</span>
+    <span class="n">kohn_sham</span><span class="o">=</span><span class="n">kohn_sham</span>
+  <span class="p">)</span>
+  <span class="n">e_eff</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">real_braket</span><span class="p">(</span><span class="n">density_per_band</span><span class="p">,</span> <span class="n">v_eff</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
+
+  <span class="n">e_kin</span> <span class="o">=</span> <span class="n">kinetic</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kpts</span><span class="p">,</span> <span class="n">coefficient</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">e_kin</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">e_eff</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">safe_real</span><span class="p">(</span><span class="n">e_eff</span> <span class="o">+</span> <span class="n">e_kin</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,885 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jrystal.pseudopotential.normcons &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/graph.js?v=9f5096e4"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jrystal/pseudopotential/normcons';</script>
+    <link rel="icon" href="../../../_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="../../../_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../tutorial/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/band_structure.html">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/ewald.html">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../../../glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jrystal.pseudopotential.normcons</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2025 Garena Online Private Limited</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;Norm Conserving Pseudopotential for Plane Waves. &quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Complex</span><span class="p">,</span> <span class="n">Int</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">einops</span><span class="w"> </span><span class="kn">import</span> <span class="n">einsum</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.._src</span><span class="w"> </span><span class="kn">import</span> <span class="n">braket</span><span class="p">,</span> <span class="n">kinetic</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.._src</span><span class="w"> </span><span class="kn">import</span> <span class="n">potential</span><span class="p">,</span> <span class="n">energy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.._src.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">wave_to_density</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.._src</span><span class="w"> </span><span class="kn">import</span> <span class="n">pw</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.spherical</span><span class="w"> </span><span class="kn">import</span> <span class="n">legendre_to_sph_harm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.local</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">_hamiltonian_local</span><span class="p">,</span> <span class="n">hamiltonian_local</span><span class="p">,</span> <span class="n">_energy_local</span><span class="p">,</span> <span class="n">energy_local</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.beta</span><span class="w"> </span><span class="kn">import</span> <span class="n">beta_sbt_grid_multi_atoms</span>
+
+
+<div class="viewcode-block" id="_potential_nonlocal_square_root">
+<a class="viewcode-back" href="../../../api/pseudopotential/normcons.html#jrystal.pseudopotential.normcons._potential_nonlocal_square_root">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_potential_nonlocal_square_root</span><span class="p">(</span>
+  <span class="n">position</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;atom 3&#39;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
+  <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
+  <span class="n">r_grid</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">]],</span>
+  <span class="n">nonlocal_beta_grid</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta r&quot;</span><span class="p">]],</span>
+  <span class="n">nonlocal_angular_momentum</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt atom beta x y z phi&quot;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Compute the square root of the nonlocal pseudopotential. </span>
+<span class="sd">  </span>
+<span class="sd">  The Nonlocal pseudopotential hamiltonian is defined by:</span>
+
+<span class="sd">  .. math::</span>
+
+<span class="sd">      &lt; C | V_\\text{nl}(G, G&#39;) | C &gt;</span>
+
+<span class="sd">  where :math:`V_\\text{nl} = F D F^\dagger`, where :math:`F` can be obtained from this function, and :math:`D` is the diagonal matrix of the beta functions. This function returns :math:`F`.</span>
+<span class="sd">    </span>
+<span class="sd">  Args:</span>
+<span class="sd">    position (Float[Array, &quot;atom 3&quot;]): The positions of the atoms.</span>
+<span class="sd">    g_vector_grid (Float[Array, &quot;x y z 3&quot;]): The grid of the reciprocal vectors.</span>
+<span class="sd">    kpts (Float[Array, &quot;kpt 3&quot;]): The grid of the k-points.</span>
+<span class="sd">    r_grid (List[Float[Array, &quot;r&quot;]]): The grid of the real space.</span>
+<span class="sd">    nonlocal_beta_grid (List[Float[Array, &quot;beta r&quot;]]): The grid of the beta functions.</span>
+<span class="sd">    nonlocal_angular_momentum (List[List[int]]): The angular momentum of the beta functions.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Complex[Array, &quot;kpt atom beta x y z phi&quot;]: The square root of the nonlocal pseudopotential.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">nonlocal_beta_grid</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">nonlocal_angular_momentum</span><span class="p">)</span>
+
+  <span class="n">gk_vector_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span>
+    <span class="n">kpts</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+  <span class="p">)</span> <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># [nk x y z 3]</span>
+
+  <span class="c1"># sbt for beta function and intepolate</span>
+  <span class="n">beta_gk</span> <span class="o">=</span> <span class="n">beta_sbt_grid_multi_atoms</span><span class="p">(</span>
+    <span class="n">r_grid</span><span class="p">,</span> <span class="n">nonlocal_beta_grid</span><span class="p">,</span> <span class="n">nonlocal_angular_momentum</span><span class="p">,</span> <span class="n">gk_vector_grid</span>
+  <span class="p">)</span>  <span class="c1"># shape [num_atom num_beta nk x y z]</span>
+
+  <span class="c1"># kernel trick for legendre polynormials.</span>
+  <span class="n">kappa_all</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">l_atom</span> <span class="ow">in</span> <span class="n">nonlocal_angular_momentum</span><span class="p">:</span>
+    <span class="n">kappa_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">l_atom</span><span class="p">:</span>
+      <span class="n">kappa_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">legendre_to_sph_harm</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">ln</span><span class="p">)))</span>
+    <span class="n">kappa</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">kappa_list</span><span class="p">:</span>
+      <span class="n">kappa</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">k</span><span class="p">(</span><span class="n">gk_vector_grid</span><span class="p">))</span>
+    <span class="n">kappa</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">kappa</span><span class="p">)</span>  <span class="c1"># shape: [num_beta nk x y z dim_phi]</span>
+    <span class="n">kappa_all</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">kappa</span><span class="p">)</span>
+
+  <span class="n">kappa</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">kappa_all</span><span class="p">)</span>  <span class="c1"># shape: [num_atom num_beta nk x y z dim_phi]</span>
+
+  <span class="c1"># structure factor</span>
+  <span class="n">structure_factor</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
+    <span class="mf">1.</span><span class="n">j</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">gk_vector_grid</span><span class="p">,</span> <span class="n">position</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span>
+  <span class="p">)</span>
+  <span class="c1"># shape: [nk x y z na]</span>
+
+  <span class="k">return</span> <span class="n">einsum</span><span class="p">(</span>
+    <span class="n">kappa</span><span class="p">,</span>
+    <span class="n">structure_factor</span><span class="p">,</span>
+    <span class="n">beta_gk</span><span class="p">,</span>
+    <span class="s2">&quot;na nb nk a b c nphi, nk a b c na, na nb nk a b c -&gt; nk na nb a b c nphi&quot;</span>
+  <span class="p">)</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># factor of 1/2 is due to the conversion of unit.</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">hamiltonian_nonlocal</span><span class="p">(</span>
+  <span class="n">pw_coefficients</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
+  <span class="n">positions</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;atom 3&#39;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
+  <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
+  <span class="n">pseudo_r_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">],</span>
+  <span class="n">nonlocal_beta_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta r&quot;</span><span class="p">],</span>
+  <span class="n">nonlocal_angular_momentum</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+  <span class="n">nonlocal_d_matrix</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;j j&quot;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band band&quot;</span><span class="p">]:</span>
+  <span class="n">potential_nl_sqrt</span> <span class="o">=</span> <span class="n">_potential_nonlocal_square_root</span><span class="p">(</span>
+    <span class="n">positions</span><span class="p">,</span>
+    <span class="n">g_vector_grid</span><span class="p">,</span>
+    <span class="n">kpts</span><span class="p">,</span>
+    <span class="n">pseudo_r_grid</span><span class="p">,</span>
+    <span class="n">nonlocal_beta_grid</span><span class="p">,</span>
+    <span class="n">nonlocal_angular_momentum</span>
+  <span class="p">)</span>
+
+  <span class="n">_f_matrix</span> <span class="o">=</span> <span class="n">einsum</span><span class="p">(</span>
+    <span class="n">pw_coefficients</span><span class="p">,</span>
+    <span class="n">potential_nl_sqrt</span><span class="p">,</span>
+    <span class="s2">&quot;ns nk nband a b c, nk na nbeta a b c nphi -&gt; ns nk nband na nbeta nphi&quot;</span>
+  <span class="p">)</span>
+
+  <span class="k">return</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">vol</span> <span class="o">*</span> <span class="n">einsum</span><span class="p">(</span>
+    <span class="n">jnp</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">_f_matrix</span><span class="p">),</span>
+    <span class="n">jnp</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nonlocal_d_matrix</span><span class="p">),</span>
+    <span class="n">_f_matrix</span><span class="p">,</span>
+    <span class="s2">&quot;ns nk b1 na j1 nphi, na j1 j2, ns nk b2 na j2 nphi -&gt; ns nk b1 b2&quot;</span>
+  <span class="p">)</span>
+
+
+<div class="viewcode-block" id="_hamiltonian_nonlocal">
+<a class="viewcode-back" href="../../../api/pseudopotential/normcons.html#jrystal.pseudopotential.normcons._hamiltonian_nonlocal">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_hamiltonian_nonlocal</span><span class="p">(</span>
+  <span class="n">pw_coefficients</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
+  <span class="n">potential_nl_sqrt</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt atom beta x y z phi&quot;</span><span class="p">],</span>
+  <span class="n">nonlocal_d_matrix</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;j j&quot;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band band&quot;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Compute the nonlocal pseudopotential hamiltonian.</span>
+<span class="sd">  </span>
+<span class="sd">  .. Note::</span>
+<span class="sd">    This function is for seperating the :math:`\sqrt{V_{nl}}` part that may not be tracable by jax.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    pw_coefficients (Complex[Array, &quot;spin kpt band x y z&quot;]): The plane wave coefficients.</span>
+<span class="sd">    potential_nl_sqrt (Complex[Array, &quot;kpt atom beta x y z phi&quot;]): The square root of the nonlocal pseudopotential.</span>
+<span class="sd">    nonlocal_d_matrix (Float[Array, &quot;j j&quot;]): The diagonal matrix of the beta functions.</span>
+<span class="sd">    vol (Float): The volume of the unit cell.</span>
+<span class="sd">    </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Complex[Array, &quot;spin kpt band band&quot;]: The nonlocal pseudopotential hamiltonian.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">_f_matrix</span> <span class="o">=</span> <span class="n">einsum</span><span class="p">(</span>
+    <span class="n">pw_coefficients</span><span class="p">,</span>
+    <span class="n">potential_nl_sqrt</span><span class="p">,</span>
+    <span class="s2">&quot;s k band a b c, k atom beta a b c phi -&gt; s k band atom beta phi&quot;</span>
+  <span class="p">)</span>
+
+  <span class="k">return</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">vol</span> <span class="o">*</span> <span class="n">einsum</span><span class="p">(</span>
+    <span class="n">jnp</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">_f_matrix</span><span class="p">),</span>
+    <span class="n">jnp</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nonlocal_d_matrix</span><span class="p">),</span>
+    <span class="n">_f_matrix</span><span class="p">,</span>
+    <span class="s2">&quot;ns nk b1 na j1 nphi, na j1 j2, ns nk b2 na j2 nphi -&gt; ns nk b1 b2&quot;</span>
+  <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="_energy_nonlocal">
+<a class="viewcode-back" href="../../../api/pseudopotential/normcons.html#jrystal.pseudopotential.normcons._energy_nonlocal">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_energy_nonlocal</span><span class="p">(</span>
+  <span class="n">pw_coefficients</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
+  <span class="n">potential_nl_sqrt</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt atom beta x y z phi&quot;</span><span class="p">],</span>
+  <span class="n">nonlocal_d_matrix</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;j j&quot;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Compute the nonlocal pseudopotential energy.</span>
+<span class="sd">  </span>
+<span class="sd">  .. Note::</span>
+<span class="sd">    This function is for seperating the :math:`\sqrt{V_{nl}}` part that may not be tracable by jax.</span>
+<span class="sd">    </span>
+<span class="sd">  Args:</span>
+<span class="sd">    pw_coefficients (Complex[Array, &quot;spin kpt band x y z&quot;]): The plane wave coefficients.</span>
+<span class="sd">    potential_nl_sqrt (Complex[Array, &quot;kpt atom beta x y z phi&quot;]): The square root of the nonlocal pseudopotential.</span>
+<span class="sd">    nonlocal_d_matrix (Float[Array, &quot;j j&quot;]): The diagonal matrix of the beta functions.</span>
+<span class="sd">    vol (Float): The volume of the unit cell.</span>
+<span class="sd">    occupation (Optional[OccupationArray]): The occupation of the states.</span>
+<span class="sd">    </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Float: The nonlocal pseudopotential energy.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">hamil_nl</span> <span class="o">=</span> <span class="n">_hamiltonian_nonlocal</span><span class="p">(</span>
+    <span class="n">pw_coefficients</span><span class="p">,</span> <span class="n">potential_nl_sqrt</span><span class="p">,</span> <span class="n">nonlocal_d_matrix</span><span class="p">,</span> <span class="n">vol</span>
+  <span class="p">)</span>  <span class="c1"># shape: [spin kpoint band band]</span>
+
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">diag</span><span class="p">))(</span><span class="n">hamil_nl</span><span class="p">)</span> <span class="o">*</span> <span class="n">occupation</span><span class="p">)</span><span class="o">.</span><span class="n">real</span></div>
+
+
+
+<div class="viewcode-block" id="energy_nonlocal">
+<a class="viewcode-back" href="../../../api/pseudopotential/normcons.html#jrystal.pseudopotential.normcons.energy_nonlocal">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">energy_nonlocal</span><span class="p">(</span>
+  <span class="n">pw_coefficients</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
+  <span class="n">positions</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;atom 3&#39;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
+  <span class="n">k_vec</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
+  <span class="n">r_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">],</span>
+  <span class="n">nonlocal_beta_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta r&quot;</span><span class="p">],</span>
+  <span class="n">nonlocal_angular_momentum</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+  <span class="n">nonlocal_d_matrix</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;j j&quot;</span><span class="p">],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Compute the nonlocal pseudopotential energy.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    pw_coefficients (Complex[Array, &quot;spin kpt band x y z&quot;]): The plane wave coefficients.</span>
+<span class="sd">    positions (Float[Array, &quot;atom 3&quot;]): The positions of the atoms.</span>
+<span class="sd">    g_vector_grid (Float[Array, &quot;x y z 3&quot;]): The grid of the reciprocal vectors.</span>
+<span class="sd">    k_vec (Float[Array, &quot;kpt 3&quot;]): The grid of the k-points.</span>
+<span class="sd">    r_grid (Float[Array, &quot;r&quot;]): The grid of the real space.</span>
+<span class="sd">    nonlocal_beta_grid (Float[Array, &quot;beta r&quot;]): The grid of the beta functions.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float: The nonlocal pseudopotential energy.</span>
+<span class="sd">    </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">hamil_nl</span> <span class="o">=</span> <span class="n">hamiltonian_nonlocal</span><span class="p">(</span>
+    <span class="n">pw_coefficients</span><span class="p">,</span>
+    <span class="n">positions</span><span class="p">,</span>
+    <span class="n">g_vector_grid</span><span class="p">,</span>
+    <span class="n">k_vec</span><span class="p">,</span>
+    <span class="n">r_grid</span><span class="p">,</span>
+    <span class="n">nonlocal_beta_grid</span><span class="p">,</span>
+    <span class="n">nonlocal_angular_momentum</span><span class="p">,</span>
+    <span class="n">nonlocal_d_matrix</span><span class="p">,</span>
+    <span class="n">vol</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">diag</span><span class="p">))(</span><span class="n">hamil_nl</span><span class="p">)</span> <span class="o">*</span> <span class="n">occupation</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="_hamiltonian_matrix">
+<a class="viewcode-back" href="../../../api/pseudopotential/normcons.html#jrystal.pseudopotential.normcons._hamiltonian_matrix">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_hamiltonian_matrix</span><span class="p">(</span>
+  <span class="n">coefficient</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpoint band *ndim&quot;</span><span class="p">],</span>
+  <span class="n">hamiltonian_density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z&quot;</span><span class="p">],</span>
+  <span class="n">potential_local_grid_reciprocal</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">],</span>
+  <span class="n">potential_nonlocal_grid_sqrt</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt atom beta x y z phi&quot;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
+  <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;num_k 3&quot;</span><span class="p">],</span>
+  <span class="n">nonlocal_d_matrix</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta beta&quot;</span><span class="p">]],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
+  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Compute the nonlocal pseudopotential hamiltonian.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    coefficient (Complex[Array, &quot;spin kpt band *ndim&quot;]): The plane wave coefficients.</span>
+<span class="sd">    hamiltonian_density_grid (ScalarGrid[Float, 3]): The hamiltonian density grid.</span>
+<span class="sd">    potential_local_grid_reciprocal (Float[Array, &quot;nr&quot;]): The local potential grid in reciprocal space.</span>
+<span class="sd">    potential_nonlocal_grid_sqrt (Complex[Array, &quot;kpt atom beta x y z phi&quot;]): The square root of the nonlocal pseudopotential.</span>
+<span class="sd">    g_vector_grid (VectorGrid[Float, 3]): The grid of the reciprocal vectors.</span>
+<span class="sd">    kpts (Float[Array, &quot;num_k d&quot;]): The grid of the k-points.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">dim</span> <span class="o">=</span> <span class="n">kpts</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">wave_grid</span><span class="p">(</span><span class="n">coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
+  <span class="n">ext_nloc</span> <span class="o">=</span> <span class="n">_hamiltonian_nonlocal</span><span class="p">(</span>
+    <span class="n">coefficient</span><span class="p">,</span> <span class="n">potential_nonlocal_grid_sqrt</span><span class="p">,</span> <span class="n">nonlocal_d_matrix</span><span class="p">,</span> <span class="n">vol</span>
+  <span class="p">)</span>
+  <span class="n">ext_loc</span> <span class="o">=</span> <span class="n">_hamiltonian_local</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">potential_local_grid_reciprocal</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
+
+  <span class="n">hamiltonian_density_grid_reciprocal</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span>
+    <span class="n">hamiltonian_density_grid</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">)</span>
+
+  <span class="n">kin</span> <span class="o">=</span> <span class="n">kinetic</span><span class="o">.</span><span class="n">kinetic_operator</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kpts</span><span class="p">)</span>
+  <span class="n">h_kin</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span>
+    <span class="n">coefficient</span><span class="p">,</span> <span class="n">kin</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;kinetic&#39;</span>
+  <span class="p">)</span>
+
+  <span class="n">har</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">hartree_reciprocal</span><span class="p">(</span>
+    <span class="n">hamiltonian_density_grid_reciprocal</span><span class="p">,</span> <span class="n">g_vector_grid</span>
+  <span class="p">)</span>
+  <span class="n">har</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">har</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+  <span class="n">lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">)</span>
+  <span class="n">v_s</span> <span class="o">=</span> <span class="n">har</span> <span class="o">+</span> <span class="n">lda</span>
+  <span class="n">h_s</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_s</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">ext_nloc</span> <span class="o">+</span> <span class="n">ext_loc</span> <span class="o">+</span> <span class="n">h_s</span> <span class="o">+</span> <span class="n">h_kin</span></div>
+
+
+
+<span class="c1"># TODO: define containers for pseudopotentials</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">hamiltonian_matrix</span><span class="p">(</span>
+  <span class="n">coefficient</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpoint band *ndim&quot;</span><span class="p">],</span>
+  <span class="n">hamiltonian_density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z&quot;</span><span class="p">],</span>
+  <span class="n">r_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;*nd 3&quot;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
+  <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;num_k 3&quot;</span><span class="p">],</span>
+  <span class="n">positions</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;num_atoms 3&quot;</span><span class="p">],</span>
+  <span class="n">r_grid</span><span class="p">:</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;nr&quot;</span><span class="p">],</span>
+  <span class="n">local_potential_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;nr&quot;</span><span class="p">],</span>
+  <span class="n">local_potential_charge</span><span class="p">:</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom&quot;</span><span class="p">],</span>
+  <span class="n">nonlocal_beta_grid</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta r&quot;</span><span class="p">]],</span>
+  <span class="n">nonlocal_d_matrix</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta beta&quot;</span><span class="p">]],</span>
+  <span class="n">nonlocal_angular_momentum</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
+  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">):</span>
+  <span class="n">dim</span> <span class="o">=</span> <span class="n">positions</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">wave_grid</span><span class="p">(</span><span class="n">coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
+  <span class="n">ext_nloc</span> <span class="o">=</span> <span class="n">hamiltonian_nonlocal</span><span class="p">(</span>
+    <span class="n">coefficient</span><span class="p">,</span>
+    <span class="n">positions</span><span class="p">,</span>
+    <span class="n">g_vector_grid</span><span class="p">,</span>
+    <span class="n">kpts</span><span class="p">,</span>
+    <span class="n">r_grid</span><span class="p">,</span>
+    <span class="n">nonlocal_beta_grid</span><span class="p">,</span>
+    <span class="n">nonlocal_angular_momentum</span><span class="p">,</span>
+    <span class="n">nonlocal_d_matrix</span><span class="p">,</span>
+    <span class="n">vol</span>
+  <span class="p">)</span>
+  <span class="n">ext_loc</span> <span class="o">=</span> <span class="n">hamiltonian_local</span><span class="p">(</span>
+    <span class="n">wave_grid</span><span class="p">,</span>
+    <span class="n">positions</span><span class="p">,</span>
+    <span class="n">r_vector_grid</span><span class="p">,</span>
+    <span class="n">g_vector_grid</span><span class="p">,</span>
+    <span class="n">r_grid</span><span class="p">,</span>
+    <span class="n">local_potential_grid</span><span class="p">,</span>
+    <span class="n">local_potential_charge</span><span class="p">,</span>
+    <span class="n">vol</span>
+  <span class="p">)</span>
+
+  <span class="n">hamiltonian_reciprocal_density_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span>
+    <span class="n">hamiltonian_density_grid</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">)</span>
+
+  <span class="n">kin</span> <span class="o">=</span> <span class="n">kinetic</span><span class="o">.</span><span class="n">kinetic_operator</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kpts</span><span class="p">)</span>
+  <span class="n">h_kin</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span>
+    <span class="n">coefficient</span><span class="p">,</span> <span class="n">kin</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;kinetic&#39;</span>
+  <span class="p">)</span>
+
+  <span class="n">har</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">hartree_reciprocal</span><span class="p">(</span>
+    <span class="n">hamiltonian_reciprocal_density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span>
+  <span class="p">)</span>
+  <span class="n">har</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">har</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+  <span class="n">lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">)</span>
+  <span class="n">v_s</span> <span class="o">=</span> <span class="n">har</span> <span class="o">+</span> <span class="n">lda</span>
+  <span class="n">h_s</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_s</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">ext_nloc</span> <span class="o">+</span> <span class="n">ext_loc</span> <span class="o">+</span> <span class="n">h_s</span> <span class="o">+</span> <span class="n">h_kin</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_hamiltonian_trace</span><span class="p">(</span>
+  <span class="n">coefficient</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
+  <span class="n">hamiltonian_density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z&quot;</span><span class="p">],</span>
+  <span class="n">potential_local_grid_reciprocal</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">],</span>
+  <span class="n">potential_nonlocal_grid_sqrt</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt atom beta x y z phi&quot;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
+  <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
+  <span class="n">nonlocal_d_matrix</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta beta&quot;</span><span class="p">]],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
+  <span class="n">dim</span> <span class="o">=</span> <span class="n">kpts</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">wave_grid</span><span class="p">(</span><span class="n">coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
+  <span class="n">occupation</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">wave_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">kpts</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+  <span class="n">density</span> <span class="o">=</span> <span class="n">wave_to_density</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
+  <span class="n">reciprocal_density_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">density</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+  <span class="n">ext_nloc</span> <span class="o">=</span> <span class="n">_energy_nonlocal</span><span class="p">(</span>
+    <span class="n">coefficient</span><span class="p">,</span>
+    <span class="n">potential_nonlocal_grid_sqrt</span><span class="p">,</span>
+    <span class="n">nonlocal_d_matrix</span><span class="p">,</span>
+    <span class="n">vol</span><span class="p">,</span>
+    <span class="n">occupation</span>
+  <span class="p">)</span>
+  <span class="n">ext_loc</span> <span class="o">=</span> <span class="n">_energy_local</span><span class="p">(</span>
+    <span class="n">reciprocal_density_grid</span><span class="p">,</span> <span class="n">potential_local_grid_reciprocal</span><span class="p">,</span> <span class="n">vol</span>
+  <span class="p">)</span>
+
+  <span class="n">hamiltonian_reciprocal_density_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span>
+    <span class="n">hamiltonian_density_grid</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">)</span>
+
+  <span class="n">v_har_reciprocal</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">hartree_reciprocal</span><span class="p">(</span>
+    <span class="n">hamiltonian_reciprocal_density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span>
+  <span class="p">)</span>
+  <span class="n">v_har</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">v_har_reciprocal</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+  <span class="n">har</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_har</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
+  <span class="c1"># har = 0</span>
+  <span class="n">v_lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">)</span>
+  <span class="n">lda</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_lda</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
+  <span class="n">h_s</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">har</span> <span class="o">+</span> <span class="n">lda</span><span class="p">)</span>
+
+  <span class="n">t_kin</span> <span class="o">=</span> <span class="n">kinetic</span><span class="o">.</span><span class="n">kinetic_operator</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kpts</span><span class="p">)</span>
+  <span class="n">kin</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span>
+    <span class="n">coefficient</span><span class="p">,</span> <span class="n">t_kin</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;kinetic&#39;</span>
+  <span class="p">)</span>
+  <span class="n">kin</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">kin</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="p">(</span><span class="n">ext_nloc</span> <span class="o">+</span> <span class="n">ext_loc</span> <span class="o">+</span> <span class="n">h_s</span> <span class="o">+</span> <span class="n">kin</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+
+
+<div class="viewcode-block" id="hamiltonian_trace">
+<a class="viewcode-back" href="../../../api/pseudopotential/normcons.html#jrystal.pseudopotential.normcons.hamiltonian_trace">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">hamiltonian_trace</span><span class="p">(</span>
+  <span class="n">coefficient</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
+  <span class="n">hamiltonian_density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z&quot;</span><span class="p">],</span>
+  <span class="n">r_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
+  <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
+  <span class="n">positions</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom 3&quot;</span><span class="p">],</span>
+  <span class="n">r_grid</span><span class="p">:</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">],</span>
+  <span class="n">local_potential_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">],</span>
+  <span class="n">local_potential_charge</span><span class="p">:</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom&quot;</span><span class="p">],</span>
+  <span class="n">nonlocal_beta_grid</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta r&quot;</span><span class="p">]],</span>
+  <span class="n">nonlocal_d_matrix</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta beta&quot;</span><span class="p">]],</span>
+  <span class="n">nonlocal_angular_momentum</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Compute the trace of the hamiltonian.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    coefficient (Complex[Array, &quot;spin kpt band x y z&quot;]): The plane wave coefficients.</span>
+<span class="sd">    hamiltonian_density_grid (ScalarGrid[Float, 3]): The hamiltonian density grid.</span>
+<span class="sd">    r_vector_grid (Float[Array, &quot;x y z 3&quot;]): The grid of the real space.</span>
+<span class="sd">    g_vector_grid (Float[Array, &quot;x y z 3&quot;]): The grid of the reciprocal vectors.</span>
+<span class="sd">    kpts (Float[Array, &quot;kpt 3&quot;]): The grid of the k-points.</span>
+<span class="sd">    positions (Float[Array, &quot;atom 3&quot;]): The positions of the atoms.</span>
+<span class="sd">    r_grid (Int[Array, &quot;r&quot;]): The grid of the real space.</span>
+<span class="sd">    local_potential_grid (Float[Array, &quot;r&quot;]): The local potential grid.</span>
+<span class="sd">    local_potential_charge (Int[Array, &quot;atom&quot;]): The local potential charge.</span>
+<span class="sd">    nonlocal_beta_grid (List[Float[Array, &quot;beta r&quot;]]): The grid of the beta functions.</span>
+<span class="sd">    nonlocal_d_matrix (List[Float[Array, &quot;beta beta&quot;]]): The diagonal matrix of the beta functions.</span>
+<span class="sd">    nonlocal_angular_momentum (List[List[int]]): The angular momentum of the beta functions.</span>
+<span class="sd">    vol (Float): The volume of the unit cell.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float: The trace of the hamiltonian.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">dim</span> <span class="o">=</span> <span class="n">positions</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">wave_grid</span><span class="p">(</span><span class="n">coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
+  <span class="n">occupation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">wave_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">])</span>
+  <span class="n">density</span> <span class="o">=</span> <span class="n">wave_to_density</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
+
+  <span class="n">reciprocal_density_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">density</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+  <span class="n">hamil_reciprocal_density_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span>
+    <span class="n">hamiltonian_density_grid</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">)</span>
+  <span class="n">ext_nloc</span> <span class="o">=</span> <span class="n">energy_nonlocal</span><span class="p">(</span>
+    <span class="n">coefficient</span><span class="p">,</span>
+    <span class="n">occupation</span><span class="p">,</span>
+    <span class="n">positions</span><span class="p">,</span>
+    <span class="n">g_vector_grid</span><span class="p">,</span>
+    <span class="n">kpts</span><span class="p">,</span>
+    <span class="n">r_grid</span><span class="p">,</span>
+    <span class="n">nonlocal_beta_grid</span><span class="p">,</span>
+    <span class="n">nonlocal_angular_momentum</span><span class="p">,</span>
+    <span class="n">nonlocal_d_matrix</span><span class="p">,</span>
+    <span class="n">vol</span>
+  <span class="p">)</span>
+
+  <span class="n">ext_loc</span> <span class="o">=</span> <span class="n">energy_local</span><span class="p">(</span>
+    <span class="n">reciprocal_density_grid</span><span class="p">,</span>
+    <span class="n">positions</span><span class="p">,</span>
+    <span class="n">r_vector_grid</span><span class="p">,</span>
+    <span class="n">g_vector_grid</span><span class="p">,</span>
+    <span class="n">r_grid</span><span class="p">,</span>
+    <span class="n">local_potential_grid</span><span class="p">,</span>
+    <span class="n">local_potential_charge</span><span class="p">,</span>
+    <span class="n">vol</span>
+  <span class="p">)</span>
+
+  <span class="n">v_har_reciprocal</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">hartree_reciprocal</span><span class="p">(</span>
+    <span class="n">hamil_reciprocal_density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span>
+  <span class="p">)</span>
+  <span class="n">v_har</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">v_har_reciprocal</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+  <span class="n">har</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_har</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
+
+  <span class="n">v_lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">)</span>
+  <span class="n">lda</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_lda</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
+  <span class="n">h_s</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">har</span> <span class="o">+</span> <span class="n">lda</span><span class="p">)</span>
+  <span class="n">kin</span> <span class="o">=</span> <span class="n">energy</span><span class="o">.</span><span class="n">kinetic</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kpts</span><span class="p">,</span> <span class="n">coefficient</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">ext_nloc</span> <span class="o">+</span> <span class="n">ext_loc</span> <span class="o">+</span> <span class="n">h_s</span> <span class="o">+</span> <span class="n">kin</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,532 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Band Structure &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/graph.js?v=9f5096e4"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'tutorial/band_structure';</script>
+    <link rel="icon" href="../_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Ewald Summation" href="ewald.html" />
+    <link rel="prev" title="How Do We Deal with Occupation Numbers in Direct Optimization?" href="occupation.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="../_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ewald.html">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/tutorial/band_structure.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Band Structure</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#solid-state-basics">Solid state basics</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#k-space-decoupling">K-space decoupling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#discretization-and-direct-optimization">Discretization and Direct optimization</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reference">Reference</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="band-structure">
+<h1>Band Structure<a class="headerlink" href="#band-structure" title="Link to this heading">#</a></h1>
+<section id="solid-state-basics">
+<h2>Solid state basics<a class="headerlink" href="#solid-state-basics" title="Link to this heading">#</a></h2>
+<p>Solid-state physics mainly deals with crystalline solids, which has a periodic structure that can be described by a Bravais lattice. A crystal can be specified by the cell vectors <span class="math notranslate nohighlight">\(\vb{a}_{i}\)</span> of the unit cell, and the atomic configuration <span class="math notranslate nohighlight">\(\{Z_\ell, \vb*{\tau}_\ell  \}_\ell\)</span> within the unit cell, where <span class="math notranslate nohighlight">\(Z_\ell\)</span> is the charge of atom <span class="math notranslate nohighlight">\(\ell \)</span> and <span class="math notranslate nohighlight">\(\vb*{\tau}_\ell \)</span> is the coordinate. To capture interaction between different translated copies of the unit cells, a finite Bravais lattice with periodic boundary condition (PBC) is typically used. The finite Bravais lattice is commonly referred to as the <strong>simulation cell</strong>.</p>
+<p>Different from molecular systems, in periodic systems the potential is periodic over the unit cell, since at each location <span class="math notranslate nohighlight">\(\vb{r}\)</span> within the unit cell, potentials from all translated unit cells are felt. In other words, the tiling periodizes the non-periodic atomic Hartree and external potential. Bloch theorem [1] states that, for periodic potential <span class="math notranslate nohighlight">\(V(\vb{r} + \vb{R}_{\vb{m}})=V(\vb{r})\)</span>, the eigenstates of the Hamiltonian <span class="math notranslate nohighlight">\(\hat{H}\)</span> takes the form</p>
+<div class="amsmath math notranslate nohighlight" id="equation-c98f5d68-7eb9-411f-bd55-694e4341a0ef">
+<span class="eqno">(1)<a class="headerlink" href="#equation-c98f5d68-7eb9-411f-bd55-694e4341a0ef" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:bloch}
+  \psi _{i, \vb{k}}(\vb{r}) = \exp [\text{i} \vb{k} ^{\top} \vb{r}] u_{i, \vb{k}}(\vb{r}), \quad \vb{k} = \sum_{d=1}^3 k_{d} \vb{b}_{d}
+\end{equation}\]</div>
+<p>where <span class="math notranslate nohighlight">\(n\)</span> is the band index and <span class="math notranslate nohighlight">\(u_{n, \vb{k}}\)</span> is a function periodic over the unit cell.</p>
+<p>To make sure that <span class="math notranslate nohighlight">\(\psi _{n, \vb{k}}\)</span> is periodic over the simulation cell of size <span class="math notranslate nohighlight">\(M_1\times M_2\times M_3\)</span>, the k-points <span class="math notranslate nohighlight">\(\vb{k}\)</span> can only take values from the lattice <span class="math notranslate nohighlight">\(k_{d}=m_{d} / M_{d}, m_{d}\in \mathbb{Z}\)</span>. Furthermore, <span class="math notranslate nohighlight">\(\vb{k}\)</span> within the first Brillouin zone (FBZ), i.e. <span class="math notranslate nohighlight">\(m_{i}\in [-\lfloor(M_{i}-1) / 2 \rfloor, \lfloor M_{i} / 2 \rfloor]\)</span>, gives all unique eigenvalues due to the periodicity in the reciprocal space. All <span class="math notranslate nohighlight">\(\vb{k}\)</span> within FBZ forms a reciprocal lattice with size <span class="math notranslate nohighlight">\(M_1\times M_2\times M_3\)</span>. Thus for periodic systems, the KS equation becomes</p>
+<div class="amsmath math notranslate nohighlight" id="equation-ed10a92d-daa9-4a54-8ff9-daf31e15e3d7">
+<span class="eqno">(2)<a class="headerlink" href="#equation-ed10a92d-daa9-4a54-8ff9-daf31e15e3d7" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:ks-eqn-periodic}
+\hat{H}[\rho]\psi_{i,\vb{k}}  = \epsilon _{i,\vb{k}} \psi_{i,\vb{k}}.
+\end{equation}\]</div>
+<p>For each <span class="math notranslate nohighlight">\(i\)</span>, there are distinct energy levels for each <span class="math notranslate nohighlight">\(\vb{k}\)</span>, and the collection <span class="math notranslate nohighlight">\(\epsilon _{i,\vb{k}}\)</span> for fixed <span class="math notranslate nohighlight">\(i\)</span> forms a line that are commonly referred to as the <span class="math notranslate nohighlight">\(i\)</span>-th <em>band</em>. Analogous to the HOMO-LUMO gap in molecular systems, the narrowest gap between the highest occupied band and the lowest unoccupied band are referred to as the band gap, which is an important indicator of the electronic conductivity of the system.
+The calculation of a collection of orbital energies within some selected bands <span class="math notranslate nohighlight">\(I\)</span>, <span class="math notranslate nohighlight">\(\{\epsilon _{i,\vb{k}}\}_{i\in I}\)</span> is commonly refer to as <em>band structure</em> calculation.</p>
+</section>
+<section id="k-space-decoupling">
+<h2>K-space decoupling<a class="headerlink" href="#k-space-decoupling" title="Link to this heading">#</a></h2>
+<p>In practical calculation, Galerkin approximation is usually applied to the periodic part of the orbital <span class="math notranslate nohighlight">\(u_{i, \vb{k}}\)</span>, and periodic basis are used to make sure that <span class="math notranslate nohighlight">\(u_{i , \vb{k}}\)</span> is periodic. Multiplying <span class="math notranslate nohighlight">\(e^{-\text{i} \vb{k} \vb{r}}\)</span> to both side of the periodic KS equation, we get</p>
+<div class="amsmath math notranslate nohighlight" id="equation-4a32c29a-ea34-4d34-839d-de5529aa9257">
+<span class="eqno">(3)<a class="headerlink" href="#equation-4a32c29a-ea34-4d34-839d-de5529aa9257" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  \hat{H}_{\vb{k}}[\rho] u_{i, \vb{k}} = \epsilon _{i, \vb{k}} u_{i, \vb{k}}
+\end{equation}\]</div>
+<p>where</p>
+<div class="amsmath math notranslate nohighlight" id="equation-f610dfa0-042f-4a9a-95ce-393bb53bbf7b">
+<span class="eqno">(4)<a class="headerlink" href="#equation-f610dfa0-042f-4a9a-95ce-393bb53bbf7b" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\hat{H}_{\vb{k}}[\rho] := e^{-\text{i} \vb{k} \vb{r}}\hat{H}[\rho]e^{\text{i} \vb{k} \vb{r}}.
+\end{equation}\]</div>
+<p>and <span class="math notranslate nohighlight">\(\mathcal{K}\)</span> is the k-path. The periodic KS equation can be solved at each k-point <span class="math notranslate nohighlight">\(\vb{k}\)</span> independently by solving the above eigenvalue problem. This is because orbitals with different k are always orthogonal due to Bloch theorem, which makes the Hamiltonian matrix <span class="math notranslate nohighlight">\(\hat{H}[\rho]\)</span> block diagonal. Therefore diagonalizing each block <span class="math notranslate nohighlight">\(\hat{H}_{\vb{k}}[\rho]\)</span> solves a part of the original eigenvalue problem.</p>
+</section>
+<section id="discretization-and-direct-optimization">
+<h2>Discretization and Direct optimization<a class="headerlink" href="#discretization-and-direct-optimization" title="Link to this heading">#</a></h2>
+<p>Given a basis set <span class="math notranslate nohighlight">\(\{\phi_{\alpha}\}\)</span>, denote the coefficient as <span class="math notranslate nohighlight">\(c_{i, \vb{k}, \alpha }=\braket{\phi _{\alpha }}{u_{i,\vb{k}}}\)</span>, and the Hamiltonian matrix is discretized into the coefficient space as</p>
+<div class="amsmath math notranslate nohighlight" id="equation-4b6931ca-2d76-4ea9-b14b-090855f278c6">
+<span class="eqno">(5)<a class="headerlink" href="#equation-4b6931ca-2d76-4ea9-b14b-090855f278c6" title="Permalink to this equation">#</a></span>\[\begin{equation}
+  H_{\vb{k}, ij}[\rho]
+  =\mel{u  _{i, \vb{k}}}{\hat{H}_{\vb{k}}[\rho]}{u _{j, \vb{k}}}
+  = \sum_{\alpha \beta } c^{*}_{i, \vb{k}, \alpha } c_{j, \vb{k}, \beta  } H_{\vb{k}, \alpha \beta }[\rho].
+\end{equation}\]</div>
+<p>At this point, the band structure calculation becomes a collection of <span class="math notranslate nohighlight">\(\abs{\mathcal{K}}\)</span> finite dimensional eigenvalue problems. One can solve them via direct optimization like in [2], where the trace of each <span class="math notranslate nohighlight">\(H_{\vb{k}, ij}[\rho]\)</span> is minimized. That is, we solve the following optimization problem:</p>
+<div class="amsmath math notranslate nohighlight" id="equation-7343716e-57be-4e94-b756-aff30fc49944">
+<span class="eqno">(6)<a class="headerlink" href="#equation-7343716e-57be-4e94-b756-aff30fc49944" title="Permalink to this equation">#</a></span>\[\begin{equation}
+\min_{\vb{c}_{\vb{k}}} \tr H_{\vb{k}, ij}[\rho^*]
+\end{equation}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\rho^*\)</span> is the ground state density solved in a total energy calculation. In principle one need to update <span class="math notranslate nohighlight">\(\rho\)</span> self-consistently since we are changing <span class="math notranslate nohighlight">\(\vb{c}\)</span>, however this is expensive and in practice the above approximation is usually applied. This approximation is commonly referred to as the Non-self-consistent-field (NSCF) step.</p>
+</section>
+<section id="reference">
+<h2>Reference<a class="headerlink" href="#reference" title="Link to this heading">#</a></h2>
+<p>[1] Bloch, Felix Über Die Quantenmechanik Der Elektronen in Kristallgittern, Zeitschrift für Physik 52 (1929).</p>
+<p>[2] Tianbo Li and Min Lin and Zheyuan Hu and Kunhao Zheng and Giovanni Vignale and Kenji Kawaguchi and A. H. Castro Neto and Kostya S. Novoselov and Shuicheng Yan D4FT: A Deep Learning Approach to Kohn-Sham Density Functional Theory, The Eleventh International Conference on Learning Representations, {ICLR} 2023, Kigali, Rwanda, May 1-5, 2023  (2023).</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="occupation.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">How Do We Deal with Occupation Numbers in Direct Optimization?</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="ewald.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Ewald Summation</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#solid-state-basics">Solid state basics</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#k-space-decoupling">K-space decoupling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#discretization-and-direct-optimization">Discretization and Direct optimization</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reference">Reference</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

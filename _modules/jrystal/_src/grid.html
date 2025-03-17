@@ -1,0 +1,884 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jrystal._src.grid &#8212; JAX-based Differentiable Density Functional Theory Framework for Materials  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=4ef6e1ae" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/graph.js?v=9f5096e4"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jrystal/_src/grid';</script>
+    <link rel="icon" href="../../../_static/jrystal_logo.png"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/jrystal_logo.png" class="logo__image only-light" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>
+    <script>document.write(`<img src="../../../_static/jrystal_logo.png" class="logo__image only-dark" alt="JAX-based Differentiable Density Functional Theory Framework for Materials  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/crystal.html">Create A Crystal Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/dft100lines.html">DFT Total Energy Calculation in Less than 50 Lines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/band_structure.html">Band Structure Calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/config.html">Command Line Interface and Configuration</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../tutorial/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/crystallography.html">An Introduction to Crystallography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/array_shape.html">Understanding Variable Shapes in <code class="docutils literal notranslate"><span class="pre">jrystal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/total_energy.html">Total Energy Minimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/differentiation.html">What Can Differentiability Do for Density Functional Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/equivalence.html">Equivalence Between Total Energy Minimization and Solving Kohn-Sham Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/occupation.html">How Do We Deal with Occupation Numbers in Direct Optimization?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/band_structure.html">Band Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorial/ewald.html">Ewald Summation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/index.html">API Documentation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/calc.html">calculator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/crystal.html">crystal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/energy.html">energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/entropy.html">entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/ewald.html">ewald</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/grid.html">grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/hamiltonian.html">hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/kinetic.html">kinetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/occupation.html">occupation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/potential.html">potential</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/pseudopotential.html">pseudopotential</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/normcons.html">normcons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/local.html">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/pw.html">planewave</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../roadmap.html">Feature Roadmap and Contribution Guide</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../../../glossary.html">Glossary</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jrystal._src.grid</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2025 Garena Online Private Limited</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&#39;&#39;&#39;Grid operations for crystalline systems.</span>
+
+<span class="sd">This module provides functions for working with real and reciprocal space grids in crystalline systems.</span>
+<span class="sd">It includes utilities for:</span>
+
+<span class="sd">- Generating G-vectors and R-vectors</span>
+<span class="sd">- :math:`k`-point sampling for Brillouin zone integration</span>
+<span class="sd">- Frequency space operations and masks</span>
+<span class="sd">- Grid transformations between real and reciprocal space</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ase.dft.kpoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">monkhorst_pack</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax</span><span class="w"> </span><span class="kn">import</span> <span class="n">lax</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Bool</span><span class="p">,</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Int</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">fft_factor</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_half_frequency_ranges</span><span class="p">(</span>
+  <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">:</span>
+  <span class="c1"># instead of masks, we return ranges that are non-zero</span>
+  <span class="n">sizes</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">starts</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">grid_sizes</span><span class="p">:</span>
+    <span class="c1"># G_min = -(size // 2)</span>
+    <span class="n">G_max</span> <span class="o">=</span> <span class="p">(</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">lower_bound</span> <span class="o">=</span> <span class="o">-</span><span class="n">G_max</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">upper_bound</span> <span class="o">=</span> <span class="n">G_max</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">pos_start</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">pos_size</span> <span class="o">=</span> <span class="n">upper_bound</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">neg_start</span> <span class="o">=</span> <span class="n">lower_bound</span> <span class="o">+</span> <span class="n">size</span>
+    <span class="n">neg_size</span> <span class="o">=</span> <span class="n">size</span> <span class="o">-</span> <span class="n">neg_start</span>
+    <span class="n">sizes</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">pos_size</span><span class="p">,</span> <span class="n">neg_size</span><span class="p">))</span>
+    <span class="n">starts</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">pos_start</span><span class="p">,</span> <span class="n">neg_start</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">starts</span><span class="p">,</span> <span class="n">sizes</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">half_frequency_shape</span><span class="p">(</span>
+  <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;Calculate the shape of arrays in half-frequency representation.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    grid_sizes (Union[Tuple, List, Int[Array, &#39;d&#39;]]): Grid dimensions along each axis.</span>
+<span class="sd">    </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Tuple[int, ...]: Tuple of dimensions for the half-frequency array.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">_</span><span class="p">,</span> <span class="n">sizes</span> <span class="o">=</span> <span class="n">_half_frequency_ranges</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span>
+  <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="n">sizes</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_half_frequency_pad_to</span><span class="p">(</span>
+  <span class="n">tensor</span><span class="p">:</span> <span class="n">Array</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">]]</span>
+<span class="p">):</span>
+  <span class="n">grid_sizes</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span>
+  <span class="n">batch_dims</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)]</span>
+  <span class="n">starts</span><span class="p">,</span> <span class="n">sizes</span> <span class="o">=</span> <span class="n">_half_frequency_ranges</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">):]</span> <span class="o">==</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="n">sizes</span><span class="p">))</span>
+  <span class="n">updates</span> <span class="o">=</span> <span class="p">[</span><span class="n">tensor</span><span class="p">]</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sz</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sizes</span><span class="p">):</span>
+    <span class="n">split_updates</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">updates</span><span class="p">:</span>
+      <span class="n">split_updates</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="p">[</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="n">i</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch_dims</span><span class="p">)))</span>
+    <span class="n">updates</span> <span class="o">=</span> <span class="n">split_updates</span>
+  <span class="n">start_indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="o">*</span><span class="n">starts</span><span class="p">))</span>
+  <span class="n">ret</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">batch_dims</span> <span class="o">+</span> <span class="n">grid_sizes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">u</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">start_indices</span><span class="p">,</span> <span class="n">updates</span><span class="p">):</span>
+    <span class="n">start_idx</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch_dims</span><span class="p">)</span> <span class="o">+</span> <span class="n">s</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">lax</span><span class="o">.</span><span class="n">dynamic_update_slice</span><span class="p">(</span><span class="n">ret</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">ret</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_vector_grid</span><span class="p">(</span>
+  <span class="n">basis</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">],</span>
+  <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">]],</span>
+  <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z d&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;This is a shared function that is used by :code:`g_vectors`</span>
+<span class="sd">  and :code:`r_vectors`.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    basis: The cell vectors or reciprocal vectors.</span>
+<span class="sd">    grid_sizes: number of grid points along each axis.</span>
+<span class="sd">    normalize: :code:`False` for :code:`r_vectors` and :code:`True` for</span>
+<span class="sd">      :code:`g_vectors`.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &#39;x y z d&#39;]: A tensor with shape [*grid_sizes, d] containing the vector grid.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">basis</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">basis</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">dim</span>
+  <span class="n">components</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="p">):</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="p">((</span><span class="n">grid_sizes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">_</span> <span class="o">==</span> <span class="n">i</span> <span class="k">else</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="p">)),</span> <span class="n">dim</span><span class="p">)</span>
+    <span class="n">fftfreq</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftfreq</span><span class="p">(</span>
+      <span class="n">grid_sizes</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">normalize</span> <span class="k">else</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">grid_sizes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">components</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">fftfreq</span><span class="p">,</span> <span class="n">basis</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">shape</span><span class="p">))</span>
+  <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="g_vectors">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.g_vectors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">g_vectors</span><span class="p">(</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">],</span>
+  <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Generate G-vectors (reciprocal space vectors) for a given crystal cell.</span>
+<span class="sd">  </span>
+<span class="sd">  Given the real space lattice vectors of a unit cell, computes the G-vectors</span>
+<span class="sd">  in reciprocal space on a discrete grid. The G-vectors are fundamental for</span>
+<span class="sd">  plane-wave calculations and Fourier transforms in periodic systems.</span>
+<span class="sd">  </span>
+<span class="sd">  The G-vectors are defined as:</span>
+<span class="sd">  </span>
+<span class="sd">  .. math::</span>
+<span class="sd">    G_{ijk} = i\mathbf{b}_1 + j\mathbf{b}_2 + k\mathbf{b}_3</span>
+<span class="sd">  </span>
+<span class="sd">  where :math:`\mathbf{b}_i` are the reciprocal lattice vectors and</span>
+<span class="sd">  :math:`i,j,k \in [0, n_i-1]` for grid sizes :math:`n_i`.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    cell_vectors (Float[Array, &#39;3 3&#39;]): Real space lattice vectors of the unit cell.</span>
+<span class="sd">      A (3,3) matrix where each row is a lattice vector.</span>
+<span class="sd">    grid_sizes (Union[Tuple, List, Int[Array, &#39;d&#39;]]): Number of grid points along each axis.</span>
+<span class="sd">  </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &#39;x y z 3&#39;]: A tensor with shape (\*grid_sizes, 3) containing the G-vectors.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">b</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+  <span class="k">return</span> <span class="n">_vector_grid</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="r_vectors">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.r_vectors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">r_vectors</span><span class="p">(</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">],</span>
+  <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3&#39;</span><span class="p">]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Generate R-vectors (real space position vectors) for a given crystal cell.</span>
+<span class="sd">  </span>
+<span class="sd">  Given the real space lattice vectors of a unit cell, computes the position</span>
+<span class="sd">  vectors R on a discrete grid within the unit cell. These vectors define the</span>
+<span class="sd">  sampling points where real-space quantities (like electron density) are evaluated.</span>
+<span class="sd">  </span>
+<span class="sd">  The R-vectors are defined as:</span>
+<span class="sd">  </span>
+<span class="sd">  .. math::</span>
+<span class="sd">    R_{ijk} = \frac{i}{n_x}\mathbf{a}_1 + \frac{j}{n_y}\mathbf{a}_2 </span>
+<span class="sd">              + \frac{k}{n_z}\mathbf{a}_3</span>
+<span class="sd">  </span>
+<span class="sd">  where :math:`\mathbf{a}_i` are the real space lattice vectors and</span>
+<span class="sd">  :math:`i,j,k \in [0, n_i-1]` for grid sizes :math:`n_i`.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    cell_vectors (Float[Array, &#39;3 3&#39;]): Real space lattice vectors of the unit cell. A (3,3) matrix where each row is a lattice vector.</span>
+<span class="sd">    grid_sizes (Union[Tuple, List, Int[Array, &#39;3&#39;]]): Number of grid points along each axis.</span>
+<span class="sd">  </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &#39;x y z 3&#39;]: A tensor with shape (*grid_sizes, 3) containing the R-vectors.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">return</span> <span class="n">_vector_grid</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="proper_grid_size">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.proper_grid_size">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">proper_grid_size</span><span class="p">(</span>
+  <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Int</span><span class="p">,</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">],</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;Optimize grid sizes for efficient FFT operations.</span>
+<span class="sd">  </span>
+<span class="sd">  Converts input grid dimensions to values that are well-suited for FFT</span>
+<span class="sd">  computations by factoring them into products of small primes (2, 3, 5, 7).</span>
+<span class="sd">  This optimization can significantly improve FFT performance.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    grid_sizes (Union[Int, Int[Array, &#39;d&#39;], Tuple, List]): Input grid dimensions. Can be:</span>
+<span class="sd">      - A single integer (same size for all dimensions)</span>
+<span class="sd">      - A sequence of integers (size for each dimension)</span>
+<span class="sd">      - A numpy array of integers</span>
+<span class="sd">  </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Array: A numpy array containing the optimized grid sizes.</span>
+<span class="sd">  </span>
+<span class="sd">  Raises:</span>
+<span class="sd">    TypeError: If grid_sizes is not a valid numeric type.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">,</span> <span class="s1">&#39;__len__&#39;</span><span class="p">):</span>
+    <span class="n">grid_sizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">grid_sizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;mesh should be a scalar, tuple, list or np.array.&#39;</span><span class="p">)</span>
+  <span class="n">grid_sizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">fft_factor</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">grid_sizes</span><span class="p">])</span>
+  <span class="k">return</span> <span class="n">grid_sizes</span></div>
+
+
+
+<div class="viewcode-block" id="translation_vectors">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.translation_vectors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">translation_vectors</span><span class="p">(</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">],</span>
+  <span class="n">cutoff</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3&#39;</span><span class="p">],</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e4</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;num 3&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;Generate translation vectors for Ewald summation.</span>
+<span class="sd">  </span>
+<span class="sd">  Creates a grid of translation vectors used in Ewald summation methods for</span>
+<span class="sd">  computing long-range interactions in periodic systems. The grid extends</span>
+<span class="sd">  to a distance determined by the cutoff parameter.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    cell_vectors (Float[Array, &#39;3 3&#39;]): Real space lattice vectors of the unit cell.</span>
+<span class="sd">      A (3,3) matrix where each row is a lattice vector.</span>
+<span class="sd">    cutoff (Union[Float[Array, &#39;3&#39;], float]): Real space cutoff distance. Larger values give more precise</span>
+<span class="sd">      Ewald summation results but increase computational cost.</span>
+<span class="sd">      Default is 1e4.</span>
+<span class="sd">  </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &#39;num 3&#39;]: An array of shape (:math:`n`, 3) containing translation vectors, where :math:`n` is determined by the cutoff distance.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">dim</span> <span class="o">=</span> <span class="n">cell_vectors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">cutoff</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+  <span class="n">grid</span> <span class="o">=</span> <span class="n">_vector_grid</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="p">)])</span>
+  <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">cell_vectors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span></div>
+
+
+
+<div class="viewcode-block" id="k_vectors">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.k_vectors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">k_vectors</span><span class="p">(</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">],</span>
+  <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3&#39;</span><span class="p">]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;kpt 3&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;Generate k-vectors for Brillouin zone sampling.</span>
+<span class="sd">  </span>
+<span class="sd">  Creates a uniform grid of :math:`k`-points in reciprocal space using the</span>
+<span class="sd">  Monkhorst-Pack scheme. This sampling is essential for integrating</span>
+<span class="sd">  periodic functions over the Brillouin zone in electronic structure</span>
+<span class="sd">  calculations.</span>
+<span class="sd">  </span>
+<span class="sd">  .. Warning::</span>
+
+<span class="sd">    This function is not differentiable as it uses :code:`monkhorst_pack` from :code:`ase`. In future, we will implement a custom differentiable version.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    cell_vectors (Float[Array, &#39;3 3&#39;]): Real space lattice vectors of the unit cell. A (3,3) matrix where each row is a lattice vector.</span>
+<span class="sd">    grid_sizes (Union[Tuple, List, Int[Array, &#39;3&#39;]]): Number of :math:`k`-points along each reciprocal lattice vector direction.</span>
+<span class="sd">  </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &#39;kpt 3&#39;]: An array of shape (:math:`n`, 3) containing k-vectors, where :math:`n` is the total number of :math:`k`-points (product of :code:`grid_sizes`).</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">b</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+  <span class="k">return</span> <span class="n">monkhorst_pack</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span> <span class="o">@</span> <span class="n">b</span></div>
+
+
+
+<div class="viewcode-block" id="spherical_mask">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.spherical_mask">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">spherical_mask</span><span class="p">(</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">],</span>
+  <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">],</span>
+  <span class="n">cutoff_energy</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Bool</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Create a spherical mask for frequency cutoff in reciprocal space.</span>
+<span class="sd">  </span>
+<span class="sd">  Generates a boolean mask that selects G-vectors satisfying the energy</span>
+<span class="sd">  cutoff condition:</span>
+<span class="sd">  </span>
+<span class="sd">  .. math::</span>
+<span class="sd">    \frac{\|G\|^2}{2} \leq E_\text{cutoff}</span>
+<span class="sd">  </span>
+<span class="sd">  This mask is commonly used in plane-wave calculations to limit the basis</span>
+<span class="sd">  set size while maintaining accuracy. G-vectors with kinetic energy above</span>
+<span class="sd">  the cutoff are excluded.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    cell_vectors (Float[Array, &#39;3 3&#39;]): Real space lattice vectors of the unit cell. A (3,3) matrix where each row is a lattice vector.</span>
+<span class="sd">    grid_sizes (Union[List, jax.Array]): Grid dimensions in reciprocal space.</span>
+<span class="sd">    cutoff_energy: Energy cutoff for the G-vectors.</span>
+<span class="sd">  </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Bool[Array, &#39;x y z&#39;]: A boolean array of shape (*grid_sizes) where True indicates G-vectors within the energy cutoff sphere.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">g_vector_grid</span> <span class="o">=</span> <span class="n">g_vectors</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="p">)</span>
+  <span class="n">g_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+  <span class="n">mask</span> <span class="o">=</span> <span class="n">g_norm</span><span class="o">**</span><span class="mi">2</span> <span class="o">&lt;=</span> <span class="n">cutoff_energy</span> <span class="o">*</span> <span class="mi">2</span>
+  <span class="k">return</span> <span class="n">mask</span></div>
+
+
+
+<div class="viewcode-block" id="cubic_mask">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.cubic_mask">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">cubic_mask</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Bool</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Create a cubic mask for frequency components in reciprocal space.</span>
+<span class="sd">  </span>
+<span class="sd">  Generates a mask that enables only certain frequency components in a</span>
+<span class="sd">  cubic region of reciprocal space. This is particularly useful when</span>
+<span class="sd">  dealing with electron density (:math:`\rho`), which contains more</span>
+<span class="sd">  frequency components than the wavefunction (:math:`\psi`) since</span>
+<span class="sd">  :math:`\rho = |\psi|^2`.</span>
+<span class="sd">  </span>
+<span class="sd">  The mask is constructed by considering the frequency mixing that occurs</span>
+<span class="sd">  when squaring the wavefunction, ensuring all relevant frequency</span>
+<span class="sd">  components are included.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    grid_sizes (Union[List, jax.Array]): Grid dimensions in reciprocal space.</span>
+<span class="sd">  </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Bool[Array, &#39;x y z&#39;]: A boolean array of shape (*grid_sizes) where True indicates allowed frequency components in the cubic mask.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">masks</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">grid_sizes</span><span class="p">:</span>
+    <span class="n">G_max</span> <span class="o">=</span> <span class="p">(</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">lower_bound</span> <span class="o">=</span> <span class="o">-</span><span class="n">G_max</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">upper_bound</span> <span class="o">=</span> <span class="n">G_max</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">size</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">m</span><span class="p">[</span><span class="n">upper_bound</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span><span class="n">lower_bound</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">masks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+  <span class="n">mask</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;i,j,k-&gt;ijk&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">masks</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">mask</span></div>
+
+
+
+<div class="viewcode-block" id="estimate_max_cutoff_energy">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.estimate_max_cutoff_energy">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">estimate_max_cutoff_energy</span><span class="p">(</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">],</span>
+  <span class="n">mask</span><span class="p">:</span> <span class="n">Bool</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;Estimate the maximum cutoff energy corresponding to a frequency mask.</span>
+<span class="sd">  </span>
+<span class="sd">  Given a boolean mask in reciprocal space, calculates the maximum kinetic</span>
+<span class="sd">  energy of the G-vectors that are included in the mask. This is useful</span>
+<span class="sd">  for determining the effective energy cutoff of a given frequency mask,</span>
+<span class="sd">  particularly when using non-spherical masks.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    cell_vectors (Float[Array, &#39;3 3&#39;]): Real space lattice vectors of the unit cell. A (3,3) matrix where each row is a lattice vector.</span>
+<span class="sd">    mask (Bool[Array, &#39;x y z&#39;]): Boolean mask indicating which G-vectors are included.</span>
+<span class="sd">  </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    float: The maximum kinetic energy (in the same units as the reciprocal lattice vectors) of any G-vector included in the mask.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">grid_sizes</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span>
+  <span class="n">g_vector_grid</span> <span class="o">=</span> <span class="n">g_vectors</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="p">)</span>
+  <span class="n">kinetic</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">kinetic</span> <span class="o">*</span> <span class="n">mask</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="grid_vector_radius">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.grid_vector_radius">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">grid_vector_radius</span><span class="p">(</span><span class="n">grid_vector</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">]):</span>
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;Calculate the magnitude (radius) of vectors at each grid point.</span>
+<span class="sd">  </span>
+<span class="sd">  Computes the Euclidean norm of vectors at each point in a grid.</span>
+<span class="sd">  The function is vectorized to efficiently handle arbitrary grid shapes.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    grid_vector (Float[Array, &#39;x y z 3&#39;]): Array of vectors where the last </span>
+<span class="sd">      dimension contains the vector components, and earlier dimensions are </span>
+<span class="sd">      grid dimensions or batch dimensions.</span>
+<span class="sd">  </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &#39;x y z&#39;]: Array of vector magnitudes with shape matching all but the last dimension of the input.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">radius</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">r</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+
+  <span class="n">ndim</span> <span class="o">=</span> <span class="n">grid_vector</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span>
+  <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">):</span>
+    <span class="n">radius</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">radius</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">radius</span><span class="p">(</span><span class="n">grid_vector</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="g2r_vector_grid">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.g2r_vector_grid">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">g2r_vector_grid</span><span class="p">(</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">],</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;Transform a G-vector grid to the corresponding R-vector grid.</span>
+<span class="sd">  </span>
+<span class="sd">  Converts a grid of vectors in reciprocal space (G-vectors) to the</span>
+<span class="sd">  corresponding grid in real space (R-vectors). If cell vectors are</span>
+<span class="sd">  not provided, they are computed from the G-vector grid.</span>
+<span class="sd">  </span>
+<span class="sd">  This transformation is useful when switching between reciprocal and</span>
+<span class="sd">  real space representations of crystal quantities.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    g_vector_grid (Float[Array, &#39;x y z 3&#39;]): Grid of G-vectors in reciprocal space.</span>
+<span class="sd">    cell_vectors (Optional[Float[Array, &#39;3 3&#39;]], optional): Real space lattice vectors. If None, they will be computed from the G-vector grid. Defaults to None.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &#39;x y z 3&#39;]: Grid of R-vectors in real space with the same  shape as the input.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">if</span> <span class="n">cell_vectors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">cell_vectors</span> <span class="o">=</span> <span class="n">g2cell_vectors</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">)</span>
+  <span class="n">grid_sizes</span> <span class="o">=</span> <span class="n">g_vector_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">r_vector_grid</span> <span class="o">=</span> <span class="n">r_vectors</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">r_vector_grid</span></div>
+
+
+
+<div class="viewcode-block" id="r2g_vector_grid">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.r2g_vector_grid">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">r2g_vector_grid</span><span class="p">(</span>
+  <span class="n">r_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">],</span>
+  <span class="n">cell_vectors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;Transform an R-vector grid to the corresponding G-vector grid.</span>
+
+<span class="sd">  Converts a grid of vectors in real space (R-vectors) to the</span>
+<span class="sd">  corresponding grid in reciprocal space (G-vectors). This is the</span>
+<span class="sd">  inverse operation of g2r_vector_grid.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    r_vector_grid (Float[Array, &#39;x y z 3&#39;]): Grid of R-vectors in real space.</span>
+<span class="sd">    cell_vectors (Float[Array, &#39;3 3&#39;]): Real space lattice vectors.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &#39;x y z 3&#39;]: Grid of G-vectors in reciprocal space with the same shape as the input.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">if</span> <span class="n">cell_vectors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">cell_vectors</span> <span class="o">=</span> <span class="n">r2cell_vectors</span><span class="p">(</span><span class="n">r_vector_grid</span><span class="p">)</span>
+  <span class="n">grid_sizes</span> <span class="o">=</span> <span class="n">r_vector_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">g_vector_grid</span> <span class="o">=</span> <span class="n">g_vectors</span><span class="p">(</span><span class="n">cell_vectors</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">g_vector_grid</span></div>
+
+
+
+<div class="viewcode-block" id="g2cell_vectors">
+<a class="viewcode-back" href="../../../api/grid.html#jrystal.grid.g2cell_vectors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">g2cell_vectors</span><span class="p">(</span>
+  <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Compute real space cell vectors from a G-vector grid.</span>
+<span class="sd">  </span>
+<span class="sd">  Determines the real space lattice vectors by solving a linear system</span>
+<span class="sd">  that relates the G-vector grid to the standard reciprocal space basis.</span>
+<span class="sd">  This is useful when only the G-vectors are known and the corresponding</span>
+<span class="sd">  real space cell vectors are needed.</span>
+<span class="sd">    </span>
+<span class="sd">  Args:</span>
+<span class="sd">    g_vector_grid (Float[Array, &#39;x y z 3&#39;]): Grid of G-vectors in reciprocal space.</span>
+<span class="sd">  </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &#39;3 3&#39;]: Real space lattice vectors as a (3,3) matrix where each row is a lattice vector.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">grid_sizes</span> <span class="o">=</span> <span class="n">g_vector_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">cardinality</span> <span class="o">=</span> <span class="n">g_vectors</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">grid_sizes</span><span class="p">)</span>
+  <span class="n">a</span> <span class="o">=</span> <span class="n">g_vector_grid</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+  <span class="n">b</span> <span class="o">=</span> <span class="n">cardinality</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">a</span><span class="p">)</span> <span class="o">@</span> <span class="n">a</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">b</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">r2cell_vectors</span><span class="p">(</span>
+  <span class="n">r_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;3 3&#39;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Compute real space cell vectors from an R-vector grid.</span>
+<span class="sd">  </span>
+<span class="sd">  Determines the real space lattice vectors by solving a linear system</span>
+<span class="sd">  that relates the R-vector grid to the standard real space basis.</span>
+<span class="sd">  This is useful when only the R-vectors are known and the corresponding</span>
+<span class="sd">  cell vectors are needed.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    r_vector_grid (Float[Array, &#39;x y z 3&#39;]): Grid of R-vectors in real space.</span>
+<span class="sd">  </span>
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &#39;3 3&#39;]: Real space lattice vectors as a (3,3) matrix where each row is a lattice vector.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">grid_sizes</span> <span class="o">=</span> <span class="n">r_vector_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">r</span> <span class="o">=</span> <span class="n">r_vector_grid</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+  <span class="n">d</span> <span class="o">=</span> <span class="n">r_vectors</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">grid_sizes</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">d</span><span class="p">)</span> <span class="o">@</span> <span class="n">d</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">r</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By SAIL AI4Science Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, SEA AI LAB.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
