@@ -18,6 +18,8 @@ import jax.numpy as jnp
 from jax.lax import stop_gradient
 from jaxtyping import Array, Complex, Float
 
+from . import xc
+
 
 def hartree_reciprocal(
   density_grid_reciprocal: Complex[Array, 'x y z'],
@@ -34,7 +36,7 @@ def hartree_reciprocal(
       \quad \hat{V}_H(\mathbf{0}) = 0
 
   where:
-  
+
   - :math:`\hat{V}_H(\mathbf{G})` is the Hartree potential in reciprocal space
   - :math:`\hat{n}(\mathbf{G})` is the electron density in reciprocal space
   - :math:`\mathbf{G}` is the reciprocal lattice vector
@@ -43,7 +45,7 @@ def hartree_reciprocal(
   for more details.
 
   Args:
-    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in 
+    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in
       reciprocal space.
     g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
     kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
@@ -83,13 +85,13 @@ def hartree(
       V_H(\mathbf{r}) = \mathcal{F}^{-1}[\hat{V}_H(\mathbf{G})]
 
   where:
-  
+
   - :math:`V_H(\mathbf{r})` is the Hartree potential in real space
   - :math:`\hat{V}_H(\mathbf{G})` is the Hartree potential in reciprocal space
   - :math:`\mathcal{F}^{-1}` denotes the inverse Fourier transform
 
   Args:
-    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in 
+    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in
       reciprocal space.
     g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
     kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
@@ -167,7 +169,7 @@ def external(
       V_{\text{ext}}(\mathbf{r}) = \mathcal{F}^{-1}[\hat{V}_{\text{ext}}(\mathbf{G})]
 
   where:
-  
+
   - :math:`V_{\text{ext}}(\mathbf{r})` is the external potential in real space
   - :math:`\hat{V}_{\text{ext}}(\mathbf{G})` is the external potential in reciprocal space
   - :math:`\mathcal{F}^{-1}` denotes the inverse Fourier transform
@@ -198,7 +200,7 @@ def _lda_density(
       \left(\frac{3}{\pi}\right)^{1/3} n(\mathbf{r})^{1/3}
 
   where:
-  
+
   - :math:`n(\mathbf{r})` is the electron density
   - :math:`\varepsilon_{xc}^{\text{LDA}}` is the exchange-correlation energy density
 
@@ -235,7 +237,7 @@ def xc_lda(density_grid: Float[Array, 'x y z'],
       \right)^{1/3}
 
   where:
-  
+
   - :math:`\rho(\mathbf{r})` is the electron density
   - :math:`v_{xc}^{\text{LDA}}` is the exchange-correlation potential
 
@@ -255,6 +257,32 @@ def xc_lda(density_grid: Float[Array, 'x y z'],
     output = -(density_grid * 3. / jnp.pi)**(1 / 3)
   else:
     return _lda_density(density_grid)
+
+  return output
+
+
+def xc_pbe(density_grid: Float[Array, 'x y z'],
+           kohn_sham: bool = False) -> Float[Array, 'x y z']:
+  r"""Calculate the PBE exchange-correlation potential.
+
+  Args:
+    density_grid (Float[Array, 'x y z']): Real-space electron density.
+    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
+
+  Returns:
+    Float[Array, 'x y z']: PBE exchange-correlation potential.
+  """
+  dim = density_grid.ndim
+  if dim > 3:
+    density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
+
+  if kohn_sham:
+    density_grid = stop_gradient(density_grid)
+    output = -(density_grid * 3. / jnp.pi)**(1 / 3)
+  else:
+    e_x, v_x, _ = xc.gga_x_pbe_spin(density_grid)
+    e_c, v_c, _ = xc.gga_c_pbe_spin(density_grid)
+    output = v_x + v_c
 
   return output
 
@@ -285,7 +313,7 @@ def effective(
   - :math:`V_H(\mathbf{r})` is the Hartree potential
   - :math:`V_{\text{ext}}(\mathbf{r})` is the external (nuclear) potential
   - :math:`V_{xc}(\mathbf{r})` is the exchange-correlation potential
-  
+
   .. warning::
     Currently supports only LDA exchange-correlation functional.
 
@@ -311,7 +339,7 @@ def effective(
   assert density_grid.ndim in [dim, dim + 1]  # w/w\o spin channel
 
   grid_size = g_vector_grid.shape[0]
-  # make sure for both spin-polarized (unpolarized) version the shape is 
+  # make sure for both spin-polarized (unpolarized) version the shape is
   # consistent
   density_grid = density_grid.reshape(
     -1, grid_size, grid_size, grid_size
@@ -328,7 +356,7 @@ def effective(
     else:
       v_xp = xc_lda(2 * density_grid[0], kohn_sham)
       v_xn = xc_lda(2 * density_grid[1], kohn_sham)
-      v_xc = jnp.vstack([[v_xp, v_xn]]) 
+      v_xc = jnp.vstack([[v_xp, v_xn]])
   else:
     raise NotImplementedError("XC only support LDA for now.")
 
