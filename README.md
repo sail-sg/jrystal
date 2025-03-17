@@ -129,13 +129,6 @@ This project is jointly developed by [SEA AI LAB (SAIL)](https://sail.sea.com/) 
 If you find this project useful, please cite:
 
 ```bibtex
-@software{jrystal,
-    author = {Li, Tianbo and Shi, Zekun and Zhao, Jiaxi and Dale, Stephen Gregory and Vignale, Giovanni and Neto, AH Castro and Novoselov, Kostya S and Lin, Min},
-    title = {Jrystal: A JAX-based Differentiable Density Functional Theory Framework for Materials},
-    year = {2025},
-    url = {https://github.com/sail-sg/jrystal}
-}
-
 @inproceedings{ml4ps2024,
     title = {Jrystal: A JAX-based Differentiable Density Functional Theory Framework for Materials},
     author = {Li, Tianbo and Shi, Zekun and Dale, Stephen Gregory and Vignale, Giovanni and Lin, Min},
