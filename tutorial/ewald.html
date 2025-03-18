@@ -41,7 +41,7 @@
     <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/graph.js?v=9f5096e4"></script>
+    <script src="../_static/graph.js?v=6245dd16"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -385,13 +385,13 @@ document.write(`
 <section id="nucleus-energy">
 <h2>Nucleus energy<a class="headerlink" href="#nucleus-energy" title="Link to this heading">#</a></h2>
 <p>Denote the atomic point charge within the unit cell as</p>
-<div class="amsmath math notranslate nohighlight" id="equation-0827511a-8549-450e-99d4-231275a1deef">
-<span class="eqno">(1)<a class="headerlink" href="#equation-0827511a-8549-450e-99d4-231275a1deef" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-e7149ed0-0d45-48f6-a429-5ce45ceea1d0">
+<span class="eqno">(1)<a class="headerlink" href="#equation-e7149ed0-0d45-48f6-a429-5ce45ceea1d0" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \rho ^{\text{atom}}(\vb{r})=-\sum_{\ell} Z_{\ell }\delta (\vb{r}-\vb*{\tau }_{\ell })
 \end{equation}\]</div>
 <p>The Coulombic potential generated from this charge is</p>
-<div class="amsmath math notranslate nohighlight" id="equation-dceeb011-23aa-49a3-adf2-3432c6776bd4">
-<span class="eqno">(2)<a class="headerlink" href="#equation-dceeb011-23aa-49a3-adf2-3432c6776bd4" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-8e42de71-b592-4338-9e39-362d867c5f06">
+<span class="eqno">(2)<a class="headerlink" href="#equation-8e42de71-b592-4338-9e39-362d867c5f06" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \begin{split}
 V_{\text{ext}}(\vb{r}) =&amp; \rho ^{\text{atom}}  \star \frac{1}{r}
 = \int_{\Omega + \vb{R} } \dd{\vb{r}'} \frac{1}{\norm{\vb{r} - \vb{r}'}} \left( -\sum_{\ell} Z_{\ell }\delta (\vb{r}'-\vb*{\tau }_{\ell }) \right) \\
@@ -399,8 +399,8 @@ V_{\text{ext}}(\vb{r}) =&amp; \rho ^{\text{atom}}  \star \frac{1}{r}
 \end{split}
 \end{equation}\]</div>
 <p>The nucleus energy is then</p>
-<div class="amsmath math notranslate nohighlight" id="equation-4183c762-4528-4fd3-a704-68e5f729811c">
-<span class="eqno">(3)<a class="headerlink" href="#equation-4183c762-4528-4fd3-a704-68e5f729811c" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-cb698f92-49a0-4746-87e9-bdda9397b552">
+<span class="eqno">(3)<a class="headerlink" href="#equation-cb698f92-49a0-4746-87e9-bdda9397b552" title="Permalink to this equation">#</a></span>\[\begin{equation}
 E_{\text{nuc}}
 = \frac{1}{2} \braket{V_{\text{ext}}}{\rho ^{\text{atom}}}
 =- \frac{1}{2}\sum_{\vb{R}} \sum_{\ell'} \sum_{\ell} Z_{\ell '}Z_{\ell } \frac{1}{\norm{\vb*{\tau }_{\ell' }  - \vb*{\tau }_{\ell } - \vb{R}}}
@@ -416,8 +416,8 @@ E_{\text{nuc}}
 <section id="reciprocal-space-representation-via-the-yukawa-kernel">
 <h2>Reciprocal space representation via the Yukawa kernel<a class="headerlink" href="#reciprocal-space-representation-via-the-yukawa-kernel" title="Link to this heading">#</a></h2>
 <p>The Fourier space representation of the electrostatic potential can then be determined by the Poisson equation in Fourier space:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-1ae3e789-2d9b-4799-93a2-cd2c50548618">
-<span class="eqno">(4)<a class="headerlink" href="#equation-1ae3e789-2d9b-4799-93a2-cd2c50548618" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-4c2f14dc-5a2b-4703-becc-25659e2e8e9c">
+<span class="eqno">(4)<a class="headerlink" href="#equation-4c2f14dc-5a2b-4703-becc-25659e2e8e9c" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \nabla ^{2} V(\vb{r}) = -4\pi \rho (\vb{r}) \Rightarrow
   -\norm{\vb{G}}^{2} \tilde{V} (\vb{G}) = -4\pi \tilde{\rho} (\vb{G}) \Rightarrow
   \tilde{V} (\vb{G}) = \frac{4\pi}{\norm{\vb{G}}^{2}} \tilde{\rho}  (\vb{G}).
@@ -425,33 +425,33 @@ E_{\text{nuc}}
 <p>Note that at <span class="math notranslate nohighlight">\(\vb{G}=\vb{0}\)</span> we have a singularity, so this ill-defined.</p>
 <p>To fix this, we introduce the Yukawa kernel <span class="math notranslate nohighlight">\(\nu_{\alpha }(r)=\frac{e^{-\alpha r}}{r}\)</span>, which represents a screened Coulomb interaction.
 It’s Fourier representation is given by</p>
-<div class="amsmath math notranslate nohighlight" id="equation-91ea5181-5261-441a-bee1-482beddb4e8f">
-<span class="eqno">(5)<a class="headerlink" href="#equation-91ea5181-5261-441a-bee1-482beddb4e8f" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-731b31ca-e00b-4891-990b-6f90c40bc01a">
+<span class="eqno">(5)<a class="headerlink" href="#equation-731b31ca-e00b-4891-990b-6f90c40bc01a" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \tilde{\nu} ^{\alpha }(\vb{G})= \int_{\mathbb{R}^{3}} \dd{\vb{r}} \nu_{\alpha }(\vb{r}) e^{-\text{i} \vb{G} \cdot \vb{r}} = \dfrac{4\pi}{\norm{\vb{G}}^2 + \alpha^2}.
 \end{equation}\]</div>
 <p>This is equivalent to treat Fourier transform as the limit of the Laplace transform.</p>
 <p>Now for any charge distribution <span class="math notranslate nohighlight">\(\rho\)</span>, we can define the Fourier transform of Coulombic potentials generated from <span class="math notranslate nohighlight">\(\rho\)</span> as a limit, since <span class="math notranslate nohighlight">\(\lim_{\alpha  \to 0} -\frac{1}{4\pi} \nu _{\alpha }=\frac{1}{r}\)</span>:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-33970c46-065c-47ed-9aae-65636ccafb6a">
-<span class="eqno">(6)<a class="headerlink" href="#equation-33970c46-065c-47ed-9aae-65636ccafb6a" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-f27c8e08-fd99-40c7-8d1e-396633ee5471">
+<span class="eqno">(6)<a class="headerlink" href="#equation-f27c8e08-fd99-40c7-8d1e-396633ee5471" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \tilde{V} (\vb{G})=\lim_{\alpha  \to 0}  [\widetilde{-\frac{1}{4\pi}\nu_{\alpha } \star -4\pi \rho }] (\vb{G}) =\lim_{\alpha  \to 0}  \tilde{\nu}_{\alpha } (\vb{G}) \tilde{\rho} (\vb{G})  
   = \lim_{\alpha  \to 0}  \frac{4\pi \tilde{\rho} (\vb{G})}{\norm{\vb{G}}^{2}+ \alpha ^{2}}.
 \end{equation}\]</div>
 <p>Note that this formula implies that the Coulombic potential generated by a neutral charge distribution has zero average, since <span class="math notranslate nohighlight">\(\tilde{\rho}(\vb{0})=0\)</span> implies <span class="math notranslate nohighlight">\(\tilde{V}(\vb{0})=0\)</span>.</p>
 <p><span class="math notranslate nohighlight">\(V_{\text{ext}}\)</span> can now be represented in the reciprocal space via the Yukawa kernel:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-362ff287-077b-43ab-bf8f-4d45b7154730">
-<span class="eqno">(7)<a class="headerlink" href="#equation-362ff287-077b-43ab-bf8f-4d45b7154730" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-a959ba37-444c-4080-82c9-afd80120a6c8">
+<span class="eqno">(7)<a class="headerlink" href="#equation-a959ba37-444c-4080-82c9-afd80120a6c8" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \tilde{V}_{\text{ext}} (\vb{G}) =\lim_{\alpha  \to 0}  \tilde{\nu}_{\alpha } (\vb{G}) \tilde{\rho}^{\text{atom}} (\vb{G})
 = -\lim_{\alpha  \to 0}  \sum_{\ell} \frac{4\pi Z_{\ell } e^{-\text{i} \vb{G} ^{\top} \vb*{\tau }_{\ell}}}{\norm{\vb{G}}^{2}+ \alpha ^{2}}
 =  -\sum_{\ell} \frac{ 4\pi Z_{\ell } e^{-\text{i} \vb{G} ^{\top} \vb*{\tau }_{\ell}}}{\norm{\vb{G}}^{2}}.
 \end{equation}\]</div>
 <p>Now since</p>
-<div class="amsmath math notranslate nohighlight" id="equation-4c09f163-b1c8-49ef-ae8d-e99e48a2fb51">
-<span class="eqno">(8)<a class="headerlink" href="#equation-4c09f163-b1c8-49ef-ae8d-e99e48a2fb51" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-ab1da7f4-3b67-4b7a-8316-680aeb775fc7">
+<span class="eqno">(8)<a class="headerlink" href="#equation-ab1da7f4-3b67-4b7a-8316-680aeb775fc7" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \tilde{\rho}  ^{\text{atom}}(\vb{G}) = - \sum_{\ell } Z_{\ell } e^{-\text{i} \vb{G}^{\top} \vb*{\tau }_{\ell }}
 \end{equation}\]</div>
 <p>by Parseval’s theorem we have</p>
-<div class="amsmath math notranslate nohighlight" id="equation-9dfe65a2-7a1e-4f73-9bce-4b04220727b3">
-<span class="eqno">(9)<a class="headerlink" href="#equation-9dfe65a2-7a1e-4f73-9bce-4b04220727b3" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-476a4c07-f0b9-42f4-a6e7-d159a17b3173">
+<span class="eqno">(9)<a class="headerlink" href="#equation-476a4c07-f0b9-42f4-a6e7-d159a17b3173" title="Permalink to this equation">#</a></span>\[\begin{equation}
 E_{\text{nuc}} = \sum_{\vb{G}\neq \vb{0}}  \tilde{V} _{\text{ext}}(\vb{G})^{*} \tilde{\rho} ^{\text{atom}}(\vb{G})
 = \sum_{\vb{G}\neq \vb{0}}  \sum_{\ell ,\ell '} \frac{1}{\norm{\vb{G}}^{2}} e^{-\text{i} \vb{G}^{\top} (\vb*{\tau }_{\ell } - \vb*{\tau }_{\ell '})}
 \end{equation}\]</div>
@@ -462,8 +462,8 @@ E_{\text{nuc}} = \sum_{\vb{G}\neq \vb{0}}  \tilde{V} _{\text{ext}}(\vb{G})^{*} \
 <h2>Ewald summation<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
 <p>The idea of Ewald summation is to do summation in both the real and the reciprocal space, where the Coulombic kernel is broken up into a short-range term that converges fast in real space, and a long-range term that converges fast in the reciprocal space. Intuitively, why this works is that the long-range terms will by definition have lower frequency.</p>
 <p>Specifically, the Coulombic kernel is decomposed as follows</p>
-<div class="amsmath math notranslate nohighlight" id="equation-377279c6-0462-4ec9-bc35-d036a73edd4e">
-<span class="eqno">(10)<a class="headerlink" href="#equation-377279c6-0462-4ec9-bc35-d036a73edd4e" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-f7e26b0e-3e6e-4fba-883d-3d6dad466dc6">
+<span class="eqno">(10)<a class="headerlink" href="#equation-f7e26b0e-3e6e-4fba-883d-3d6dad466dc6" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \frac{1}{r} = \underbrace{\text{erfc}(\eta r) \frac{1}{r}}_{\nu _{\text{sr}}} + \underbrace{\text{erf}(\eta r) \frac{1}{r}}_{\nu _{\text{lr}}}
 \end{equation}\]</div>
 <p>where <span class="math notranslate nohighlight">\(\nu_{\text{sr}}, \nu _{\text{lr}}\)</span> are the short-range and the long-range kernel respectively.</p>
@@ -472,28 +472,28 @@ E_{\text{nuc}} = \sum_{\vb{G}\neq \vb{0}}  \tilde{V} _{\text{ext}}(\vb{G})^{*} \
 <h3>Long range potential<a class="headerlink" href="#long-range-potential" title="Link to this heading">#</a></h3>
 <p>Obviously <span class="math notranslate nohighlight">\(\nu_{\text{sr}}\)</span> decays exponentially in the real space. We need to show that the long-range kernel decays fast in the reciprocal space.</p>
 <p>The long range potential is given by</p>
-<div class="amsmath math notranslate nohighlight" id="equation-e696e6ab-dff6-4450-80d3-2d617238a233">
-<span class="eqno">(11)<a class="headerlink" href="#equation-e696e6ab-dff6-4450-80d3-2d617238a233" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-57a5acde-2d5c-4fa8-8251-a0f179d6d809">
+<span class="eqno">(11)<a class="headerlink" href="#equation-57a5acde-2d5c-4fa8-8251-a0f179d6d809" title="Permalink to this equation">#</a></span>\[\begin{equation}
 V_{\text{lr}}(\vb{r}) = \rho ^{\text{atom}} \star \nu _{\text{lr}} = - \sum_{\ell } \frac{Z_{\ell } \text{erf}(\eta \norm{ \vb{r} - \vb*{\tau }_{\ell }})}{\norm{\vb{r} - \vb*{\tau }_{\ell }}}
 \end{equation}\]</div>
 <p>The long-range part will be evaluated in the reciprocal space. First, we derive the Fourier transform of the long-range kernel calculated analytically using the same trick as Yukawa, which treats Fourier transform as the limit of Laplace transform:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-4284e128-2287-43fd-9a53-286dd33b3d4e">
-<span class="eqno">(12)<a class="headerlink" href="#equation-4284e128-2287-43fd-9a53-286dd33b3d4e" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-a7e488fd-a576-4f41-9544-adf09f12984f">
+<span class="eqno">(12)<a class="headerlink" href="#equation-a7e488fd-a576-4f41-9544-adf09f12984f" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \begin{aligned}
 \tilde{\nu }^\alpha_{\text{lr}} (\vb{G})= \int_{\mathbb{R}^{3}} \dd{\vb{r}} \nu _{\text{lr}} (\vb{r}) e^{-\alpha r} e^{-\text{i} \vb{G} \cdot \vb{r}}
 =&amp; \dfrac{2 \pi }{\text{i} G }  \left[ -\frac{e^{(\frac{\alpha+ \text{i} G}{2\eta })^2 }}{\text{i} G + \alpha } + \frac{e^{(\frac{\alpha- \text{i} G}{2\eta })^2 }}{-\text{i} G + \alpha } \right].
 \end{aligned}
 \end{equation}\]</div>
 <p>where <span class="math notranslate nohighlight">\(G=\norm{\vb{G}}\)</span>, and in the last equality we have used square completion trick with the Gaussian integrals. For <span class="math notranslate nohighlight">\(\vb{G}\neq 0\)</span>, we can take <span class="math notranslate nohighlight">\(\alpha \to 0\)</span> and get</p>
-<div class="amsmath math notranslate nohighlight" id="equation-4b6cab72-afd5-4a5a-af0c-4598b60dc7b6">
-<span class="eqno">(13)<a class="headerlink" href="#equation-4b6cab72-afd5-4a5a-af0c-4598b60dc7b6" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-aa31dcae-6922-4602-ba2b-5460f3250b71">
+<span class="eqno">(13)<a class="headerlink" href="#equation-aa31dcae-6922-4602-ba2b-5460f3250b71" title="Permalink to this equation">#</a></span>\[\begin{equation}
     \tilde{\nu }_{\text{lr}}(\vb{G})  = \lim_{\alpha  \to 0}  \tilde{\nu }_{\text{lr}}^\alpha(\vb{G})
     = \dfrac{2 \pi }{\text{i} G }  \left[ \frac{e^{(\frac{ \text{i} G}{2\eta })^2 }}{\text{i} G  } - \frac{e^{(\frac{ -\text{i} G}{2\eta })^2 }}{-\text{i} G } \right]
     = \dfrac{4 \pi }{ G^2 }  \exp {\frac{-G^2}{4\eta^2 } }.
 \end{equation}\]</div>
 <p>and the long-range potential for is then given by</p>
-<div class="amsmath math notranslate nohighlight" id="equation-8f60d469-b88e-4611-8628-70ad28c43c32">
-<span class="eqno">(14)<a class="headerlink" href="#equation-8f60d469-b88e-4611-8628-70ad28c43c32" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-e5016d6c-db0a-4c26-b9f6-89a06f123e13">
+<span class="eqno">(14)<a class="headerlink" href="#equation-e5016d6c-db0a-4c26-b9f6-89a06f123e13" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \tilde{V} _{\text{lr}}(\vb{G}) = \widetilde{[\nu_{\text{lr}} \star \rho^{\text{atom}}]}(\vb{G}) = \tilde{\nu} _{\text{lr}}(\vb{G})^{*} \tilde{\rho} ^{\text{atom}}(\vb{G})
 = \dfrac{4 \pi }{ G^2 }  \exp {\frac{-G^2}{4\eta^2 } } e^{-\text{i} \vb{G} ^\top \vb*{\tau }_{\ell }}
 \end{equation}\]</div>
@@ -505,8 +505,8 @@ V_{\text{lr}}(\vb{r}) = \rho ^{\text{atom}} \star \nu _{\text{lr}} = - \sum_{\el
 <h2>Interpretation as screening by a Gaussian charge<a class="headerlink" href="#interpretation-as-screening-by-a-gaussian-charge" title="Link to this heading">#</a></h2>
 <p>Although we have shown that this decomposition of the Coulomb kernel yields two fast converging terms, we haven’t handle the neutral charge requirement. The perspective on kernel decomposition is not very helpful in this aspect. Instead, we need to interpret the <strong>Ewald summation as screening by a Gaussian charge</strong>.</p>
 <p>Specifically, we will show that Ewald summation split the neutralized atomic charge distribution <span class="math notranslate nohighlight">\(\rho^{\text{atom}}+ \rho ^{-}\)</span> into two part: (a) the atomic charge distribution neutralized by a Gaussian charge distribution <span class="math notranslate nohighlight">\(\rho^{\text{tot}}\)</span>; (b) the Gaussian charge distribution neutralized by the uniform background charge <span class="math notranslate nohighlight">\(\rho^{-}\)</span>. The Coulombic potential generated by these two charge distributions corresponds to the short-range and the long-range part:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-7dfc02fd-707a-4188-a5c7-3f4fe1f25cdd">
-<span class="eqno">(15)<a class="headerlink" href="#equation-7dfc02fd-707a-4188-a5c7-3f4fe1f25cdd" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-dc951181-7261-4623-b70a-bb3778156c8e">
+<span class="eqno">(15)<a class="headerlink" href="#equation-dc951181-7261-4623-b70a-bb3778156c8e" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \begin{split}
     V_{\text{nuc}}
     =&amp; \frac{1}{r} \star  [\rho ^{\text{atom}} + \rho ^{-}] \\
@@ -518,45 +518,45 @@ V_{\text{lr}}(\vb{r}) = \rho ^{\text{atom}} \star \nu _{\text{lr}} = - \sum_{\el
 <section id="long-range-part-is-the-coulombic-potential-generated-via-a-gaussian-charge-distribution">
 <h3>Long-range part is the Coulombic potential generated via a Gaussian charge distribution<a class="headerlink" href="#long-range-part-is-the-coulombic-potential-generated-via-a-gaussian-charge-distribution" title="Link to this heading">#</a></h3>
 <p>Consider the positive Gaussian charge distribution</p>
-<div class="amsmath math notranslate nohighlight" id="equation-c3963bea-eb44-44d7-b514-f140beee0453">
-<span class="eqno">(16)<a class="headerlink" href="#equation-c3963bea-eb44-44d7-b514-f140beee0453" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-198d312b-f207-471b-a622-b6a9ee9c9a72">
+<span class="eqno">(16)<a class="headerlink" href="#equation-198d312b-f207-471b-a622-b6a9ee9c9a72" title="Permalink to this equation">#</a></span>\[\begin{equation}
  \rho ^{g}(\vb{r}) = -(\pi  /\eta^{2} )^{-\frac{3}{2}} \exp (- \eta^{2} \norm{\vb{r}}^{2})
 \end{equation}\]</div>
 <p>whose Fourier space representation is</p>
-<div class="amsmath math notranslate nohighlight" id="equation-3fbed033-a8a8-49ad-a6d3-0e2ab43bb58c">
-<span class="eqno">(17)<a class="headerlink" href="#equation-3fbed033-a8a8-49ad-a6d3-0e2ab43bb58c" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-76e561fb-5d3c-4838-844b-d29d00aa3dac">
+<span class="eqno">(17)<a class="headerlink" href="#equation-76e561fb-5d3c-4838-844b-d29d00aa3dac" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \tilde{\rho } ^{g}(\vb{G}) = - \frac{1}{\Omega } \exp (-\frac{\norm{\vb{G}}^{2}}{4 \eta ^{2} } ).
 \end{equation}\]</div>
 <p>Now consider the adding such Gaussian charge distribution at each atom’s site in the crystal, the total charge distribution is:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-439741fd-972b-4253-bb90-b79dd4fb40c3">
-<span class="eqno">(18)<a class="headerlink" href="#equation-439741fd-972b-4253-bb90-b79dd4fb40c3" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:n-tot-real}
+<div class="amsmath math notranslate nohighlight" id="equation-793fd96f-c517-467d-8dd3-a31d885dea04">
+<span class="eqno">(18)<a class="headerlink" href="#equation-793fd96f-c517-467d-8dd3-a31d885dea04" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:n-tot-real}
     \rho ^{\text{tot}}(\vb{r})
     =  \sum_{\ell  } \sum_{\vb{n}}^{\infty } Z_{\ell } \rho ^{g}(\vb{r}- \vb*{\tau }_{\ell } - \vb{R}_{\vb{n}})
     = - (\pi  /\eta^{2} )^{-\frac{3}{2}}  \sum_{\ell  } \sum_{\vb{n}}^{\infty } Z_{\ell } \exp (-\eta ^{2} \norm{\vb{r}- \vb*{\tau }_{\ell } - \vb{R}_{\vb{n}}}^{2})
 \end{equation}\]</div>
 <p>whose Fourier space representation is</p>
-<div class="amsmath math notranslate nohighlight" id="equation-43ed7261-7201-4a4e-b8fb-6cb217b41bf2">
-<span class="eqno">(19)<a class="headerlink" href="#equation-43ed7261-7201-4a4e-b8fb-6cb217b41bf2" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:n-tot-fourier}
+<div class="amsmath math notranslate nohighlight" id="equation-2d56af4c-bea2-494d-a2d7-1bcf07da239b">
+<span class="eqno">(19)<a class="headerlink" href="#equation-2d56af4c-bea2-494d-a2d7-1bcf07da239b" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:n-tot-fourier}
 \tilde{\rho }^{\text{tot}}(\vb{G})
     = -\frac{1}{\Omega }\sum_{\ell  }  Z_{\ell } e^{-\text{i} \vb{G}\cdot  \vb*{\tau }_{\ell }} \exp (-\frac{\norm{\vb{G}}^{2}}{4 \eta ^{2} } )
 \end{equation}\]</div>
 <p>From the previous section, the <strong>Coulombic potential</strong> generated by <span class="math notranslate nohighlight">\(\rho ^{\text{tot}}\)</span> is</p>
-<div class="amsmath math notranslate nohighlight" id="equation-94637db3-83c7-437c-b48f-fba7dbfaddc3">
-<span class="eqno">(20)<a class="headerlink" href="#equation-94637db3-83c7-437c-b48f-fba7dbfaddc3" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-d00e3155-f8fa-485a-9989-866223220c39">
+<span class="eqno">(20)<a class="headerlink" href="#equation-d00e3155-f8fa-485a-9989-866223220c39" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \tilde{V}^{\text{tot}}(\vb{G}) = \left\{\begin{array}{cc}
     \frac{4\pi}{\norm{\vb{G}}^{2}} \tilde{\rho }^{\text{tot}}(\vb{G}), &amp; \vb{G}\neq \vb{0}, \\
     0, &amp; \vb{G}= \vb{0}, \\
   \end{array}\right.
 \end{equation}\]</div>
 <p>therefore for the case of <span class="math notranslate nohighlight">\(\vb{G}\neq \vb{0}\)</span></p>
-<div class="amsmath math notranslate nohighlight" id="equation-89b5c65d-ea41-4231-b3a2-e0100d3aef07">
-<span class="eqno">(21)<a class="headerlink" href="#equation-89b5c65d-ea41-4231-b3a2-e0100d3aef07" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-cdfaa016-616d-477f-998d-ec8a55b18e68">
+<span class="eqno">(21)<a class="headerlink" href="#equation-cdfaa016-616d-477f-998d-ec8a55b18e68" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \hat{V}^{\text{tot}}(\vb{G})
   =-    \frac{1}{\Omega } \sum_{\vb{G}\neq 0} \sum_{\ell } Z_{\ell } \frac{4\pi}{\norm{\vb{G}}^{2}}  \exp (-\frac{\norm{\vb{G}}^{2}}{4 \eta ^{2} } ) e^{-\text{i}\vb{G}^{\top}  \vb*{\tau }_{\ell }} = \tilde{V} _{\text{lr}}(\vb{G}).
 \end{equation}\]</div>
 <p>where removing the <span class="math notranslate nohighlight">\(\vb{G}=\vb{0}\)</span> term is equivalent to screening by uniform charge. Therefore</p>
-<div class="amsmath math notranslate nohighlight" id="equation-b3dc21b6-c8d8-4525-9f9e-2dc491258c19">
-<span class="eqno">(22)<a class="headerlink" href="#equation-b3dc21b6-c8d8-4525-9f9e-2dc491258c19" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-646d29db-9867-449e-bfda-4940ff7fcb2c">
+<span class="eqno">(22)<a class="headerlink" href="#equation-646d29db-9867-449e-bfda-4940ff7fcb2c" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \nu _{\text{lr}} \star \rho ^{\text{atom}} + \frac{1}{r} \star \rho ^{-} = V_{\text{lr}} = V^{\text{tot}} = \frac{1}{r} \star  [\rho^{\text{tot}} + \rho^{-}]
 \end{equation}\]</div>
 <p>which says the long-range potential is the Coulombic potential generated via a neutralized Gaussian charge distribution <span class="math notranslate nohighlight">\(\rho^{\text{tot}} + \rho ^-\)</span>.</p>
@@ -565,40 +565,40 @@ V_{\text{lr}}(\vb{r}) = \rho ^{\text{atom}} \star \nu _{\text{lr}} = - \sum_{\el
 <section id="short-range-part">
 <h3>Short-range part<a class="headerlink" href="#short-range-part" title="Link to this heading">#</a></h3>
 <p>For simplicity, consider the case where <span class="math notranslate nohighlight">\(\rho^{\text{atom}}(\vb{r})=\delta (\vb{r})\)</span>, i.e. a system where there’s a unit positive charge at the origin. Then</p>
-<div class="amsmath math notranslate nohighlight" id="equation-ecff8dcb-ee9c-4862-9998-080f5569c891">
-<span class="eqno">(23)<a class="headerlink" href="#equation-ecff8dcb-ee9c-4862-9998-080f5569c891" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-ba740644-f095-42ca-b06c-098239063edd">
+<span class="eqno">(23)<a class="headerlink" href="#equation-ba740644-f095-42ca-b06c-098239063edd" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \nabla ^{2} \left[ \nu_{\text{lr}} \star \rho ^{\text{atom}}  \right] =  \nabla ^{2} \left[\text{erf}(\eta \norm{\vb{r}}) \frac{1}{ \norm{\vb{r}}}\right]
      = -4\pi [-\rho^{g}(\vb{r})].
 \end{equation}\]</div>
 <p>Plug this into Poisson equation we get</p>
-<div class="amsmath math notranslate nohighlight" id="equation-4748bb6b-9226-4b24-8f21-a82d1600b499">
-<span class="eqno">(24)<a class="headerlink" href="#equation-4748bb6b-9226-4b24-8f21-a82d1600b499" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-b3ad2516-0782-41bb-9c1c-3ec8de659c14">
+<span class="eqno">(24)<a class="headerlink" href="#equation-b3ad2516-0782-41bb-9c1c-3ec8de659c14" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \nabla ^{2} [\nu _{\text{sr}}\star  \rho^{\text{atom}}](\vb{r})
   =\nabla ^{2} [(\frac{1}{r} - \nu _{\text{lr}})\star  \rho^{\text{atom}}](\vb{r})
   =\nabla ^{2} [\frac{1}{r} \star  \rho^{\text{atom}}](\vb{r}) - \nabla ^{2} [\nu _{\text{lr}} \star  \rho^{\text{atom}}](\vb{r})
  = -4\pi  [\rho ^{\text{atom}}-\rho ^{g }](\vb{r})  .
 \end{equation}\]</div>
 <p>It is easy to see that in the general case where <span class="math notranslate nohighlight">\(\rho ^{\text{atom}}(\vb{r})=-\sum_{\ell} Z_{\ell }\delta (\vb{r}-\vb*{\tau }_{\ell })\)</span> we have</p>
-<div class="amsmath math notranslate nohighlight" id="equation-a021d6a1-f3a0-497d-978c-4ffb5388a955">
-<span class="eqno">(25)<a class="headerlink" href="#equation-a021d6a1-f3a0-497d-978c-4ffb5388a955" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-eaccbec7-4786-4d3c-befb-b072afc15a1c">
+<span class="eqno">(25)<a class="headerlink" href="#equation-eaccbec7-4786-4d3c-befb-b072afc15a1c" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \nabla ^{2} [\nu _{\text{sr}}\star  \rho^{\text{atom}}](\vb{r})
  = -4\pi  [\rho ^{\text{atom}}-\rho ^{\text{tot} }](\vb{r})  .
 \end{equation}\]</div>
 <p>Now this implies that</p>
-<div class="amsmath math notranslate nohighlight" id="equation-52fc50ab-0caf-4de5-b297-24479364e2a5">
-<span class="eqno">(26)<a class="headerlink" href="#equation-52fc50ab-0caf-4de5-b297-24479364e2a5" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:ewald-sr}
+<div class="amsmath math notranslate nohighlight" id="equation-b52329b1-165c-40c6-921e-3fe1a46a92b6">
+<span class="eqno">(26)<a class="headerlink" href="#equation-b52329b1-165c-40c6-921e-3fe1a46a92b6" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:ewald-sr}
   \nu_{\text{sr}}\star \rho^{\text{atom}} - C = \frac{1}{r} \star [\rho^{\text{atom}}-\rho^{\text{tot}}]
 \end{equation}\]</div>
 <p>where the constant <span class="math notranslate nohighlight">\(C\)</span> is the average value of <span class="math notranslate nohighlight">\(G_{\text{sr}}\star \rho^{\text{atom}}\)</span>, which is there due to the zero average condition of the potential. The value of <span class="math notranslate nohighlight">\(C\)</span> can be calculated:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-9abf653b-1ae3-4a07-a891-7b971b6edf90">
-<span class="eqno">(27)<a class="headerlink" href="#equation-9abf653b-1ae3-4a07-a891-7b971b6edf90" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-f1a17734-bde0-4cc3-8be3-733c82dc1edd">
+<span class="eqno">(27)<a class="headerlink" href="#equation-f1a17734-bde0-4cc3-8be3-733c82dc1edd" title="Permalink to this equation">#</a></span>\[\begin{equation}
     C = \frac{1}{\Omega} \int_{\Omega }\dd{\vb{r}} [\nu _{\text{sr}}\star \rho  ^{\text{atom}}](\vb{r})
     = -\frac{\pi }{\Omega \eta ^{2}}.
 \end{equation}\]</div>
 <p>We see that <strong>this construction converts the hard-to-apply charge neutral correct in real space to just a zero average condition of the potential</strong>.</p>
 <p>Now we can calculate the short-range part of the nucleus energy via a real space summation:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-f30538e8-a6d8-4962-b821-b26ae7f5456e">
-<span class="eqno">(28)<a class="headerlink" href="#equation-f30538e8-a6d8-4962-b821-b26ae7f5456e" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-15c384f2-c0c5-4644-82f2-5f605c1f0c3b">
+<span class="eqno">(28)<a class="headerlink" href="#equation-15c384f2-c0c5-4644-82f2-5f605c1f0c3b" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \begin{split}
   E_{\text{nuc}}^{\text{sr}} =&amp; \frac{1}{2} \int_{\Omega } \dd{\vb{r}} [\nu _{\text{sr}}\star \rho ^{\text{atom}}-C](\vb{r}) \rho ^{\text{atom}}(\vb{r}). \\
   \approx&amp; \frac{1}{2} \sum_{\ell, \ell'} \sum_{\vb{n}}^{L} Z_{\ell }Z_{\ell '} \frac{\text{erfc}(\eta \norm{\vb*{\tau }_{\ell }- \vb*{\tau }_{\ell' } - \vb{R}_{\vb{n}}})}{\norm{\vb*{\tau }_{\ell } - \vb*{\tau }_{\ell' } - \vb{R}_{\vb{n}}}} - \frac{\pi Z_{\text{tot}}^{2}}{2\Omega \eta ^{2}}.
@@ -610,14 +610,14 @@ V_{\text{lr}}(\vb{r}) = \rho ^{\text{atom}} \star \nu _{\text{lr}} = - \sum_{\el
 <section id="long-range-part">
 <h3>Long-range part<a class="headerlink" href="#long-range-part" title="Link to this heading">#</a></h3>
 <p>The long-range contribution is</p>
-<div class="amsmath math notranslate nohighlight" id="equation-c842d065-7e3c-42c4-b208-f4ac670c6cc1">
-<span class="eqno">(29)<a class="headerlink" href="#equation-c842d065-7e3c-42c4-b208-f4ac670c6cc1" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-2763a94d-d237-4517-b664-f40ae8460091">
+<span class="eqno">(29)<a class="headerlink" href="#equation-2763a94d-d237-4517-b664-f40ae8460091" title="Permalink to this equation">#</a></span>\[\begin{equation}
   E_{\text{nuc}}^{\text{lr}} = \frac{1}{2} \int_{\Omega } \dd{\vb{r}} V_{\text{lr}}(\vb{r})
   \rho ^{\text{atom}}(\vb{r}) = \frac{1}{2} \sum_{\vb{G}\neq \vb{0}} \tilde{V}_{\text{lr}} (\vb{G})^* \tilde{\rho}^{\text{atom}}(\vb{G}).
 \end{equation}\]</div>
 <p>It <strong>decays fast in the reciprocal space</strong>. So with a reasonably small reciprocal mesh <span class="math notranslate nohighlight">\(L'\)</span>, we can calculate the long-range contribution to energy:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-70dbc9dd-5d38-4227-9acc-bde356d5d2f8">
-<span class="eqno">(30)<a class="headerlink" href="#equation-70dbc9dd-5d38-4227-9acc-bde356d5d2f8" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-03a3213b-42e6-458d-a5a1-e81ef273bdc6">
+<span class="eqno">(30)<a class="headerlink" href="#equation-03a3213b-42e6-458d-a5a1-e81ef273bdc6" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \begin{aligned}
     E^{\text{lr}}_{\text{nuc}}
     \approx&amp; \frac{1}{2\Omega } \sum_{\vb{G}\neq \vb{0}}^{L'} \sum_{\ell } \sum_{\ell' } Z_{\ell } Z_{\ell'} \frac{4\pi}{\norm{\vb{G}}^{2}}  \exp (-\frac{\norm{\vb{G}}^{2}}{4 \eta ^{2} } ) e^{\text{i}\vb{G} \cdot (\vb*{\tau }_{\ell '}-\vb*{\tau }_{\ell })} \\
@@ -626,13 +626,13 @@ V_{\text{lr}}(\vb{r}) = \rho ^{\text{atom}} \star \nu _{\text{lr}} = - \sum_{\el
 \end{equation}\]</div>
 <p>We also need to remove the self-interaction for the long-range part like in the short-range part. Specifically,
 since</p>
-<div class="amsmath math notranslate nohighlight" id="equation-5bdca101-0218-41b1-82e4-fd1b28849fc4">
-<span class="eqno">(31)<a class="headerlink" href="#equation-5bdca101-0218-41b1-82e4-fd1b28849fc4" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-261544d0-bcfd-4af4-8512-854495d111c5">
+<span class="eqno">(31)<a class="headerlink" href="#equation-261544d0-bcfd-4af4-8512-854495d111c5" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \nu _{\text{lr}} \star \rho ^{\text{atom}} + \frac{1}{r} \star \rho ^{-} = V_{\text{lr}},
 \end{equation}\]</div>
 <p>we need to remove the interaction between <span class="math notranslate nohighlight">\(\nu_{\text{lr}} \star \rho^{\text{atom}}\)</span> and the portion of <span class="math notranslate nohighlight">\(\rho^{\text{atom}}\)</span> within <span class="math notranslate nohighlight">\(\Omega\)</span>:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-71943a61-5a9e-4495-8e7c-e03062be253d">
-<span class="eqno">(32)<a class="headerlink" href="#equation-71943a61-5a9e-4495-8e7c-e03062be253d" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-e7cf4c64-15a4-49f9-b2bb-d1eabc17cfb3">
+<span class="eqno">(32)<a class="headerlink" href="#equation-e7cf4c64-15a4-49f9-b2bb-d1eabc17cfb3" title="Permalink to this equation">#</a></span>\[\begin{equation}
     E^{\text{self}}_{\text{nuc}}
     = \frac{1}{2} \int_{\Omega}\dd{\vb{r}} [\nu _{\text{lr}} \star  \rho ^{\text{atom}}](\vb{r}) \rho ^{\text{atom}}(\vb{r})
     = \sum_{\ell }  Z_{\ell }^{2} \eta  / \sqrt{\pi}.
@@ -643,8 +643,8 @@ since</p>
 <section id="summary">
 <h2>Summary<a class="headerlink" href="#summary" title="Link to this heading">#</a></h2>
 <p>The nucleus repulsion energy can now be evaluated using Ewald summation:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-b054226c-6aba-4631-8124-9e8f06b37672">
-<span class="eqno">(33)<a class="headerlink" href="#equation-b054226c-6aba-4631-8124-9e8f06b37672" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-171c494a-2eeb-494d-b4c0-d9da767096c3">
+<span class="eqno">(33)<a class="headerlink" href="#equation-171c494a-2eeb-494d-b4c0-d9da767096c3" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \begin{split}
     E_{\text{nuc}}' =
  \frac{1}{2} \int_{\Omega } \dd{\vb{r}}  V_{\text{nuc}}'(\vb{r}) \rho^{\text{atom}}(\vb{r}) - E^{\text{self}}_{\text{nuc}}
@@ -653,8 +653,8 @@ since</p>
 \end{equation}\]</div>
 <p>where <span class="math notranslate nohighlight">\(V_{\text{nuc}}',E_{\text{nuc}}'\)</span> means we have incorporated self-interaction correction,
 and we have the following decomposition of the nucleus potential</p>
-<div class="amsmath math notranslate nohighlight" id="equation-1a763e8d-d6b2-4395-a76e-0bad0d324bf8">
-<span class="eqno">(34)<a class="headerlink" href="#equation-1a763e8d-d6b2-4395-a76e-0bad0d324bf8" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:ewald-pot}
+<div class="amsmath math notranslate nohighlight" id="equation-b3884c8b-e4be-4eb3-bce8-db1b4c8a6684">
+<span class="eqno">(34)<a class="headerlink" href="#equation-b3884c8b-e4be-4eb3-bce8-db1b4c8a6684" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:ewald-pot}
   \begin{split}
     V_{\text{nuc}}(\vb{r}) =&amp; (\frac{1}{r} \star [\rho^{\text{atom}}+\rho^{-}])(\vb{r}) = [G_{\text{sr}}\star \rho^{\text{atom}} -C + V^{\text{tot}}](\vb{r}) \\
   =&amp;
