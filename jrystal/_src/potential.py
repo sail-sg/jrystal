@@ -262,12 +262,11 @@ def xc_lda(density_grid: Float[Array, 'x y z'],
 
 
 def xc_pbe(density_grid: Float[Array, 'x y z'],
-           kohn_sham: bool = False) -> Float[Array, 'x y z']:
+           nabla_density_grid: Float[Array, 'x y z 3']) -> Float[Array, 'x y z']:
   r"""Calculate the PBE exchange-correlation potential.
 
   Args:
     density_grid (Float[Array, 'x y z']): Real-space electron density.
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
 
   Returns:
     Float[Array, 'x y z']: PBE exchange-correlation potential.
@@ -276,15 +275,12 @@ def xc_pbe(density_grid: Float[Array, 'x y z'],
   if dim > 3:
     density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
 
-  if kohn_sham:
-    density_grid = stop_gradient(density_grid)
-    output = -(density_grid * 3. / jnp.pi)**(1 / 3)
-  else:
-    e_x, v_x, _ = xc.gga_x_pbe_spin(density_grid)
-    e_c, v_c, _ = xc.gga_c_pbe_spin(density_grid)
-    output = v_x + v_c
+  e_x, v_x, _ = xc.gga_x_pbe_spin(density_grid, nabla_density_grid)
+  e_c, v_c, _ = xc.gga_c_pbe_spin(density_grid, nabla_density_grid)
+  e_xc = e_x + e_c
+  v_xc = v_x + v_c
 
-  return output
+  return e_xc, v_xc
 
 
 def effective(

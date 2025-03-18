@@ -19,7 +19,7 @@ import numpy as np
 from typing import Tuple
 from jaxtyping import Array, Complex, Float, Int
 
-from . import braket, potential, pw
+from . import braket, grid, potential, pw
 from .ewald import ewald_coulomb_repulsion
 from .grid import translation_vectors
 from .utils import (
@@ -218,8 +218,8 @@ def xc_lda(
 
 def xc_pbe(
   density_grid: Float[Array, 'x y z'],
+  nabla_density_grid: Float[Array, 'x y z 3'],
   vol: Float,
-  kohn_sham: bool = False
 ) -> Float:
   r"""Calculate the PBE exchange-correlation energy.
 
@@ -238,7 +238,7 @@ def xc_pbe(
     density_grid = jnp.sum(density_grid, axis=0)
 
   num_grid = jnp.prod(jnp.array(density_grid.shape))
-  pbe_density = potential.xc_pbe(density_grid, kohn_sham)
+  pbe_density, _ = potential.xc_pbe(density_grid, nabla_density_grid)
   e_pbe = jnp.sum(pbe_density * density_grid)
   e_pbe = safe_real(e_pbe)
 
@@ -334,15 +334,23 @@ def total_energy(
   e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
-  if xc == 'lda_x':
-    if spin_restricted:
-      e_xc = xc_lda(density_grid, vol, kohn_sham)
-    else:
-      o_alpha, o_beta = occupation
-      n_alpha_grid = wave_to_density(wave_grid_arr[0], o_alpha)
-      n_beta_grid = wave_to_density(wave_grid_arr[1], o_beta)
-      e_xc = xc_lda(n_alpha_grid*2, vol, kohn_sham)/2 +\
-        xc_lda(n_beta_grid*2, vol, kohn_sham)/2
+  if xc == 'lda':
+    e_xc = xc_lda(density_grid, vol, kohn_sham)
+  elif xc == 'pbe':
+    nabla_density_grid_rec = density_grid_rec[..., None] * g_vector_grid
+    nabla_density = jnp.fft.fftn(nabla_density_grid_rec, axes=range(-4, -1))
+    cell_vectors = grid.g2cell_vectors(g_vector_grid)
+    grid_sizes = g_vector_grid.shape[:-1]
+    r_vector_grid = grid.r_vectors(cell_vectors, grid_sizes)
+    nabla_density_ = pw.nabla_density_grid(
+      r_vector_grid,
+      coefficient,
+      cell_vectors,
+      g_vector_grid,
+      occupation,
+    )
+    breakpoint()
+    e_xc = xc_pbe(density_grid, nabla_density, vol)
   else:
     raise NotImplementedError(f"xc {xc} is not supported yet.")
 
