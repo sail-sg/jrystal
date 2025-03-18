@@ -111,7 +111,7 @@ def gga_x_pbe_spin(n, zeta, dn_spin=None, **kwargs):
     return ex + 0.5 * (ex_up + ex_dw) / n, jnp.array([vx[0] + vx_up, vx[1] + vx_dw]), vsigmax
 
 
-def gga_c_pbe_spin(n, zeta, beta=0.06672455060314922, dn_spin=None, **kwargs):
+def gga_c_pbe_spin(n, dn_spin=None, **kwargs):
     """Perdew-Burke-Ernzerhof parametrization of the correlation functional (spin-polarized).
 
     Corresponds to the functional with the label GGA_C_PBE and ID 130 in Libxc.
@@ -130,6 +130,8 @@ def gga_c_pbe_spin(n, zeta, beta=0.06672455060314922, dn_spin=None, **kwargs):
     Returns:
         PBE correlation energy density, potential, and vsigma.
     """
+    zeta = 0
+    beta=0.06672455060314922
     gamma = (1 - jnp.log(2)) / jnp.pi**2
 
     pi34 = (3 / (4 * jnp.pi)) ** (1 / 3)
