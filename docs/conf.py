@@ -48,6 +48,8 @@ epub_show_urls = 'footnote'
 html_theme_options = {
   # 'style_nav_header_background': '#910f0f',
   'show_toc_level': 2,
+  "repository_url": "https://github.com/sail-sg/jrystal",
+  "use_repository_button": True,
 }
 
 # include the physics package
