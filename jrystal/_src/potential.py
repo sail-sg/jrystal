@@ -283,7 +283,17 @@ def xc_pbe(
   if dim > 3:
     density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
 
-  zeta = (n_alpha - n_beta) / (n_alpha + n_beta)
+  epsilon = 1
+  n = jnp.where(
+    (n_alpha + n_beta) > 0,
+    n_alpha + n_beta,
+    epsilon,
+  )
+  zeta = jnp.where(
+    (n_alpha + n_beta) > 0,
+    (n_alpha - n_beta) / n,
+    0,
+  )
   breakpoint()
   e_x, v_x, _ = xc.gga_x_pbe_spin(n, zeta, nabla_density_grid)
   # e_c, v_c, _ = xc.gga_c_pbe_spin(n, zeta, nabla_density_grid)
