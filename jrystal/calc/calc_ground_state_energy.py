@@ -107,6 +107,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       crystal.vol,
       occ,
       kohn_sham=False,
+      xc=config.xc,
     )
 
   def get_entropy(params_occ):

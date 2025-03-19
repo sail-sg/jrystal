@@ -50,14 +50,18 @@ def pbe_x_base(n, dn=None):
   kappa = 0.804
   mu=0.2195149727645171
 
+  breakpoint()
   norm_dn = jnp.linalg.norm(dn, axis=1)
   kf = (3 * jnp.pi**2 * n) ** (1 / 3)
   # Handle divisions by zero
   # divkf = 1 / kf
-  divkf = jnp.divide(1, kf, out=jnp.zeros_like(kf), where=kf > 0)
+  # divkf = jnp.divide(1, kf, out=jnp.zeros_like(kf), where=kf > 0)
+  divkf = jnp.where(kf > 0, 1 / kf, 0)
   # Handle divisions by zero
   # s = norm_dn * divkf / (2 * n)
-  s = jnp.divide(norm_dn * divkf, 2 * n, out=jnp.zeros_like(n), where=n > 0)
+  # s = jnp.divide(norm_dn * divkf, 2 * n, out=jnp.zeros_like(n), where=n > 0)
+#   s = jnp.where(n > 0, norm_dn * divkf / 2 / n, 0)
+  s = norm_dn * divkf / 2 / n
   f1 = 1 + mu * s**2 / kappa
   Fx = kappa - kappa / f1
   exunif = -3 * kf / (4 * jnp.pi)
@@ -72,9 +76,10 @@ def pbe_x_base(n, dn=None):
 
   # Handle divisions by zero
   # vsigmax = exunifdFx * divkf / (2 * norm_dn)
-  vsigmax = jnp.divide(
-      exunifdFx * divkf, 2 * norm_dn, out=jnp.zeros_like(norm_dn), where=norm_dn > 0
-  )
+  # vsigmax = jnp.divide(
+  #   exunifdFx * divkf, 2 * norm_dn, out=jnp.zeros_like(norm_dn), where=norm_dn > 0
+  # )
+  vsigmax = jnp.where(norm_dn > 0, exunifdFx * divkf / 2 / norm_dn, 0)
   return sx * n, jnp.array([vx]), vsigmax
 
 
@@ -98,7 +103,7 @@ def gga_x_pbe_spin(n, zeta, dn_spin=None, **kwargs):
         PBE exchange energy density, potential, and vsigma.
     """
     # Use the spin-scaling relationship Exc(n_up, n_down)=(Exc(2 n_up)+Exc(2 n_down))/2
-    zeta = zeta[0]  # Getting the non-zero values from zeta adds an extra dimension, remove it here
+    # zeta = zeta[0]  # Getting the non-zero values from zeta adds an extra dimension, remove it here
     n_up = zeta * n + n  # 2 * n_up
     n_dw = -zeta * n + n  # 2 * n_down
     ex_up, vx_up, vsigma_up = pbe_x_base(n_up, 2 * dn_spin[0], **kwargs)
@@ -111,7 +116,7 @@ def gga_x_pbe_spin(n, zeta, dn_spin=None, **kwargs):
     return ex + 0.5 * (ex_up + ex_dw) / n, jnp.array([vx[0] + vx_up, vx[1] + vx_dw]), vsigmax
 
 
-def gga_c_pbe_spin(n, dn_spin=None, **kwargs):
+def gga_c_pbe_spin(n, zeta, dn_spin=None, **kwargs):
     """Perdew-Burke-Ernzerhof parametrization of the correlation functional (spin-polarized).
 
     Corresponds to the functional with the label GGA_C_PBE and ID 130 in Libxc.

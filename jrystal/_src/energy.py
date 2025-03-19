@@ -234,9 +234,8 @@ def xc_pbe(
 
   assert density_grid.ndim in [3, 4]
 
-  if density_grid.ndim == 4:  # have spin channel
-    density_grid = jnp.sum(density_grid, axis=0)
-
+  density_grid = density_grid.reshape(2, -1)
+  nabla_density_grid = nabla_density_grid.reshape(2, -1, 3)
   num_grid = jnp.prod(jnp.array(density_grid.shape))
   pbe_density, _ = potential.xc_pbe(density_grid, nabla_density_grid)
   e_pbe = jnp.sum(pbe_density * density_grid)
@@ -336,20 +335,35 @@ def total_energy(
   if xc == 'lda':
     e_xc = xc_lda(density_grid, vol, kohn_sham)
   elif xc == 'pbe':
-    nabla_density_grid_rec = density_grid_rec[..., None] * g_vector_grid
-    nabla_density = jnp.fft.fftn(nabla_density_grid_rec, axes=range(-4, -1))
-    cell_vectors = grid.g2cell_vectors(g_vector_grid)
-    grid_sizes = g_vector_grid.shape[:-1]
-    r_vector_grid = grid.r_vectors(cell_vectors, grid_sizes)
-    nabla_density_ = pw.nabla_density_grid(
-      r_vector_grid,
-      coefficient,
-      cell_vectors,
-      g_vector_grid,
-      occupation,
+    # nabla_density_grid_rec = density_grid_rec[..., None] * g_vector_grid
+    # nabla_density = jnp.fft.ifftn(nabla_density_grid_rec, axes=range(-4, -1))
+    # cell_vectors = grid.g2cell_vectors(g_vector_grid)
+    # grid_sizes = g_vector_grid.shape[:-1]
+    # r_vector_grid = grid.r_vectors(cell_vectors, grid_sizes)
+    # nabla_density_ = pw.nabla_density_grid(
+    #   r_vector_grid,
+    #   coefficient,
+    #   cell_vectors,
+    #   g_vector_grid,
+    #   occupation,
+    # )
+
+    # separate the spin channel
+    o_alpha = jnp.copy(occupation)
+    o_alpha = o_alpha.at[1].set(0)
+    o_beta = jnp.copy(occupation)
+    o_beta = o_beta.at[0].set(0)
+    n_alpha_grid = wave_to_density(wave_grid_arr, o_alpha)
+    n_beta_grid = wave_to_density(wave_grid_arr, o_beta)
+    nabla_n_alpha_grid_rec = n_alpha_grid[..., None] * g_vector_grid
+    nabla_n_alpha_grid = jnp.fft.ifftn(nabla_n_alpha_grid_rec, axes=range(-4, -1))
+    nabla_n_beta_grid_rec = n_beta_grid[..., None] * g_vector_grid
+    nabla_n_beta_grid = jnp.fft.ifftn(nabla_n_beta_grid_rec, axes=range(-4, -1))
+    density_grid = jnp.vstack([[n_alpha_grid, n_beta_grid]])
+    nabla_density_grid = jnp.vstack(
+      [nabla_n_alpha_grid[None, ...], nabla_n_beta_grid[None, ]]
     )
-    breakpoint()
-    e_xc = xc_pbe(density_grid, nabla_density, vol)  
+    e_xc = xc_pbe(density_grid, nabla_density_grid, vol)  
   else:
     raise NotImplementedError(f"xc {xc} is not supported yet.")
 
