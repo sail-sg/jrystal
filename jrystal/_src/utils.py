@@ -162,7 +162,7 @@ def wave_to_density(
   wave_grid: Complex[Array, 'spin kpt band x y z'],
   occupation: Optional[Float[Array, 'spin kpt band']] = None,
   axis: Optional[Union[int, Tuple, List]] = None
-) -> Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band']]:
+) -> Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'x y z']]:
   """Computes electron density from wave functions in real space.
 
     Calculates the electron density by taking the absolute square of wave functions and optionally applying occupation numbers. The density can be computed for the full grid or reduced along specified dimensions.

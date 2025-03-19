@@ -39,7 +39,7 @@ from .opt_utils import (
 
 @dataclass
 class GroundStateEnergyOutput:
-  """Output of the ground state energy calculation. 
+  """Output of the ground state energy calculation.
 
   Args:
     config (JrystalConfigDict): Configuration for the calculation.
@@ -116,7 +116,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       occ,
       kohn_sham=False,
       xc=config.xc,
-      spin_restricted=config.spin_restricted,
     )
 
   def get_entropy(params_occ):
@@ -203,7 +202,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   output = GroundStateEnergyOutput(
      config, crystal, params["pw"], params["occ"], etot + ew, []
    )
- 
+
   save_file = ''.join(crystal.symbol) + "_ground_state.pkl"
   with open(save_file, "wb") as f:
     pickle.dump(output, f)

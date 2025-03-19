@@ -261,8 +261,10 @@ def xc_lda(density_grid: Float[Array, 'x y z'],
   return output
 
 
-def xc_pbe(density_grid: Float[Array, 'x y z'],
-           nabla_density_grid: Float[Array, 'x y z 3']) -> Float[Array, 'x y z']:
+def xc_pbe(
+  density_grid: Float[Array, '2 x y z'],
+  nabla_density_grid: Float[Array, '2 x y z 3'],
+) -> Float[Array, 'x y z']:
   r"""Calculate the PBE exchange-correlation potential.
 
   Args:
@@ -270,17 +272,25 @@ def xc_pbe(density_grid: Float[Array, 'x y z'],
 
   Returns:
     Float[Array, 'x y z']: PBE exchange-correlation potential.
+
+  TODO: the code here can be optimized, we can use n_alpha, n_beta as argument
+  currently we stick to these arguments just because the xc functional requires them
   """
   dim = density_grid.ndim
+  n_alpha = density_grid[0]
+  n_beta = density_grid[1]
+  n = n_alpha + n_beta
   if dim > 3:
     density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
 
-  e_x, v_x, _ = xc.gga_x_pbe_spin(density_grid, nabla_density_grid)
-  e_c, v_c, _ = xc.gga_c_pbe_spin(density_grid, nabla_density_grid)
-  e_xc = e_x + e_c
-  v_xc = v_x + v_c
+  zeta = (n_alpha - n_beta) / (n_alpha + n_beta)
+  breakpoint()
+  e_x, v_x, _ = xc.gga_x_pbe_spin(n, zeta, nabla_density_grid)
+  # e_c, v_c, _ = xc.gga_c_pbe_spin(n, zeta, nabla_density_grid)
+  # e_xc = e_x + e_c
+  # v_xc = v_x + v_c
 
-  return e_xc, v_xc
+  return e_x, v_x
 
 
 def effective(
