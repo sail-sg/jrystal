@@ -162,22 +162,18 @@ def pbe_x_base(n, dn=None):
   kappa = 0.804
   mu=0.2195149727645171
 
-  breakpoint()
-  if jnp.any(jnp.isnan(dn)):
-      print("NaN exists in dn...")
-      breakpoint()
   norm_dn = jnp.linalg.norm(dn, axis=1)
   kf = (3 * jnp.pi**2 * n) ** (1 / 3)
   # Handle divisions by zero
   # divkf = 1 / kf
   # divkf = jnp.divide(1, kf, out=jnp.zeros_like(kf), where=kf > 0)
-  kf_ = jnp.where(kf > 0, kf, 1)
-  divkf = jnp.where(kf > 0, 1 / kf_, 0)
+#   kf_ = jnp.where(kf > 0, kf, 1)
+  divkf = jnp.where(kf > 0, 1 / kf, 0)
   # Handle divisions by zero
   # s = norm_dn * divkf / (2 * n)
   # s = jnp.divide(norm_dn * divkf, 2 * n, out=jnp.zeros_like(n), where=n > 0)
-  n_ = jnp.where(n > 0, n, 1)
-  s = jnp.where(n > 0, norm_dn * divkf / 2 / n_, 0)
+#   n_ = jnp.where(n > 0, n, 1)
+  s = jnp.where(n > 0, norm_dn * divkf / 2 / n, 0)
   f1 = 1 + mu * s**2 / kappa
   Fx = kappa - kappa / f1
   exunif = -3 * kf / (4 * jnp.pi)
@@ -195,8 +191,8 @@ def pbe_x_base(n, dn=None):
   # vsigmax = jnp.divide(
   #   exunifdFx * divkf, 2 * norm_dn, out=jnp.zeros_like(norm_dn), where=norm_dn > 0
   # )
-  norm_dn_ = jnp.where(norm_dn > 0, norm_dn, 1)
-  vsigmax = jnp.where(norm_dn > 0, exunifdFx * divkf / 2 / norm_dn_, 0)
+#   norm_dn_ = jnp.where(norm_dn > 0, norm_dn, 1)
+  vsigmax = jnp.where(norm_dn > 0, exunifdFx * divkf / 2 / norm_dn, 0)
   return sx * n, jnp.array([vx]), vsigmax
 
 
@@ -279,9 +275,10 @@ def gga_c_pbe_spin(n, zeta, dn_spin=None, **kwargs):
     gec = gamma * phi3 * jnp.log(nolog)
 
     # Handle divisions by zero
-    with jnp.errstate(divide="ignore", invalid="ignore"):
-        dfz = ((1 + zeta) ** (-1 / 3) - (1 - zeta) ** (-1 / 3)) / 3
-    dfz = jnp.nan_to_num(dfz, nan=0, posinf=0, neginf=0)
+    # with jnp.errstate(divide="ignore", invalid="ignore"):
+    #     dfz = ((1 + zeta) ** (-1 / 3) - (1 - zeta) ** (-1 / 3)) / 3
+    # dfz = jnp.nan_to_num(dfz, nan=0, posinf=0, neginf=0)
+    dfz = ((1 + zeta) ** (-1 / 3) - (1 - zeta) ** (-1 / 3)) / 3
     factor = A2t4 * (2 + At2) / divsum**2
     bfpre = expec / phi3
     bf_up = bfpre * (vc_up - ec)

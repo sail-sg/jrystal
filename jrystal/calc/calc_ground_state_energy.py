@@ -92,7 +92,11 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
   def get_occupation(params):
     return occupation.idempotent(
-      params, crystal.num_electron, num_kpts, crystal.spin
+      params,
+      crystal.num_electron,
+      num_kpts,
+      crystal.spin,
+      config.spin_restricted
     )
 
   def total_energy(params_pw, params_occ):

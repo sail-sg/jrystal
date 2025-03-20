@@ -285,7 +285,7 @@ def total_energy(
   vol: Float,
   occupation: Optional[Float[Array, "spin kpt band"]] = None,
   kohn_sham: bool = False,
-  xc: str = 'lda',
+  xc: str = 'lda_x',
   split: bool = False,
 ) -> Union[Float, Tuple[Float, Float, Float, Float]]:
   r"""Calculate the total electronic energy of the system.
@@ -332,21 +332,33 @@ def total_energy(
   e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
-  if xc == 'lda':
+  if xc == 'lda_x':
     e_xc = xc_lda(density_grid, vol, kohn_sham)
   elif xc == 'pbe':
-    # nabla_density_grid_rec = density_grid_rec[..., None] * g_vector_grid
-    # nabla_density = jnp.fft.ifftn(nabla_density_grid_rec, axes=range(-4, -1))
+    # test calculating gradient using fft
     # cell_vectors = grid.g2cell_vectors(g_vector_grid)
     # grid_sizes = g_vector_grid.shape[:-1]
     # r_vector_grid = grid.r_vectors(cell_vectors, grid_sizes)
-    # nabla_density_ = pw.nabla_density_grid(
-    #   r_vector_grid,
-    #   coefficient,
-    #   cell_vectors,
-    #   g_vector_grid,
-    #   occupation,
+    # from functools import partial
+
+    # nabla_n = partial(
+    #   pw.nabla_density_grid,
+    #   coeff=coefficient,
+    #   cell_vectors=cell_vectors,
+    #   g_vector_grid=g_vector_grid,
+    #   occupation=occupation,
     # )
+    # density_r = partial(
+    #   pw.density_r,
+    #   coeff=coefficient,
+    #   cell_vectors=cell_vectors,
+    #   g_vector_grid=g_vector_grid,
+    #   occupation=occupation,
+    # )
+    # wave_grid_arr = pw.wave_grid(coefficient, vol)
+    # n_grid_rec = wave_to_density_reciprocal(wave_grid_arr, occupation)
+    # nabla_n_rec = n_grid_rec[..., None] * g_vector_grid * 1j
+    # nabla_n_grid = jnp.fft.ifftn(nabla_n_rec, axes=range(-4, -1))
 
     # separate the spin channel
     o_alpha = jnp.copy(occupation)
@@ -355,15 +367,23 @@ def total_energy(
     o_beta = o_beta.at[0].set(0)
     n_alpha_grid = wave_to_density(wave_grid_arr, o_alpha)
     n_beta_grid = wave_to_density(wave_grid_arr, o_beta)
-    nabla_n_alpha_grid_rec = n_alpha_grid[..., None] * g_vector_grid
-    nabla_n_alpha_grid = jnp.fft.ifftn(nabla_n_alpha_grid_rec, axes=range(-4, -1))
-    nabla_n_beta_grid_rec = n_beta_grid[..., None] * g_vector_grid
-    nabla_n_beta_grid = jnp.fft.ifftn(nabla_n_beta_grid_rec, axes=range(-4, -1))
+    n_alpha_grid_rec = wave_to_density_reciprocal(wave_grid_arr, o_alpha)
+    n_beta_grid_rec = wave_to_density_reciprocal(wave_grid_arr, o_beta)
+    nabla_n_alpha_grid_rec = n_alpha_grid_rec[..., None] *\
+      g_vector_grid * 1j
+    nabla_n_alpha_grid = jnp.fft.ifftn(
+      nabla_n_alpha_grid_rec, axes=range(-4, -1)
+    )
+    nabla_n_beta_grid_rec = n_beta_grid_rec[..., None] *\
+      g_vector_grid * 1j
+    nabla_n_beta_grid = jnp.fft.ifftn(
+      nabla_n_beta_grid_rec, axes=range(-4, -1)
+    )
     density_grid = jnp.vstack([[n_alpha_grid, n_beta_grid]])
     nabla_density_grid = jnp.vstack(
       [nabla_n_alpha_grid[None, ...], nabla_n_beta_grid[None, ]]
     )
-    e_xc = xc_pbe(density_grid, nabla_density_grid, vol)  
+    e_xc = xc_pbe(density_grid, jnp.real(nabla_density_grid), vol)
   else:
     raise NotImplementedError(f"xc {xc} is not supported yet.")
 

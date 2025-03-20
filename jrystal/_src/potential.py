@@ -294,13 +294,12 @@ def xc_pbe(
     (n_alpha - n_beta) / n,
     0,
   )
-  breakpoint()
   e_x, v_x, _ = xc.gga_x_pbe_spin(n, zeta, nabla_density_grid)
-  # e_c, v_c, _ = xc.gga_c_pbe_spin(n, zeta, nabla_density_grid)
-  # e_xc = e_x + e_c
-  # v_xc = v_x + v_c
+  e_c, v_c, _ = xc.gga_c_pbe_spin(n, zeta, nabla_density_grid)
+  e_xc = e_x + e_c
+  v_xc = v_x + v_c
 
-  return e_x, v_x
+  return e_xc, v_xc
 
 
 def effective(
