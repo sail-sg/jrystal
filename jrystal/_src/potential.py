@@ -187,9 +187,7 @@ def external(
   return jnp.fft.ifftn(ext_pot_grid_rcprl, axes=range(-3, 0))
 
 
-def _lda_density(
-  density_grid: Float[Array, '*d x y z']
-) -> Float[Array, '*d x y z']:
+def _lda_x(density_grid: Float[Array, '*d x y z']) -> Float[Array, '*d x y z']:
   r"""Calculate the LDA exchange-correlation energy density.
 
   Implements the Local Density Approximation (LDA) for the exchange-correlation
@@ -256,12 +254,33 @@ def xc_lda(density_grid: Float[Array, 'x y z'],
     density_grid = stop_gradient(density_grid)
     output = -(density_grid * 3. / jnp.pi)**(1 / 3)
   else:
-    return _lda_density(density_grid)
+    return _lda_x(density_grid)
 
   return output
 
 
-def xc_pbe(
+def _pbe_x(rho_r, rho_r_grad_norm):
+  kappa, mu = 0.804, 0.21951
+  kf = (3 * jnp.pi**2 * rho_r)**(1 / 3)
+  # reduced_density_gradient
+  div_kf = jnp.where(kf > 0, 1 / kf, 0)
+  drho = jnp.sqrt(rho_r_grad_norm)
+  s = jnp.where(rho_r > 0, drho * div_kf / 2 / rho_r, 0)
+  # enhancement factor
+  e_f = 1 + kappa - kappa / (1 + mu * s**2 / kappa)
+  return _lda_x(rho_r) * e_f
+
+
+def xc_pbe(density_grid: Float[Array, 'x y z'],
+           kohn_sham: bool = False) -> Float[Array, 'x y z']:
+  """
+  Args:
+    kohn_sham: if True, calculate vxc
+  """
+  assert density_grid.ndim == 3, "does not work with polarized density"
+
+
+def xc_pbe_pol(
   density_grid: Float[Array, '2 x y z'],
   nabla_density_grid: Float[Array, '2 x y z 3'],
 ) -> Float[Array, 'x y z']:

@@ -6,6 +6,7 @@ import jax.numpy as jnp
 import jrystal
 import numpy as np
 from folx import forward_laplacian
+from jax import lax
 from jaxtyping import Array, Float
 from jrystal._src.grid import (
   _half_frequency_pad_to,
@@ -80,10 +81,14 @@ def ex_pbe(rho_r, rho_r_grad_norm):
   kappa, mu = 0.804, 0.21951
   kf = (3 * jnp.pi**2 * rho_r)**(1 / 3)
   # reduced_density_gradient
-  # s = jnp.sqrt(rho_r_grad_norm / (2 * kf * rho_r))
   div_kf = jnp.where(kf > 0, 1 / kf, 0)
+  # div_kf = lax.cond(kf > 0, lambda kf_: 1 / kf_, lambda kf_: 0., kf)
   drho = jnp.sqrt(rho_r_grad_norm)
   s = jnp.where(rho_r > 0, drho * div_kf / 2 / rho_r, 0)
+  # s = lax.cond(
+  #   rho_r > 0, lambda rho_r_: drho * div_kf / 2 / rho_r_, lambda rho_r_: 0.,
+  #   rho_r
+  # )
   # enhancement factor
   e_f = 1 + kappa - kappa / (1 + mu * s**2 / kappa)
   return lda_x(rho_r) * e_f
@@ -99,6 +104,30 @@ def lapl_r(fn, rs):
 def lapl_G(fn, rs):
   f_G = jnp.fft.fftn(fn(rs))
   return -1 * (gs**2).sum(-1) * f_G
+
+
+def vxc_gga_pw_integrand_recp_new(c, rs, gs, exc, rho_r_fn, rho_r_grad_norm_fn):
+  rho_r_ = rho_r_fn(c, rs)
+  rho_G = jnp.fft.fftn(rho_r_)
+  rho_r_flat = rho_r_.reshape(-1)
+  rho_r_grad_norm_ = rho_r_grad_norm_fn(c, rs, gs)
+  rho_r_grad_norm_flat = rho_r_grad_norm_.reshape(-1)
+  dexc_drho_flat = jax.vmap(jax.grad(exc))(rho_r_flat, rho_r_grad_norm_flat)
+  dexc_drho_grad_norm_flat = jax.vmap(jax.grad(exc, argnums=1)
+                                     )(rho_r_flat, rho_r_grad_norm_flat)
+
+  t = dexc_drho_grad_norm_flat.reshape(grid_sizes) * rho_r_
+  # HACK
+  t = t.at[0, 0, 0].set(0)
+
+  g_axes = list(range(gs.ndim - 1))
+
+  t1 = dexc_drho_flat.reshape(grid_sizes) * rho_r_
+  t2 = exc(rho_r_, rho_r_grad_norm_)
+  t3 = t[..., None] * jnp.fft.ifftn(1j * gs * rho_G[..., None], axes=g_axes)
+  vxc_G = jnp.fft.fftn(t1 + t2) - 2 * (1j * gs *
+                                       jnp.fft.fftn(t3, axes=g_axes)).sum(-1)
+  return vxc_G
 
 
 def vxc_gga_pw_integrand_recp(
@@ -174,7 +203,7 @@ if __name__ == '__main__':
   config = jrystal.config.get_config()
 
   nO = 2
-  nG = 10
+  nG = 5
 
   config.crystal = 'diamond1'
   config.grid_sizes = nG
@@ -204,9 +233,15 @@ if __name__ == '__main__':
   lapl_G_2 = lapl_G(fn, rs)
   np.allclose(lapl_G_1, lapl_G_2)
 
+  vxc_G_0 = vxc_gga_pw_integrand_recp_new(
+    c, rs, gs, ex_pbe, rho_r_fn, rho_r_grad_norm_fn
+  )
+
   vxc_G_1 = vxc_gga_pw_integrand_recp(
     c, rs, gs, ex_pbe, rho_r_fn, rho_r_grad_norm_fn
   )
+  print(np.allclose(vxc_G_0, vxc_G_1, atol=1e-4))
+
   vxc_G_2 = vxc_gga_pw_integrand_recp(
     c, rs, gs, ex_pbe, rho_r_fn, rho_r_grad_norm_fn, lapl_recp=False
   )
