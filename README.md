@@ -50,7 +50,7 @@ To build and serve the documentation locally:
 ```sh
 make doc-dev
 ```
-Then visit `localhost:6400`.
+Then visit `localhost:8000`.
 
 ## Usage
 
