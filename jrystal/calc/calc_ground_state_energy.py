@@ -100,7 +100,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       crystal.num_electron,
       num_kpts,
       crystal.spin,
-      config.spin_restricted,
+      config.spin_restricted
     )
 
   def total_energy(params_pw, params_occ, g_vec=g_vec):
