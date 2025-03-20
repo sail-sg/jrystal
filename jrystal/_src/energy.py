@@ -219,6 +219,7 @@ def xc_lda(
 def xc_pbe(
   density_grid: Float[Array, 'x y z'],
   nabla_density_grid: Float[Array, 'x y z 3'],
+  g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
 ) -> Float:
   r"""Calculate the PBE exchange-correlation energy.
@@ -237,7 +238,9 @@ def xc_pbe(
   density_grid = density_grid.reshape(2, -1)
   nabla_density_grid = nabla_density_grid.reshape(2, -1, 3)
   num_grid = jnp.prod(jnp.array(density_grid.shape))
-  pbe_density, _ = potential.xc_pbe(density_grid, nabla_density_grid)
+  pbe_density, _ = potential.xc_pbe(
+    density_grid, nabla_density_grid, g_vector_grid
+  )
   e_pbe = jnp.sum(pbe_density * density_grid)
   e_pbe = safe_real(e_pbe)
 
@@ -383,7 +386,9 @@ def total_energy(
     nabla_density_grid = jnp.vstack(
       [nabla_n_alpha_grid[None, ...], nabla_n_beta_grid[None, ]]
     )
-    e_xc = xc_pbe(density_grid, jnp.real(nabla_density_grid), vol)
+    e_xc = xc_pbe(
+      density_grid, jnp.real(nabla_density_grid), g_vector_grid, vol
+    )
   else:
     raise NotImplementedError(f"xc {xc} is not supported yet.")
 

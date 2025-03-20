@@ -262,9 +262,10 @@ def xc_lda(density_grid: Float[Array, 'x y z'],
 
 
 def xc_pbe(
-  density_grid: Float[Array, '2 x y z'],
-  nabla_density_grid: Float[Array, '2 x y z 3'],
-) -> Float[Array, 'x y z']:
+  density_grid: Float[Array, '2 N'],
+  nabla_density_grid: Float[Array, '2 N 3'],
+  g_vector_grid: Float[Array, 'N 3'],
+) -> Float[Array, 'N']:
   r"""Calculate the PBE exchange-correlation potential.
 
   Args:
@@ -294,10 +295,33 @@ def xc_pbe(
     (n_alpha - n_beta) / n,
     0,
   )
-  e_x, v_x, _ = xc.gga_x_pbe_spin(n, zeta, nabla_density_grid)
+  e_x, v_x, vsigmax = xc.gga_x_pbe_spin(n, zeta, nabla_density_grid)
   e_c, v_c, _ = xc.gga_c_pbe_spin(n, zeta, nabla_density_grid)
+
+  # handle the Euler-Lagrangian term from intergration by part
+  # of the potential function
+  num = g_vector_grid.shape[0]
+  # NOTE: there is an extra factor 2 as we are evaluating the
+  # direvative at 2n_+ and 2n_-
+  tmp = (vsigmax[0][:, None] * 2 * nabla_density_grid[0]).reshape(
+    num, num, num, 3
+  )
+  tmp_rec = jnp.fft.fftn(tmp, axes=range(-4, -1))
+  div_tmp_rec = tmp_rec * g_vector_grid * 1j
+  v_xp = jnp.fft.ifftn(div_tmp_rec, axes=range(-4, -1)).reshape(-1)
+  tmp = (vsigmax[2][:, None] * 2 * nabla_density_grid[1]).reshape(
+    num, num, num, 3
+  )
+  tmp_rec = jnp.fft.fftn(tmp, axes=range(-4, -1))
+  div_tmp_rec = tmp_rec * g_vector_grid * 1j
+  v_xn = jnp.fft.ifftn(div_tmp_rec, axes=range(-4, -1)).reshape(-1)
+  v_x += v_xn * (1 + zeta) / 2 + v_xp * (1 - zeta) / 2
+
+  # TODO: handle the term for exchange
+
   e_xc = e_x + e_c
   v_xc = v_x + v_c
+
 
   return e_xc, v_xc
 
