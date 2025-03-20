@@ -1,33 +1,30 @@
 # Jrystal
 A JAX-based Differentiable Density Functional Theory Framework for Materials
 
+<div style="flex: 1; text-align: left;">
+    <img src="docs/images/jrystal_logo.png" alt="feature-solid" width="120"/>
+  </div>
+
 [**Reference docs**](https://sail-sg.github.io/jrystal/)
 
 ## Core Features
 
 <img src="docs/_static/images/feature-AD.png" alt="feature-AD" width="64" align="left"/>
 
-**Differentiable:** Leveraging JAX's automatic differentiation for efficient gradient computation of quantum properties, enabling straightforward optimization workflows.
-
-<br clear="all"/>
+**Differentiable:** Leveraging JAX's automatic differentiation for efficient gradient computation of quantum properties, enabling straightforward optimization workflows.  <br><br>
 
 <img src="docs/_static/images/feature-gpu.png" alt="feature-gpu" width="64" align="left"/>
 
-**GPU-Accelerated:** Optimized for modern GPU architectures, delivering high-performance quantum calculations with automatic hardware acceleration.
-
-<br clear="all"/>
+**GPU-Accelerated:** Optimized for modern GPU architectures, delivering high-performance quantum calculations with automatic hardware acceleration. <br><br>
 
 <img src="docs/_static/images/feature-solid.png" alt="feature-solid" width="64" align="left"/>
 
-**Solid-State Calculation:** Full-featured framework for periodic systems using plane wave basis sets, supporting precise electronic structure calculations of crystalline materials.
-
-<br clear="all"/>
+**Solid-State Calculation:** Full-featured framework for periodic systems using plane wave basis sets, supporting precise electronic structure calculations of crystalline materials. <br><br>
 
 <img src="docs/_static/images/feature-total.png" alt="feature-total" width="64" align="left"/>
 
-**Direct Optimization:** A direct minimization approach that avoids SCF iterations, enabling smooth convergence and natural integration of machine learning methods, and advanced quantum chemistry methods into density functional theory calculations.
+**Direct Optimization:** A direct minimization approach that avoids SCF iterations, enabling smooth convergence and natural integration of machine learning methods, and advanced quantum chemistry methods into density functional theory calculations. <br><br>
 
-<br clear="all"/>
 
 ## Installation
 
@@ -53,7 +50,7 @@ To build and serve the documentation locally:
 ```sh
 make doc-dev
 ```
-Then visit `localhost:8000`.
+Then visit `localhost:6400`.
 
 ## Usage
 
@@ -150,6 +147,3 @@ If you find this project useful, please cite:
 
 This project is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 
-## Documentation
-
-For detailed documentation, tutorials, and API reference, please visit our [documentation page](https://jrystal.readthedocs.io/).
