@@ -378,6 +378,7 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.grid_vector_radius"><code class="docutils literal notranslate"><span class="pre">grid_vector_radius()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.k_vectors"><code class="docutils literal notranslate"><span class="pre">k_vectors()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.proper_grid_size"><code class="docutils literal notranslate"><span class="pre">proper_grid_size()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r2cell_vectors"><code class="docutils literal notranslate"><span class="pre">r2cell_vectors()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r2g_vector_grid"><code class="docutils literal notranslate"><span class="pre">r2g_vector_grid()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r_vectors"><code class="docutils literal notranslate"><span class="pre">r_vectors()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.spherical_mask"><code class="docutils literal notranslate"><span class="pre">spherical_mask()</span></code></a></li>
@@ -604,6 +605,27 @@ This optimization can significantly improve FFT performance.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.r2cell_vectors">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">r2cell_vectors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#r2cell_vectors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.r2cell_vectors" title="Link to this definition">#</a></dt>
+<dd><p>Compute real space cell vectors from an R-vector grid.</p>
+<p>Determines the real space lattice vectors by solving a linear system
+that relates the R-vector grid to the standard real space basis.
+This is useful when only the R-vectors are known and the corresponding
+cell vectors are needed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>r_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of R-vectors in real space.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Real space lattice vectors as a (3,3) matrix where each row is a lattice vector.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, ‘3 3’]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="jrystal.grid.r2g_vector_grid">
 <span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">r2g_vector_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#r2g_vector_grid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.r2g_vector_grid" title="Link to this definition">#</a></dt>
 <dd><p>Transform an R-vector grid to the corresponding G-vector grid.</p>
@@ -764,6 +786,7 @@ Default is 1e4.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.grid_vector_radius"><code class="docutils literal notranslate"><span class="pre">grid_vector_radius()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.k_vectors"><code class="docutils literal notranslate"><span class="pre">k_vectors()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.proper_grid_size"><code class="docutils literal notranslate"><span class="pre">proper_grid_size()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r2cell_vectors"><code class="docutils literal notranslate"><span class="pre">r2cell_vectors()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r2g_vector_grid"><code class="docutils literal notranslate"><span class="pre">r2g_vector_grid()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r_vectors"><code class="docutils literal notranslate"><span class="pre">r_vectors()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.spherical_mask"><code class="docutils literal notranslate"><span class="pre">spherical_mask()</span></code></a></li>
