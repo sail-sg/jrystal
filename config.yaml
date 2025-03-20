@@ -12,7 +12,8 @@ crystal_file_path_path: null
 #         Exchange-Correlation Setting         #
 ################################################
 # xc functional
-xc: "lda_x"
+# xc: "lda_x"
+xc: "pbe"
 
 ################################################
 #           Pseudopotential Setting            #
