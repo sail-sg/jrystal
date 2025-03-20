@@ -215,7 +215,7 @@ def xc_lda(
   return e_lda * vol / num_grid
 
 
-def xc_functional(
+def exc_functional(
   density_grid: Float[Array, 'x y z'],
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
@@ -369,7 +369,7 @@ def total_energy(
   e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
-  e_xc = xc_functional(density_grid, g_vector_grid, vol, xc, kohn_sham)
+  e_xc = exc_functional(density_grid, g_vector_grid, vol, xc, kohn_sham)
   # if xc == 'lda_x':
   #   e_xc = xc_lda(density_grid, vol, kohn_sham)
   # elif xc == 'pbe':

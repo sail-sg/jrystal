@@ -225,7 +225,7 @@ def _lda_x(density_grid: Float[Array, '*d x y z']) -> Float[Array, '*d x y z']:
   return res
 
 
-def vxc_gga_pw_integrand_recp(exc, rho_r, rho_r_grad_norm, gs):
+def vxc_gga_recp(exc, rho_r, rho_r_grad_norm, gs):
   rho_G = jnp.fft.fftn(rho_r)
   rho_r_flat = rho_r.reshape(-1)
   rho_r_grad_norm_flat = rho_r_grad_norm.reshape(-1)
@@ -327,9 +327,7 @@ def xc_pbe(
 
   if kohn_sham:  # return vxc
     # NOTE: v_eff can be calculated in reciprocal space
-    vxc_G = vxc_gga_pw_integrand_recp(
-      _pbe_x, density_grid, grad_norm, g_vector_grid
-    )
+    vxc_G = vxc_gga_recp(_pbe_x, density_grid, grad_norm, g_vector_grid)
     vxc_r = jnp.fft.ifft(vxc_G)
     return vxc_r
   else:
