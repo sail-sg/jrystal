@@ -186,6 +186,11 @@ if __name__ == '__main__':
   c_dense = jnp.linalg.qr(w)[0].T.reshape((nO, *half_grid_sizes))
   c = _half_frequency_pad_to(c_dense, grid_sizes)
 
+  grad_norm_ad = rho_r_grad_norm_fn_ad(c, rs)
+  grad_norm = rho_r_grad_norm_fn(c, rs, gs)
+
+  np.allclose(grad_norm, grad_norm_ad)
+
   orbs = u(crystal.cell_vectors, c, rs, force_fft=True)
   # sum over the orbitals densities
 
