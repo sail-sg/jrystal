@@ -78,9 +78,12 @@ def rho_r_grad_norm_fn(c_, r_, gs):
 
 def ex_pbe(rho_r, rho_r_grad_norm):
   kappa, mu = 0.804, 0.21951
-  kf = jnp.cbrt(3 * mu**2 * rho_r)
+  kf = (3 * jnp.pi**2 * rho_r)**(1 / 3)
   # reduced_density_gradient
-  s = jnp.sqrt(rho_r_grad_norm / (2 * kf * rho_r))
+  # s = jnp.sqrt(rho_r_grad_norm / (2 * kf * rho_r))
+  div_kf = jnp.where(kf > 0, 1 / kf, 0)
+  drho = jnp.sqrt(rho_r_grad_norm)
+  s = jnp.where(rho_r > 0, drho * div_kf / 2 / rho_r, 0)
   # enhancement factor
   e_f = 1 + kappa - kappa / (1 + mu * s**2 / kappa)
   return lda_x(rho_r) * e_f
@@ -116,6 +119,7 @@ def vxc_gga_pw_integrand_recp(
     lapl_rho_r = lapl_r(partial(rho_r_fn, c), rs)
 
   t = dexc_drho_grad_norm_flat.reshape(grid_sizes) * rho_r_
+  t = t.at[0, 0, 0].set(0)
 
   g_axes = list(range(gs.ndim - 1))
 
@@ -154,6 +158,7 @@ def vxc_gga_pw_integrand_recp_fwd(
     rho_r_grad = rho_r_grad_flat.reshape((*grid_sizes, 3))
 
   t = dexc_drho_grad_norm_flat.reshape(grid_sizes) * rho_r_
+  t = t.at[0, 0, 0].set(0)
 
   t1 = dexc_drho_flat.reshape(grid_sizes) * rho_r_
   t2 = exc(rho_r_, rho_r_grad_norm_)
@@ -169,7 +174,7 @@ if __name__ == '__main__':
   config = jrystal.config.get_config()
 
   nO = 2
-  nG = 5
+  nG = 10
 
   config.crystal = 'diamond1'
   config.grid_sizes = nG
@@ -189,7 +194,7 @@ if __name__ == '__main__':
   grad_norm_ad = rho_r_grad_norm_fn_ad(c, rs)
   grad_norm = rho_r_grad_norm_fn(c, rs, gs)
 
-  np.allclose(grad_norm, grad_norm_ad)
+  assert np.allclose(grad_norm, grad_norm_ad)
 
   orbs = u(crystal.cell_vectors, c, rs, force_fft=True)
   # sum over the orbitals densities
@@ -197,7 +202,7 @@ if __name__ == '__main__':
   fn = partial(rho_r_fn, c)
   lapl_G_1 = jnp.fft.fftn(lapl_r(fn, rs))
   lapl_G_2 = lapl_G(fn, rs)
-  np.allclose(lapl_G_1, lapl_G_2, atol=1e-4)
+  np.allclose(lapl_G_1, lapl_G_2)
 
   vxc_G_1 = vxc_gga_pw_integrand_recp(
     c, rs, gs, ex_pbe, rho_r_fn, rho_r_grad_norm_fn
@@ -213,11 +218,11 @@ if __name__ == '__main__':
     c, rs, gs, ex_pbe, rho_r_fn, rho_r_grad_norm_fn, grad_recp=False
   )
 
-  np.allclose(vxc_G_1, vxc_G_2)
+  assert np.allclose(vxc_G_1, vxc_G_2, atol=1e-4)
 
-  np.allclose(vxc_G_3, vxc_G_4, atol=1e-5)
+  assert np.allclose(vxc_G_3, vxc_G_4, atol=1e-4)
 
-  np.allclose(vxc_G_1, vxc_G_3, atol=1e-1)
+  # assert np.allclose(vxc_G_1, vxc_G_3, atol=1e-1)
 
   # benchmark time
   f1 = jax.jit(
@@ -240,7 +245,7 @@ if __name__ == '__main__':
     )
   )
 
-  def get_avg_time(f, x, N=10):
+  def get_avg_time(f, x, N=100):
     f(x).block_until_ready()
     avg_time = timeit.timeit(lambda: f(x).block_until_ready(), number=N) / N
     return avg_time
