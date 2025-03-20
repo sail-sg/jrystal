@@ -13,33 +13,36 @@
 # limitations under the License.
 """Band Structure Calculator. """
 
+import time
+from dataclasses import dataclass
+from math import ceil
+from typing import Optional
+
 import jax
 import jax.numpy as jnp
 import optax
-from math import ceil
-
-import time
-from typing import Optional
-from dataclasses import dataclass
 from absl import logging
 from tqdm import tqdm
 
-from .calc_ground_state_energy import calc as energy_calc
-from .calc_ground_state_energy import GroundStateEnergyOutput
-from .opt_utils import set_env_params, create_crystal, create_freq_mask
-from .opt_utils import create_grids, create_optimizer
-
-from ..config import JrystalConfigDict
-from .._src import pw, hamiltonian, occupation
+from .._src import hamiltonian, occupation, pw
 from .._src.band import get_k_path
 from .._src.crystal import Crystal
-from .._src.utils import wave_to_density
+from ..config import JrystalConfigDict
+from .calc_ground_state_energy import GroundStateEnergyOutput
+from .calc_ground_state_energy import calc as energy_calc
+from .opt_utils import (
+  create_crystal,
+  create_freq_mask,
+  create_grids,
+  create_optimizer,
+  set_env_params
+)
 
 
 @dataclass
 class BandStructureOutput:
-  """Output of the band structure calculation. 
-  
+  """Output of the band structure calculation.
+
   Args:
     config (JrystalConfigDict): Configuration for the calculation.
     crystal (Crystal): The crystal object.
@@ -79,7 +82,6 @@ def calc(
   crystal = create_crystal(config)
   g_vec, _, k_vec = create_grids(config)
   freq_mask = create_freq_mask(config)
-  xc = config.xc
 
   # generate K-path.
   logging.info("===> Generating K-path...")
@@ -136,8 +138,7 @@ def calc(
       g_vec,
       kpts,
       crystal.vol,
-      xc,
-      config.spin_restricted,
+      xc=config.xc,
     )
     return jnp.sum(energy).real
 
@@ -209,12 +210,8 @@ def calc(
   logging.info("===> Diagonalizing the Hamiltonian matrix...")
 
   @jax.jit
-  def eig_fn(
-    coeff_k, 
-    k, 
-    ground_state_density_grid, 
-    g_vec, 
-  ):
+  def eig_fn(param, k):
+    coeff_k = pw.coeff(param, freq_mask)
     hamil_matrix = hamiltonian.hamiltonian_matrix(
       coeff_k,
       crystal.positions,
@@ -223,8 +220,7 @@ def calc(
       g_vec,
       k,
       crystal.vol,
-      xc,
-      config.spin_restricted,
+      config.xc,
       kohn_sham=True,
     )
 

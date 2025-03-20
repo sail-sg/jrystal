@@ -18,9 +18,7 @@ import jax
 import jax.numpy as jnp
 from jax.lax import stop_gradient
 from jaxtyping import Array, Complex, Float
-from jrystal._src.grid import g_vectors
 
-from . import xc
 from .utils import absolute_square
 
 
@@ -347,47 +345,6 @@ def xc_density(
     return xc_pbe(density_grid, g_vector_grid, kohn_sham)
   else:
     raise NotImplementedError(f"XC {xc} not supported.")
-
-
-def xc_pbe_pol(
-  density_grid: Float[Array, '2 x y z'],
-  nabla_density_grid: Float[Array, '2 x y z 3'],
-) -> Float[Array, 'x y z']:
-  r"""Calculate the PBE exchange-correlation potential.
-
-  Args:
-    density_grid (Float[Array, 'x y z']): Real-space electron density.
-
-  Returns:
-    Float[Array, 'x y z']: PBE exchange-correlation potential.
-
-  TODO: the code here can be optimized, we can use n_alpha, n_beta as argument
-  currently we stick to these arguments just because the xc functional requires them
-  """
-  dim = density_grid.ndim
-  n_alpha = density_grid[0]
-  n_beta = density_grid[1]
-  n = n_alpha + n_beta
-  if dim > 3:
-    density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
-
-  epsilon = 1
-  n = jnp.where(
-    (n_alpha + n_beta) > 0,
-    n_alpha + n_beta,
-    epsilon,
-  )
-  zeta = jnp.where(
-    (n_alpha + n_beta) > 0,
-    (n_alpha - n_beta) / n,
-    0,
-  )
-  e_x, v_x, _ = xc.gga_x_pbe_spin(n, zeta, nabla_density_grid)
-  e_c, v_c, _ = xc.gga_c_pbe_spin(n, zeta, nabla_density_grid)
-  e_xc = e_x + e_c
-  v_xc = v_x + v_c
-
-  return e_xc, v_xc
 
 
 def effective(
