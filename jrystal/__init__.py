@@ -14,25 +14,27 @@
 
 __version__ = "0.0.1"
 
-from . import _src
-from . import crystal
-from .crystal import Crystal
-from . import calc
-
-from . import pseudopotential
-from . import utils
-from . import sbt
-from . import pw
-from . import energy
-from . import entropy
-from . import occupation
-from . import potential
-from . import hamiltonian
-from . import grid
-from . import ewald
-
-from . import config
 from pathlib import Path
+
+from . import (
+  _src,
+  bloch,
+  calc,
+  config,
+  crystal,
+  energy,
+  entropy,
+  ewald,
+  grid,
+  hamiltonian,
+  occupation,
+  potential,
+  pseudopotential,
+  pw,
+  sbt,
+  utils
+)
+from .crystal import Crystal
 
 
 def get_pkg_path():
@@ -57,4 +59,5 @@ __all__ = [
   "get_pkg_path",
   "config",
   "ewald",
+  "bloch",
 ]
