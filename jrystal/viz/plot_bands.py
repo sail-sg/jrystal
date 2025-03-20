@@ -1,4 +1,5 @@
 from typing import List, Tuple, Union
+import argparse
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -55,3 +56,27 @@ def plot_band_structure(
     fig.savefig(save_path)
 
   return fig.tight_layout()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Plot band structure from a .npy file")
+    parser.add_argument("input_file", type=str, help="Path to the .npy file containing band structure data")
+    parser.add_argument("--output", "-o", type=str, help="Output path for the plot (default: bands.png)")
+    parser.add_argument("--title", "-t", type=str, help="Title for the plot (default: Band structure)")
+    parser.add_argument("--ylim", "-y", type=float, nargs=2, help="Y-axis limits (min, max)")
+    
+    args = parser.parse_args()
+    
+    # Load the band structure data
+    ks_eigs = np.load(args.input_file)
+    
+    # Set default output path if not provided
+    output_path = args.output if args.output else "bands.png"
+    
+    # Create the plot
+    plot_band_structure(
+        ks_eigs=ks_eigs,
+        save_path=output_path,
+        title=args.title if args.title else "Band structure",
+        ylim=tuple(args.ylim) if args.ylim else None
+    )
