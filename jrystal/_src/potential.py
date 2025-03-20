@@ -14,11 +14,14 @@
 """Potentials."""
 from typing import Tuple, Union
 
+import jax
 import jax.numpy as jnp
 from jax.lax import stop_gradient
 from jaxtyping import Array, Complex, Float
+from jrystal._src.grid import g_vectors
 
 from . import xc
+from .utils import absolute_square
 
 
 def hartree_reciprocal(
@@ -222,6 +225,35 @@ def _lda_x(density_grid: Float[Array, '*d x y z']) -> Float[Array, '*d x y z']:
   return res
 
 
+def vxc_gga_pw_integrand_recp(exc, rho_r, rho_r_grad_norm, gs):
+  rho_G = jnp.fft.fftn(rho_r)
+  rho_r_flat = rho_r.reshape(-1)
+  rho_r_grad_norm_flat = rho_r_grad_norm.reshape(-1)
+  dexc_drho_flat = jax.vmap(jax.grad(exc))(rho_r_flat, rho_r_grad_norm_flat)
+  dexc_drho_grad_norm_flat = jax.vmap(jax.grad(exc, argnums=1)
+                                     )(rho_r_flat, rho_r_grad_norm_flat)
+  lapl_rho_G = -1 * (gs**2).sum(-1) * rho_G
+  lapl_rho_r = jnp.fft.ifftn(lapl_rho_G)
+
+  grid_sizes = gs.shape[:-1]
+  t = dexc_drho_grad_norm_flat.reshape(grid_sizes) * rho_r
+  # HACK
+  t = t.at[0, 0, 0].set(0)
+
+  g_axes = list(range(gs.ndim - 1))
+
+  t1 = dexc_drho_flat.reshape(grid_sizes) * rho_r
+  t2 = exc(rho_r, rho_r_grad_norm)
+  t3 = (
+    jnp.fft.ifftn(1j * gs * jnp.fft.fftn(t)[..., None], axes=g_axes) *
+    jnp.fft.ifftn(1j * gs * rho_G[..., None], axes=g_axes)
+  ).sum(-1)
+  t4 = t * lapl_rho_r
+  integrand = t1 + t2 - 2 * (t3 + t4)
+  vxc_G = jnp.fft.fftn(integrand)
+  return vxc_G
+
+
 def xc_lda(density_grid: Float[Array, 'x y z'],
            kohn_sham: bool = False) -> Float[Array, 'x y z']:
   r"""Calculate the LDA exchange-correlation potential.
@@ -271,13 +303,37 @@ def _pbe_x(rho_r, rho_r_grad_norm):
   return _lda_x(rho_r) * e_f
 
 
-def xc_pbe(density_grid: Float[Array, 'x y z'],
-           kohn_sham: bool = False) -> Float[Array, 'x y z']:
+def rho_r_grad_norm_fn(density_grid, gs):
+  rho_G = jnp.fft.fftn(density_grid)
+  grad_rho_G = rho_G[..., None] * 1j * gs
+  grad_rho_r = jnp.fft.ifftn(grad_rho_G, axes=(0, 1, 2))
+  return absolute_square(grad_rho_r).sum(-1)
+
+
+def xc_pbe(
+  density_grid: Float[Array, 'x y z'],
+  g_vector_grid,
+  kohn_sham: bool = False
+) -> Float[Array, 'x y z']:
   """
   Args:
     kohn_sham: if True, calculate vxc
   """
-  assert density_grid.ndim == 3, "does not work with polarized density"
+  dim = density_grid.ndim
+  if dim > 3:
+    density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
+
+  grad_norm = rho_r_grad_norm_fn(density_grid, g_vector_grid)
+
+  if kohn_sham:  # return vxc
+    # NOTE: v_eff can be calculated in reciprocal space
+    vxc_G = vxc_gga_pw_integrand_recp(
+      _pbe_x, density_grid, grad_norm, g_vector_grid
+    )
+    vxc_r = jnp.fft.ifft(vxc_G)
+    return vxc_r
+  else:
+    return _pbe_x(density_grid, grad_norm)
 
 
 def xc_pbe_pol(
