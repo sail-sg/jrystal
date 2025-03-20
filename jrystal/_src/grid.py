@@ -443,8 +443,8 @@ def g2cell_vectors(
   '''
   grid_sizes = g_vector_grid.shape[:-1]
   cardinality = g_vectors(jnp.eye(3), grid_sizes)
-  a = g_vector_grid.reshape([-1, 3])
-  b = cardinality.reshape([-1, 3])
+  a = cardinality.reshape([-1, 3])
+  b = g_vector_grid.reshape([-1, 3])
   return jnp.linalg.inv(jnp.linalg.inv(a.T @ a) @ a.T @ b)
 
 

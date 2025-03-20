@@ -33,6 +33,7 @@ from ._src.grid import (
   estimate_max_cutoff_energy,
   grid_vector_radius,
   g2cell_vectors,
+  r2cell_vectors,
   r2g_vector_grid,
   g2r_vector_grid,
 )
@@ -48,6 +49,7 @@ __all__ = [
   "estimate_max_cutoff_energy",
   "grid_vector_radius",
   "g2cell_vectors",
+  "r2cell_vectors",
   "r2g_vector_grid",
   "g2r_vector_grid",
 ]
