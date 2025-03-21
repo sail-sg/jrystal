@@ -201,7 +201,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     config, crystal, params["pw"], params["occ"], etot + ew, []
   )
 
-  save_file = ''.join(crystal.symbol) + "_groun_state.pkl"
+  save_file = ''.join(crystal.symbol) + "_ground_state.pkl"
   with open(save_file, "wb") as f:
     pickle.dump(output, f)
 

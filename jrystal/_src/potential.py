@@ -17,6 +17,8 @@ from typing import Tuple, Union
 import jax
 import jax.numpy as jnp
 from jax.lax import stop_gradient
+from jax_xc.impl.gga_x_pbe import unpol as pbe_jac_xc
+from jax_xc.utils import get_p
 from jaxtyping import Array, Complex, Float
 
 from .utils import absolute_square
@@ -291,15 +293,23 @@ def xc_lda(density_grid: Float[Array, 'x y z'],
 
 
 def _pbe_x(rho_r, rho_r_grad_norm):
-  kappa, mu = 0.804, 0.21951
-  kf = (3 * jnp.pi**2 * rho_r)**(1 / 3)
-  # reduced_density_gradient
-  div_kf = jnp.where(kf > 0, 1 / kf, 0)
-  drho = jnp.sqrt(rho_r_grad_norm)
-  s = jnp.where(rho_r > 0, drho * div_kf / 2 / rho_r, 0)
-  # enhancement factor
-  e_f = 1 + kappa - kappa / (1 + mu * s**2 / kappa)
-  return _lda_x(rho_r) * e_f
+  p = get_p("gga_x_pbe", 1)
+  grid_shape = rho_r.shape
+  rho_r_flat = rho_r.reshape(-1)
+  rho_r_grad_norm_flat = rho_r_grad_norm.reshape(-1)
+  out = jax.vmap(pbe_jac_xc, (None, 0, 0),
+                 0)(p, rho_r_flat, rho_r_grad_norm_flat)
+  return out.reshape(grid_shape)
+
+  # kappa, mu = 0.804, 0.21951
+  # kf = (3 * jnp.pi**2 * rho_r)**(1 / 3)
+  # # reduced_density_gradient
+  # div_kf = jnp.where(kf > 0, 1 / kf, 0)
+  # drho = jnp.sqrt(rho_r_grad_norm)
+  # s = jnp.where(rho_r > 0, drho * div_kf / 2 / rho_r, 0)
+  # # enhancement factor
+  # e_f = 1 + kappa - kappa / (1 + mu * s**2 / kappa)
+  # return _lda_x(rho_r) * e_f
 
 
 def rho_r_grad_norm_fn(density_grid, gs):
