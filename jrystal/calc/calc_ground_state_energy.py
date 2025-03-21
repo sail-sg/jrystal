@@ -24,6 +24,7 @@ from tqdm import tqdm
 
 from .._src.crystal import Crystal
 from .._src import energy, entropy, occupation, pw
+from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
 from .opt_utils import (
   create_crystal,
@@ -82,6 +83,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
   g_vec, r_vec, k_vec = create_grids(config)
   num_kpts = k_vec.shape[0]
+  logging.info(f"Number of G-vectors: {proper_grid_size(config.grid_sizes)}")
+  logging.info(f"Number of k-vectors: {proper_grid_size(config.k_grid_sizes)}")
   num_bands = ceil(crystal.num_electron / 2) + config.empty_bands
   freq_mask = create_freq_mask(config)
   ew = get_ewald_coulomb_repulsion(config)
@@ -95,7 +98,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       params, crystal.num_electron, num_kpts, crystal.spin
     )
 
-  def total_energy(params_pw, params_occ):
+  def total_energy(params_pw, params_occ, g_vec=g_vec):
     coeff = pw.coeff(params_pw, freq_mask)
     occ = get_occupation(params_occ)
     return energy.total_energy(
@@ -113,8 +116,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     occ = get_occupation(params_occ)
     return entropy.fermi_dirac(occ, eps=EPS)
 
-  def free_energy(params_pw, params_occ, temp):
-    total = total_energy(params_pw, params_occ)
+  def free_energy(params_pw, params_occ, temp, g_vec=g_vec):
+    total = total_energy(params_pw, params_occ, g_vec)
     etro = get_entropy(params_occ)
     free = total + temp * etro
     return free, (total, etro)
@@ -128,8 +131,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
   # Define update function.
   @jax.jit
-  def update(params, opt_state, temp):
-    loss = lambda x: free_energy(x["pw"], x["occ"], temp)
+  def update(params, opt_state, temp, g_vec):
+    loss = lambda x: free_energy(x["pw"], x["occ"], temp, g_vec)
     (loss_val, es), grad = jax.value_and_grad(loss, has_aux=True)(params)
     updates, opt_state = optimizer.update(grad, opt_state)
     params = optax.apply_updates(params, updates)
@@ -160,7 +163,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   for i in iters:
     temp = temperature_scheduler(i)
     start = time.time()
-    params, opt_state, loss_val, es = update(params, opt_state, temp)
+    params, opt_state, loss_val, es = update(params, opt_state, temp, g_vec)
     etot, entro = es
     etot = jax.block_until_ready(etot)
     train_time += time.time() - start
