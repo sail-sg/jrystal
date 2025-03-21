@@ -32,7 +32,7 @@ from ..config import JrystalConfigDict
 
 
 def set_env_params(config: JrystalConfigDict):
-  jax.config.update("jax_debug_nans", True)
+  jax.config.update("jax_debug_nans", False)
 
   if config.verbose:
     logging.set_verbosity(logging.INFO)

@@ -118,7 +118,7 @@ def calc(
   )
 
   # Define the objective function for band structure calculation.
-  def hamiltonian_trace(params_pw_band, kpts):
+  def hamiltonian_trace(params_pw_band, kpts, g_vec=g_vec):
     coeff_band = pw.coeff(params_pw_band, freq_mask)
     energy = hamiltonian.hamiltonian_matrix_trace(
       coeff_band,
@@ -139,8 +139,10 @@ def calc(
 
   # define update function
   @jax.jit
-  def update(params, opt_state, kpts):
-    hamil_trace, grad = jax.value_and_grad(hamiltonian_trace)(params, kpts)
+  def update(params, opt_state, kpts, g_vec):
+    hamil_trace, grad = jax.value_and_grad(hamiltonian_trace)(
+      params, kpts, g_vec
+    )
 
     updates, opt_state = optimizer.update(grad, opt_state)
     params = optax.apply_updates(params, updates)
@@ -163,7 +165,7 @@ def calc(
   start = time.time()
   for i in iters:
     params_pw_band, opt_state, hamil_trace = update(
-      params_pw_band, opt_state, k_path[0:1]
+      params_pw_band, opt_state, k_path[0:1], g_vec
     )
     iters.set_description(f"Hamiltonian trace: {hamil_trace:.4E}")
 
@@ -185,7 +187,7 @@ def calc(
   for i in iters:
     for _ in range(config.k_path_fine_tuning_epoch):
       params_pw_band, opt_state, hamil_trace = update(
-        params_pw_band, opt_state, k_path[i:(i+1)]
+        params_pw_band, opt_state, k_path[i:(i+1)], g_vec
       )
     iters.set_description(f" Loss(the {i+1}th k point): {hamil_trace:.4E}")
     params_kpoint_list.append(params_pw_band)
@@ -197,8 +199,12 @@ def calc(
   logging.info("===> Diagonalizing the Hamiltonian matrix...")
 
   @jax.jit
-  def eig_fn(param, k):
-    coeff_k = pw.coeff(param, freq_mask)
+  def eig_fn(
+    coeff_k, 
+    k, 
+    ground_state_density_grid, 
+    g_vec, 
+  ):
     hamil_matrix = hamiltonian.hamiltonian_matrix(
       coeff_k,
       crystal.positions,
@@ -219,7 +225,8 @@ def calc(
     prm = params_kpoint_list[i]
     k = k_path[i:(i + 1), :]
     iters.set_description(f"Diagonolizing the {i+1}th k points")
-    eig = eig_fn(prm, k)
+    coeff_k = pw.coeff(prm, freq_mask)
+    eig = eig_fn(coeff_k, k, ground_state_density_grid, g_vec)
     eigen_values.append(eig)
 
   # eigen_values = jnp.vstack(eigen_values)
