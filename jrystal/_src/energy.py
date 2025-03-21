@@ -205,11 +205,34 @@ def xc_lda(
 
   assert density_grid.ndim in [3, 4]
 
+  # for spin-polarized
+  def lda_x_spin():
+    n = density_grid[0] + density_grid[1]
+    n_alpha = density_grid[0]
+    n_beta = density_grid[1]
+    zeta = (n_alpha - n_beta) / n
+    f = -3 / 4 * (3 / jnp.pi) ** (1 / 3)
+
+    rho13p = ((1 + zeta) * n) ** (1 / 3)
+    rho13m = ((1 - zeta) * n) ** (1 / 3)
+
+    ex_up = f * rho13p
+    ex_dw = f * rho13m
+    ex = 0.5 * ((1 + zeta) * ex_up + (1 - zeta) * ex_dw)
+
+    vx_up = 4 / 3 * ex_up
+    vx_dw = 4 / 3 * ex_dw
+    return ex, jnp.array([vx_up, vx_dw]), None
+
+  lda_density, _, _ = lda_x_spin()
+
+  # for spin-unpolarized
+  # lda_density = potential.xc_lda(density_grid, kohn_sham)
+
   if density_grid.ndim == 4:  # have spin channel
     density_grid = jnp.sum(density_grid, axis=0)
 
   num_grid = jnp.prod(jnp.array(density_grid.shape))
-  lda_density = potential.xc_lda(density_grid, kohn_sham)
   e_lda = jnp.sum(lda_density * density_grid)
   e_lda = safe_real(e_lda)
 
@@ -237,11 +260,11 @@ def xc_pbe(
 
   density_grid = density_grid.reshape(2, -1)
   nabla_density_grid = nabla_density_grid.reshape(2, -1, 3)
-  num_grid = jnp.prod(jnp.array(density_grid.shape))
+  num_grid = jnp.prod(jnp.array(density_grid.shape)) / 2
   pbe_density, _ = potential.xc_pbe(
     density_grid, nabla_density_grid, g_vector_grid
   )
-  e_pbe = jnp.sum(pbe_density * density_grid)
+  e_pbe = jnp.sum(pbe_density * jnp.sum(density_grid, axis=0))
   e_pbe = safe_real(e_pbe)
 
   return e_pbe * vol / num_grid
@@ -336,8 +359,20 @@ def total_energy(
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
   if xc == 'lda_x':
+    print("============ using lda_x ============")
+    print(occupation.shape)
+
+    # for spin-polarized
+    o_alpha = jnp.copy(occupation)
+    o_alpha = o_alpha.at[1].set(0)
+    o_beta = jnp.copy(occupation)
+    o_beta = o_beta.at[0].set(0)
+    n_alpha_grid = wave_to_density(wave_grid_arr, o_alpha)
+    n_beta_grid = wave_to_density(wave_grid_arr, o_beta)
+    density_grid = jnp.vstack([[n_alpha_grid, n_beta_grid]])
     e_xc = xc_lda(density_grid, vol, kohn_sham)
   elif xc == 'pbe':
+    print("============ using pbe ============")
     # test calculating gradient using fft
     # cell_vectors = grid.g2cell_vectors(g_vector_grid)
     # grid_sizes = g_vector_grid.shape[:-1]
