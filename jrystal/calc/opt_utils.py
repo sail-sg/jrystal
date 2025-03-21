@@ -12,22 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Utility functions for optimization. """
-import jax
-import os
-import numpy as np
-import optax
-from optax._src import alias
 import argparse
-from absl import logging
 from typing import Callable
 
+import jax
 import jrystal as jr
-from .._src.ewald import ewald_coulomb_repulsion
-from .._src.grid import proper_grid_size, translation_vectors
-from .._src.grid import g_vectors, r_vectors, k_vectors
-from .._src.grid import cubic_mask, spherical_mask
-from .._src.grid import estimate_max_cutoff_energy
+import numpy as np
+import optax
+from absl import logging
+from optax._src import alias
+
 from .._src.crystal import Crystal
+from .._src.ewald import ewald_coulomb_repulsion
+from .._src.grid import (
+  cubic_mask,
+  estimate_max_cutoff_energy,
+  g_vectors,
+  k_vectors,
+  proper_grid_size,
+  r_vectors,
+  spherical_mask,
+  translation_vectors
+)
 from .._src.utils import check_spin_number
 from ..config import JrystalConfigDict
 

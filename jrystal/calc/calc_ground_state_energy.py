@@ -23,9 +23,9 @@ import optax
 from absl import logging
 from tqdm import tqdm
 
-from .._src.crystal import Crystal
 from .._src import energy, entropy, occupation, pw
 from .._src.grid import proper_grid_size
+from .._src.crystal import Crystal
 from ..config import JrystalConfigDict
 from .opt_utils import (
   create_crystal,
@@ -200,10 +200,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Total Energy: {etot+ew:.4f} Ha")
 
   output = GroundStateEnergyOutput(
-     config, crystal, params["pw"], params["occ"], etot + ew, []
-   )
+    config, crystal, params["pw"], params["occ"], etot + ew, []
+  )
 
-  save_file = ''.join(crystal.symbol) + "_ground_state.pkl"
+  save_file = ''.join(crystal.symbol) + "_groun_state.pkl"
   with open(save_file, "wb") as f:
     pickle.dump(output, f)
 

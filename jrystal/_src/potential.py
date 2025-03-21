@@ -235,8 +235,9 @@ def vxc_gga_recp(exc, rho_r, rho_r_grad_norm, gs):
 
   grid_sizes = gs.shape[:-1]
   t = dexc_drho_grad_norm_flat.reshape(grid_sizes) * rho_r
-  # HACK
-  t = t.at[0, 0, 0].set(0)
+  t = jnp.where(rho_r_grad_norm > 0, t, 0)
+  # # HACK
+  # t = t.at[0, 0, 0].set(0)
 
   g_axes = list(range(gs.ndim - 1))
 
@@ -326,7 +327,7 @@ def xc_pbe(
   if kohn_sham:  # return vxc
     # NOTE: v_eff can be calculated in reciprocal space
     vxc_G = vxc_gga_recp(_pbe_x, density_grid, grad_norm, g_vector_grid)
-    vxc_r = jnp.fft.ifft(vxc_G)
+    vxc_r = jnp.fft.ifftn(vxc_G)
     return vxc_r
   else:
     return _pbe_x(density_grid, grad_norm)
@@ -338,6 +339,11 @@ def xc_density(
   kohn_sham: bool = False,
   xc: str = "lda_x"
 ):
+  # DEBUG
+  # vxc_lda = xc_lda(density_grid, kohn_sham)
+  # vxc_pbe = xc_pbe(density_grid, g_vector_grid, kohn_sham)
+  # breakpoint()
+
   # TODO: support lda_c etc.
   if xc == 'lda_x':
     return xc_lda(density_grid, kohn_sham)

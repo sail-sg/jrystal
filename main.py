@@ -1,4 +1,7 @@
 import argparse
+
+import cloudpickle as pickle
+
 import jrystal as jr
 
 

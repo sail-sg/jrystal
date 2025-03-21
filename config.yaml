@@ -123,3 +123,5 @@ xla_preallocate: True
 jax_enable_x64: True
 verbose: True
 eps: 1.e-08
+
+debug: False
