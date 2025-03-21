@@ -17,13 +17,14 @@ from dataclasses import dataclass
 from math import ceil
 from typing import List, Union
 
+import cloudpickle as pickle
 import jax
 import optax
 from absl import logging
 from tqdm import tqdm
 
-from .._src.crystal import Crystal
 from .._src import energy, entropy, occupation, pw
+from .._src.crystal import Crystal
 from ..config import JrystalConfigDict
 from .opt_utils import (
   create_crystal,
@@ -196,6 +197,12 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
   logging.info(f"Total Energy: {etot+ew:.4f} Ha")
 
-  return GroundStateEnergyOutput(
+  output = GroundStateEnergyOutput(
     config, crystal, params["pw"], params["occ"], etot + ew, []
   )
+
+  save_file = ''.join(crystal.symbol) + "_groun_state.pkl"
+  with open(save_file, "wb") as f:
+    pickle.dump(output, f)
+
+  return output
