@@ -9,4 +9,4 @@ absl-py
 einops
 ml_collections
 
-jax_xc==0.8.0
+jax_xc==0.0.8
