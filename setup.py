@@ -41,7 +41,7 @@ setup(
   install_requires=_read_requirements(),
   entry_points={
     'console_scripts': [
-      'jrystal=main',
+      'jrystal=main:main',
     ],
   },
 )
