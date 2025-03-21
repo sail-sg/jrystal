@@ -308,13 +308,15 @@ def xc_pbe(
   )
   tmp_rec = jnp.fft.fftn(tmp, axes=range(-4, -1))
   div_tmp_rec = tmp_rec * g_vector_grid * 1j
-  v_xp = jnp.fft.ifftn(div_tmp_rec, axes=range(-4, -1)).reshape(-1)
+  v_xp = jnp.sum(jnp.fft.ifftn(div_tmp_rec, axes=range(-4, -1)), axis=-1).reshape(-1)
   tmp = (vsigmax[2][:, None] * 2 * nabla_density_grid[1]).reshape(
     num, num, num, 3
   )
   tmp_rec = jnp.fft.fftn(tmp, axes=range(-4, -1))
   div_tmp_rec = tmp_rec * g_vector_grid * 1j
-  v_xn = jnp.fft.ifftn(div_tmp_rec, axes=range(-4, -1)).reshape(-1)
+  v_xn = jnp.sum(jnp.fft.ifftn(div_tmp_rec, axes=range(-4, -1)), axis=-1).reshape(-1)
+  v_x = jnp.sum(v_x, axis=0)
+  v_c = jnp.sum(v_c, axis=0)
   v_x += v_xn * (1 + zeta) / 2 + v_xp * (1 - zeta) / 2
 
   # TODO: handle the term for exchange
