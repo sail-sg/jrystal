@@ -371,9 +371,9 @@ document.write(`
 
 <span class="sd">  .. math::</span>
 
-<span class="sd">      &lt; C | V_\\text{nl}(G, G&#39;) | C &gt;</span>
+<span class="sd">      &lt; C | V_\text{nl}(G, G&#39;) | C &gt;</span>
 
-<span class="sd">  where :math:`V_\\text{nl} = F D F^\dagger`, where :math:`F` can be obtained from this function, and :math:`D` is the diagonal matrix of the beta functions. This function returns :math:`F`.</span>
+<span class="sd">  where :math:`V_\text{nl} = F D F^\dagger`, where :math:`F` can be obtained from this function, and :math:`D` is the diagonal matrix of the beta functions. This function returns :math:`F`.</span>
 <span class="sd">    </span>
 <span class="sd">  Args:</span>
 <span class="sd">    position (Float[Array, &quot;atom 3&quot;]): The positions of the atoms.</span>
@@ -589,7 +589,7 @@ document.write(`
   <span class="n">nonlocal_d_matrix</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta beta&quot;</span><span class="p">]],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
   <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
-  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  Compute the nonlocal pseudopotential hamiltonian.</span>
@@ -620,10 +620,10 @@ document.write(`
   <span class="p">)</span>
 
   <span class="n">har</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">hartree_reciprocal</span><span class="p">(</span>
-    <span class="n">hamiltonian_density_grid_reciprocal</span><span class="p">,</span> <span class="n">g_vector_grid</span>
+    <span class="n">hamiltonian_density_grid_reciprocal</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kohn_sham</span> <span class="o">=</span> <span class="n">kohn_sham</span>
   <span class="p">)</span>
   <span class="n">har</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">har</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-  <span class="n">lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">)</span>
+  <span class="n">lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">,</span> <span class="n">kohn_sham</span> <span class="o">=</span> <span class="n">kohn_sham</span><span class="p">)</span>
   <span class="n">v_s</span> <span class="o">=</span> <span class="n">har</span> <span class="o">+</span> <span class="n">lda</span>
   <span class="n">h_s</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_s</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
 
@@ -647,7 +647,7 @@ document.write(`
   <span class="n">nonlocal_angular_momentum</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
   <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
-  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="p">):</span>
   <span class="n">dim</span> <span class="o">=</span> <span class="n">positions</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
   <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">wave_grid</span><span class="p">(</span><span class="n">coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
@@ -683,10 +683,10 @@ document.write(`
   <span class="p">)</span>
 
   <span class="n">har</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">hartree_reciprocal</span><span class="p">(</span>
-    <span class="n">hamiltonian_reciprocal_density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span>
+    <span class="n">hamiltonian_reciprocal_density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kohn_sham</span> <span class="o">=</span> <span class="n">kohn_sham</span>
   <span class="p">)</span>
   <span class="n">har</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">har</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-  <span class="n">lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">)</span>
+  <span class="n">lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">,</span> <span class="n">kohn_sham</span> <span class="o">=</span> <span class="n">kohn_sham</span><span class="p">)</span>
   <span class="n">v_s</span> <span class="o">=</span> <span class="n">har</span> <span class="o">+</span> <span class="n">lda</span>
   <span class="n">h_s</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_s</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
 
@@ -702,6 +702,7 @@ document.write(`
   <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
   <span class="n">nonlocal_d_matrix</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta beta&quot;</span><span class="p">]],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
   <span class="n">dim</span> <span class="o">=</span> <span class="n">kpts</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
   <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">wave_grid</span><span class="p">(</span><span class="n">coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
@@ -726,12 +727,12 @@ document.write(`
   <span class="p">)</span>
 
   <span class="n">v_har_reciprocal</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">hartree_reciprocal</span><span class="p">(</span>
-    <span class="n">hamiltonian_reciprocal_density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span>
+    <span class="n">hamiltonian_reciprocal_density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kohn_sham</span> <span class="o">=</span> <span class="n">kohn_sham</span>
   <span class="p">)</span>
   <span class="n">v_har</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">v_har_reciprocal</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
   <span class="n">har</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_har</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
-  <span class="c1"># har = 0</span>
-  <span class="n">v_lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">)</span>
+  
+  <span class="n">v_lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">,</span> <span class="n">kohn_sham</span> <span class="o">=</span> <span class="n">kohn_sham</span><span class="p">)</span>
   <span class="n">lda</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_lda</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
   <span class="n">h_s</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">har</span> <span class="o">+</span> <span class="n">lda</span><span class="p">)</span>
 
@@ -760,6 +761,7 @@ document.write(`
   <span class="n">nonlocal_d_matrix</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;beta beta&quot;</span><span class="p">]],</span>
   <span class="n">nonlocal_angular_momentum</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
+  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  Compute the trace of the hamiltonian.</span>
@@ -794,7 +796,6 @@ document.write(`
   <span class="p">)</span>
   <span class="n">ext_nloc</span> <span class="o">=</span> <span class="n">energy_nonlocal</span><span class="p">(</span>
     <span class="n">coefficient</span><span class="p">,</span>
-    <span class="n">occupation</span><span class="p">,</span>
     <span class="n">positions</span><span class="p">,</span>
     <span class="n">g_vector_grid</span><span class="p">,</span>
     <span class="n">kpts</span><span class="p">,</span>
@@ -822,7 +823,7 @@ document.write(`
   <span class="n">v_har</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">v_har_reciprocal</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
   <span class="n">har</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_har</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
 
-  <span class="n">v_lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">)</span>
+  <span class="n">v_lda</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">hamiltonian_density_grid</span><span class="p">,</span> <span class="p">)</span>
   <span class="n">lda</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_lda</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
   <span class="n">h_s</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">har</span> <span class="o">+</span> <span class="n">lda</span><span class="p">)</span>
   <span class="n">kin</span> <span class="o">=</span> <span class="n">energy</span><span class="o">.</span><span class="n">kinetic</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kpts</span><span class="p">,</span> <span class="n">coefficient</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
