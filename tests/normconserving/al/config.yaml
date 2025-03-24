@@ -1,0 +1,124 @@
+################################################
+#             Crystal Setting                  #
+################################################
+
+# Code will load the "$CRYSTAL.xyz" file in the geometry directory if
+# crystal name is provided, otherwise the code will read the from the path
+# specified by "crystal_file_path_path".
+crystal: "al_bcc"
+crystal_file_path_path: null
+
+################################################
+#         Exchange-Correlation Setting         #
+################################################
+# xc functional
+xc: "lda_x"
+
+################################################
+#           Pseudopotential Setting            #
+################################################
+
+use_pseudopotential: True
+pseudopotential_file_dir: null
+# The pseudopotential file directory. If None, the code will use the default
+# pseudopotential file directory.
+
+################################################
+#       Planewave Hyper-parameters             #
+################################################
+
+freq_mask_method: "spherical"
+# freq_mask_method can be either "cubic" or "spherical".
+# For "cubic", the cutoff cannot be assigned, but will be estimated.
+# Only for "spherical" method, the cutoff_energy argument is valid.
+
+# cutoff energy in Hartree
+cutoff_energy: 50
+# grid sizes for the FFT grid
+grid_sizes: 48
+# k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
+k_grid_sizes: 1
+# Occupation method
+occupation: "fermi-dirac"
+# occupation support {"fermi-dirac", "gamma", "uniform"}
+
+# smearing factor for the Fermi-Dirac distribution
+smearing: 0.01
+# the total number of unoccupapied bands. The Total number of
+# potentially-occupied bands is ceil(num_electron / 2) + empty_bands
+empty_bands: 14
+spin_restricted: True
+# whether the calculation is spin_restricted or not, ie., spin-up and spin-down
+# electrons share the same spatial orbitals.
+
+# Hyperparameters for the Ewald sum.
+ewald_args:
+  ewald_eta: 0.1
+  ewald_cutoff: 2.0e+4
+
+################################################
+#           Optimizizer Setting                #
+################################################
+epoch: 10000
+optimizer: "adam"
+optimizer_args:
+  learning_rate: 0.001
+
+# arguments for the optimizer. Please refer to optax documentation.
+# https://optax.readthedocs.io/en/latest/api/optimizers.html
+# WARNING: the learning_rate is sensitve to the number of G vectors and
+# cutoff energy. It is suggested to tune the learning rate for different
+# systems.
+
+# "scheduler": "piecewise_constant_schedule",
+scheduler: null
+# optax scheduler. No scheduler is used if set to None.
+
+convergence_condition: 1.e-8
+# Convergence criterion for optimization.
+# The code monitors the variance of the objective values (e.g., energy)
+# over the last 50 steps (if available). If the computed variance meets
+# the convergence condition, the calculation will terminate.
+
+################################################
+# Band Structure Calculation Hyper-parameters. #
+################################################
+
+# NOTE: The following configs are only valid for band structure calculation.
+# Need to either indicate the k_path or the k_path file.
+band_structure_empty_bands: null
+k_path_special_points: null
+# If `k_path_special_points` is None, the code will use the default
+# special points for the given unit cell, as defined in ASE.
+# For more details, refer to:
+# https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
+
+k_path_special_points: "LGXL"
+num_kpoints: 60
+
+# Alternatively, the user can provide a `k_path` file containing k-path
+# vectors. The file must be in `.npy` format and contain a 2D array,
+# where each row represents the relative coordinates of a k-point in
+# reciprocal space.
+k_path_file: null
+band_structure_epoch: 10000
+
+# Flag indicating whether fine-tuning is enabled.
+# If True, the optimization will start with the first k-point,
+# using its parameters as the initialization for subsequent k-points.
+# This approach is recommended for large crystal systems.
+k_path_fine_tuning: True
+k_path_fine_tuning_epoch: 400
+
+################################################
+#              System Setting                  #
+################################################
+
+# Random seed
+seed: 123
+
+# Environment setting
+xla_preallocate: True
+jax_enable_x64: True
+verbose: True
+eps: 1.e-08
