@@ -13,6 +13,7 @@
 # limitations under the License.
 """Band Structure Calculator. """
 import jax
+import numpy as np
 import jax.numpy as jnp
 import optax
 from math import ceil
@@ -71,6 +72,8 @@ def calc(
   set_env_params(config)
   key = jax.random.PRNGKey(config.seed)
   crystal = create_crystal(config)
+  pseudopot = create_pseudopotential(config)
+  valence_charges = np.sum(pseudopot.valence_charges)
   g_vec, r_vec, k_vec = create_grids(config)
   freq_mask = create_freq_mask(config)
   xc = config.xc
@@ -86,7 +89,6 @@ def calc(
   logging.info(f"{k_path.shape[0]} k-points generated.")
 
   # initialize pseudopotential
-  pseudopot = create_pseudopotential(config)
   potential_loc = local._potential_local_reciprocal(
     crystal.positions,
     g_vec,
@@ -98,7 +100,7 @@ def calc(
   potential_nl = normcons._potential_nonlocal_square_root(
     crystal.positions,
     g_vec,
-    k_vec,
+    k_path,
     pseudopot.r_grid,
     pseudopot.nonlocal_beta_grid,
     pseudopot.nonlocal_angular_momentum,
@@ -120,7 +122,7 @@ def calc(
   # Calculate ground state density at grid points.
   def get_occupation(params):
     return occupation.idempotent(
-      params, crystal.num_electron, k_vec.shape[0], crystal.spin
+      params, valence_charges, k_vec.shape[0], crystal.spin
     )
 
   coeff_ground_state = pw.coeff(params_pw_ground_state, freq_mask)
@@ -130,7 +132,7 @@ def calc(
   )
 
   # Define the objective function for band structure calculation.
-  def hamiltonian_trace(params_pw_band, kpts):
+  def hamiltonian_trace(params_pw_band, kpts, g_vector_grid, potential_nl):
     coeff_band = pw.coeff(params_pw_band, freq_mask)
 
     return normcons._hamiltonian_trace(
@@ -138,7 +140,7 @@ def calc(
       ground_state_density_grid,
       potential_loc,
       potential_nl,
-      g_vec,
+      g_vector_grid,
       kpts,
       pseudopot.nonlocal_d_matrix,
       crystal.vol
@@ -146,14 +148,16 @@ def calc(
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
-  num_bands = ceil(crystal.num_electron / 2) + config.band_structure_empty_bands
+  num_bands = ceil(valence_charges / 2) + config.band_structure_empty_bands
   params_pw_band = pw.param_init(key, num_bands, 1, freq_mask)
   opt_state = optimizer.init(params_pw_band)
 
   # define update function
   @jax.jit
-  def update(params, opt_state, kpts):
-    hamil_trace, grad = jax.value_and_grad(hamiltonian_trace)(params, kpts)
+  def update(params, opt_state, kpts, g_vector_grid, potential_nl):
+    hamil_trace, grad = jax.value_and_grad(hamiltonian_trace)(
+      params, kpts, g_vector_grid, potential_nl
+    )
 
     updates, opt_state = optimizer.update(grad, opt_state)
     params = optax.apply_updates(params, updates)
@@ -175,7 +179,7 @@ def calc(
   start = time.time()
   for i in iters:
     params_pw_band, opt_state, hamil_trace = update(
-      params_pw_band, opt_state, k_path[0:1]
+      params_pw_band, opt_state, k_path[0:1], g_vec, potential_nl[0:1]
     )
     iters.set_description(f"Hamiltonian trace: {hamil_trace:.4E}")
 
@@ -197,7 +201,7 @@ def calc(
   for i in iters:
     for _ in range(config.k_path_fine_tuning_epoch):
       params_pw_band, opt_state, hamil_trace = update(
-        params_pw_band, opt_state, k_path[i:(i+1)]
+        params_pw_band, opt_state, k_path[i:(i+1)], g_vec, potential_nl[i:(i+1)]
       )
     iters.set_description(f" Loss(the {i+1}th k point): {hamil_trace:.4E}")
     params_kpoint_list.append(params_pw_band)
@@ -208,14 +212,14 @@ def calc(
   logging.info("===> Diagonalizing the Hamiltonian matrix...")
 
   @jax.jit
-  def eig_fn(param, kpts):
+  def eig_fn(param, kpts, g_vector_grid, potential_nl):
     coeff_i = pw.coeff(param, freq_mask)
     hamil_matrix = normcons._hamiltonian_matrix(
       coeff_i,
       ground_state_density_grid,
       potential_loc,
       potential_nl,
-      g_vec,
+      g_vector_grid,
       kpts,
       pseudopot.nonlocal_d_matrix,
       crystal.vol
@@ -227,8 +231,9 @@ def calc(
   for i in iters:
     prm = params_kpoint_list[i]
     k = k_path[i:(i + 1), :]
+    v_nl = potential_nl[i:(i + 1)]
     iters.set_description(f"Diagonolizing the {i+1}th k points")
-    eig = eig_fn(prm, k)
+    eig = eig_fn(prm, k, g_vec, v_nl)
     eigen_values.append(eig)
 
   eigen_values = jnp.vstack(eigen_values)
