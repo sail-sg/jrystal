@@ -45,9 +45,9 @@ def _potential_nonlocal_square_root(
 
   .. math::
 
-      < C | V_\\text{nl}(G, G') | C >
+      < C | V_\text{nl}(G, G') | C >
 
-  where :math:`V_\\text{nl} = F D F^\dagger`, where :math:`F` can be obtained from this function, and :math:`D` is the diagonal matrix of the beta functions. This function returns :math:`F`.
+  where :math:`V_\text{nl} = F D F^\dagger`, where :math:`F` can be obtained from this function, and :math:`D` is the diagonal matrix of the beta functions. This function returns :math:`F`.
     
   Args:
     position (Float[Array, "atom 3"]): The positions of the atoms.
@@ -251,7 +251,7 @@ def _hamiltonian_matrix(
   nonlocal_d_matrix: List[Float[Array, "beta beta"]],
   vol: Float,
   xc: str = 'lda',
-  kohn_sham: bool = False
+  kohn_sham: bool = True
 ):
   """
   Compute the nonlocal pseudopotential hamiltonian.
@@ -282,10 +282,10 @@ def _hamiltonian_matrix(
   )
 
   har = potential.hartree_reciprocal(
-    hamiltonian_density_grid_reciprocal, g_vector_grid
+    hamiltonian_density_grid_reciprocal, g_vector_grid, kohn_sham = kohn_sham
   )
   har = jnp.fft.ifftn(har, axes=range(-dim, 0))
-  lda = potential.xc_lda(hamiltonian_density_grid)
+  lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham = kohn_sham)
   v_s = har + lda
   h_s = braket.expectation(wave_grid, v_s, vol, diagonal=False, mode="real")
 
@@ -308,7 +308,7 @@ def hamiltonian_matrix(
   nonlocal_angular_momentum: List[List[int]],
   vol: Float,
   xc: str = 'lda',
-  kohn_sham: bool = False
+  kohn_sham: bool = True
 ):
   dim = positions.shape[-1]
   wave_grid = pw.wave_grid(coefficient, vol)
@@ -344,10 +344,10 @@ def hamiltonian_matrix(
   )
 
   har = potential.hartree_reciprocal(
-    hamiltonian_reciprocal_density_grid, g_vector_grid
+    hamiltonian_reciprocal_density_grid, g_vector_grid, kohn_sham = kohn_sham
   )
   har = jnp.fft.ifftn(har, axes=range(-dim, 0))
-  lda = potential.xc_lda(hamiltonian_density_grid)
+  lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham = kohn_sham)
   v_s = har + lda
   h_s = braket.expectation(wave_grid, v_s, vol, diagonal=False, mode="real")
 
@@ -363,6 +363,7 @@ def _hamiltonian_trace(
   kpts: Float[Array, "kpt 3"],
   nonlocal_d_matrix: List[Float[Array, "beta beta"]],
   vol: Float,
+  kohn_sham: bool = True
 ) -> Float:
   dim = kpts.shape[-1]
   wave_grid = pw.wave_grid(coefficient, vol)
@@ -387,12 +388,12 @@ def _hamiltonian_trace(
   )
 
   v_har_reciprocal = potential.hartree_reciprocal(
-    hamiltonian_reciprocal_density_grid, g_vector_grid
+    hamiltonian_reciprocal_density_grid, g_vector_grid, kohn_sham = kohn_sham
   )
   v_har = jnp.fft.ifftn(v_har_reciprocal, axes=range(-3, 0))
   har = braket.expectation(wave_grid, v_har, vol, diagonal=True, mode="real")
-  # har = 0
-  v_lda = potential.xc_lda(hamiltonian_density_grid)
+  
+  v_lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham = kohn_sham)
   lda = braket.expectation(wave_grid, v_lda, vol, diagonal=True, mode="real")
   h_s = jnp.sum(har + lda)
 
@@ -419,6 +420,7 @@ def hamiltonian_trace(
   nonlocal_d_matrix: List[Float[Array, "beta beta"]],
   nonlocal_angular_momentum: List[List[int]],
   vol: Float,
+  kohn_sham: bool = True
 ):
   """
   Compute the trace of the hamiltonian.
@@ -453,7 +455,6 @@ def hamiltonian_trace(
   )
   ext_nloc = energy_nonlocal(
     coefficient,
-    occupation,
     positions,
     g_vector_grid,
     kpts,
@@ -481,7 +482,7 @@ def hamiltonian_trace(
   v_har = jnp.fft.ifftn(v_har_reciprocal, axes=range(-3, 0))
   har = braket.expectation(wave_grid, v_har, vol, diagonal=True, mode="real")
 
-  v_lda = potential.xc_lda(hamiltonian_density_grid)
+  v_lda = potential.xc_lda(hamiltonian_density_grid, )
   lda = braket.expectation(wave_grid, v_lda, vol, diagonal=True, mode="real")
   h_s = jnp.sum(har + lda)
   kin = energy.kinetic(g_vector_grid, kpts, coefficient, occupation)
