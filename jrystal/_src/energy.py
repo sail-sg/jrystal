@@ -267,7 +267,7 @@ def total_energy(
 
   .. math::
   
-    E_{\\text{tot}} = E_{\\text{kin}} + E_{\\text{ext}} + E_H + E_{xc}
+    E_{\text{tot}} = E_{\text{kin}} + E_{\text{ext}} + E_H + E_{xc}
 
   .. warning::
   
