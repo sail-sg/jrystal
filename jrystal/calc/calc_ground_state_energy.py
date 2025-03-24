@@ -119,7 +119,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   def free_energy(params_pw, params_occ, temp, g_vec=g_vec):
     total = total_energy(params_pw, params_occ, g_vec)
     etro = get_entropy(params_occ)
-    free = total + temp * etro
+    free = total - temp * etro
     return free, (total, etro)
 
   # Initialize parameters and optimizer.
@@ -147,7 +147,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       end_value=config.smearing
     )
   else:
-
     def temperature_scheduler(i):
       return 0.
 

@@ -18,6 +18,7 @@ from math import ceil
 from typing import List, Union
 
 import jax
+import numpy as np
 import optax
 from absl import logging
 from tqdm import tqdm
@@ -72,17 +73,20 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   temp = config.smearing
 
   crystal = create_crystal(config)
+  pseudopot = create_pseudopotential(config)
+  valence_charges = np.sum(pseudopot.valence_charges)
   logging.info(f"Crystal: {crystal.symbol}")
   EPS = config.eps
 
   g_vec, r_vec, k_vec = create_grids(config)
   num_kpts = k_vec.shape[0]
-  num_bands = ceil(crystal.num_electron / 2) + config.empty_bands
+  num_bands = ceil(valence_charges / 2) + config.empty_bands
+  logging.info(f"num_bands: {num_bands}")
   freq_mask = create_freq_mask(config)
   ew = get_ewald_coulomb_repulsion(config)
 
   # initialize pseudopotential
-  pseudopot = create_pseudopotential(config)
+
   potential_loc = local._potential_local_reciprocal(
     crystal.positions,
     g_vec,
@@ -99,12 +103,13 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     pseudopot.nonlocal_beta_grid,
     pseudopot.nonlocal_angular_momentum,
   )
-
+  
   # Define functions for energy calculation.
   # assume fermi-dirac occupation.
+
   def get_occupation(params):
     return occupation.idempotent(
-      params, crystal.num_electron, num_kpts, crystal.spin
+      params, valence_charges, num_kpts, crystal.spin
     )
 
   def total_energy(params_pw, params_occ, g_vec):
@@ -135,7 +140,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   def free_energy(params_pw, params_occ, temp, g_vec):
     total = total_energy(params_pw, params_occ, g_vec)
     etro = get_entropy(params_occ)
-    free = total + temp * etro
+    free = total - temp * etro
     return free, (total, etro)
 
   # Initialize parameters and optimizer.
