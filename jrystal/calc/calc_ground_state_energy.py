@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from math import ceil
 from typing import List, Union
 
+import cloudpickle as pickle
 import jax
 import optax
 from absl import logging
@@ -96,7 +97,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       crystal.num_electron,
       num_kpts,
       crystal.spin,
-      config.spin_restricted
+      config.spin_restricted,
     )
 
   def total_energy(params_pw, params_occ):
@@ -126,7 +127,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
-  params_pw = pw.param_init(key, num_bands, num_kpts, freq_mask)
+  params_pw = pw.param_init(key, num_bands, num_kpts, freq_mask, config.spin_restricted)
   params_occ = occupation.idempotent_param_init(key, num_bands, num_kpts)
   params = {"pw": params_pw, "occ": params_occ}
   opt_state = optimizer.init(params)
@@ -196,6 +197,12 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
   logging.info(f"Total Energy: {etot+ew:.4f} Ha")
 
-  return GroundStateEnergyOutput(
-    config, crystal, params["pw"], params["occ"], etot + ew, []
-  )
+  output = GroundStateEnergyOutput(
+     config, crystal, params["pw"], params["occ"], etot + ew, []
+   )
+ 
+  save_file = ''.join(crystal.symbol) + "_ground_state.pkl"
+  with open(save_file, "wb") as f:
+    pickle.dump(output, f)
+
+  return output

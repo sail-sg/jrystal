@@ -108,7 +108,8 @@ def calc(
   # Calculate ground state density at grid points.
   def get_occupation(params):
     return occupation.idempotent(
-      params, crystal.num_electron, k_vec.shape[0], crystal.spin
+      params, crystal.num_electron, k_vec.shape[0],
+      crystal.spin, config.spin_restricted
     )
 
   coeff_ground_state = pw.coeff(params_pw_ground_state, freq_mask)
@@ -127,7 +128,8 @@ def calc(
       ground_state_density_grid,
       g_vec,
       kpts,
-      crystal.vol
+      crystal.vol,
+      xc,
     )
     return jnp.sum(energy).real
 

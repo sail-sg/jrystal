@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Potentials."""
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import jax.numpy as jnp
 from jax.lax import stop_gradient
 from jaxtyping import Array, Complex, Float
 
 from . import xc
+from .utils import (
+  wave_to_density, wave_to_density_reciprocal
+)
 
 
 def hartree_reciprocal(
@@ -334,6 +337,7 @@ def effective(
   charge: Float[Array, "num_atom"],
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
+  # occupation: Optional[Float[Array, "spin kpt band"]] = None,
   split: bool = False,
   xc: str = "lda",
   kohn_sham: bool = False,
@@ -393,7 +397,29 @@ def effective(
   if xc.strip() in ["lda", "lda_x"]:
     v_xc = xc_lda(density_grid, kohn_sham)
   elif xc.strip() in ["pbe", "pbe_x"]:
-    v_xc = xc_pbe(density_grid, kohn_sham)
+    # o_alpha = jnp.copy(occupation)
+    # o_alpha = o_alpha.at[1].set(0)
+    # o_beta = jnp.copy(occupation)
+    # o_beta = o_beta.at[0].set(0)
+    # n_alpha_grid = wave_to_density(wave_grid_arr, o_alpha)
+    # n_beta_grid = wave_to_density(wave_grid_arr, o_beta)
+    # n_alpha_grid_rec = wave_to_density_reciprocal(wave_grid_arr, o_alpha)
+    # n_beta_grid_rec = wave_to_density_reciprocal(wave_grid_arr, o_beta)
+    # nabla_n_alpha_grid_rec = n_alpha_grid_rec[..., None] *\
+    #   g_vector_grid * 1j
+    # nabla_n_alpha_grid = jnp.fft.ifftn(
+    #   nabla_n_alpha_grid_rec, axes=range(-4, -1)
+    # )
+    # nabla_n_beta_grid_rec = n_beta_grid_rec[..., None] *\
+    #   g_vector_grid * 1j
+    # nabla_n_beta_grid = jnp.fft.ifftn(
+    #   nabla_n_beta_grid_rec, axes=range(-4, -1)
+    # )
+    # density_grid = jnp.vstack([[n_alpha_grid, n_beta_grid]])
+    # nabla_density_grid = jnp.vstack(
+    #   [nabla_n_alpha_grid[None, ...], nabla_n_beta_grid[None, ]]
+    # )
+    _, v_xc = xc_pbe(density_grid, kohn_sham)
   else:
     raise NotImplementedError("XC only support LDA for now.")
 
