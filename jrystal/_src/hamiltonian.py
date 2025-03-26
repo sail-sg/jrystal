@@ -98,6 +98,7 @@ def hamiltonian_matrix_trace(
   kpts: Float[Array, "kpt 3"],
   vol: Float,
   xc: str = 'lda',
+  spin_restricted: bool = True,
   kohn_sham: bool = True,
   keep_kpts_axis: bool = False,
   keep_spin_axis: bool = False,
@@ -134,11 +135,11 @@ def hamiltonian_matrix_trace(
     - If keep_kpts_axis True: returns Float[Array, "kpt"]
     - If both True: returns Float[Array, "spin kpt"]
   """
-  num_spin = band_coefficient.shape[0]
-  if num_spin == 2:
-    raise NotImplementedError(
-      "Spin-unrestricted hamiltonian matrix is not implemented."
-    )
+  # num_spin = band_coefficient.shape[0]
+  # if num_spin == 2:
+  #   raise NotImplementedError(
+  #     "Spin-unrestricted hamiltonian matrix is not implemented."
+  #   )
 
   v_eff = potential.effective(
     effictive_density_grid,
@@ -148,7 +149,8 @@ def hamiltonian_matrix_trace(
     vol,
     False,
     xc,
-    kohn_sham
+    kohn_sham,
+    spin_restricted,
   )
   wave_grid = pw.wave_grid(band_coefficient, vol)
   f_eff = braket.expectation(wave_grid, v_eff, vol, diagonal=True, mode="real")
@@ -163,6 +165,7 @@ def hamiltonian_matrix_trace(
     hamil_trace = jnp.sum(hamil_trace, axis=1)
   if not keep_spin_axis:
     hamil_trace = jnp.sum(hamil_trace, axis=0)
+  breakpoint()
   return jnp.sum(hamil_trace, axis=-1)
 
 
@@ -175,6 +178,7 @@ def hamiltonian_matrix(
   kpts: Float[Array, "kpt 3"],
   vol: Float,
   xc: str = 'lda',
+  spin_restricted: bool = True,
   kohn_sham: bool = True,
 ) -> Complex[Array, "kpt band band"]:
   r"""Compute the full Hamiltonian matrix in the orbital basis.
@@ -203,12 +207,6 @@ def hamiltonian_matrix(
     Complex[Array, "kpt band band"]: Complex array of shape [kpt, band, band] containing the complete Hamiltonian matrix elements between all pairs of bands at each k-point.
   """
   num_bands = band_coefficient.shape[-4]
-  num_spin = band_coefficient.shape[0]
-
-  if num_spin == 2:
-    raise NotImplementedError(
-      "Spin-unrestricted hamiltonian matrix is not implemented."
-    )
 
   def hamil_k(k, coeff_k):
     k = jnp.reshape(k, [-1, 3])
@@ -227,6 +225,7 @@ def hamiltonian_matrix(
         k,
         vol,
         xc,
+        spin_restricted,
         kohn_sham,
       )
 

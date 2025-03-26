@@ -117,6 +117,19 @@ def calc(
   ground_state_density_grid = pw.density_grid(
     coeff_ground_state, crystal.vol, occ_ground_state
   )
+  o_alpha = jnp.copy(occ_ground_state)
+  o_alpha = o_alpha.at[1].set(0)
+  o_beta = jnp.copy(occ_ground_state)
+  o_beta = o_beta.at[0].set(0)
+  density_alpha_grid = pw.density_grid(
+    coeff_ground_state, crystal.vol, o_alpha
+  )
+  density_beta_grid = pw.density_grid(
+    coeff_ground_state, crystal.vol, o_beta
+  )
+  density_grid = jnp.vstack([
+    [density_alpha_grid, density_beta_grid]]
+  )
 
   # Define the objective function for band structure calculation.
   def hamiltonian_trace(params_pw_band, kpts):
@@ -125,22 +138,23 @@ def calc(
       coeff_band,
       crystal.positions,
       crystal.charges,
-      ground_state_density_grid,
+      density_grid,
       g_vec,
       kpts,
       crystal.vol,
       xc,
+      config.spin_restricted,
     )
     return jnp.sum(energy).real
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
   num_bands = ceil(crystal.num_electron / 2) + config.band_structure_empty_bands
-  params_pw_band = pw.param_init(key, num_bands, 1, freq_mask)
+  params_pw_band = pw.param_init(key, num_bands, 1, freq_mask, config.spin_restricted)
   opt_state = optimizer.init(params_pw_band)
 
   # define update function
-  @jax.jit
+  # @jax.jit
   def update(params, opt_state, kpts):
     hamil_trace, grad = jax.value_and_grad(hamiltonian_trace)(params, kpts)
 
@@ -198,18 +212,19 @@ def calc(
   # One-time eigen decomposition
   logging.info("===> Diagonalizing the Hamiltonian matrix...")
 
-  @jax.jit
+  # @jax.jit
   def eig_fn(param, k):
     coeff_k = pw.coeff(param, freq_mask)
     hamil_matrix = hamiltonian.hamiltonian_matrix(
       coeff_k,
       crystal.positions,
       crystal.charges,
-      ground_state_density_grid,
+      density_grid,
       g_vec,
       k,
       crystal.vol,
       xc,
+      config.spin_restricted,
       kohn_sham=True,
     )
 

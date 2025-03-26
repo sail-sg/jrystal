@@ -63,7 +63,7 @@ def hartree_reciprocal(
   if kohn_sham:
     density_grid_reciprocal = stop_gradient(density_grid_reciprocal)
 
-  output = density_grid_reciprocal / g_vec_square
+  output = density_grid_reciprocal / g_vec_square[None, ...]
   output = output.at[(0,) * dim].set(0)
   output = output * 4 * jnp.pi
 
@@ -318,16 +318,22 @@ def xc_pbe(
   tmp_rec = jnp.fft.fftn(tmp, axes=range(-4, -1))
   div_tmp_rec = tmp_rec * g_vector_grid * 1j
   v_xn = jnp.sum(jnp.fft.ifftn(div_tmp_rec, axes=range(-4, -1)), axis=-1).reshape(-1)
-  v_x = jnp.sum(v_x, axis=0)
-  v_c = jnp.sum(v_c, axis=0)
-  v_x += v_xn * (1 + zeta) / 2 + v_xp * (1 - zeta) / 2
+
+  # if v_xc distinguish spin channels
+  # TODO: need to check if here we should force the value to be real
+  v_x = v_x.at[0].add(jnp.real(v_xp))
+  v_x = v_x.at[1].add(jnp.real(v_xn))
+
+  # if v_xc do not distinguish spin channels
+  # v_x = jnp.sum(v_x, axis=0)
+  # v_c = jnp.sum(v_c, axis=0)
+  # v_x += v_xn * (1 + zeta) / 2 + v_xp * (1 - zeta) / 2
 
   # TODO: handle the term for exchange
 
   e_xc = e_x + e_c
   v_xc = v_x + v_c
-
-
+ 
   return e_xc, v_xc
 
 
@@ -337,7 +343,6 @@ def effective(
   charge: Float[Array, "num_atom"],
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
-  # occupation: Optional[Float[Array, "spin kpt band"]] = None,
   split: bool = False,
   xc: str = "lda",
   kohn_sham: bool = False,
@@ -383,9 +388,12 @@ def effective(
 
   assert density_grid.ndim in [dim, dim + 1]  # w/w\o spin channel
 
-  if spin_restricted and density_grid.ndim == dim + 1:
-    density_grid = jnp.sum(density_grid, axis=0)
-
+  grid_size = g_vector_grid.shape[0]
+  # make sure for both spin-polarized (unpolarized) version the shape is 
+  # consistent
+  density_grid = density_grid.reshape(
+    -1, grid_size, grid_size, grid_size
+  )
   density_grid_reciprocal = jnp.fft.fftn(density_grid, axes=range(-dim, 0))
   # reciprocal space:
   v_hartree = hartree_reciprocal(
@@ -395,31 +403,33 @@ def effective(
 
   # real space:
   if xc.strip() in ["lda", "lda_x"]:
-    v_xc = xc_lda(density_grid, kohn_sham)
+    v_xp = xc_lda(2 * density_grid[0], kohn_sham) / 2
+    v_xn = xc_lda(2 * density_grid[1], kohn_sham) / 2
+    v_xc = jnp.vstack([[v_xp, v_xn]]) 
+    breakpoint()
   elif xc.strip() in ["pbe", "pbe_x"]:
-    # o_alpha = jnp.copy(occupation)
-    # o_alpha = o_alpha.at[1].set(0)
-    # o_beta = jnp.copy(occupation)
-    # o_beta = o_beta.at[0].set(0)
-    # n_alpha_grid = wave_to_density(wave_grid_arr, o_alpha)
-    # n_beta_grid = wave_to_density(wave_grid_arr, o_beta)
-    # n_alpha_grid_rec = wave_to_density_reciprocal(wave_grid_arr, o_alpha)
-    # n_beta_grid_rec = wave_to_density_reciprocal(wave_grid_arr, o_beta)
-    # nabla_n_alpha_grid_rec = n_alpha_grid_rec[..., None] *\
-    #   g_vector_grid * 1j
-    # nabla_n_alpha_grid = jnp.fft.ifftn(
-    #   nabla_n_alpha_grid_rec, axes=range(-4, -1)
-    # )
-    # nabla_n_beta_grid_rec = n_beta_grid_rec[..., None] *\
-    #   g_vector_grid * 1j
-    # nabla_n_beta_grid = jnp.fft.ifftn(
-    #   nabla_n_beta_grid_rec, axes=range(-4, -1)
-    # )
-    # density_grid = jnp.vstack([[n_alpha_grid, n_beta_grid]])
-    # nabla_density_grid = jnp.vstack(
-    #   [nabla_n_alpha_grid[None, ...], nabla_n_beta_grid[None, ]]
-    # )
-    _, v_xc = xc_pbe(density_grid, kohn_sham)
+    n_alpha_grid = density_grid[0]
+    n_beta_grid = density_grid[1]
+    n_alpha_grid_rec = density_grid_reciprocal[0]
+    n_beta_grid_rec = density_grid_reciprocal[1]
+    nabla_n_alpha_grid_rec = n_alpha_grid_rec[..., None] *\
+      g_vector_grid * 1j
+    nabla_n_alpha_grid = jnp.fft.ifftn(
+      nabla_n_alpha_grid_rec, axes=range(-4, -1)
+    )
+    nabla_n_beta_grid_rec = n_beta_grid_rec[..., None] *\
+      g_vector_grid * 1j
+    nabla_n_beta_grid = jnp.fft.ifftn(
+      nabla_n_beta_grid_rec, axes=range(-4, -1)
+    )
+    density_grid_ = jnp.vstack([[n_alpha_grid, n_beta_grid]])
+    nabla_density_grid = jnp.vstack(
+      [nabla_n_alpha_grid[None, ...], nabla_n_beta_grid[None, ]]
+    )
+    density_grid_ = density_grid_.reshape(2, -1)
+    nabla_density_grid = nabla_density_grid.reshape(2, -1, 3)
+    _, v_xc = xc_pbe(density_grid_, jnp.real(nabla_density_grid), g_vector_grid)
+    v_xc = v_xc.reshape(-1, grid_size, grid_size, grid_size)
   else:
     raise NotImplementedError("XC only support LDA for now.")
 
@@ -430,4 +440,4 @@ def effective(
   if split:
     return v_hartree, v_external, v_xc
   else:
-    return v_hartree + v_external + v_xc
+    return v_hartree + v_external[None, ...] + v_xc
