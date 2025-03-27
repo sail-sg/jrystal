@@ -257,7 +257,8 @@ def total_energy(
   vol: Float,
   occupation: Optional[Float[Array, "spin kpt band"]] = None,
   kohn_sham: bool = False,
-  xc: str = 'lda',
+  xc: str = 'lda_x',
+  spin_restricted: str = True,
   split: bool = False,
 ) -> Union[Float, Tuple[Float, Float, Float, Float]]:
   r"""Calculate the total electronic energy of the system.
@@ -304,8 +305,18 @@ def total_energy(
   e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
-  if xc == 'lda':
-    e_xc = xc_lda(density_grid, vol, kohn_sham)
+  if xc == 'lda_x':
+    if spin_restricted:
+      e_xc = xc_lda(density_grid, vol, kohn_sham)
+    else:
+      o_alpha = jnp.copy(occupation)
+      o_alpha = o_alpha.at[1].set(0)
+      o_beta = jnp.copy(occupation)
+      o_beta = o_beta.at[0].set(0)
+      n_alpha_grid = wave_to_density(wave_grid_arr, o_alpha)
+      n_beta_grid = wave_to_density(wave_grid_arr, o_beta)
+      e_xc = xc_lda(n_alpha_grid*2, vol, kohn_sham)/2 +\
+        xc_lda(n_beta_grid*2, vol, kohn_sham)/2
   else:
     raise NotImplementedError(f"xc {xc} is not supported yet.")
 

@@ -108,7 +108,8 @@ def calc(
   # Calculate ground state density at grid points.
   def get_occupation(params):
     return occupation.idempotent(
-      params, crystal.num_electron, k_vec.shape[0], crystal.spin
+      params, crystal.num_electron, k_vec.shape[0],
+      crystal.spin, config.spin_restricted
     )
 
   coeff_ground_state = pw.coeff(params_pw_ground_state, freq_mask)
@@ -116,6 +117,20 @@ def calc(
   ground_state_density_grid = pw.density_grid(
     coeff_ground_state, crystal.vol, occ_ground_state
   )
+  if not config.spin_restricted:
+    o_alpha = jnp.copy(occ_ground_state)
+    o_alpha = o_alpha.at[1].set(0)
+    o_beta = jnp.copy(occ_ground_state)
+    o_beta = o_beta.at[0].set(0)
+    density_alpha_grid = pw.density_grid(
+      coeff_ground_state, crystal.vol, o_alpha
+    )
+    density_beta_grid = pw.density_grid(
+      coeff_ground_state, crystal.vol, o_beta
+    )
+    ground_state_density_grid = jnp.vstack([
+      [density_alpha_grid, density_beta_grid]]
+    )
 
   # Define the objective function for band structure calculation.
   def hamiltonian_trace(params_pw_band, kpts, g_vec=g_vec):
@@ -127,14 +142,16 @@ def calc(
       ground_state_density_grid,
       g_vec,
       kpts,
-      crystal.vol
+      crystal.vol,
+      xc,
+      config.spin_restricted,
     )
     return jnp.sum(energy).real
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
   num_bands = ceil(crystal.num_electron / 2) + config.band_structure_empty_bands
-  params_pw_band = pw.param_init(key, num_bands, 1, freq_mask)
+  params_pw_band = pw.param_init(key, num_bands, 1, freq_mask, config.spin_restricted)
   opt_state = optimizer.init(params_pw_band)
 
   # define update function
@@ -214,10 +231,11 @@ def calc(
       k,
       crystal.vol,
       xc,
+      config.spin_restricted,
       kohn_sham=True,
     )
 
-    eigen_values = jnp.linalg.eigvalsh(hamil_matrix[0])
+    eigen_values = jnp.linalg.eigvalsh(hamil_matrix)
     return eigen_values
 
   iters = tqdm(range(len(params_kpoint_list)))
