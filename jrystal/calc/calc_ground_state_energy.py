@@ -109,7 +109,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       crystal.charges,
       g_vec,
       k_vec,
-      crystal.vol,
+      crystal,
       occ,
       kohn_sham=False,
       xc=config.xc,

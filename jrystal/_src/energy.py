@@ -16,13 +16,19 @@ from typing import Optional, Tuple, Union
 
 import jax.numpy as jnp
 import numpy as np
-from jaxtyping import Array, Complex, Float, Int
+from autofd import function
+from jaxtyping import Array, Complex, Float, Float64, Int
 
-from . import braket, grid, potential, pw
+from . import bloch, braket, grid, potential, pw
+from .crystal import Crystal
 from .ewald import ewald_coulomb_repulsion
 from .grid import translation_vectors
 from .utils import (
-  absolute_square, safe_real, wave_to_density, wave_to_density_reciprocal
+  absolute_square,
+  safe_real,
+  vmapstack,
+  wave_to_density,
+  wave_to_density_reciprocal
 )
 
 
@@ -216,9 +222,10 @@ def xc_lda(
 
 
 def exc_functional(
-  density_grid: Float[Array, 'x y z'],
+  coefficient: Array,
+  occupation: Array,
   g_vector_grid: Float[Array, 'x y z 3'],
-  vol: Float,
+  crystal: Crystal,
   xc: str,
   kohn_sham: bool = False
 ) -> Float:
@@ -232,15 +239,39 @@ def exc_functional(
   Returns:
     Float: PBE exchange-correlation energy.
   """
+  vol = crystal.vol
 
-  assert density_grid.ndim in [3, 4]
+  # wave_grid_arr = pw.wave_grid(coefficient, vol)
+  # density_grid = wave_to_density(wave_grid_arr, occupation)
 
-  if density_grid.ndim == 4:  # have spin channel
-    density_grid = jnp.sum(density_grid, axis=0)
+  rs = grid.g2r_vector_grid(g_vector_grid, crystal.cell_vectors)
 
-  num_grid = jnp.prod(jnp.array(density_grid.shape))
-  exc_density = potential.xc_density(density_grid, g_vector_grid, kohn_sham, xc)
-  e_xc = jnp.sum(exc_density * density_grid)
+  def rho(r: Float64[Array, '3']) -> Float64[Array, '']:
+    return jnp.sum(
+      occupation * absolute_square(
+        bloch.u(crystal.cell_vectors, coefficient, r, force_fft=True) /
+        jnp.sqrt(crystal.vol)
+      ),
+      axis=range(0, 3)
+    )
+
+  num_grid = jnp.prod(jnp.array(coefficient.shape[-3:]))
+  exc_density = potential.xc_density(
+    function(rho), rs, g_vector_grid, kohn_sham, xc
+  )
+  # NOTE: does not include spin channel?
+
+  e_xc = jnp.sum(exc_density * vmapstack(3)(rho)(rs))
+
+  # assert density_grid.ndim in [3, 4]
+
+  # if density_grid.ndim == 4:  # have spin channel
+  #   density_grid = jnp.sum(density_grid, axis=0)
+
+  # num_grid = jnp.prod(jnp.array(density_grid.shape))
+  # exc_density = potential.xc_density(density_grid, g_vector_grid, kohn_sham, xc)
+  # e_xc = jnp.sum(exc_density * density_grid)
+
   e_xc = safe_real(e_xc)
 
   return e_xc * vol / num_grid
@@ -284,7 +315,7 @@ def total_energy(
   charge: Int[Array, "atom"],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Float[Array, "kpt 3"],
-  vol: Float,
+  crystal: Crystal,
   occupation: Optional[Float[Array, "spin kpt band"]] = None,
   kohn_sham: bool = False,
   xc: str = 'lda_x',
@@ -321,6 +352,7 @@ def total_energy(
       the total electronic energy. If split is True, returns the individual
       components (kinetic, external, Hartree, exchange-correlation).
   """
+  vol = crystal.vol
 
   wave_grid_arr = pw.wave_grid(coefficient, vol)
 
@@ -328,13 +360,15 @@ def total_energy(
     shape=coefficient.shape[:3]
   ) if occupation is None else occupation
 
-  density_grid = wave_to_density(wave_grid_arr, occupation)
+  # density_grid = wave_to_density(wave_grid_arr, occupation)
   density_grid_rec = wave_to_density_reciprocal(wave_grid_arr, occupation)
 
   e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
-  e_xc = exc_functional(density_grid, g_vector_grid, vol, xc, kohn_sham)
+  e_xc = exc_functional(
+    coefficient, occupation, g_vector_grid, crystal, xc, kohn_sham
+  )
 
   if split:
     return e_kin, e_ext, e_har, e_xc

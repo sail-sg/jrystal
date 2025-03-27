@@ -14,14 +14,16 @@
 """Potentials."""
 from typing import Tuple, Union
 
+import autofd.operators as o
 import jax
 import jax.numpy as jnp
+import jax_xc
 from jax.lax import stop_gradient
 from jax_xc.impl.gga_x_pbe import unpol as pbe_jac_xc
 from jax_xc.utils import get_p
 from jaxtyping import Array, Complex, Float
 
-from .utils import absolute_square
+from .utils import absolute_square, vmapstack
 
 
 def hartree_reciprocal(
@@ -320,7 +322,9 @@ def rho_r_grad_norm_fn(density_grid, gs):
 
 
 def xc_pbe(
-  density_grid: Float[Array, 'x y z'],
+  # density_grid: Float[Array, 'x y z'],
+  rho,
+  rs,
   g_vector_grid,
   kohn_sham: bool = False
 ) -> Float[Array, 'x y z']:
@@ -328,23 +332,37 @@ def xc_pbe(
   Args:
     kohn_sham: if True, calculate vxc
   """
-  dim = density_grid.ndim
-  if dim > 3:
-    density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
 
-  grad_norm = rho_r_grad_norm_fn(density_grid, g_vector_grid)
+  with jax.ensure_compile_time_eval():
+    gga_x_pbe = jax_xc.experimental.gga_x_pbe
+    epsilon_xc = gga_x_pbe(rho)
+    if kohn_sham:  # return vxc
+      vxc = jax.grad(lambda rho: o.integrate(rho * gga_x_pbe(rho)))(rho)
+      fn = vxc
+    else:
+      fn = epsilon_xc
 
-  if kohn_sham:  # return vxc
-    # NOTE: v_eff can be calculated in reciprocal space
-    vxc_G = vxc_gga_recp(_pbe_x, density_grid, grad_norm, g_vector_grid)
-    vxc_r = jnp.fft.ifftn(vxc_G)
-    return vxc_r
-  else:
-    return _pbe_x(density_grid, grad_norm)
+  return vmapstack(3)(fn)(rs)
+
+  # dim = density_grid.ndim
+  # if dim > 3:
+  #   density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
+
+  # grad_norm = rho_r_grad_norm_fn(density_grid, g_vector_grid)
+
+  # if kohn_sham:  # return vxc
+  #   # NOTE: v_eff can be calculated in reciprocal space
+  #   vxc_G = vxc_gga_recp(_pbe_x, density_grid, grad_norm, g_vector_grid)
+  #   vxc_r = jnp.fft.ifftn(vxc_G)
+  #   return vxc_r
+  # else:
+  #   return _pbe_x(density_grid, grad_norm)
 
 
 def xc_density(
-  density_grid: Float[Array, 'x y z'],
+  # density_grid: Float[Array, 'x y z'],
+  rho,
+  rs,
   g_vector_grid,
   kohn_sham: bool = False,
   xc: str = "lda_x"
@@ -356,9 +374,9 @@ def xc_density(
 
   # TODO: support lda_c etc.
   if xc == 'lda_x':
-    return xc_lda(density_grid, kohn_sham)
+    return xc_lda(rho, rs, kohn_sham)
   elif xc == 'pbe':
-    return xc_pbe(density_grid, g_vector_grid, kohn_sham)
+    return xc_pbe(rho, rs, g_vector_grid, kohn_sham)
   else:
     raise NotImplementedError(f"XC {xc} not supported.")
 
