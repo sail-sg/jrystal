@@ -160,12 +160,15 @@ def hamiltonian_matrix_trace(
     band_coefficient, t_kin, vol, diagonal=True, mode='kinetic'
   )  # [spin, kpt, band]
 
-  hamil_trace = (f_eff + f_kin).real
+  if spin_restricted:
+    hamil_trace = (f_eff + f_kin).real
+  else:
+    hamil_trace = (f_eff[0, 0] + f_eff[1, 1] + f_kin).real
   if not keep_kpts_axis:
     hamil_trace = jnp.sum(hamil_trace, axis=1)
   if not keep_spin_axis:
     hamil_trace = jnp.sum(hamil_trace, axis=0)
-  breakpoint()
+  # breakpoint()
   return jnp.sum(hamil_trace, axis=-1)
 
 

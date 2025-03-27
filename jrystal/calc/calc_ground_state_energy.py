@@ -113,6 +113,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       occ,
       kohn_sham=False,
       xc=config.xc,
+      spin_restricted=config.spin_restricted,
     )
 
   def get_entropy(params_occ):

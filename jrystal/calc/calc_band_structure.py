@@ -114,22 +114,23 @@ def calc(
 
   coeff_ground_state = pw.coeff(params_pw_ground_state, freq_mask)
   occ_ground_state = get_occupation(params_occ_ground_state)
-  ground_state_density_grid = pw.density_grid(
+  density_grid = pw.density_grid(
     coeff_ground_state, crystal.vol, occ_ground_state
   )
-  o_alpha = jnp.copy(occ_ground_state)
-  o_alpha = o_alpha.at[1].set(0)
-  o_beta = jnp.copy(occ_ground_state)
-  o_beta = o_beta.at[0].set(0)
-  density_alpha_grid = pw.density_grid(
-    coeff_ground_state, crystal.vol, o_alpha
-  )
-  density_beta_grid = pw.density_grid(
-    coeff_ground_state, crystal.vol, o_beta
-  )
-  density_grid = jnp.vstack([
-    [density_alpha_grid, density_beta_grid]]
-  )
+  if not config.spin_restricted:
+    o_alpha = jnp.copy(occ_ground_state)
+    o_alpha = o_alpha.at[1].set(0)
+    o_beta = jnp.copy(occ_ground_state)
+    o_beta = o_beta.at[0].set(0)
+    density_alpha_grid = pw.density_grid(
+      coeff_ground_state, crystal.vol, o_alpha
+    )
+    density_beta_grid = pw.density_grid(
+      coeff_ground_state, crystal.vol, o_beta
+    )
+    density_grid = jnp.vstack([
+      [density_alpha_grid, density_beta_grid]]
+    )
 
   # Define the objective function for band structure calculation.
   def hamiltonian_trace(params_pw_band, kpts):
@@ -154,7 +155,7 @@ def calc(
   opt_state = optimizer.init(params_pw_band)
 
   # define update function
-  # @jax.jit
+  @jax.jit
   def update(params, opt_state, kpts):
     hamil_trace, grad = jax.value_and_grad(hamiltonian_trace)(params, kpts)
 

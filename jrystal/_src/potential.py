@@ -58,12 +58,12 @@ def hartree_reciprocal(
   """
   dim = g_vector_grid.shape[-1]
   g_vec_square = jnp.sum(g_vector_grid**2, axis=-1)  # [x y z]
-  g_vec_square = g_vec_square.at[(0,) * dim].set(1e-16)
+  g_vec_square = g_vec_square.at[(0,) * dim].set(1)
 
   if kohn_sham:
     density_grid_reciprocal = stop_gradient(density_grid_reciprocal)
 
-  output = density_grid_reciprocal / g_vec_square[None, ...]
+  output = density_grid_reciprocal / g_vec_square
   output = output.at[(0,) * dim].set(0)
   output = output * 4 * jnp.pi
 
@@ -396,17 +396,17 @@ def effective(
   )
   density_grid_reciprocal = jnp.fft.fftn(density_grid, axes=range(-dim, 0))
   # reciprocal space:
-  v_hartree = hartree_reciprocal(
-    density_grid_reciprocal, g_vector_grid, kohn_sham
-  )
+  v_hartree = hartree_reciprocal(jnp.sum(density_grid_reciprocal, axis=0), g_vector_grid, kohn_sham)
   v_external = external_reciprocal(position, charge, g_vector_grid, vol)
 
   # real space:
   if xc.strip() in ["lda", "lda_x"]:
-    v_xp = xc_lda(2 * density_grid[0], kohn_sham) / 2
-    v_xn = xc_lda(2 * density_grid[1], kohn_sham) / 2
-    v_xc = jnp.vstack([[v_xp, v_xn]]) 
-    breakpoint()
+    if spin_restricted:
+      v_xc = xc_lda(density_grid, kohn_sham)
+    else:
+      v_xp = xc_lda(2 * density_grid[0], kohn_sham)
+      v_xn = xc_lda(2 * density_grid[1], kohn_sham)
+      v_xc = jnp.vstack([[v_xp, v_xn]]) 
   elif xc.strip() in ["pbe", "pbe_x"]:
     n_alpha_grid = density_grid[0]
     n_beta_grid = density_grid[1]
@@ -436,8 +436,9 @@ def effective(
   # transform to real space
   v_hartree = jnp.fft.ifftn(v_hartree, axes=range(-dim, 0))
   v_external = jnp.fft.ifftn(v_external, axes=range(-dim, 0))
+  # breakpoint()
 
   if split:
     return v_hartree, v_external, v_xc
   else:
-    return v_hartree + v_external[None, ...] + v_xc
+    return v_hartree[None, ...] + v_external[None, ...] + v_xc
