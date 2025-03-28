@@ -53,7 +53,7 @@ def hartree_reciprocal(
   """
   dim = g_vector_grid.shape[-1]
   g_vec_square = jnp.sum(g_vector_grid**2, axis=-1)  # [x y z]
-  g_vec_square = g_vec_square.at[(0,) * dim].set(1e-16)
+  g_vec_square = g_vec_square.at[(0,) * dim].set(1)
 
   if kohn_sham:
     density_grid_reciprocal = stop_gradient(density_grid_reciprocal)
@@ -310,19 +310,25 @@ def effective(
 
   assert density_grid.ndim in [dim, dim + 1]  # w/w\o spin channel
 
-  if spin_restricted and density_grid.ndim == dim + 1:
-    density_grid = jnp.sum(density_grid, axis=0)
-
+  grid_size = g_vector_grid.shape[0]
+  # make sure for both spin-polarized (unpolarized) version the shape is 
+  # consistent
+  density_grid = density_grid.reshape(
+    -1, grid_size, grid_size, grid_size
+  )
   density_grid_reciprocal = jnp.fft.fftn(density_grid, axes=range(-dim, 0))
   # reciprocal space:
-  v_hartree = hartree_reciprocal(
-    density_grid_reciprocal, g_vector_grid, kohn_sham
-  )
+  v_hartree = hartree_reciprocal(jnp.sum(density_grid_reciprocal, axis=0), g_vector_grid, kohn_sham)
   v_external = external_reciprocal(position, charge, g_vector_grid, vol)
 
   # real space:
   if xc.strip() in ["lda", "lda_x"]:
-    v_xc = xc_lda(density_grid, kohn_sham)
+    if spin_restricted:
+      v_xc = xc_lda(density_grid, kohn_sham)
+    else:
+      v_xp = xc_lda(2 * density_grid[0], kohn_sham)
+      v_xn = xc_lda(2 * density_grid[1], kohn_sham)
+      v_xc = jnp.vstack([[v_xp, v_xn]]) 
   else:
     raise NotImplementedError("XC only support LDA for now.")
 
@@ -333,4 +339,4 @@ def effective(
   if split:
     return v_hartree, v_external, v_xc
   else:
-    return v_hartree + v_external + v_xc
+    return v_hartree[None, ...] + v_external[None, ...] + v_xc
