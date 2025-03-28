@@ -33,6 +33,7 @@ from ..config import JrystalConfigDict
 from .._src import pw, hamiltonian, occupation
 from .._src.band import get_k_path
 from .._src.crystal import Crystal
+from .._src.utils import wave_to_density
 
 
 @dataclass
@@ -118,19 +119,10 @@ def calc(
     coeff_ground_state, crystal.vol, occ_ground_state
   )
   if not config.spin_restricted:
-    o_alpha = jnp.copy(occ_ground_state)
-    o_alpha = o_alpha.at[1].set(0)
-    o_beta = jnp.copy(occ_ground_state)
-    o_beta = o_beta.at[0].set(0)
-    density_alpha_grid = pw.density_grid(
-      coeff_ground_state, crystal.vol, o_alpha
-    )
-    density_beta_grid = pw.density_grid(
-      coeff_ground_state, crystal.vol, o_beta
-    )
-    ground_state_density_grid = jnp.vstack([
-      [density_alpha_grid, density_beta_grid]]
-    )
+    wave_grid_arr = pw.wave_grid(coeff_ground_state, crystal.vol)
+    n_orb = wave_to_density(wave_grid_arr)
+    n_alpha_grid, n_beta_grid= jnp.sum(n_orb, axis=(1, 2))
+    ground_state_density_grid = jnp.vstack([n_alpha_grid, n_beta_grid])
 
   # Define the objective function for band structure calculation.
   def hamiltonian_trace(params_pw_band, kpts, g_vec=g_vec):
@@ -235,7 +227,8 @@ def calc(
       kohn_sham=True,
     )
 
-    eigen_values = jnp.linalg.eigvalsh(hamil_matrix)
+    eigen_values = jnp.linalg.eigvalsh(hamil_matrix.reshape(-1, num_bands, num_bands))
+
     return eigen_values
 
   iters = tqdm(range(len(params_kpoint_list)))
