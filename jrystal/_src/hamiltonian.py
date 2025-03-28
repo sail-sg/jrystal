@@ -196,7 +196,8 @@ def hamiltonian_matrix(
     charges (Int[Array, "atom"]): Atomic numbers for each atom with shape [atom].
     effictive_density_grid (Float[Array, "x y z"]): Electron density for effective potential evaluated on real space grid with shape [x, y, z].
     g_vector_grid (Float[Array, "x y z 3"]): G-vector grid in reciprocal space with shape [x, y, z, 3].
-    kpts (Float[Array, "kpt 3"]): K-points in reciprocal space with shape [kpt, 3].
+    kpts (Float[Array, "kpt 3"]): K-points in reciprocal space with shape [kpt, 3]. Currently, only spin-restricted
+    calculation enable parallel calculation for multiple K-points.
     vol (Float): Volume of the unit cell.
     xc (str): Exchange-correlation functional name. Defaults to 'lda'.
     kohn_sham (bool): Whether to use Kohn-Sham potential. Defaults to True.
@@ -211,9 +212,9 @@ def hamiltonian_matrix(
 
     def efun(u):
       _coeff = jnp.einsum(
-        "ik, ijkabc -> ijabc", u.reshape(-1, num_bands), coeff_k
+        "si, sixyz -> sxyz", u.reshape(-1, num_bands), coeff_k
       )
-      _coeff = jnp.expand_dims(_coeff, axis=-5)
+      _coeff = jnp.expand_dims(_coeff, axis=(-5, -4))
 
       band_energies = hamiltonian_matrix_trace(
         _coeff,
@@ -236,8 +237,17 @@ def hamiltonian_matrix(
       x = jnp.ones(2 * num_bands, dtype=band_coefficient.dtype)
     return complex_hessian(efun, x)
 
-  h1 = hamil_k(kpts, band_coefficient)
-  return h1  # shape: [kpt, band, band]
+  if spin_restricted:
+    h1 = jax.vmap(hamil_k, in_axes=(0, 1), out_axes=0)(kpts, band_coefficient)
+    h1 = h1[None, ...]
+    # shape: [1, k, band, band]
+  else:
+    h1_ = hamil_k(kpts, band_coefficient[:, 0])
+    h1 = jnp.zeros((2, 1, num_bands, num_bands))
+    h1 = h1.at[0, 0].set(h1_[:num_bands, :num_bands])
+    h1 = h1.at[1, 0].set(h1_[num_bands:, num_bands:])
+    # shape: [2, 1, band, band]
+  return h1 
 
 
 def _hamiltonian_matrix_basis(
