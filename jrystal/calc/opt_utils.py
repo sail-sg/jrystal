@@ -39,9 +39,6 @@ from ..config import JrystalConfigDict
 
 
 def set_env_params(config: JrystalConfigDict):
-  os.environ["OPENBLAS_NUM_THREADS"] = "4"
-  os.environ["MKL_NUM_THREADS"] = "4"
-  os.environ["OMP_NUM_THREADS"] = "4"
   jax.config.update("jax_debug_nans", config.jax_debug_nans)
 
   if config.verbose:
