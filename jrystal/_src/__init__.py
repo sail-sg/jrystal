@@ -27,6 +27,8 @@ from . import grid
 from . import utils
 from . import unitary_module
 from . import braket
+from . import spmd
+
 
 __all__ = [
   "band",
@@ -44,4 +46,5 @@ __all__ = [
   "utils",
   "unitary_module",
   "braket",
+  "spmd",
 ]
