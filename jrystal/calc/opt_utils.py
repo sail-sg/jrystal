@@ -32,13 +32,15 @@ from ..config import JrystalConfigDict
 
 
 def set_env_params(config: JrystalConfigDict):
-  jax.config.update("jax_debug_nans", False)
+  jax.config.update("jax_debug_nans", config.jax_debug_nans)
 
   if config.verbose:
     logging.set_verbosity(logging.INFO)
     logging.info('Versbose mode is on.')
     if config.jax_enable_x64:
       logging.info("Precision: Double (64 bit).")
+    else:
+      logging.info("Precision: Single (32 bit).")
   else:
     logging.set_verbosity(logging.WARNING)
     logging.warning('Versbose mode is off.')
@@ -85,7 +87,10 @@ def create_freq_mask(config: JrystalConfigDict):
 
 def create_crystal(config: JrystalConfigDict) -> Crystal:
   _pkg_path = jr.get_pkg_path()
-  path = _pkg_path + '/geometry/' + config.crystal + '.xyz'
+  if config.crystal is not None:
+    path = _pkg_path + '/geometry/' + config.crystal + '.xyz'
+  else:
+    path = config.crystal_file_path_path
   crystal = Crystal.create_from_file(file_path=path)
   check_spin_number(crystal.num_electron, crystal.spin)
   return crystal
