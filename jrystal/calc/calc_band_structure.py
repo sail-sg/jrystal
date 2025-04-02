@@ -120,8 +120,9 @@ def calc(
   )
   if not config.spin_restricted:
     wave_grid_arr = pw.wave_grid(coeff_ground_state, crystal.vol)
-    n_orb = wave_to_density(wave_grid_arr)
-    n_alpha_grid, n_beta_grid= jnp.sum(n_orb, axis=(1, 2))
+    o_alpha, o_beta = occ_ground_state
+    n_alpha_grid = wave_to_density(wave_grid_arr[0], o_alpha)
+    n_beta_grid = wave_to_density(wave_grid_arr[1], o_beta)
     ground_state_density_grid = jnp.vstack([n_alpha_grid, n_beta_grid])
 
   # Define the objective function for band structure calculation.
