@@ -309,8 +309,9 @@ def total_energy(
     if spin_restricted:
       e_xc = xc_lda(density_grid, vol, kohn_sham)
     else:
-      n_orb = wave_to_density(wave_grid_arr)
-      n_alpha_grid, n_beta_grid= jnp.sum(n_orb, axis=(1, 2))
+      o_alpha, o_beta = occupation
+      n_alpha_grid = wave_to_density(wave_grid_arr[0], o_alpha)
+      n_beta_grid = wave_to_density(wave_grid_arr[1], o_beta)
       e_xc = xc_lda(n_alpha_grid*2, vol, kohn_sham)/2 +\
         xc_lda(n_beta_grid*2, vol, kohn_sham)/2
   else:
