@@ -43,8 +43,6 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/graph.js?v=6245dd16"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
-    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/potential';</script>
     <link rel="icon" href="../_static/jrystal_logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -347,9 +345,7 @@ document.write(`
   </button>
 `);
 </script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -365,19 +361,6 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.effective"><code class="docutils literal notranslate"><span class="pre">effective()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.external"><code class="docutils literal notranslate"><span class="pre">external()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.external_reciprocal"><code class="docutils literal notranslate"><span class="pre">external_reciprocal()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.hartree"><code class="docutils literal notranslate"><span class="pre">hartree()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.hartree_reciprocal"><code class="docutils literal notranslate"><span class="pre">hartree_reciprocal()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.xc_lda"><code class="docutils literal notranslate"><span class="pre">xc_lda()</span></code></a></li>
-</ul>
-            </nav>
         </div>
     </div>
 </div>
@@ -387,220 +370,8 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="module-jrystal.potential">
-<span id="potential"></span><h1>potential<a class="headerlink" href="#module-jrystal.potential" title="Link to this heading">#</a></h1>
-<p>Potential functions.</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.potential.effective">
-<span class="sig-prename descclassname"><span class="pre">jrystal.potential.</span></span><span class="sig-name descname"><span class="pre">effective</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">density_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'num_atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'num_atom'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'lda'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kohn_sham</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spin_restricted</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/potential.html#effective"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.potential.effective" title="Link to this definition">#</a></dt>
-<dd><p>Calculate the effective potential for electronic structure calculations.</p>
-<p>The effective potential is the sum of three contributions:</p>
-<div class="math notranslate nohighlight">
-\[V_{\text{eff}}(\mathbf{r}) = V_H(\mathbf{r}) + V_{\text{ext}}(\mathbf{r})
-+ V_{xc}(\mathbf{r})\]</div>
-<p>where:</p>
-<ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(V_H(\mathbf{r})\)</span> is the Hartree potential</p></li>
-<li><p><span class="math notranslate nohighlight">\(V_{\text{ext}}(\mathbf{r})\)</span> is the external (nuclear) potential</p></li>
-<li><p><span class="math notranslate nohighlight">\(V_{xc}(\mathbf{r})\)</span> is the exchange-correlation potential</p></li>
-</ul>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Currently supports only LDA exchange-correlation functional.</p>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>density_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z'</em><em>]</em>) – Real-space electron density.</p></li>
-<li><p><strong>position</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;num_atom 3&quot;</em><em>]</em>) – Atomic positions in the unit cell.</p></li>
-<li><p><strong>charge</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;num_atom&quot;</em><em>]</em>) – Nuclear charges.</p></li>
-<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
-<li><p><strong>vol</strong> (<em>Float</em>) – Volume of the unit cell.</p></li>
-<li><p><strong>split</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, return individual potential components.
-Defaults to False.</p></li>
-<li><p><strong>xc</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Exchange-correlation functional type. Only “lda” is
-currently supported. Defaults to “lda”.</p></li>
-<li><p><strong>kohn_sham</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, use Kohn-Sham formalism. Defaults to False.</p></li>
-<li><p><strong>spin_restricted</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, use spin-restricted calculation.
-Defaults to True.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>If split is True, returns (Hartree, external, exchange-correlation) potentials. Otherwise returns their sum as the total effective potential.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Union[Tuple[Array, Array, Array], Array]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.potential.external">
-<span class="sig-prename descclassname"><span class="pre">jrystal.potential.</span></span><span class="sig-name descname"><span class="pre">external</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/potential.html#external"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.potential.external" title="Link to this definition">#</a></dt>
-<dd><p>Calculate the external potential in real space.</p>
-<p>Computes the external potential by applying inverse Fourier transform to the
-reciprocal space potential. The real-space external potential represents the
-Coulomb interaction between electrons and nuclei:</p>
-<div class="math notranslate nohighlight">
-\[V_{\text{ext}}(\mathbf{r}) = \mathcal{F}^{-1}[\hat{V}_{\text{ext}}(\mathbf{G})]\]</div>
-<p>where:</p>
-<ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(V_{\text{ext}}(\mathbf{r})\)</span> is the external potential in real space</p></li>
-<li><p><span class="math notranslate nohighlight">\(\hat{V}_{\text{ext}}(\mathbf{G})\)</span> is the external potential in reciprocal space</p></li>
-<li><p><span class="math notranslate nohighlight">\(\mathcal{F}^{-1}\)</span> denotes the inverse Fourier transform</p></li>
-</ul>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>position</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'atom 3'</em><em>]</em>) – Atomic positions in the unit cell.</p></li>
-<li><p><strong>charge</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'atom'</em><em>]</em>) – Nuclear charges.</p></li>
-<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
-<li><p><strong>vol</strong> (<em>Float</em>) – Volume of the unit cell.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>External potential in real space.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Complex[Array, ‘x y z’]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.potential.external_reciprocal">
-<span class="sig-prename descclassname"><span class="pre">jrystal.potential.</span></span><span class="sig-name descname"><span class="pre">external_reciprocal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/potential.html#external_reciprocal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.potential.external_reciprocal" title="Link to this definition">#</a></dt>
-<dd><p>Calculate the external potential in reciprocal space.</p>
-<p>The external potential represents the Coulomb interaction between electrons
-and nuclei. In reciprocal space, it is computed as a sum over atomic
-contributions:</p>
-<div class="math notranslate nohighlight">
-\[\hat{V}_{\text{ext}}(\mathbf{G}) = \sum_{\alpha} Z_{\alpha}
-e^{-i\mathbf{G}\cdot\mathbf{R}_{\alpha}} v(\mathbf{G})\]</div>
-<p>where:</p>
-<ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(Z_{\alpha}\)</span> is the nuclear charge of atom <span class="math notranslate nohighlight">\(\alpha\)</span></p></li>
-<li><p><span class="math notranslate nohighlight">\(\mathbf{R}_{\alpha}\)</span> is the position of atom <span class="math notranslate nohighlight">\(\alpha\)</span></p></li>
-<li><p><span class="math notranslate nohighlight">\(v(\mathbf{G}) = -4\pi/|\mathbf{G}|^2\)</span> is the Coulomb potential in reciprocal space</p></li>
-<li><p><span class="math notranslate nohighlight">\(\mathbf{G}\)</span> is the reciprocal lattice vector</p></li>
-</ul>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>position</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'atom 3'</em><em>]</em>) – Atomic positions in the unit cell.</p></li>
-<li><p><strong>charge</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'atom'</em><em>]</em>) – Nuclear charges.</p></li>
-<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
-<li><p><strong>vol</strong> (<em>Float</em>) – Volume of the unit cell.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>External potential in reciprocal space.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Complex[Array, ‘x y z’]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.potential.hartree">
-<span class="sig-prename descclassname"><span class="pre">jrystal.potential.</span></span><span class="sig-name descname"><span class="pre">hartree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">density_grid_reciprocal</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kohn_sham</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/potential.html#hartree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.potential.hartree" title="Link to this definition">#</a></dt>
-<dd><p>Calculate the Hartree potential in real space.</p>
-<p>Computes the Hartree potential by applying inverse Fourier transform to the
-reciprocal space potential. The real-space Hartree potential represents the
-classical electrostatic interaction between electrons:</p>
-<div class="math notranslate nohighlight">
-\[V_H(\mathbf{r}) = \mathcal{F}^{-1}[\hat{V}_H(\mathbf{G})]\]</div>
-<p>where:</p>
-<ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(V_H(\mathbf{r})\)</span> is the Hartree potential in real space</p></li>
-<li><p><span class="math notranslate nohighlight">\(\hat{V}_H(\mathbf{G})\)</span> is the Hartree potential in reciprocal space</p></li>
-<li><p><span class="math notranslate nohighlight">\(\mathcal{F}^{-1}\)</span> denotes the inverse Fourier transform</p></li>
-</ul>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>density_grid_reciprocal</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>'x y z'</em><em>]</em>) – Electron density in
-reciprocal space.</p></li>
-<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
-<li><p><strong>kohn_sham</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, use Kohn-Sham formalism. Defaults to False.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Hartree potential in real space. If density_grid_reciprocal has batch axes, they are preserved in the output.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Complex[Array, ‘x y z’]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.potential.hartree_reciprocal">
-<span class="sig-prename descclassname"><span class="pre">jrystal.potential.</span></span><span class="sig-name descname"><span class="pre">hartree_reciprocal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">density_grid_reciprocal</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kohn_sham</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/potential.html#hartree_reciprocal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.potential.hartree_reciprocal" title="Link to this definition">#</a></dt>
-<dd><p>Calculate the Hartree potential in reciprocal space.</p>
-<p>The Hartree potential represents the classical electrostatic interaction between electrons.
-In reciprocal space, it obeys the following equation:</p>
-<div class="math notranslate nohighlight">
-\[\hat{V}_H(\mathbf{G}) = 4\pi \frac{\hat{n}(\mathbf{G})}{|\mathbf{G}|^2},
-\quad \hat{V}_H(\mathbf{0}) = 0\]</div>
-<p>where:</p>
-<ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(\hat{V}_H(\mathbf{G})\)</span> is the Hartree potential in reciprocal space</p></li>
-<li><p><span class="math notranslate nohighlight">\(\hat{n}(\mathbf{G})\)</span> is the electron density in reciprocal space</p></li>
-<li><p><span class="math notranslate nohighlight">\(\mathbf{G}\)</span> is the reciprocal lattice vector</p></li>
-</ul>
-<p>Please also refer to the tutorial <a class="reference internal" href="../tutorial/total_energy.html"><span class="doc">Total Energy Minimization</span></a>
-for more details.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>density_grid_reciprocal</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>'x y z'</em><em>]</em>) – Electron density in
-reciprocal space.</p></li>
-<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
-<li><p><strong>kohn_sham</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, use Kohn-Sham formalism. Defaults to False.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Hartree potential in reciprocal space. If  density_grid_reciprocal has batch axes, they are preserved in the output.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Complex[Array, ‘x y z’]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.potential.xc_lda">
-<span class="sig-prename descclassname"><span class="pre">jrystal.potential.</span></span><span class="sig-name descname"><span class="pre">xc_lda</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">density_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kohn_sham</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/potential.html#xc_lda"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.potential.xc_lda" title="Link to this definition">#</a></dt>
-<dd><p>Calculate the LDA exchange-correlation potential.</p>
-<p>Implements the Local Density Approximation (LDA) for the exchange-correlation
-potential in the spin-unpolarized case. The potential is obtained as the
-functional derivative of the LDA energy:</p>
-<div class="math notranslate nohighlight">
-\[v_{xc}^{\text{LDA}}(\mathbf{r}) = -\left(\frac{3\rho(\mathbf{r})}{\pi}
-\right)^{1/3}\]</div>
-<p>where:</p>
-<ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(\rho(\mathbf{r})\)</span> is the electron density</p></li>
-<li><p><span class="math notranslate nohighlight">\(v_{xc}^{\text{LDA}}\)</span> is the exchange-correlation potential</p></li>
-</ul>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>density_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z'</em><em>]</em>) – Real-space electron density.</p></li>
-<li><p><strong>kohn_sham</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, use Kohn-Sham formalism. Defaults to False.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>LDA exchange-correlation potential.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Float[Array, ‘x y z’]</p>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="potential">
+<h1>potential<a class="headerlink" href="#potential" title="Link to this heading">#</a></h1>
 </section>
 
 
@@ -638,26 +409,6 @@ functional derivative of the LDA energy:</p>
             </div>
             
             
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.effective"><code class="docutils literal notranslate"><span class="pre">effective()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.external"><code class="docutils literal notranslate"><span class="pre">external()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.external_reciprocal"><code class="docutils literal notranslate"><span class="pre">external_reciprocal()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.hartree"><code class="docutils literal notranslate"><span class="pre">hartree()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.hartree_reciprocal"><code class="docutils literal notranslate"><span class="pre">hartree_reciprocal()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.potential.xc_lda"><code class="docutils literal notranslate"><span class="pre">xc_lda()</span></code></a></li>
-</ul>
-  </nav></div>
-
-</div></div>
               
             
           </div>

@@ -345,9 +345,7 @@ document.write(`
   </button>
 `);
 </script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -363,17 +361,6 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.calc.band"><code class="docutils literal notranslate"><span class="pre">band()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.calc.band_normcons"><code class="docutils literal notranslate"><span class="pre">band_normcons()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.calc.energy"><code class="docutils literal notranslate"><span class="pre">energy()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.calc.energy_normcons"><code class="docutils literal notranslate"><span class="pre">energy_normcons()</span></code></a></li>
-</ul>
-            </nav>
         </div>
     </div>
 </div>
@@ -385,81 +372,6 @@ document.write(`
                   
   <section id="calculator">
 <h1>calculator<a class="headerlink" href="#calculator" title="Link to this heading">#</a></h1>
-<p id="module-jrystal.calc">Calculation module for band structure and energy.</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.calc.band">
-<span class="sig-prename descclassname"><span class="pre">jrystal.calc.</span></span><span class="sig-name descname"><span class="pre">band</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">JrystalConfigDict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ground_state_energy_output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GroundStateEnergyOutput</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">BandStructureOutput</span></span></span><a class="headerlink" href="#jrystal.calc.band" title="Link to this definition">#</a></dt>
-<dd><p>Calculate the band structure of a crystal.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>config</strong> (<em>JrystalConfigDict</em>) – The configuration for the calculation.</p></li>
-<li><p><strong>ground_state_energy_output</strong> (<em>Optional</em><em>[</em><em>GroundStateEnergyOutput</em><em>]</em><em>, </em><em>optional</em>) – The output of the ground state energy calculation. Defaults to None.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The band structure output of the crystal.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>BandStructureOutput</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.calc.band_normcons">
-<span class="sig-prename descclassname"><span class="pre">jrystal.calc.</span></span><span class="sig-name descname"><span class="pre">band_normcons</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">JrystalConfigDict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ground_state_energy_output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GroundStateEnergyOutput</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">BandStructureOutput</span></span></span><a class="headerlink" href="#jrystal.calc.band_normcons" title="Link to this definition">#</a></dt>
-<dd><p>Calculate the band structure of a crystal with norm-conserving pseudopotential.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>config</strong> (<em>JrystalConfigDict</em>) – The configuration for the calculation.</p></li>
-<li><p><strong>ground_state_energy_output</strong> (<em>Optional</em><em>[</em><em>GroundStateEnergyOutput</em><em>]</em><em>, </em><em>optional</em>) – The output of the ground state energy calculation. Defaults to None.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The band structure output of the crystal.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>BandStructureOutput</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.calc.energy">
-<span class="sig-prename descclassname"><span class="pre">jrystal.calc.</span></span><span class="sig-name descname"><span class="pre">energy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">JrystalConfigDict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">GroundStateEnergyOutput</span></span></span><a class="headerlink" href="#jrystal.calc.energy" title="Link to this definition">#</a></dt>
-<dd><p>Calculate the ground state energy of a crystal.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>config</strong> (<em>JrystalConfigDict</em>) – Configuration for the calculation.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The ground state energy of the crystal.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>GroundStateEnergyOutput</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.calc.energy_normcons">
-<span class="sig-prename descclassname"><span class="pre">jrystal.calc.</span></span><span class="sig-name descname"><span class="pre">energy_normcons</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">JrystalConfigDict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">GroundStateEnergyOutput</span></span></span><a class="headerlink" href="#jrystal.calc.energy_normcons" title="Link to this definition">#</a></dt>
-<dd><p>Calculate the ground state energy of a crystal with norm-conserving pseudopotential.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>config</strong> (<em>JrystalConfigDict</em>) – The configuration for the calculation.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The ground state energy output of the crystal.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>GroundStateEnergyOutput</p>
-</dd>
-</dl>
-</dd></dl>
-
 </section>
 
 
@@ -497,24 +409,6 @@ document.write(`
             </div>
             
             
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.calc.band"><code class="docutils literal notranslate"><span class="pre">band()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.calc.band_normcons"><code class="docutils literal notranslate"><span class="pre">band_normcons()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.calc.energy"><code class="docutils literal notranslate"><span class="pre">energy()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.calc.energy_normcons"><code class="docutils literal notranslate"><span class="pre">energy_normcons()</span></code></a></li>
-</ul>
-  </nav></div>
-
-</div></div>
               
             
           </div>

@@ -43,8 +43,6 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/graph.js?v=6245dd16"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
-    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/kinetic';</script>
     <link rel="icon" href="../_static/jrystal_logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -347,9 +345,7 @@ document.write(`
   </button>
 `);
 </script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -365,14 +361,6 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.kinetic.kinetic_operator"><code class="docutils literal notranslate"><span class="pre">kinetic_operator()</span></code></a></li>
-</ul>
-            </nav>
         </div>
     </div>
 </div>
@@ -382,34 +370,8 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="module-jrystal.kinetic">
-<span id="kinetic"></span><h1>kinetic<a class="headerlink" href="#module-jrystal.kinetic" title="Link to this heading">#</a></h1>
-<p>Kinetic operator.</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.kinetic.kinetic_operator">
-<span class="sig-prename descclassname"><span class="pre">jrystal.kinetic.</span></span><span class="sig-name descname"><span class="pre">kinetic_operator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kpts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'kpt</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'kpt</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/kinetic.html#kinetic_operator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.kinetic.kinetic_operator" title="Link to this definition">#</a></dt>
-<dd><p>Compute kinetic operator matrix element in reciprocal space.</p>
-<p>This function returns the following expression:</p>
-<div class="math notranslate nohighlight">
-\[\Vert \mathbf{G} + \mathbf{k} \Vert^2 / 2,\]</div>
-<p>the kinetic energy matrix element evaluated at each k-point and reciprocal lattice vector which will be contracted with the coefficient matrix to obtain the kinetic energy.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>g_vector_grid</strong> (<em>VectorGrid</em><em>[</em><em>Float</em><em>, </em><em>3</em><em>]</em>) – reciprocal lattice vector.</p></li>
-<li><p><strong>kpts</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'num_k 3'</em><em>]</em><em>, </em><em>optional</em>) – k-points. Defaults to None.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>kinetic energy matrix element evaluated at
-each k-point and reciprocal lattice vector.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Float[Array, ‘kpt x y z’]</p>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="kinetic">
+<h1>kinetic<a class="headerlink" href="#kinetic" title="Link to this heading">#</a></h1>
 </section>
 
 
@@ -447,21 +409,6 @@ each k-point and reciprocal lattice vector.</p>
             </div>
             
             
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.kinetic.kinetic_operator"><code class="docutils literal notranslate"><span class="pre">kinetic_operator()</span></code></a></li>
-</ul>
-  </nav></div>
-
-</div></div>
               
             
           </div>

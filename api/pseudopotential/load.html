@@ -345,9 +345,7 @@ document.write(`
   </button>
 `);
 </script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -363,22 +361,6 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.extract_value"><code class="docutils literal notranslate"><span class="pre">extract_value()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.find_upf"><code class="docutils literal notranslate"><span class="pre">find_upf()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_pp_header"><code class="docutils literal notranslate"><span class="pre">parse_pp_header()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_pp_info"><code class="docutils literal notranslate"><span class="pre">parse_pp_info()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_pp_local"><code class="docutils literal notranslate"><span class="pre">parse_pp_local()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_pp_mesh"><code class="docutils literal notranslate"><span class="pre">parse_pp_mesh()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_pp_nonlocal"><code class="docutils literal notranslate"><span class="pre">parse_pp_nonlocal()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_upf"><code class="docutils literal notranslate"><span class="pre">parse_upf()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_valence_configuration"><code class="docutils literal notranslate"><span class="pre">parse_valence_configuration()</span></code></a></li>
-</ul>
-            </nav>
         </div>
     </div>
 </div>
@@ -388,98 +370,8 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="module-jrystal.pseudopotential.load">
-<span id="load"></span><h1>load<a class="headerlink" href="#module-jrystal.pseudopotential.load" title="Link to this heading">#</a></h1>
-<p>UPF (Unified Pseudopotential Format) parser</p>
-<dl class="simple">
-<dt>Ref:</dt><dd><p><a class="github reference external" href="https://github.com/ltalirz/upf-schema/blob/master/upf.xsd">ltalirz/upf-schema</a>
-<a class="reference external" href="https://pseudopotentials.quantum-espresso.org/home/unified-pseudopotential-format">https://pseudopotentials.quantum-espresso.org/home/unified-pseudopotential-format</a></p>
-</dd>
-</dl>
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pseudopotential.load.extract_value">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.load.</span></span><span class="sig-name descname"><span class="pre">extract_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">line</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/load.html#extract_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.load.extract_value" title="Link to this definition">#</a></dt>
-<dd><p>Safely extract data after a colon.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pseudopotential.load.find_upf">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.load.</span></span><span class="sig-name descname"><span class="pre">find_upf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dir_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">atom</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/load.html#find_upf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.load.find_upf" title="Link to this definition">#</a></dt>
-<dd><p>Find the pseudopotential file of an atom in the directory path.</p>
-<dl class="simple">
-<dt>The pseudo potential file must start with the</dt><dd><p>“$atom_symbol$.$xc_functional$.*.upf”</p>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>dir_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a>) – The directory path for pseudopotential files in UPF format.
-The directory must contain only one file per element.</p></li>
-<li><p><strong>atom</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a>) – The symbol for the element.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The upf file path.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)">str</a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pseudopotential.load.parse_pp_header">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.load.</span></span><span class="sig-name descname"><span class="pre">parse_pp_header</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pp_header</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/load.html#parse_pp_header"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.load.parse_pp_header" title="Link to this definition">#</a></dt>
-<dd><p>Parse the PP_HEADER attributes into a dictionary.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pseudopotential.load.parse_pp_info">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.load.</span></span><span class="sig-name descname"><span class="pre">parse_pp_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pp_info_string</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/load.html#parse_pp_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.load.parse_pp_info" title="Link to this definition">#</a></dt>
-<dd><p>Parse the PP_INFO section into a dictionary.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pseudopotential.load.parse_pp_local">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.load.</span></span><span class="sig-name descname"><span class="pre">parse_pp_local</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pp_local</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/load.html#parse_pp_local"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.load.parse_pp_local" title="Link to this definition">#</a></dt>
-<dd><p>Parse the PP_LOCAL section into a list of floats.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pseudopotential.load.parse_pp_mesh">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.load.</span></span><span class="sig-name descname"><span class="pre">parse_pp_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pp_mesh</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/load.html#parse_pp_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.load.parse_pp_mesh" title="Link to this definition">#</a></dt>
-<dd><p>Parse the PP_MESH section into a dictionary.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pseudopotential.load.parse_pp_nonlocal">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.load.</span></span><span class="sig-name descname"><span class="pre">parse_pp_nonlocal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pp_nonlocal</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/load.html#parse_pp_nonlocal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.load.parse_pp_nonlocal" title="Link to this definition">#</a></dt>
-<dd><p>Parse the PP_NONLOCAL section into a dictionary.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pseudopotential.load.parse_upf">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.load.</span></span><span class="sig-name descname"><span class="pre">parse_upf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/load.html#parse_upf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.load.parse_upf" title="Link to this definition">#</a></dt>
-<dd><p>Main function to parse a UPF file.
-The schema of upf can be find <a class="github reference external" href="https://github.com/ltalirz/upf-schema">ltalirz/upf-schema</a>.</p>
-<dl>
-<dt>Usage:</dt><dd><p>Mesh_grid: dict[“PP_MESH”][“PP_R”]
-Local part: dict[“PP_LOCAL”]
-Nonlocal part:</p>
-<blockquote>
-<div><p>Beta: dict[“PP_NONLOCAL”][“BETA”][‘values’]
-D_ij: dict[“PP_NONLOCAL”][“D_IJ”][‘values’]</p>
-</div></blockquote>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pseudopotential.load.parse_valence_configuration">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.load.</span></span><span class="sig-name descname"><span class="pre">parse_valence_configuration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">valence_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/load.html#parse_valence_configuration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.load.parse_valence_configuration" title="Link to this definition">#</a></dt>
-<dd><p>Parse the valence configuration section into a list of dictionaries.</p>
-</dd></dl>
-
+  <section id="load">
+<h1>load<a class="headerlink" href="#load" title="Link to this heading">#</a></h1>
 </section>
 
 
@@ -499,29 +391,6 @@ D_ij: dict[“PP_NONLOCAL”][“D_IJ”][‘values’]</p>
             </div>
             
             
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.extract_value"><code class="docutils literal notranslate"><span class="pre">extract_value()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.find_upf"><code class="docutils literal notranslate"><span class="pre">find_upf()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_pp_header"><code class="docutils literal notranslate"><span class="pre">parse_pp_header()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_pp_info"><code class="docutils literal notranslate"><span class="pre">parse_pp_info()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_pp_local"><code class="docutils literal notranslate"><span class="pre">parse_pp_local()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_pp_mesh"><code class="docutils literal notranslate"><span class="pre">parse_pp_mesh()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_pp_nonlocal"><code class="docutils literal notranslate"><span class="pre">parse_pp_nonlocal()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_upf"><code class="docutils literal notranslate"><span class="pre">parse_upf()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.load.parse_valence_configuration"><code class="docutils literal notranslate"><span class="pre">parse_valence_configuration()</span></code></a></li>
-</ul>
-  </nav></div>
-
-</div></div>
               
             
           </div>

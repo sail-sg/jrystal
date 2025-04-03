@@ -43,8 +43,6 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/graph.js?v=6245dd16"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
-    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/entropy';</script>
     <link rel="icon" href="../_static/jrystal_logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -347,9 +345,7 @@ document.write(`
   </button>
 `);
 </script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -365,14 +361,6 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.entropy.fermi_dirac"><code class="docutils literal notranslate"><span class="pre">fermi_dirac()</span></code></a></li>
-</ul>
-            </nav>
         </div>
     </div>
 </div>
@@ -382,41 +370,8 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="module-jrystal.entropy">
-<span id="entropy"></span><h1>entropy<a class="headerlink" href="#module-jrystal.entropy" title="Link to this heading">#</a></h1>
-<p>Entropy functions.</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.entropy.fermi_dirac">
-<span class="sig-prename descclassname"><span class="pre">jrystal.entropy.</span></span><span class="sig-name descname"><span class="pre">fermi_dirac</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">occupation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-08</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span></span></span><a class="reference internal" href="../_modules/jrystal/_src/entropy.html#fermi_dirac"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.entropy.fermi_dirac" title="Link to this definition">#</a></dt>
-<dd><p>Compute the entropy corresponding to Fermi-Dirac distribution.</p>
-<p>The entropy is defined as:</p>
-<div class="math notranslate nohighlight">
-\[-\sum_{\sigma, k, i} [o_{\sigma, k, i} \log(o_{\sigma, k, i} + \epsilon) +
-(1-o_{\sigma, k, i}) \log(1-o_{\sigma, k, i} + \epsilon)]\]</div>
-<p>where</p>
-<ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(o_{\sigma, k, i}\)</span> is the occupation number</p></li>
-<li><p><span class="math notranslate nohighlight">\(\sigma\)</span> is the spin index</p></li>
-<li><p><span class="math notranslate nohighlight">\(k\)</span> is the <span class="math notranslate nohighlight">\(k\)</span>-point index</p></li>
-<li><p><span class="math notranslate nohighlight">\(i\)</span> is the band index</p></li>
-<li><p><span class="math notranslate nohighlight">\(\epsilon\)</span> is the machine epsilon to prevent numerical instabilities.</p></li>
-</ul>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>occupation</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'spin kpt band'</em><em>]</em>) – The occupation numbers with shape (spin, kpt, band).</p></li>
-<li><p><strong>eps</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – Machine epsilon to prevent numerical instabilities. Default: 1e-8</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The entropy value corresponding to the Fermi-Dirac distribution.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Float</p>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="entropy">
+<h1>entropy<a class="headerlink" href="#entropy" title="Link to this heading">#</a></h1>
 </section>
 
 
@@ -454,21 +409,6 @@ document.write(`
             </div>
             
             
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.entropy.fermi_dirac"><code class="docutils literal notranslate"><span class="pre">fermi_dirac()</span></code></a></li>
-</ul>
-  </nav></div>
-
-</div></div>
               
             
           </div>

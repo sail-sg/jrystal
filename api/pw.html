@@ -43,8 +43,6 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/graph.js?v=6245dd16"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
-    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/pw';</script>
     <link rel="icon" href="../_static/jrystal_logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -347,9 +345,7 @@ document.write(`
   </button>
 `);
 </script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -365,19 +361,6 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.coeff"><code class="docutils literal notranslate"><span class="pre">coeff()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.density_grid"><code class="docutils literal notranslate"><span class="pre">density_grid()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.density_grid_reciprocal"><code class="docutils literal notranslate"><span class="pre">density_grid_reciprocal()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.param_init"><code class="docutils literal notranslate"><span class="pre">param_init()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.wave_grid"><code class="docutils literal notranslate"><span class="pre">wave_grid()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.wave_r"><code class="docutils literal notranslate"><span class="pre">wave_r()</span></code></a></li>
-</ul>
-            </nav>
         </div>
     </div>
 </div>
@@ -387,282 +370,8 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="module-jrystal.pw">
-<span id="planewave"></span><h1>planewave<a class="headerlink" href="#module-jrystal.pw" title="Link to this heading">#</a></h1>
-<p>Planewave module.</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pw.coeff">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pw.</span></span><span class="sig-name descname"><span class="pre">coeff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pw_param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Array</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq_mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bool</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/pw.html#coeff"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pw.coeff" title="Link to this definition">#</a></dt>
-<dd><p>Create the linear coefficients to combine the frequency components.</p>
-<p>This function takes a raw parameter of shape
-<code class="code docutils literal notranslate"><span class="pre">(num_spin,</span> <span class="pre">num_kpts,</span> <span class="pre">num_gpts,</span> <span class="pre">num_bands)</span></code>, orthogonalizes for the last
-two dimensions, so that the resulting tensor satisfies the unitary constraint
-<code class="code docutils literal notranslate"><span class="pre">einsum('kabc,labc-&gt;kl',</span> <span class="pre">ret[i,</span> <span class="pre">j],</span> <span class="pre">ret[i,</span> <span class="pre">j])</span> <span class="pre">==</span> <span class="pre">eye(num_bands)</span></code>.</p>
-<p>The <code class="code docutils literal notranslate"><span class="pre">pw_param</span></code> should be created from <a class="reference internal" href="#jrystal.pw.param_init" title="jrystal.pw.param_init"><code class="xref py py-func docutils literal notranslate"><span class="pre">param_init()</span></code></a>, and the same
-<code class="code docutils literal notranslate"><span class="pre">freq_mask</span></code> used in <a class="reference internal" href="#jrystal.pw.param_init" title="jrystal.pw.param_init"><code class="xref py py-func docutils literal notranslate"><span class="pre">param_init()</span></code></a> should be used here. As mentioned
-in <a class="reference internal" href="#jrystal.pw.param_init" title="jrystal.pw.param_init"><code class="xref py py-func docutils literal notranslate"><span class="pre">param_init()</span></code></a>, we use linear combination over 3D Fourier
-components for creating wave functions. Some extra requirements are:</p>
-<ol class="arabic simple">
-<li><p>The wave functions that have the same spin and same k component need
-to be orthogonal to each other.</p></li>
-<li><p>We only activate some of the frequency components with the <code class="code docutils literal notranslate"><span class="pre">freq_mask</span></code>.</p></li>
-</ol>
-<p>As the raw parameter returned from <a class="reference internal" href="#jrystal.pw.param_init" title="jrystal.pw.param_init"><code class="xref py py-func docutils literal notranslate"><span class="pre">param_init()</span></code></a> has the shape
-<code class="code docutils literal notranslate"><span class="pre">(num_spin,</span> <span class="pre">num_kpts,</span> <span class="pre">num_g,</span> <span class="pre">num_bands)</span></code>, where <code class="code docutils literal notranslate"><span class="pre">num_g</span></code> is the number of
-activated frequencies flattened from the activated entries in the <code class="code docutils literal notranslate"><span class="pre">freq_mask</span></code>,
-this function first orthogonalizes over the last two dimensions and
-reorganizes the orthogonalized parameter into a 3D grid the same shape as
-the frequency mask.</p>
-<p>Extension reads:
-1. Why and how to mask the frequency components.
-2. Bloch theorem.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>pw_param</strong> (<em>Union</em><em>[</em><em>Array</em><em>, </em><em>Tuple</em><em>]</em>) – The raw parameter, maybe created from <a class="reference internal" href="#jrystal.pw.param_init" title="jrystal.pw.param_init"><code class="xref py py-func docutils literal notranslate"><span class="pre">param_init()</span></code></a>.</p></li>
-<li><p><strong>freq_mask</strong> (<em>Bool</em><em>[</em><em>Array</em><em>, </em><em>'x y z'</em><em>]</em>) – A 3D mask to select the frequency components.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Complex array of shape
-<code class="code docutils literal notranslate"><span class="pre">(num_spin,</span> <span class="pre">num_kpts,</span> <span class="pre">num_band,</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z)</span></code>. It satisfies the unitary
-constraint that for any <code class="code docutils literal notranslate"><span class="pre">i,j</span></code>, <code class="code docutils literal notranslate"><span class="pre">einsum('kabc,labc-&gt;kl',</span> <span class="pre">ret[i,</span> <span class="pre">j],</span> <span class="pre">ret[i,</span> <span class="pre">j])</span></code>
-is an identity matrix.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Complex[Array, ‘spin kpt band x y z’]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pw.density_grid">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pw.</span></span><span class="sig-name descname"><span class="pre">density_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coeff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">occupation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/pw.html#density_grid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pw.density_grid" title="Link to this definition">#</a></dt>
-<dd><p>Compute the density at the spatial grid.</p>
-<p>In a system with electrons, the density of the electron is the result of
-multiple wave functions overlapping in space. As mentioned in
-<a class="reference internal" href="#jrystal.pw.wave_grid" title="jrystal.pw.wave_grid"><code class="xref py py-func docutils literal notranslate"><span class="pre">wave_grid()</span></code></a>, the wave function is a linear combination of 3D Fourier
-components. To compute the density, usually we only need to take the absolute
-square of each wave function and sum them up.</p>
-<div class="math notranslate nohighlight">
-\[\rho(r) = \sum_i |\psi_i(r)|^2\]</div>
-<p>This function evaluates the density <span class="math notranslate nohighlight">\(\rho(r)\)</span> at the spatial grid
-generated from <a class="reference internal" href="grid.html#jrystal.grid.r_vectors" title="jrystal.grid.r_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.r_vectors()</span></code></a>.</p>
-<p>In crystals, this is a little bit more complicated. The form of the wave
-function is:</p>
-<div class="math notranslate nohighlight">
-\[\psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} e^{ikr} \sum_G c_{kG}
-e^{iGr}\]</div>
-<p>The <span class="math notranslate nohighlight">\(c_{kG}\)</span> can be computed from <a class="reference internal" href="#jrystal.pw.param_init" title="jrystal.pw.param_init"><code class="xref py py-func docutils literal notranslate"><span class="pre">param_init()</span></code></a>
-and <a class="reference internal" href="#jrystal.pw.coeff" title="jrystal.pw.coeff"><code class="xref py py-func docutils literal notranslate"><span class="pre">coeff()</span></code></a>. For calculation of density, we only need
-the <span class="math notranslate nohighlight">\(c_{kG}\)</span> and the occupation <span class="math notranslate nohighlight">\(o_k\)</span> over <span class="math notranslate nohighlight">\(k\)</span>.</p>
-<div class="math notranslate nohighlight">
-\[\rho(r) = \frac{1}{\Omega_\text{cell}} e^{ikr} \sum_G c_{kG}
-e^{iGr}\]</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>coeff</strong> – <span class="math notranslate nohighlight">\(c_{kG}\)</span> part of the parameter. It can have a leading batch dimension which will be summed to get the overall density. Therefore the shape is <code class="code docutils literal notranslate"><span class="pre">(spin,</span> <span class="pre">kpt,</span> <span class="pre">band,</span> <span class="pre">x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code>.</p></li>
-<li><p><strong>vol</strong> – Volume of the unit cell, a real scalar.</p></li>
-<li><p><strong>occupation</strong> – The occupation over different k frequencies. The shape is <code class="code docutils literal notranslate"><span class="pre">(spin,</span> <span class="pre">kpt,</span> <span class="pre">band)</span></code>, it should have the same leading dimension as <code class="code docutils literal notranslate"><span class="pre">coeff</span></code>. This is an optional argument. When <code class="code docutils literal notranslate"><span class="pre">occupation=None</span></code>, we compute the density contribution from each <span class="math notranslate nohighlight">\(k\)</span> without summing them. If <code class="code docutils literal notranslate"><span class="pre">occupation</span></code> is provided, we sum up all the density from each <span class="math notranslate nohighlight">\(k\)</span> weighted by the occupation.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A real-valued tensor that represents the density at the spatial grid computed from <a class="reference internal" href="grid.html#jrystal.grid.r_vectors" title="jrystal.grid.r_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.r_vectors()</span></code></a>. The shape is <code class="code docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code> if <code class="code docutils literal notranslate"><span class="pre">occupation</span></code> is provided, else the shape is <code class="code docutils literal notranslate"><span class="pre">(spin,</span> <span class="pre">kpt,</span> <span class="pre">band,</span> <span class="pre">x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code>.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Union[Float[Array, “spin kpt band x y z”], Float[Array, “spin kpt band”]]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pw.density_grid_reciprocal">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pw.</span></span><span class="sig-name descname"><span class="pre">density_grid_reciprocal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coeff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">occupation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/pw.html#density_grid_reciprocal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pw.density_grid_reciprocal" title="Link to this definition">#</a></dt>
-<dd><p>Fourier transform of the density grid.</p>
-<p>In a system with electrons, the density of the electron is the result of
-multiple wave functions overlapping in the space. As we mention in
-<a class="reference internal" href="#jrystal.pw.wave_grid" title="jrystal.pw.wave_grid"><code class="xref py py-func docutils literal notranslate"><span class="pre">wave_grid()</span></code></a>, the wave function is a linear combination of 3D fourier
-components. To compute the density, usually we only need to take the absolute
-square of each wave function <span class="math notranslate nohighlight">\(\psi_i\)</span>, multiply by the occupation <span class="math notranslate nohighlight">\(f_i\)</span>
-and sum them up:</p>
-<div class="math notranslate nohighlight">
-\[\rho(\vb{r}) = \sum_i f_i |\psi_i(\vb{r})|^2\]</div>
-<p><a class="reference internal" href="#jrystal.pw.density_grid" title="jrystal.pw.density_grid"><code class="xref py py-func docutils literal notranslate"><span class="pre">density_grid()</span></code></a> computes the density <span class="math notranslate nohighlight">\(\rho(\vb{r})\)</span> at the spatial grid
-generated from <a class="reference internal" href="grid.html#jrystal.grid.r_vectors" title="jrystal.grid.r_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.r_vectors()</span></code></a>.</p>
-<p>The discrete fourier transformation of <span class="math notranslate nohighlight">\(\rho(\vb{r})\)</span> is</p>
-<div class="math notranslate nohighlight">
-\[\tilde{\rho}(\vb{G}) = \frac{1}{\Omega} \int_\Omega \rho(\vb{r}) e^{-\text{i} \vb{G}^\top \vb{r}} \dd{\vb{r}}\]</div>
-<p>We can also evaluate the <span class="math notranslate nohighlight">\(\tilde{\rho}(G)\)</span> at any <span class="math notranslate nohighlight">\(G\)</span>, but this function
-computes the <span class="math notranslate nohighlight">\(\tilde{\rho}(G)\)</span> evaluated at the grid generated from
-<a class="reference internal" href="grid.html#jrystal.grid.g_vectors" title="jrystal.grid.g_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.g_vectors()</span></code></a>. It is equivalent to computing the <span class="math notranslate nohighlight">\(\rho(\vb{r})\)</span>
-at <a class="reference internal" href="grid.html#jrystal.grid.r_vectors" title="jrystal.grid.r_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.r_vectors()</span></code></a> and then do the discrete fourier
-transform.</p>
-<p>Since this function is just composing FFT with <a class="reference internal" href="#jrystal.pw.density_grid" title="jrystal.pw.density_grid"><code class="xref py py-func docutils literal notranslate"><span class="pre">density_grid()</span></code></a>,
-we refer you to <a class="reference internal" href="#jrystal.pw.density_grid" title="jrystal.pw.density_grid"><code class="xref py py-func docutils literal notranslate"><span class="pre">density_grid()</span></code></a> for more details.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>coeff</strong> – coefficients of the wave functions.</p></li>
-<li><p><strong>vol</strong> – volume of the unit cell.</p></li>
-<li><p><strong>occupation</strong> – occupation over the different <span class="math notranslate nohighlight">\(k\)</span> components, see more in
-<a class="reference internal" href="#jrystal.pw.density_grid" title="jrystal.pw.density_grid"><code class="xref py py-func docutils literal notranslate"><span class="pre">density_grid()</span></code></a>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A complex valued tensor representing <span class="math notranslate nohighlight">\(\tilde{\rho}(G)\)</span> evaluated at <span class="math notranslate nohighlight">\(G\)</span>
-generated from <a class="reference internal" href="grid.html#jrystal.grid.g_vectors" title="jrystal.grid.g_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.g_vectors()</span></code></a>.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pw.param_init">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pw.</span></span><span class="sig-name descname"><span class="pre">param_init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_bands</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_kpts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq_mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bool</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spin_restricted</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../_modules/jrystal/_src/pw.html#param_init"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pw.param_init" title="Link to this definition">#</a></dt>
-<dd><p>Initialize the raw parameters.</p>
-<p>This function generates a random tensor of shape
-<code class="code docutils literal notranslate"><span class="pre">(num_spin,</span> <span class="pre">num_kpts,</span> <span class="pre">num_g,</span> <span class="pre">num_bands)</span></code>, where <code class="code docutils literal notranslate"><span class="pre">num_g</span></code> is the
-number of <code class="code docutils literal notranslate"><span class="pre">True</span></code> items in the <code class="code docutils literal notranslate"><span class="pre">freq_mask</span></code>.</p>
-<p>In planewave-based calculation, a wave function is represented as a
-linear combination of the Fourier series in 3D. Therefore, to create one
-wave function we need a 3D shaped tensor to represent the mixing
-coefficients on each frequency component (denoted as <code class="code docutils literal notranslate"><span class="pre">G</span></code>).
-<code class="code docutils literal notranslate"><span class="pre">freq_mask</span></code> provides a 3D mask to decide which frequency components
-are selected, the number of selected components is denoted as <code class="code docutils literal notranslate"><span class="pre">num_g</span></code>.</p>
-<p>The <code class="code docutils literal notranslate"><span class="pre">num_bands</span></code> &amp; <code class="code docutils literal notranslate"><span class="pre">num_kpts</span></code> are a bit hard to explain. Intuitively,
-the wave functions consist of high frequency components that have a period
-smaller than the unit cell (denoted <span class="math notranslate nohighlight">\(G\)</span>) and components that have a period
-larger than the unit cell (denoted <span class="math notranslate nohighlight">\(k\)</span>).</p>
-<p>The form of wave function under solid state is:</p>
-<div class="math notranslate nohighlight">
-\[\psi(r) = e^{ikr}\sum_G c_{kG} e^{iGr}\]</div>
-<p>This function generates a raw parameter, which after processing by
-<a class="reference internal" href="#jrystal.pw.coeff" title="jrystal.pw.coeff"><code class="xref py py-func docutils literal notranslate"><span class="pre">coeff()</span></code></a> can be used as the <span class="math notranslate nohighlight">\(c_{kG}\)</span> part of the above equation.</p>
-<p>Extension reads:
-1. Why and how to mask the frequency components.
-2. Bloch theorem.</p>
-<p>As far as this function is concerned, it simply returns a randomly
-initialized parameter of shape <code class="code docutils literal notranslate"><span class="pre">(num_spin,</span> <span class="pre">num_kpts,</span> <span class="pre">num_g,</span> <span class="pre">num_bands)</span></code>.
-The input arguments to this function are only used to determine the shape.</p>
-<p>Note that this function returns the raw parameter that cannot be used
-directly to weight the frequency components, as in quantum chemistry we
-require the wave functions to be orthogonal to each other.
-Check <a class="reference internal" href="#jrystal.pw.coeff" title="jrystal.pw.coeff"><code class="xref py py-func docutils literal notranslate"><span class="pre">coeff()</span></code></a> for converting the raw parameter into a unitary
-tensor.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>key</strong> (<em>Array</em>) – Random key for initializing the parameters.</p></li>
-<li><p><strong>num_bands</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a>) – The number of bands.</p></li>
-<li><p><strong>num_kpts</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a>) – The number of k points.</p></li>
-<li><p><strong>freq_mask</strong> (<em>Bool</em><em>[</em><em>Array</em><em>, </em><em>'x y z'</em><em>]</em>) – A 3D mask that denotes which frequency components are selected.</p></li>
-<li><p><strong>spin_restricted</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a>) – If <code class="code docutils literal notranslate"><span class="pre">True</span></code>, <code class="code docutils literal notranslate"><span class="pre">num_spin=2</span></code> else <code class="code docutils literal notranslate"><span class="pre">num_spin=1</span></code>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A complex type raw parameter of shape <code class="code docutils literal notranslate"><span class="pre">(num_spin,</span> <span class="pre">num_kpts,</span> <span class="pre">num_g,</span> <span class="pre">num_bands)</span></code>.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Complex[Array, ‘spin kpt gpt band’]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pw.wave_grid">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pw.</span></span><span class="sig-name descname"><span class="pre">wave_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coeff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/pw.html#wave_grid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pw.wave_grid" title="Link to this definition">#</a></dt>
-<dd><p>Wave function evaluated at a grid of spatial locations.</p>
-<p>This function implements the <span class="math notranslate nohighlight">\(u(r)\)</span> part of the Bloch wave function:</p>
-<div class="math notranslate nohighlight">
-\[u(r)=\frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iG^\top r}\]</div>
-<p>where <span class="math notranslate nohighlight">\(G\)</span> is the 3D frequency components, <span class="math notranslate nohighlight">\(\Omega_\text{cell}\)</span> is the
-volume of the crystal unit cell, which is to make sure the wave function is
-normalized within the cell.</p>
-<p>where <span class="math notranslate nohighlight">\(c\)</span> is the linear coefficient. It combines over different
-<span class="math notranslate nohighlight">\(G\)</span> components that is generated with <a class="reference internal" href="grid.html#jrystal.grid.g_vectors" title="jrystal.grid.g_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.g_vectors()</span></code></a>.
-We can evaluate the wave function at any spatial location <span class="math notranslate nohighlight">\(r\)</span> which takes
-<span class="math notranslate nohighlight">\(O(|G|)\)</span> computation. However, if we evaluate this function on a specific
-spatial grid of size <span class="math notranslate nohighlight">\(|G|\)</span>, we can be faster than <span class="math notranslate nohighlight">\(O(|G|^2)\)</span> by using
-fourier transform. IFFT gives us an <span class="math notranslate nohighlight">\(O(|G|\log(|G|))\)</span> implementation of the
-above equation. The <span class="math notranslate nohighlight">\(G\)</span> and <span class="math notranslate nohighlight">\(R\)</span> grid can be obtained from
-<a class="reference internal" href="grid.html#jrystal.grid.g_vectors" title="jrystal.grid.g_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.g_vectors()</span></code></a> and <a class="reference internal" href="grid.html#jrystal.grid.r_vectors" title="jrystal.grid.r_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.r_vectors()</span></code></a>
-correspondingly.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">G</span> <span class="o">=</span> <span class="n">jrystal</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">g_vectors</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>  <span class="c1"># (x y z, 3)</span>
-<span class="n">R</span> <span class="o">=</span> <span class="n">jrystal</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">r_vectors</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>  <span class="c1"># (x y z, 3)</span>
-<span class="n">coefficients</span> <span class="o">=</span> <span class="o">...</span>  <span class="c1"># (x y z)</span>
-<span class="n">vol</span> <span class="o">=</span> <span class="o">...</span>
-
-<span class="k">def</span><span class="w"> </span><span class="nf">wave_function</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
-  <span class="k">return</span> <span class="p">(</span><span class="n">coefficients</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">G</span> <span class="o">@</span> <span class="n">r</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">vol</span><span class="p">)</span>
-
-<span class="c1"># The following is O(|G|^2)</span>
-<span class="n">wave_at_R_naive</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">wave_function</span><span class="p">)))(</span><span class="n">R</span><span class="p">)</span>
-<span class="c1"># The following is O(|G|log|G|)</span>
-<span class="n">wave_at_R_fft</span> <span class="o">=</span> <span class="n">wave_grid</span><span class="p">(</span><span class="n">coefficients</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>As IFFT implements</p>
-<div class="math notranslate nohighlight">
-\[x_n = \frac{1}{N} \sum_{k=0}^{N-1} X_k e^{i\frac{2\pi}{N}kn}\]</div>
-<p>It is a bit different from the definition of the wave function,
-if you check the code, we do two things to align them,</p>
-<p>1. we multiply back the <span class="math notranslate nohighlight">\(N\)</span> to cancel the <span class="math notranslate nohighlight">\(\frac{1}{N}\)</span>
-factor in the IFFT (in 3D the <code class="code docutils literal notranslate"><span class="pre">np.prod(grid_sizes)</span></code>).
-2. we divide by the <span class="math notranslate nohighlight">\(\sqrt{\Omega_\text{cell}}\)</span>.</p>
-<p>The <code class="code docutils literal notranslate"><span class="pre">coeff</span></code> passed to this function has shape <code class="code docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z)</span></code>,
-it can have any leading dimension.
-It can be created using <a class="reference internal" href="#jrystal.pw.param_init" title="jrystal.pw.param_init"><code class="xref py py-func docutils literal notranslate"><span class="pre">param_init()</span></code></a> and <a class="reference internal" href="#jrystal.pw.coeff" title="jrystal.pw.coeff"><code class="xref py py-func docutils literal notranslate"><span class="pre">coeff()</span></code></a>.
-<a class="reference internal" href="#jrystal.pw.param_init" title="jrystal.pw.param_init"><code class="xref py py-func docutils literal notranslate"><span class="pre">param_init()</span></code></a> creates a raw parameter and <a class="reference internal" href="#jrystal.pw.coeff" title="jrystal.pw.coeff"><code class="xref py py-func docutils literal notranslate"><span class="pre">coeff()</span></code></a> converts
-that parameter into coefficients that are used to linearly weight the 3D
-fourier components.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>coeff</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>'spin kpt band x y z'</em><em>]</em>) – Wave function coefficients, which has a shape of <code class="code docutils literal notranslate"><span class="pre">(spin,</span> <span class="pre">kpt,</span> <span class="pre">band,</span> <span class="pre">x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code>.</p></li>
-<li><p><strong>vol</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – Volume of the unit cell.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Wave function evaluated at the spatial grid.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Complex[Array, ‘spin kpt band x y z’]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pw.wave_r">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pw.</span></span><span class="sig-name descname"><span class="pre">wave_r</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/pw.html#wave_r"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pw.wave_r" title="Link to this definition">#</a></dt>
-<dd><p>Evaluate plane wave functions at location r.</p>
-<p>This function computes the <span class="math notranslate nohighlight">\(\psi(r)\)</span> following the equation:</p>
-<div class="math notranslate nohighlight">
-\[\psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iGr}\]</div>
-<p>The <code class="code docutils literal notranslate"><span class="pre">coeff</span></code> provided is the <span class="math notranslate nohighlight">\(c_{G}\)</span>, the <code class="code docutils literal notranslate"><span class="pre">cell_vectors</span></code> is
-used to generate the grid of frequency components <span class="math notranslate nohighlight">\(G\)</span> by calling the function
-<a class="reference internal" href="grid.html#jrystal.grid.g_vectors" title="jrystal.grid.g_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.g_vectors()</span></code></a>. The <code class="code docutils literal notranslate"><span class="pre">r</span></code> is the location where we
-evaluate the wave function.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>r</strong> – Spatial location to evaluate the wave function, shape: (3,).</p></li>
-<li><p><strong>coeff</strong> – Wave function coefficients, which has a shape of
-<code class="code docutils literal notranslate"><span class="pre">(spin,</span> <span class="pre">kpt,</span> <span class="pre">band,</span> <span class="pre">x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code>.
-It can be created from <a class="reference internal" href="#jrystal.pw.param_init" title="jrystal.pw.param_init"><code class="xref py py-func docutils literal notranslate"><span class="pre">param_init()</span></code></a> followed by <a class="reference internal" href="#jrystal.pw.coeff" title="jrystal.pw.coeff"><code class="xref py py-func docutils literal notranslate"><span class="pre">coeff()</span></code></a>.</p></li>
-<li><p><strong>cell_vectors</strong> – The cell vectors of the crystal unit cell.</p></li>
-<li><p><strong>g_vector_grid</strong> – The G vectors computed from <a class="reference internal" href="grid.html#jrystal.grid.g_vectors" title="jrystal.grid.g_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.g_vectors()</span></code></a>.
-If None, will be computed from cell_vectors.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Complex tensor that represents wave functions evaluated at location r.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Complex[Array, ‘spin kpt band’]</p>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="planewave">
+<h1>planewave<a class="headerlink" href="#planewave" title="Link to this heading">#</a></h1>
 </section>
 
 
@@ -700,26 +409,6 @@ If None, will be computed from cell_vectors.</p></li>
             </div>
             
             
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.coeff"><code class="docutils literal notranslate"><span class="pre">coeff()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.density_grid"><code class="docutils literal notranslate"><span class="pre">density_grid()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.density_grid_reciprocal"><code class="docutils literal notranslate"><span class="pre">density_grid_reciprocal()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.param_init"><code class="docutils literal notranslate"><span class="pre">param_init()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.wave_grid"><code class="docutils literal notranslate"><span class="pre">wave_grid()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pw.wave_r"><code class="docutils literal notranslate"><span class="pre">wave_r()</span></code></a></li>
-</ul>
-  </nav></div>
-
-</div></div>
               
             
           </div>
