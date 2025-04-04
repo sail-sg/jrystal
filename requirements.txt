@@ -1,5 +1,5 @@
-jax>=0.4.14
-jaxlib>=0.4.14
+jax>=0.5.3
+jaxlib>=0.5.3
 optax>=0.1.4
 
 jaxtyping

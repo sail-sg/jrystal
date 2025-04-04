@@ -25,7 +25,7 @@ def main():
 
   args = parser.parse_args()
 
-  config = jr.config.get_config("config.yaml")
+  config = jr.config.get_config(args.config)
 
   if args.mode == "energy":
     if config.use_pseudopotential:
