@@ -55,7 +55,7 @@ def cartesian_to_spherical(x: Float[Array, "*n 3"],
 
 
 def legendre_to_sph_harm(
-  l: int = 0,
+  l: int = 0, l_max: int = 4
 ) -> Callable[[Float[Array, "*batch 3"]], Float[Array, "*batch m"]]:
   """Convert Legendre polynomials to spherical harmonics decomposition.
 
@@ -81,7 +81,6 @@ def legendre_to_sph_harm(
   """
   m = jnp.arange(-l, l + 1)
   n = jnp.array([l])
-  L_MAX = 4
 
   def fun(x):
 
@@ -95,10 +94,41 @@ def legendre_to_sph_harm(
         sph_harm, in_axes=[0, None, None, None]
       )(m, n, theta, phi).reshape([-1])  # [m]
 
-      y_lm = jnp.pad(y_lm, (0, (L_MAX - l) * 2), constant_values=0)
+      y_lm = jnp.pad(y_lm, (0, (l_max - l) * 2), constant_values=0)
       # pad the y_lm to length l_max with zeros
       return y_lm * 2 * jnp.sqrt(jnp.pi)  # [m]
 
     return _f(x)
 
   return fun
+
+
+def legendre_kernel_trick(l: int = 0) -> Callable:  # noqa
+  """Decompose legendre polynomials via kernel trick:
+
+      (2l+1) P_l (x^Ty) = \phi(x)^T \phi(y)
+
+  Return \phi
+
+  Args:
+      l (int, optional): The degree of the legendre polynomial. Defaults to 0.
+
+  Returns:
+      callable: return a function that map from shape [n1 n2 n3 3] to
+      [n1 n2 n3 new_dim] where new_dim is decided using kernel trick.
+  """
+  if l == 0:
+    def phi(x):
+      return jnp.sqrt(3) / 3 + jnp.zeros_like(x)
+    return phi
+  elif l == 1:
+    def phi(x):
+      x = x / jnp.sqrt(jnp.sum(x ** 2, axis=-1, keepdims=True))
+      x = jnp.where(jnp.isnan(x), 0, x)
+      return jnp.sqrt(3) * x
+    # sqrt(3) is due to the (2l+1) factor
+    return phi
+  else:
+    raise NotImplementedError(
+      "The decomposition of legendre has not been implemented for l > 1."
+    )

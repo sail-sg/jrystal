@@ -126,18 +126,29 @@ class NormConservingPseudopotential(Pseudopotential):
       # which is to make it consistent with QE.
 
       beta = []
-      num_beta = len(pp["PP_NONLOCAL"]["PP_BETA"])
-      nonlocal_num_beta.append(num_beta)
-      beta_angular_momentum = []
-      for beta_i in pp["PP_NONLOCAL"]["PP_BETA"]:
-        beta.append(beta_i['values'] / r_grid[-1])
-        beta_angular_momentum.append(int(beta_i["angular_momentum"]))
 
-      nonlocal_beta_grid.append(np.stack(beta))
-      nonlocal_beta_cutoff_radius.append(beta_i['cutoff_radius'])
-      d_mat = np.array(pp["PP_NONLOCAL"]["PP_DIJ"])
-      d_mat = np.reshape(d_mat, [num_beta, num_beta])
-      nonlocal_d_matrix.append(d_mat)
+      if "PP_BETA" in pp["PP_NONLOCAL"]:
+        num_beta = len(pp["PP_NONLOCAL"]["PP_BETA"])
+        nonlocal_num_beta.append(num_beta)
+        beta_angular_momentum = []
+        for beta_i in pp["PP_NONLOCAL"]["PP_BETA"]:
+          beta.append(beta_i['values'] / r_grid[-1])
+          beta_angular_momentum.append(int(beta_i["angular_momentum"]))
+        nonlocal_beta_grid.append(np.stack(beta))
+        nonlocal_beta_cutoff_radius.append(beta_i['cutoff_radius'])
+        d_mat = np.array(pp["PP_NONLOCAL"]["PP_DIJ"])
+        d_mat = np.reshape(d_mat, [num_beta, num_beta])
+        nonlocal_d_matrix.append(d_mat)
+
+      else:
+        nonlocal_num_beta.append(1)
+        beta_angular_momentum = [0]
+        beta.append(np.zeros_like(r_grid[-1]))
+
+        nonlocal_beta_grid.append(np.stack(beta))
+        nonlocal_beta_cutoff_radius.append(0)
+        d_mat = np.zeros([1, 1])
+        nonlocal_d_matrix.append(d_mat)
 
       # 1/2 is due to the conversion from rydberg to hartree.
       nonlocal_angular_momentum.append(
