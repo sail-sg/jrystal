@@ -19,6 +19,7 @@ from typing import List, Union
 
 import cloudpickle as pickle
 import jax
+import jax.numpy as jnp
 import optax
 from absl import logging
 from tqdm import tqdm
@@ -105,6 +106,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     )
   
   def get_position(pos):
+    pos = pos @ jnp.linalg.inv(crystal.cell_vectors)
+    pos = jnp.mod(pos, 1.0)
+    pos = pos @ crystal.cell_vectors
     return pos
 
   def total_energy(params_pw, params_occ, params_pos, g_vec=g_vec):
@@ -138,7 +142,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   optimizer = create_optimizer(config)
   params_pw = pw.param_init(key, num_bands, num_kpts, freq_mask, config.spin_restricted)
   params_occ = occupation.idempotent_param_init(key, num_bands, num_kpts)
-  params_pos = None
+  params_pos = jax.random.uniform(key, (2, 3)) @ crystal.cell_vectors
   params = {"pw": params_pw, "occ": params_occ, "pos": params_pos}
   opt_state = optimizer.init(params)
 
