@@ -20,6 +20,7 @@ from typing import List, Union
 
 import cloudpickle as pickle
 import jax
+import jax.numpy as jnp
 import optax
 from absl import logging
 from tqdm import tqdm
@@ -33,7 +34,6 @@ from .opt_utils import (
   create_freq_mask,
   create_grids,
   create_optimizer,
-  get_ewald_coulomb_repulsion,
   set_env_params
 )
 
@@ -47,6 +47,7 @@ class GroundStateEnergyOutput:
     crystal (Crystal): The crystal object.
     params_pw (dict): Parameters for the plane wave basis.
     params_occ (dict): Parameters for the occupation.
+    params_pos (jax.Array): Parameters for atomic positions.
     total_energy (Union[float, jax.Array]): Total energy of the crystal.
     total_energy_history (List[float]): The optimization history of the total energy.
   """
@@ -54,6 +55,7 @@ class GroundStateEnergyOutput:
   crystal: Crystal
   params_pw: dict
   params_occ: dict
+  params_pos: jax.numpy.ndarray
   total_energy: Union[float, jax.Array]
   total_energy_history: List[float]
 
@@ -92,7 +94,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Number of k-vectors: {proper_grid_size(config.k_grid_sizes)}")
   num_bands = ceil(crystal.num_electron / 2) + config.empty_bands
   freq_mask = create_freq_mask(config)
-  ew = get_ewald_coulomb_repulsion(config)
 
   # Define functions for energy calculation.
   # assume fermi-dirac occupation.
@@ -106,14 +107,21 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       crystal.spin,
       config.spin_restricted,
     )
+  
+  def get_position(pos):
+    pos = pos @ jnp.linalg.inv(crystal.cell_vectors)
+    pos = jnp.mod(pos, 1.0)
+    pos = pos @ crystal.cell_vectors
+    return pos
 
   @partial(jax.jit, static_argnames=['ewald_grid'])
-  def total_energy(params_pw, params_occ, g_vec=g_vec, ewald_grid=ewald_grid):
+  def total_energy(params_pw, params_occ, params_pos, g_vec=g_vec, ewald_grid=ewald_grid):
     coeff = pw.coeff(params_pw, freq_mask)
     occ = get_occupation(params_occ)
+    pos = get_position(params_pos)
     return energy.total_energy(
       coeff,
-      crystal.positions,
+      pos,
       crystal.charges,
       g_vec,
       ewald_grid,
@@ -129,8 +137,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     occ = get_occupation(params_occ)
     return entropy.fermi_dirac(occ, eps=EPS)
 
-  def free_energy(params_pw, params_occ, temp, g_vec=g_vec):
-    total = total_energy(params_pw, params_occ, g_vec)
+  def free_energy(params_pw, params_occ, params_pos, temp, g_vec=g_vec):
+    total = total_energy(params_pw, params_occ, params_pos, g_vec)
     etro = get_entropy(params_occ)
     free = total - temp * etro
     return free, (total, etro)
@@ -139,13 +147,14 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   optimizer = create_optimizer(config)
   params_pw = pw.param_init(key, num_bands, num_kpts, freq_mask, config.spin_restricted)
   params_occ = occupation.idempotent_param_init(key, num_bands, num_kpts)
-  params = {"pw": params_pw, "occ": params_occ}
+  params_pos = jax.random.uniform(key, (2, 3)) @ crystal.cell_vectors
+  params = {"pw": params_pw, "occ": params_occ, "pos": params_pos}
   opt_state = optimizer.init(params)
 
   # Define update function.
   @jax.jit
   def update(params, opt_state, temp, g_vec):
-    loss = lambda x: free_energy(x["pw"], x["occ"], temp, g_vec)
+    loss = lambda x: free_energy(x["pw"], x["occ"], x["pos"], temp, g_vec)
     (loss_val, es), grad = jax.value_and_grad(loss, has_aux=True)(params)
     updates, opt_state = optimizer.update(grad, opt_state)
     params = optax.apply_updates(params, updates)
@@ -190,12 +199,17 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   #####################################
   coeff = pw.coeff(params["pw"], freq_mask)
   occ = get_occupation(params["occ"])
+  pos = get_position(params["pos"])
   density = pw.density_grid(coeff, crystal.vol, occ)
   density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
   kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
   hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
   external = energy.external(
-    density_reciprocal, crystal.positions, crystal.charges, g_vec, crystal.vol
+    density_reciprocal, pos, crystal.charges, g_vec, crystal.vol
+  )
+  ew = energy.ewald_coulomb_repulsion(
+    pos, crystal.charges, g_vec, crystal.vol,
+    ewald_eta=config.ewald_args['ewald_eta'], ewald_grid=ewald_grid
   )
   lda = energy.xc_lda(density, crystal.vol)
 
@@ -207,7 +221,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Total Energy: {etot:.4f} Ha")
 
   output = GroundStateEnergyOutput(
-     config, crystal, params["pw"], params["occ"], etot, []
+     config, crystal, params["pw"], params["occ"], pos, etot, []
    )
  
   save_file = ''.join(crystal.symbol) + "_ground_state.pkl"
