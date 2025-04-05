@@ -21,7 +21,6 @@ from jaxtyping import Array, Complex, Float, Int
 
 from . import braket, potential, pw
 from .ewald import ewald_coulomb_repulsion
-from .grid import translation_vectors
 from .utils import (
   absolute_square, safe_real, wave_to_density, wave_to_density_reciprocal
 )
@@ -219,11 +218,10 @@ def xc_lda(
 def nuclear_repulsion(
   position: Float[Array, 'atom 3'],
   charge: Float[Array, 'atom'],
-  cell_vectors: Float[Array, '3 3'],
   g_vector_grid: Float[Array, 'x y z 3'],
+  ewald_grid: Float[Array, 'x y z 3'],
   vol: Float,
   ewald_eta: float,
-  ewald_cutoff: float,
 ) -> Float:
   r"""Compute the nuclear repulsion energy using Ewald summation.
 
@@ -242,7 +240,6 @@ def nuclear_repulsion(
   Returns:
     Float: Nuclear-nuclear repulsion energy.
   """
-  ewald_grid = translation_vectors(cell_vectors, ewald_cutoff)
   return ewald_coulomb_repulsion(
     position, charge, g_vector_grid, vol, ewald_eta, ewald_grid
   )
@@ -253,6 +250,7 @@ def total_energy(
   position: Float[Array, "atom 3"],
   charge: Int[Array, "atom"],
   g_vector_grid: Float[Array, "x y z 3"],
+  ewald_grid: Float[Array, "x y z 3"],
   kpts: Float[Array, "kpt 3"],
   vol: Float,
   occupation: Optional[Float[Array, "spin kpt band"]] = None,
@@ -305,6 +303,7 @@ def total_energy(
   e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
+  e_nuc = nuclear_repulsion(position, charge, g_vector_grid, ewald_grid, vol, 0.1)
   if xc == 'lda_x':
     if spin_restricted:
       e_xc = xc_lda(density_grid, vol, kohn_sham)
@@ -318,9 +317,9 @@ def total_energy(
     raise NotImplementedError(f"xc {xc} is not supported yet.")
 
   if split:
-    return e_kin, e_ext, e_har, e_xc
+    return e_kin, e_ext, e_har, e_xc , e_nuc
 
-  return e_kin + e_ext + e_har + e_xc
+  return e_kin + e_ext + e_har + e_xc + e_nuc
 
 
 def band_energy(

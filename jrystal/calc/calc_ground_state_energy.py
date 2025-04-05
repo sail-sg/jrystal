@@ -14,6 +14,7 @@
 
 import time
 from dataclasses import dataclass
+from functools import partial
 from math import ceil
 from typing import List, Union
 
@@ -25,7 +26,7 @@ from tqdm import tqdm
 
 from .._src.crystal import Crystal
 from .._src import energy, entropy, occupation, pw
-from .._src.grid import proper_grid_size
+from .._src.grid import proper_grid_size, translation_vectors
 from ..config import JrystalConfigDict
 from .opt_utils import (
   create_crystal,
@@ -83,6 +84,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   EPS = config.eps
 
   g_vec, r_vec, k_vec = create_grids(config)
+  ewald_grid = translation_vectors(
+    crystal.cell_vectors, config.ewald_args['ewald_cutoff']
+  )
   num_kpts = k_vec.shape[0]
   logging.info(f"Number of G-vectors: {proper_grid_size(config.grid_sizes)}")
   logging.info(f"Number of k-vectors: {proper_grid_size(config.k_grid_sizes)}")
@@ -103,7 +107,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       config.spin_restricted,
     )
 
-  def total_energy(params_pw, params_occ, g_vec=g_vec):
+  @partial(jax.jit, static_argnames=['ewald_grid'])
+  def total_energy(params_pw, params_occ, g_vec=g_vec, ewald_grid=ewald_grid):
     coeff = pw.coeff(params_pw, freq_mask)
     occ = get_occupation(params_occ)
     return energy.total_energy(
@@ -111,6 +116,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       crystal.positions,
       crystal.charges,
       g_vec,
+      ewald_grid,
       k_vec,
       crystal.vol,
       occ,
@@ -175,7 +181,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     train_time += time.time() - start
 
     iters.set_description(
-      f"Loss: {loss_val:.4f}|Energy: {etot+ew:.4f}|"
+      f"Loss: {loss_val:.4f}|Energy: {etot:.4f}|"
       f"Entropy: {entro:.4f}|T: {temp:.2E}"
     )
 
@@ -198,10 +204,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"LDA Energy: {lda:.4f} Ha")
   logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
   logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
-  logging.info(f"Total Energy: {etot+ew:.4f} Ha")
+  logging.info(f"Total Energy: {etot:.4f} Ha")
 
   output = GroundStateEnergyOutput(
-     config, crystal, params["pw"], params["occ"], etot + ew, []
+     config, crystal, params["pw"], params["occ"], etot, []
    )
  
   save_file = ''.join(crystal.symbol) + "_ground_state.pkl"

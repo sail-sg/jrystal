@@ -14,6 +14,7 @@
 
 import time
 from dataclasses import dataclass
+from functools import partial
 from math import ceil
 from typing import List, Union
 
@@ -26,14 +27,13 @@ from tqdm import tqdm
 
 from .._src.crystal import Crystal
 from .._src import energy, entropy, occupation, pw
-from .._src.grid import proper_grid_size
+from .._src.grid import proper_grid_size, translation_vectors
 from ..config import JrystalConfigDict
 from .opt_utils import (
   create_crystal,
   create_freq_mask,
   create_grids,
   create_optimizer,
-  get_ewald_coulomb_repulsion,
   set_env_params
 )
 
@@ -47,6 +47,7 @@ class GroundStateEnergyOutput:
     crystal (Crystal): The crystal object.
     params_pw (dict): Parameters for the plane wave basis.
     params_occ (dict): Parameters for the occupation.
+    params_pos (jax.Array): Parameters for atomic positions.
     total_energy (Union[float, jax.Array]): Total energy of the crystal.
     total_energy_history (List[float]): The optimization history of the total energy.
   """
@@ -85,12 +86,14 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   EPS = config.eps
 
   g_vec, r_vec, k_vec = create_grids(config)
+  ewald_grid = translation_vectors(
+    crystal.cell_vectors, config.ewald_args['ewald_cutoff']
+  )
   num_kpts = k_vec.shape[0]
   logging.info(f"Number of G-vectors: {proper_grid_size(config.grid_sizes)}")
   logging.info(f"Number of k-vectors: {proper_grid_size(config.k_grid_sizes)}")
   num_bands = ceil(crystal.num_electron / 2) + config.empty_bands
   freq_mask = create_freq_mask(config)
-  ew = get_ewald_coulomb_repulsion(config)
 
   # Define functions for energy calculation.
   # assume fermi-dirac occupation.
@@ -111,7 +114,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     pos = pos @ crystal.cell_vectors
     return pos
 
-  def total_energy(params_pw, params_occ, params_pos, g_vec=g_vec):
+  @partial(jax.jit, static_argnames=['ewald_grid'])
+  def total_energy(params_pw, params_occ, params_pos, g_vec=g_vec, ewald_grid=ewald_grid):
     coeff = pw.coeff(params_pw, freq_mask)
     occ = get_occupation(params_occ)
     pos = get_position(params_pos)
@@ -120,6 +124,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       pos,
       crystal.charges,
       g_vec,
+      ewald_grid,
       k_vec,
       crystal.vol,
       occ,
@@ -185,7 +190,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     train_time += time.time() - start
 
     iters.set_description(
-      f"Loss: {loss_val:.4f}|Energy: {etot+ew:.4f}|"
+      f"Loss: {loss_val:.4f}|Energy: {etot:.4f}|"
       f"Entropy: {entro:.4f}|T: {temp:.2E}"
     )
 
@@ -194,13 +199,17 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   #####################################
   coeff = pw.coeff(params["pw"], freq_mask)
   occ = get_occupation(params["occ"])
-  pos = get_position(params_pos)
+  pos = get_position(params["pos"])
   density = pw.density_grid(coeff, crystal.vol, occ)
   density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
   kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
   hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
   external = energy.external(
     density_reciprocal, pos, crystal.charges, g_vec, crystal.vol
+  )
+  ew = energy.ewald_coulomb_repulsion(
+    pos, crystal.charges, g_vec, crystal.vol,
+    ewald_eta=config.ewald_args['ewald_eta'], ewald_grid=ewald_grid
   )
   lda = energy.xc_lda(density, crystal.vol)
 
@@ -209,10 +218,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"LDA Energy: {lda:.4f} Ha")
   logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
   logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
-  logging.info(f"Total Energy: {etot+ew:.4f} Ha")
+  logging.info(f"Total Energy: {etot:.4f} Ha")
 
   output = GroundStateEnergyOutput(
-     config, crystal, params["pw"], params["occ"], etot + ew, []
+     config, crystal, params["pw"], params["occ"], pos, etot, []
    )
  
   save_file = ''.join(crystal.symbol) + "_ground_state.pkl"
