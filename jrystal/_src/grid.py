@@ -231,20 +231,9 @@ def translation_vectors(
     Float[Array, 'num 3']: An array of shape (:math:`n`, 3) containing translation vectors, where :math:`n` is determined by the cutoff distance.
   '''
   dim = cell_vectors.shape[0]
-  n = jnp.array(jnp.ceil(cutoff / jnp.linalg.norm(jnp.sum(cell_vectors, axis=0))**2), int)
+  n = int(np.ceil(cutoff / np.linalg.norm(np.sum(cell_vectors, axis=0))**2))
   grid = _vector_grid(cell_vectors, [n for i in range(dim)])
-  # grid_sizes = [n for i in range(dim)]
-  # basis = cell_vectors
-  # normalize = False
-  # dim = len(grid_sizes)
-  # assert basis.shape[0] == basis.shape[1] == dim
-  # components = []
-  # for i in range(dim):
-  #   shape = (*((grid_sizes[i] if _ == i else 1) for _ in range(dim)), dim)
-  #   breakpoint()
-  #   fftfreq = jnp.fft.fftfreq(grid_sizes[i], 1 if normalize else 1 / grid_sizes[i])
-  #   components.append(jnp.reshape(jnp.outer(fftfreq, basis[i]), shape))
-  return jnp.reshape(grid, [-1, cell_vectors.shape[0]])
+  return np.reshape(grid, [-1, cell_vectors.shape[0]])
 
 
 def k_vectors(
