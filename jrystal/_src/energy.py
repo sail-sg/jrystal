@@ -334,7 +334,17 @@ def total_energy(
   e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
-  e_xc = exc_functional(density_grid, g_vector_grid, vol, xc, kohn_sham)
+
+  if spin_restricted:
+    e_xc = exc_functional(density_grid, g_vector_grid, vol, xc, kohn_sham)
+  else:
+    o_alpha, o_beta = occupation
+    den_alpha_grid = wave_to_density(wave_grid_arr[0], o_alpha)
+    den_beta_grid = wave_to_density(wave_grid_arr[1], o_beta)
+    e_xc = (
+      exc_functional(den_alpha_grid * 2, g_vector_grid, vol, xc, kohn_sham) / 2
+      + exc_functional(den_beta_grid * 2, g_vector_grid, vol, xc, kohn_sham) / 2
+    )
 
   if split:
     return e_kin, e_ext, e_har, e_xc

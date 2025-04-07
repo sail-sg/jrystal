@@ -24,6 +24,7 @@ from absl import logging
 from tqdm import tqdm
 
 from .._src import energy, entropy, occupation, pw
+from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from .._src.crystal import Crystal
 from ..config import JrystalConfigDict
