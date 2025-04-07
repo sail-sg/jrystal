@@ -426,16 +426,12 @@ def effective(
   v_external = external_reciprocal(position, charge, g_vector_grid, vol)
 
   # real space:
-  # v_xc = xc_density(density_grid, g_vector_grid, kohn_sham, xc)
-  if xc.strip() in ["lda", "lda_x"]:
-    if spin_restricted:
-      v_xc = xc_lda(density_grid, kohn_sham)
-    else:
-      v_xp = xc_lda(2 * density_grid[0], kohn_sham)
-      v_xn = xc_lda(2 * density_grid[1], kohn_sham)
-      v_xc = jnp.vstack([[v_xp, v_xn]])
+  if spin_restricted:
+    v_xc = xc_density(density_grid, g_vector_grid, kohn_sham, xc)
   else:
-    raise NotImplementedError("XC only support LDA for now.")
+    v_xp = xc_density(2 * density_grid[0], g_vector_grid, kohn_sham, xc)
+    v_xn = xc_density(2 * density_grid[1], g_vector_grid, kohn_sham, xc)
+    v_xc = jnp.vstack([[v_xp, v_xn]])
 
   # transform to real space
   v_hartree = jnp.fft.ifftn(v_hartree, axes=range(-dim, 0))

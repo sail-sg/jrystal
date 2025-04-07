@@ -347,18 +347,6 @@ def total_energy(
       + exc_functional(den_beta_grid * 2, g_vector_grid, vol, xc, kohn_sham) / 2
     )
 
-  # if xc == 'lda_x':
-  #   if spin_restricted:
-  #     e_xc = xc_lda(density_grid, vol, kohn_sham)
-  #   else:
-  #     o_alpha, o_beta = occupation
-  #     n_alpha_grid = wave_to_density(wave_grid_arr[0], o_alpha)
-  #     n_beta_grid = wave_to_density(wave_grid_arr[1], o_beta)
-  #     e_xc = xc_lda(n_alpha_grid*2, vol, kohn_sham)/2 +\
-  #       xc_lda(n_beta_grid*2, vol, kohn_sham)/2
-  # else:
-  #   raise NotImplementedError(f"xc {xc} is not supported yet.")
-
   if split:
     return e_kin, e_ext, e_har, e_xc
 
