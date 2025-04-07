@@ -1,9 +1,34 @@
-from typing import List, Tuple, Union
 import argparse
+from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 from jaxtyping import Array, Float
+from jrystal._src.const import HARTREE2EV
+
+
+def get_fermi_level(
+  eigenvalues,
+  num_electrons: int,
+  polarized: bool = False,
+):
+  """get the fermi level given a array of eigenvalues.
+
+  Args:
+    eigenvalues (OccupationArray): an array of eigenvalues.
+      The dimension of the last two axes are num_k and num_band.
+    num_electrons (Int): number of electrons
+
+
+  Returns:
+      Float[Array, '']: the fermi level.
+  """
+  assert polarized is False, "polarized is not supported yet."
+
+  num_k = eigenvalues.shape[0]
+
+  eigenvalues = np.sort(eigenvalues.flatten())  # ascending order.
+  return eigenvalues[num_k * num_electrons // 2 - 1]
 
 
 def plot_band_structure(
@@ -59,24 +84,47 @@ def plot_band_structure(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Plot band structure from a .npy file")
-    parser.add_argument("input_file", type=str, help="Path to the .npy file containing band structure data")
-    parser.add_argument("--output", "-o", type=str, help="Output path for the plot (default: bands.png)")
-    parser.add_argument("--title", "-t", type=str, help="Title for the plot (default: Band structure)")
-    parser.add_argument("--ylim", "-y", type=float, nargs=2, help="Y-axis limits (min, max)")
-    
-    args = parser.parse_args()
-    
-    # Load the band structure data
-    ks_eigs = np.load(args.input_file)
-    
-    # Set default output path if not provided
-    output_path = args.output if args.output else "bands.png"
-    
-    # Create the plot
-    plot_band_structure(
-        ks_eigs=ks_eigs,
-        save_path=output_path,
-        title=args.title if args.title else "Band structure",
-        ylim=tuple(args.ylim) if args.ylim else None
-    )
+  parser = argparse.ArgumentParser(
+    description="Plot band structure from a .npy file"
+  )
+  parser.add_argument(
+    "input_file",
+    type=str,
+    help="Path to the .npy file containing band structure data"
+  )
+  parser.add_argument(
+    "--output",
+    "-o",
+    type=str,
+    help="Output path for the plot (default: bands.png)"
+  )
+  parser.add_argument(
+    "--title",
+    "-t",
+    type=str,
+    help="Title for the plot (default: Band structure)"
+  )
+  parser.add_argument(
+    "--ylim", "-y", type=float, nargs=2, help="Y-axis limits (min, max)"
+  )
+
+  args = parser.parse_args()
+
+  # Load the band structure data
+  ks_eigs = np.load(args.input_file)
+  breakpoint()
+
+  ks_eigs = ks_eigs[:, 0] * HARTREE2EV
+  fermi_level = get_fermi_level(ks_eigs, 12)
+  ks_eigs -= fermi_level
+
+  # Set default output path if not provided
+  output_path = args.output if args.output else "bands.png"
+
+  # Create the plot
+  plot_band_structure(
+    ks_eigs=ks_eigs,
+    save_path=output_path,
+    title=args.title if args.title else "Band structure",
+    ylim=tuple(args.ylim) if args.ylim else None
+  )

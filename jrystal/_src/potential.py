@@ -349,11 +349,6 @@ def xc_density(
   kohn_sham: bool = False,
   xc: str = "lda_x"
 ):
-  # DEBUG
-  # vxc_lda = xc_lda(density_grid, kohn_sham)
-  # vxc_pbe = xc_pbe(density_grid, g_vector_grid, kohn_sham)
-  # breakpoint()
-
   # TODO: support lda_c etc.
   if xc == 'lda_x':
     return xc_lda(density_grid, kohn_sham)
