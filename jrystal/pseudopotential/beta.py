@@ -30,7 +30,7 @@ def beta_sbt_grid_single_atom(
 
   .. math::
 
-    \\beta_l(G) = \\int_0^\infty  \\beta(r) j_l(Gr) r^2 dr
+    \beta_l(G) = \int_0^\infty  \beta(r) j_l(Gr) r^2 dr
 
   Return the beta function value of angular momentum values :math:`l` at the reciprocal vectors :math:`G` per atom
 
@@ -74,7 +74,7 @@ def beta_sbt_grid_multi_atoms(
 
   .. math::
 
-    \\beta_l(G) = \\int_0^\infty  \\beta(r) j_l(Gr) r^2 dr
+    \beta_l(G) = \int_0^\infty  \beta(r) j_l(Gr) r^2 dr
 
   Return the beta function value of angular momentum values :math:`l` at the reciprocal vectors :math:`G` per atom
 

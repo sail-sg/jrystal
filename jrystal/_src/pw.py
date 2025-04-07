@@ -53,7 +53,7 @@ def param_init(
 
   .. math::
 
-    \psi(r) = e^{ikr}\sum_G c_{kG} e^{iGr}
+    \psi(r) = e^{i\vb{k}^\top \vb{r}}\sum_G c_{kG} e^{i\vb{G}^\top \vb{r}}
 
   This function generates a raw parameter, which after processing by
   :py:func:`coeff` can be used as the :math:`c_{kG}` part of the above equation.
@@ -221,7 +221,7 @@ def density_grid(
 
   .. math::
 
-    \rho(r) = \sum_i |\psi_i(r)|^2
+    \rho(\vb{r}) = \sum_i |\psi_i(\vb{r})|^2
 
   This function evaluates the density :math:`\rho(r)` at the spatial grid
   generated from :py:func:`jrystal.grid.r_vectors`.
@@ -231,8 +231,8 @@ def density_grid(
 
   .. math::
 
-    \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} e^{ikr} \sum_G c_{kG}
-    e^{iGr}
+    \psi(\vb{r}) = \frac{1}{\sqrt{\Omega_\text{cell}}} e^{i\vb{k}^\top \vb{r}} \sum_G c_{kG}
+    e^{i\vb{G}^\top \vb{r}}
 
   The :math:`c_{kG}` can be computed from :py:func:`param_init`
   and :py:func:`coeff`. For calculation of density, we only need
@@ -240,8 +240,8 @@ def density_grid(
 
   .. math::
 
-    \rho(r) = \frac{1}{\Omega_\text{cell}} e^{ikr} \sum_G c_{kG}
-    e^{iGr}
+    \rho(\vb{r}) = \frac{1}{\Omega_\text{cell}} \sum_{G, G'} c_{kG}c_{kG'}^*
+    e^{i\vb{(G - G')}^\top \vb{r}}
 
   Args:
     coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension which will be summed to get the overall density. Therefore the shape is :code:`(spin, kpt, band, x, y, z)`.
@@ -330,7 +330,7 @@ def wave_r(
 
   .. math::
 
-    \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iGr}
+    \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{i\vb{G}^\top \vb{r}}
 
   The :code:`coeff` provided is the :math:`c_{G}`, the :code:`cell_vectors` is
   used to generate the grid of frequency components :math:`G` by calling the function
