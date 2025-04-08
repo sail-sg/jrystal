@@ -13,6 +13,7 @@
 # limitations under the License.
 """Utility functions for optimization. """
 import jax
+import os
 import numpy as np
 import optax
 from optax._src import alias
@@ -32,6 +33,9 @@ from ..config import JrystalConfigDict
 
 
 def set_env_params(config: JrystalConfigDict):
+  os.environ["OPENBLAS_NUM_THREADS"] = "4"
+  os.environ["MKL_NUM_THREADS"] = "4"
+  os.environ["OMP_NUM_THREADS"] = "4"
   jax.config.update("jax_debug_nans", config.jax_debug_nans)
 
   if config.verbose:
@@ -68,16 +72,21 @@ def create_freq_mask(config: JrystalConfigDict):
   if config.freq_mask_method == "cubic":
     mask = np.array(cubic_mask(grid_sizes))
     max_cutoff = estimate_max_cutoff_energy(crystal.cell_vectors, mask)
-    logging.info(f"maxmum cutoff: {max_cutoff:.2f} Ha")
-    logging.info(f"number of g points: {np.sum(mask)}")
+    logging.info(
+      f"Maxmum cutoff: {max_cutoff:.0f} Ha ({max_cutoff*27.2114:.0f} eV)"
+    )
+    logging.info(f"Number of g points: {np.sum(mask)}")
 
   elif config.freq_mask_method == "spherical":
     mask = spherical_mask(
       crystal.cell_vectors, grid_sizes, config.cutoff_energy
     )
-    logging.info(f"mask percentage: {np.mean(mask)*100:.2f}%")
-    logging.info(f"maxmum cutoff: {config.cutoff_energy}")
-    logging.info(f"number of g points: {np.sum(mask)}")
+    logging.info(f"Mask percentage: {np.mean(mask)*100:.2f}%")
+    logging.info(
+      f"Maxmum cutoff: {config.cutoff_energy:.0f} Ha "
+      f"({config.cutoff_energy*27.2114:.0f} eV)"
+    )
+    logging.info(f"Number of g points: {np.sum(mask)}")
 
   else:
     raise ValueError("freq_mask_method must be either cubic or spherical.")
@@ -121,6 +130,7 @@ def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
   config_dict = dict(config.optimizer_args)
   opt = getattr(alias, config.optimizer, None)
   lr = config_dict.pop("learning_rate")
+  logging.info(f"learning rate: {lr}")
   if config.scheduler:
     raise NotImplementedError("Scheduler is not implemented yet.")
 
