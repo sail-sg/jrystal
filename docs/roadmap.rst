@@ -56,7 +56,7 @@ Career Opportunities
 
 We're growing! Join our team at `Sea AI Lab <https://sail.sea.com/>`_:
 
-- `Full-time positions <https://career.sea.com/position/J00377738>`_
+- `Full-time positions <https://career.sea.com/position/J02003915>`_
 - `Part-time positions <https://career.sea.com/position/J00215947>`_
 
 We welcome contributions from both academia and industry. Whether you're looking to join our team or contribute as a community member, we're excited to work with you! 
