@@ -16,11 +16,14 @@ import argparse
 from typing import Callable
 
 import jax
+import os
 import jrystal as jr
 import numpy as np
 import optax
-from absl import logging
 from optax._src import alias
+import argparse
+from absl import logging
+from typing import Callable
 
 from .._src.crystal import Crystal
 from .._src.ewald import ewald_coulomb_repulsion
@@ -39,6 +42,9 @@ from ..config import JrystalConfigDict
 
 
 def set_env_params(config: JrystalConfigDict):
+  os.environ["OPENBLAS_NUM_THREADS"] = "4"
+  os.environ["MKL_NUM_THREADS"] = "4"
+  os.environ["OMP_NUM_THREADS"] = "4"
   jax.config.update("jax_debug_nans", config.jax_debug_nans)
 
   if config.verbose:
