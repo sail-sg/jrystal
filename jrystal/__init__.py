@@ -18,7 +18,6 @@ from pathlib import Path
 
 from . import (
   _src,
-  bloch,
   calc,
   config,
   crystal,
@@ -59,5 +58,4 @@ __all__ = [
   "get_pkg_path",
   "config",
   "ewald",
-  "bloch",
 ]
