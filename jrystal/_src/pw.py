@@ -210,7 +210,7 @@ def density_grid(
   coeff: Complex[Array, 'spin kpt band x y z'],
   vol: Float,
   occupation: Optional[Float[Array, 'spin kpt band']] = None
-) -> Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'x y z']]:
+) -> Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band']]:
   r'''Compute the density at the spatial grid.
 
   In a system with electrons, the density of the electron is the result of
@@ -360,7 +360,7 @@ def wave_r(
   leading_dims = coeff.shape[:-3]
   coeff_ = coeff.reshape((-1, x, y, z))
   output = jnp.exp(1j * g_vector_grid @ r)
-  output = jnp.einsum('lxyz,xyz->l', coeff_, output)
+  output = jnp.einsum('lxyz,xyz->skb', coeff_, output)
   output = jnp.reshape(output, leading_dims)
   return output / jnp.sqrt(vol)
 
