@@ -3,7 +3,10 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 jr_eigen = np.load("SiSi_band_structure.npy")*27.2114
+jr_eigen = jr_eigen[:, 0] # remove spin channel
+
 qe_eigen = np.load("qe.npy").T
+
 
 
 ### comparing jr and qe
