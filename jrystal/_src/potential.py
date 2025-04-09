@@ -293,6 +293,7 @@ def xc_lda(density_grid: Float[Array, 'x y z'],
 
 
 def _pbe_x(rho_r, rho_r_grad_norm):
+  """wrapper to low level API of jax_xc"""
   p = get_p("gga_x_pbe", 1)
   grid_shape = rho_r.shape
   rho_r_flat = rho_r.reshape(-1)

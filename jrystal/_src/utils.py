@@ -43,12 +43,12 @@ def safe_real(array: Array, tol: float = 1e-8) -> Array:
             specified tolerance.
 
     Example:
-    
+
     .. code-block:: python
-      
+
       x = 1.0 + 1e-10j
       safe_real(x)  # Returns 1.0
-      y = 1.0 + 1.0j  
+      y = 1.0 + 1.0j
       safe_real(y)  # Raises ValueError
     """
   if jnp.iscomplexobj(array):
@@ -76,9 +76,9 @@ def vmapstack(times: int, args: List[Dict] = None) -> Callable:
             vmap applications (times).
 
     Example:
-    
+
     .. code-block:: python
-      
+
       @vmapstack(2)
       def f(x):
           return x * 2
@@ -109,14 +109,14 @@ def absolute_square(array: Complex[Array, '...']) -> Float[Array, '...']:
   """Computes the squared magnitude of complex numbers in an array.
 
     Calculates :math:`|z|^2` for each complex number :math:`z` in the input array by multiplying each element with its complex conjugate. This operation preserves the array shape while converting complex values to their real squared magnitudes.
-    
+
     .. note::
         This is equivalent to :math:`(Re(z))^2 + (Im(z))^2` for each complex number :math:`z`, but is computed using complex conjugate multiplication for better numerical stability.
 
     Example:
-    
+
     .. code-block:: python
-      
+
       x = 3 + 4j
       absolute_square(x)  # Returns 25.0 (|3 + 4j|² = 3² + 4² = 25)
 
@@ -140,9 +140,9 @@ def volume(cell_vectors: Float[Array, '3 3']) -> Float:
         The volume is calculated as :math:`|det(A)|` where :math:`A` is the matrix of cell vectors. This gives the volume of the parallelepiped formed by the three vectors regardless of their orientation.
 
     Example:
-    
+
     .. code-block:: python
-      
+
       # For a cubic cell of side length 2
       vectors = jnp.array([[2., 0., 0.],
                            [0., 2., 0.],
@@ -162,7 +162,7 @@ def wave_to_density(
   wave_grid: Complex[Array, 'spin kpt band x y z'],
   occupation: Optional[Float[Array, 'spin kpt band']] = None,
   axis: Optional[Union[int, Tuple, List]] = None
-) -> Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'x y z']]:
+) -> Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band']]:
   """Computes electron density from wave functions in real space.
 
     Calculates the electron density by taking the absolute square of wave functions and optionally applying occupation numbers. The density can be computed for the full grid or reduced along specified dimensions.
@@ -222,12 +222,12 @@ def fft_factor(n: int) -> int:
   """Finds the smallest valid FFT size that is >= n.
 
     Determines the smallest number greater than or equal to n that can be
-    factored as 
-    
+    factored as
+
     .. math::
-    
+
         \\text{FFT size} = 2^a \\times 3^b \\times 5^c \\times 7^d \\times 11^e \\times 13^f
-    
+
     where :math:`e` and :math:`f` are either 0 or 1.
 
     Args:
@@ -264,7 +264,7 @@ def expand_coefficient(
         Complex[Array, "spin kpt band x y z"]: The expanded coefficient array with dimensions matching the batch dimensions of coeff_compact (spin, kpt, band) followed by the spatial dimensions of the mask (x, y, z).
 
     .. note::
-    
+
         The function first swaps the last two axes of the input coefficients to align with the expected output format, then creates a zero-filled array of the target shape and places the coefficients at the masked positions.
 
     """
@@ -287,7 +287,7 @@ def squeeze_coefficient(
     efficient computation.
 
     .. note::
-    
+
         The function extracts values at masked positions and then swaps the last two axes to arrange the output as (spin, kpt, gpt, band) rather than (spin, kpt, band, gpt).
 
     Args:

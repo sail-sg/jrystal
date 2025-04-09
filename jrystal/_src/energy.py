@@ -222,7 +222,7 @@ def exc_functional(
   xc: str,
   kohn_sham: bool = False
 ) -> Float:
-  r"""Calculate the PBE exchange-correlation energy.
+  r"""Calculate the exchange-correlation energy of the input density.
 
   Args:
     density_grid (Float[Array, 'x y z']): Real-space electron density.
@@ -230,7 +230,7 @@ def exc_functional(
     kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
 
   Returns:
-    Float: PBE exchange-correlation energy.
+    Float: exchange-correlation energy.
   """
 
   assert density_grid.ndim in [3, 4]
