@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Energy functions. """
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 import jax.numpy as jnp
 import numpy as np
-from typing import Tuple
 from jaxtyping import Array, Complex, Float, Int
 
-from . import braket, potential, pw
+from . import braket, grid, potential, pw
 from .ewald import ewald_coulomb_repulsion
 from .grid import translation_vectors
 from .utils import (
@@ -47,7 +46,7 @@ def hartree(
   The Hartree energy is computed as:
 
   .. math::
-  
+
       E_H = \frac{1}{2}\sum_{\mathbf{G}} \hat{\rho}(\mathbf{G})\hat{V}_{H}(\mathbf{G})
       = 2\pi \sum_{\mathbf{G}} \frac{|\hat{\rho}(\mathbf{G})|^2}{|\mathbf{G}|^2}
 
@@ -55,7 +54,7 @@ def hartree(
   for more details.
 
   Args:
-    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in 
+    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in
       reciprocal space.
     g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
     vol (Float): Unit cell volume.
@@ -93,8 +92,8 @@ def external(
   expressing the real-space integral as a sum over reciprocal lattice vectors:
 
   .. math::
-      E = \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G})\hat{V}_{\text{ext}}(\mathbf{G}) = 
-      \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G}) \sum_{\alpha} Z_{\alpha} 
+      E = \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G})\hat{V}_{\text{ext}}(\mathbf{G}) =
+      \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G}) \sum_{\alpha} Z_{\alpha}
       \exp(-i\mathbf{G}\cdot\mathbf{R}_{\alpha}) v(\mathbf{G})
 
   where:
@@ -106,7 +105,7 @@ def external(
   - :math:`v(\mathbf{G})` is the Fourier transform of the Coulomb potential
 
   Args:
-    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in 
+    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in
       reciprocal space.
     position (Float[Array, 'atom 3']): Atomic positions in the unit cell.
     charge (Float[Array, 'atom']): Nuclear charges.
@@ -142,11 +141,11 @@ def kinetic(
   reciprocal space. The kinetic energy is computed as:
 
   .. math::
-      E_{\text{kin}} = \frac{1}{2} \sum_{\mathbf{G}} 
+      E_{\text{kin}} = \frac{1}{2} \sum_{\mathbf{G}}
       |\mathbf{k} + \mathbf{G}|^2 |c_{n\mathbf{k}}(\mathbf{G})|^2
 
   where:
-  
+
   - :math:`\mathbf{k}` is the k-point vector
   - :math:`\mathbf{G}` is the reciprocal lattice vector
   - :math:`c_{n\mathbf{k}}(\mathbf{G})` are the plane wave coefficients
@@ -216,6 +215,37 @@ def xc_lda(
   return e_lda * vol / num_grid
 
 
+def exc_functional(
+  density_grid: Float[Array, 'x y z'],
+  g_vector_grid: Float[Array, 'x y z 3'],
+  vol: Float,
+  xc: str,
+  kohn_sham: bool = False
+) -> Float:
+  r"""Calculate the exchange-correlation energy of the input density.
+
+  Args:
+    density_grid (Float[Array, 'x y z']): Real-space electron density.
+    vol (Float): Unit cell volume.
+    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
+
+  Returns:
+    Float: exchange-correlation energy.
+  """
+
+  assert density_grid.ndim in [3, 4]
+
+  if density_grid.ndim == 4:  # have spin channel
+    density_grid = jnp.sum(density_grid, axis=0)
+
+  num_grid = jnp.prod(jnp.array(density_grid.shape))
+  exc_density = potential.xc_density(density_grid, g_vector_grid, kohn_sham, xc)
+  e_xc = jnp.sum(exc_density * density_grid)
+  e_xc = safe_real(e_xc)
+
+  return e_xc * vol / num_grid
+
+
 def nuclear_repulsion(
   position: Float[Array, 'atom 3'],
   charge: Float[Array, 'atom'],
@@ -267,11 +297,11 @@ def total_energy(
   Hartree, and exchange-correlation terms:
 
   .. math::
-  
+
     E_{\text{tot}} = E_{\text{kin}} + E_{\text{ext}} + E_H + E_{xc}
 
   .. warning::
-  
+
     This function does not include the nuclear-nuclear repulsion (Ewald) energy. For the complete total energy, the Ewald term must be added separately.
 
   Args:
@@ -305,17 +335,17 @@ def total_energy(
   e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
-  if xc == 'lda_x':
-    if spin_restricted:
-      e_xc = xc_lda(density_grid, vol, kohn_sham)
-    else:
-      o_alpha, o_beta = occupation
-      n_alpha_grid = wave_to_density(wave_grid_arr[0], o_alpha)
-      n_beta_grid = wave_to_density(wave_grid_arr[1], o_beta)
-      e_xc = xc_lda(n_alpha_grid*2, vol, kohn_sham)/2 +\
-        xc_lda(n_beta_grid*2, vol, kohn_sham)/2
+
+  if spin_restricted:
+    e_xc = exc_functional(density_grid, g_vector_grid, vol, xc, kohn_sham)
   else:
-    raise NotImplementedError(f"xc {xc} is not supported yet.")
+    o_alpha, o_beta = occupation
+    den_alpha_grid = wave_to_density(wave_grid_arr[0], o_alpha)
+    den_beta_grid = wave_to_density(wave_grid_arr[1], o_beta)
+    e_xc = (
+      exc_functional(den_alpha_grid * 2, g_vector_grid, vol, xc, kohn_sham) / 2
+      + exc_functional(den_beta_grid * 2, g_vector_grid, vol, xc, kohn_sham) / 2
+    )
 
   if split:
     return e_kin, e_ext, e_har, e_xc
@@ -340,7 +370,7 @@ def band_energy(
   single-particle Hamiltonian for each state:
 
   .. math::
-  
+
       \varepsilon_{n\mathbf{k}} = \langle \psi_{n\mathbf{k}} |
       \hat{T} + \hat{V}_{\text{eff}} | \psi_{n\mathbf{k}} \rangle
 

@@ -23,8 +23,8 @@ import optax
 from absl import logging
 from tqdm import tqdm
 
-from .._src.crystal import Crystal
 from .._src import energy, entropy, occupation, pw
+from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
 from .opt_utils import (
@@ -39,7 +39,7 @@ from .opt_utils import (
 
 @dataclass
 class GroundStateEnergyOutput:
-  """Output of the ground state energy calculation. 
+  """Output of the ground state energy calculation.
 
   Args:
     config (JrystalConfigDict): Configuration for the calculation.
@@ -131,7 +131,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
-  params_pw = pw.param_init(key, num_bands, num_kpts, freq_mask, config.spin_restricted)
+  params_pw = pw.param_init(
+    key, num_bands, num_kpts, freq_mask, config.spin_restricted
+  )
   params_occ = occupation.idempotent_param_init(key, num_bands, num_kpts)
   params = {"pw": params_pw, "occ": params_occ}
   opt_state = optimizer.init(params)
@@ -154,6 +156,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       end_value=config.smearing
     )
   else:
+
     def temperature_scheduler(i):
       return 0.
 
@@ -201,9 +204,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Total Energy: {etot+ew:.4f} Ha")
 
   output = GroundStateEnergyOutput(
-     config, crystal, params["pw"], params["occ"], etot + ew, []
-   )
- 
+    config, crystal, params["pw"], params["occ"], etot + ew, []
+  )
+
   save_file = ''.join(crystal.symbol) + "_ground_state.pkl"
   with open(save_file, "wb") as f:
     pickle.dump(output, f)

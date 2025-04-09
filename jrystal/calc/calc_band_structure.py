@@ -13,33 +13,37 @@
 # limitations under the License.
 """Band Structure Calculator. """
 
+import time
+from dataclasses import dataclass
+from math import ceil
+from typing import Optional
+
 import jax
 import jax.numpy as jnp
 import optax
-from math import ceil
-
-import time
-from typing import Optional
-from dataclasses import dataclass
 from absl import logging
 from tqdm import tqdm
 
-from .calc_ground_state_energy import calc as energy_calc
-from .calc_ground_state_energy import GroundStateEnergyOutput
-from .opt_utils import set_env_params, create_crystal, create_freq_mask
-from .opt_utils import create_grids, create_optimizer
-
-from ..config import JrystalConfigDict
-from .._src import pw, hamiltonian, occupation
+from .._src import hamiltonian, occupation, pw
 from .._src.band import get_k_path
 from .._src.crystal import Crystal
 from .._src.utils import wave_to_density
+from ..config import JrystalConfigDict
+from .calc_ground_state_energy import GroundStateEnergyOutput
+from .calc_ground_state_energy import calc as energy_calc
+from .opt_utils import (
+  create_crystal,
+  create_freq_mask,
+  create_grids,
+  create_optimizer,
+  set_env_params
+)
 
 
 @dataclass
 class BandStructureOutput:
-  """Output of the band structure calculation. 
-  
+  """Output of the band structure calculation.
+
   Args:
     config (JrystalConfigDict): Configuration for the calculation.
     crystal (Crystal): The crystal object.
@@ -109,8 +113,11 @@ def calc(
   # Calculate ground state density at grid points.
   def get_occupation(params):
     return occupation.idempotent(
-      params, crystal.num_electron, k_vec.shape[0],
-      crystal.spin, config.spin_restricted
+      params,
+      crystal.num_electron,
+      k_vec.shape[0],
+      crystal.spin,
+      config.spin_restricted
     )
 
   coeff_ground_state = pw.coeff(params_pw_ground_state, freq_mask)
@@ -144,7 +151,9 @@ def calc(
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
   num_bands = ceil(crystal.num_electron / 2) + config.band_structure_empty_bands
-  params_pw_band = pw.param_init(key, num_bands, 1, freq_mask, config.spin_restricted)
+  params_pw_band = pw.param_init(
+    key, num_bands, 1, freq_mask, config.spin_restricted
+  )
   opt_state = optimizer.init(params_pw_band)
 
   # define update function
@@ -210,10 +219,10 @@ def calc(
 
   @jax.jit
   def eig_fn(
-    coeff_k, 
-    k, 
-    ground_state_density_grid, 
-    g_vec, 
+    coeff_k,
+    k,
+    ground_state_density_grid,
+    g_vec,
   ):
     hamil_matrix = hamiltonian.hamiltonian_matrix(
       coeff_k,
@@ -228,7 +237,9 @@ def calc(
       kohn_sham=True,
     )
 
-    eigen_values = jnp.linalg.eigvalsh(hamil_matrix.reshape(-1, num_bands, num_bands))
+    eigen_values = jnp.linalg.eigvalsh(
+      hamil_matrix.reshape(-1, num_bands, num_bands)
+    )
 
     return eigen_values
 
