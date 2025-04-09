@@ -379,7 +379,7 @@ document.write(`
 
 <span class="sd">  .. math::</span>
 
-<span class="sd">    \psi(r) = e^{ikr}\sum_G c_{kG} e^{iGr}</span>
+<span class="sd">    \psi(r) = e^{i\vb{k}^\top \vb{r}}\sum_G c_{kG} e^{i\vb{G}^\top \vb{r}}</span>
 
 <span class="sd">  This function generates a raw parameter, which after processing by</span>
 <span class="sd">  :py:func:`coeff` can be used as the :math:`c_{kG}` part of the above equation.</span>
@@ -556,7 +556,7 @@ document.write(`
 
 <span class="sd">  .. math::</span>
 
-<span class="sd">    \rho(r) = \sum_i |\psi_i(r)|^2</span>
+<span class="sd">    \rho(\vb{r}) = \sum_i |\psi_i(\vb{r})|^2</span>
 
 <span class="sd">  This function evaluates the density :math:`\rho(r)` at the spatial grid</span>
 <span class="sd">  generated from :py:func:`jrystal.grid.r_vectors`.</span>
@@ -566,8 +566,8 @@ document.write(`
 
 <span class="sd">  .. math::</span>
 
-<span class="sd">    \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} e^{ikr} \sum_G c_{kG}</span>
-<span class="sd">    e^{iGr}</span>
+<span class="sd">    \psi(\vb{r}) = \frac{1}{\sqrt{\Omega_\text{cell}}} e^{i\vb{k}^\top \vb{r}} \sum_G c_{kG}</span>
+<span class="sd">    e^{i\vb{G}^\top \vb{r}}</span>
 
 <span class="sd">  The :math:`c_{kG}` can be computed from :py:func:`param_init`</span>
 <span class="sd">  and :py:func:`coeff`. For calculation of density, we only need</span>
@@ -575,8 +575,8 @@ document.write(`
 
 <span class="sd">  .. math::</span>
 
-<span class="sd">    \rho(r) = \frac{1}{\Omega_\text{cell}} e^{ikr} \sum_G c_{kG}</span>
-<span class="sd">    e^{iGr}</span>
+<span class="sd">    \rho(\vb{r}) = \frac{1}{\Omega_\text{cell}} \sum_{G, G&#39;} c_{kG}c_{kG&#39;}^*</span>
+<span class="sd">    e^{i\vb{(G - G&#39;)}^\top \vb{r}}</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension which will be summed to get the overall density. Therefore the shape is :code:`(spin, kpt, band, x, y, z)`.</span>
@@ -671,7 +671,7 @@ document.write(`
 
 <span class="sd">  .. math::</span>
 
-<span class="sd">    \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{iGr}</span>
+<span class="sd">    \psi(r) = \frac{1}{\sqrt{\Omega_\text{cell}}} \sum_G c_{G} e^{i\vb{G}^\top \vb{r}}</span>
 
 <span class="sd">  The :code:`coeff` provided is the :math:`c_{G}`, the :code:`cell_vectors` is</span>
 <span class="sd">  used to generate the grid of frequency components :math:`G` by calling the function</span>

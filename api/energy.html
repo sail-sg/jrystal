@@ -43,6 +43,8 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/graph.js?v=6245dd16"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/energy';</script>
     <link rel="icon" href="../_static/jrystal_logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -345,7 +347,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
 </div></div>
       
     </div>
@@ -361,6 +365,20 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.band_energy"><code class="docutils literal notranslate"><span class="pre">band_energy()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.external"><code class="docutils literal notranslate"><span class="pre">external()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.hartree"><code class="docutils literal notranslate"><span class="pre">hartree()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.kinetic"><code class="docutils literal notranslate"><span class="pre">kinetic()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.nuclear_repulsion"><code class="docutils literal notranslate"><span class="pre">nuclear_repulsion()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.total_energy"><code class="docutils literal notranslate"><span class="pre">total_energy()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.xc_lda"><code class="docutils literal notranslate"><span class="pre">xc_lda()</span></code></a></li>
+</ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -370,8 +388,247 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="energy">
-<h1>energy<a class="headerlink" href="#energy" title="Link to this heading">#</a></h1>
+  <section id="module-jrystal.energy">
+<span id="energy"></span><h1>energy<a class="headerlink" href="#module-jrystal.energy" title="Link to this heading">#</a></h1>
+<p>Energy functions.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.energy.band_energy">
+<span class="sig-prename descclassname"><span class="pre">jrystal.energy.</span></span><span class="sig-name descname"><span class="pre">band_energy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coefficient</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Int</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kpts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'kpt</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">occupation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kohn_sham</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'lda'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/jrystal/_src/energy.html#band_energy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.energy.band_energy" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the energy eigenvalues for each electronic state.</p>
+<p>Computes the energy eigenvalues by evaluating the expectation value of the
+single-particle Hamiltonian for each state:</p>
+<div class="math notranslate nohighlight">
+\[\varepsilon_{n\mathbf{k}} = \langle \psi_{n\mathbf{k}} |
+\hat{T} + \hat{V}_{\text{eff}} | \psi_{n\mathbf{k}} \rangle\]</div>
+<p>where <span class="math notranslate nohighlight">\(\hat{T}\)</span> is the kinetic energy operator and
+<span class="math notranslate nohighlight">\(\hat{V}_{\text{eff}}\)</span> is the effective potential operator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coefficient</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>&quot;spin kpt band x y z&quot;</em><em>]</em>) – Plane wave coefficients.</p></li>
+<li><p><strong>position</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;atom 3&quot;</em><em>]</em>) – Atomic positions in the unit cell.</p></li>
+<li><p><strong>charge</strong> (<em>Int</em><em>[</em><em>Array</em><em>, </em><em>&quot;atom&quot;</em><em>]</em>) – Nuclear charges.</p></li>
+<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;x y z 3&quot;</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
+<li><p><strong>kpts</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;kpt 3&quot;</em><em>]</em>) – k-points in reciprocal space.</p></li>
+<li><p><strong>vol</strong> (<em>Float</em>) – Unit cell volume.</p></li>
+<li><p><strong>occupation</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;spin kpt band&quot;</em><em>]</em>) – Occupation numbers.</p></li>
+<li><p><strong>kohn_sham</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, use Kohn-Sham formalism. Defaults to False.</p></li>
+<li><p><strong>xc</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Exchange-correlation functional type. Defaults to ‘lda’.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Energy eigenvalues for each electronic state.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, “spin kpt band”]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.energy.external">
+<span class="sig-prename descclassname"><span class="pre">jrystal.energy.</span></span><span class="sig-name descname"><span class="pre">external</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">density_grid_reciprocal</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span></span></span><a class="reference internal" href="../_modules/jrystal/_src/energy.html#external"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.energy.external" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the external potential energy.</p>
+<p>The external potential energy is computed using Parseval’s identity,
+expressing the real-space integral as a sum over reciprocal lattice vectors:</p>
+<div class="math notranslate nohighlight">
+\[E = \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G})\hat{V}_{\text{ext}}(\mathbf{G}) =
+\sum_{\mathbf{G}} \hat{\rho}(\mathbf{G}) \sum_{\alpha} Z_{\alpha}
+\exp(-i\mathbf{G}\cdot\mathbf{R}_{\alpha}) v(\mathbf{G})\]</div>
+<p>where:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(\hat{\rho}(\mathbf{G})\)</span> is the Fourier transform of the electron density, i.e. the density in reciprocal space.</p></li>
+<li><p><span class="math notranslate nohighlight">\(\hat{V}_{\text{ext}}(\mathbf{G})\)</span> is the external potential in reciprocal space</p></li>
+<li><p><span class="math notranslate nohighlight">\(Z_{\alpha}\)</span> is the nuclear charge of atom <span class="math notranslate nohighlight">\(\alpha\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{R}_{\alpha}\)</span> is the position of atom <span class="math notranslate nohighlight">\(\alpha\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(v(\mathbf{G})\)</span> is the Fourier transform of the Coulomb potential</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>density_grid_reciprocal</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>'x y z'</em><em>]</em>) – Electron density in
+reciprocal space.</p></li>
+<li><p><strong>position</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'atom 3'</em><em>]</em>) – Atomic positions in the unit cell.</p></li>
+<li><p><strong>charge</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'atom'</em><em>]</em>) – Nuclear charges.</p></li>
+<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
+<li><p><strong>vol</strong> (<em>Float</em>) – Unit cell volume.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>External potential energy.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.energy.hartree">
+<span class="sig-prename descclassname"><span class="pre">jrystal.energy.</span></span><span class="sig-name descname"><span class="pre">hartree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">density_grid_reciprocal</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kohn_sham</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span></span></span><a class="reference internal" href="../_modules/jrystal/_src/energy.html#hartree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.energy.hartree" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the Hartree energy.</p>
+<p>The Hartree energy represents the classical electrostatic interaction between
+electrons. The calculation is performed in reciprocal space for efficiency.
+The Hartree potential in reciprocal space is given by:</p>
+<div class="math notranslate nohighlight">
+\[\hat{V}_H(\mathbf{G}) = 4\pi \frac{\hat{\rho}(\mathbf{G})}{|\mathbf{G}|^2},
+\quad \hat{V}_H(\mathbf{0}) = 0\]</div>
+<p>The Hartree energy is computed as:</p>
+<div class="math notranslate nohighlight">
+\[E_H = \frac{1}{2}\sum_{\mathbf{G}} \hat{\rho}(\mathbf{G})\hat{V}_{H}(\mathbf{G})
+= 2\pi \sum_{\mathbf{G}} \frac{|\hat{\rho}(\mathbf{G})|^2}{|\mathbf{G}|^2}\]</div>
+<p>Please also refer to the tutorial <a class="reference internal" href="../tutorial/total_energy.html"><span class="doc">Total Energy Minimization</span></a>
+for more details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>density_grid_reciprocal</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>'x y z'</em><em>]</em>) – Electron density in
+reciprocal space.</p></li>
+<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
+<li><p><strong>vol</strong> (<em>Float</em>) – Unit cell volume.</p></li>
+<li><p><strong>kohn_sham</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, use Kohn-Sham formalism. Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Hartree energy.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.energy.kinetic">
+<span class="sig-prename descclassname"><span class="pre">jrystal.energy.</span></span><span class="sig-name descname"><span class="pre">kinetic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kpts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'kpt</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeff_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">occupation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/energy.html#kinetic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.energy.kinetic" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the kinetic energy.</p>
+<p>For plane wave basis, the kinetic energy operator is diagonal in
+reciprocal space. The kinetic energy is computed as:</p>
+<div class="math notranslate nohighlight">
+\[E_{\text{kin}} = \frac{1}{2} \sum_{\mathbf{G}}
+|\mathbf{k} + \mathbf{G}|^2 |c_{n\mathbf{k}}(\mathbf{G})|^2\]</div>
+<p>where:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(\mathbf{k}\)</span> is the k-point vector</p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{G}\)</span> is the reciprocal lattice vector</p></li>
+<li><p><span class="math notranslate nohighlight">\(c_{n\mathbf{k}}(\mathbf{G})\)</span> are the plane wave coefficients</p></li>
+<li><p><span class="math notranslate nohighlight">\(n\)</span> is the band index</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
+<li><p><strong>kpts</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'kpt 3'</em><em>]</em>) – k-points in reciprocal space.</p></li>
+<li><p><strong>coeff_grid</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>'spin kpt band x y z'</em><em>]</em>) – Plane wave coefficients.</p></li>
+<li><p><strong>occupation</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'spin kpt band'</em><em>]</em><em>, </em><em>optional</em>) – Occupation numbers. If provided, returns the total kinetic energy weighted by occupations.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>If occupation is provided, returns the total kinetic energy. Otherwise, returns the kinetic energy for each state.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Union[Float, Float[Array, “spin kpt band”]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.energy.nuclear_repulsion">
+<span class="sig-prename descclassname"><span class="pre">jrystal.energy.</span></span><span class="sig-name descname"><span class="pre">nuclear_repulsion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ewald_eta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ewald_cutoff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span></span></span><a class="reference internal" href="../_modules/jrystal/_src/energy.html#nuclear_repulsion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.energy.nuclear_repulsion" title="Link to this definition">#</a></dt>
+<dd><p>Compute the nuclear repulsion energy using Ewald summation.</p>
+<p>This function calculates the nuclear-nuclear repulsion energy in periodic systems
+using the Ewald summation technique.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>position</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'atom 3'</em><em>]</em>) – Coordinates of atoms in a unit cell.</p></li>
+<li><p><strong>charge</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'atom'</em><em>]</em>) – Nuclear charges of atoms.</p></li>
+<li><p><strong>cell_vectors</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'3 3'</em><em>]</em>) – Unit cell vectors.</p></li>
+<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
+<li><p><strong>vol</strong> (<em>Float</em>) – Volume of the unit cell.</p></li>
+<li><p><strong>ewald_eta</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – Ewald splitting parameter.</p></li>
+<li><p><strong>ewald_cutoff</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – Real-space cutoff for Ewald summation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Nuclear-nuclear repulsion energy.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.energy.total_energy">
+<span class="sig-prename descclassname"><span class="pre">jrystal.energy.</span></span><span class="sig-name descname"><span class="pre">total_energy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coefficient</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpts</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Int</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kpts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'kpt</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">occupation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kohn_sham</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'lda_x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spin_restricted</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/energy.html#total_energy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.energy.total_energy" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the total electronic energy of the system.</p>
+<p>Computes the total energy as the sum of kinetic, external potential,
+Hartree, and exchange-correlation terms:</p>
+<div class="math notranslate nohighlight">
+\[E_{\text{tot}} = E_{\text{kin}} + E_{\text{ext}} + E_H + E_{xc}\]</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This function does not include the nuclear-nuclear repulsion (Ewald) energy. For the complete total energy, the Ewald term must be added separately.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coefficient</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>&quot;spin kpts band x y z&quot;</em><em>]</em>) – Plane wave coefficients.</p></li>
+<li><p><strong>position</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;atom 3&quot;</em><em>]</em>) – Atomic positions in the unit cell.</p></li>
+<li><p><strong>charge</strong> (<em>Int</em><em>[</em><em>Array</em><em>, </em><em>&quot;atom&quot;</em><em>]</em>) – Nuclear charges.</p></li>
+<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;x y z 3&quot;</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
+<li><p><strong>kpts</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;kpt 3&quot;</em><em>]</em>) – k-points in reciprocal space.</p></li>
+<li><p><strong>vol</strong> (<em>Float</em>) – Unit cell volume.</p></li>
+<li><p><strong>occupation</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;spin kpt band&quot;</em><em>]</em><em>, </em><em>optional</em>) – Occupation numbers.
+If not provided, all states are considered fully occupied.</p></li>
+<li><p><strong>kohn_sham</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, use Kohn-Sham formalism. Defaults to False.</p></li>
+<li><p><strong>xc</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Exchange-correlation functional type. Defaults to ‘lda’.</p></li>
+<li><p><strong>split</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, return individual energy components. Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>If split is False, returns</dt><dd><p>the total electronic energy. If split is True, returns the individual
+components (kinetic, external, Hartree, exchange-correlation).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Union[Float, Tuple[Float, Float, Float, Float]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.energy.xc_lda">
+<span class="sig-prename descclassname"><span class="pre">jrystal.energy.</span></span><span class="sig-name descname"><span class="pre">xc_lda</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">density_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kohn_sham</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span></span></span><a class="reference internal" href="../_modules/jrystal/_src/energy.html#xc_lda"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.energy.xc_lda" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the LDA exchange-correlation energy.</p>
+<p>Implements the Local Density Approximation (LDA) for the exchange-correlation
+energy in the spin-unpolarized case. The exchange energy in LDA is given by:</p>
+<div class="math notranslate nohighlight">
+\[E_x^{\text{LDA}}[\rho] = -\frac{3}{4}\left(\frac{3}{\pi}\right)^{1/3}
+\int \rho(\mathbf{r})^{4/3} d\mathbf{r}\]</div>
+<p>Note that this implementation includes both exchange and correlation terms,
+though only the exchange term is shown in the equation above.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>density_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z'</em><em>]</em>) – Real-space electron density.</p></li>
+<li><p><strong>vol</strong> (<em>Float</em>) – Unit cell volume.</p></li>
+<li><p><strong>kohn_sham</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, use Kohn-Sham formalism. Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>LDA exchange-correlation energy.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -409,6 +666,27 @@ document.write(`
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.band_energy"><code class="docutils literal notranslate"><span class="pre">band_energy()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.external"><code class="docutils literal notranslate"><span class="pre">external()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.hartree"><code class="docutils literal notranslate"><span class="pre">hartree()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.kinetic"><code class="docutils literal notranslate"><span class="pre">kinetic()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.nuclear_repulsion"><code class="docutils literal notranslate"><span class="pre">nuclear_repulsion()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.total_energy"><code class="docutils literal notranslate"><span class="pre">total_energy()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.energy.xc_lda"><code class="docutils literal notranslate"><span class="pre">xc_lda()</span></code></a></li>
+</ul>
+  </nav></div>
+
+</div></div>
               
             
           </div>

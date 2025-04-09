@@ -345,7 +345,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
 </div></div>
       
     </div>
@@ -361,6 +363,14 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.ewald.ewald_coulomb_repulsion"><code class="docutils literal notranslate"><span class="pre">ewald_coulomb_repulsion()</span></code></a></li>
+</ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -372,6 +382,40 @@ document.write(`
                   
   <section id="ewald">
 <h1>ewald<a class="headerlink" href="#ewald" title="Link to this heading">#</a></h1>
+<p id="module-jrystal.ewald">Ewald summation for periodic systems.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.ewald.ewald_coulomb_repulsion">
+<span class="sig-prename descclassname"><span class="pre">jrystal.ewald.</span></span><span class="sig-name descname"><span class="pre">ewald_coulomb_repulsion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom</span> <span class="pre">d'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ewald_eta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ewald_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span></span></span><a class="reference internal" href="../_modules/jrystal/_src/ewald.html#ewald_coulomb_repulsion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.ewald.ewald_coulomb_repulsion" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the nuclei repulsion energy using Ewald summation method.</p>
+<p>This function computes the nuclei repulsion energy for a periodic system using the Ewald summation technique, which splits the calculation into real and reciprocal space contributions. The method provides an efficient way to handle long-range Coulomb interactions in periodic systems.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Further reading:</p>
+<ul class="simple">
+<li><p>Textbook: Martin, R. M. (2020). Electronic structure: basic theory and practical methods. Cambridge university press. (Appendix F.2)</p></li>
+<li><p>Our tutorial: <a class="reference internal" href="../tutorial/ewald.html"><span class="doc">Ewald Summation</span></a></p></li>
+</ul>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>positions</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'atom d'</em><em>]</em>) – Array of shape (atom, d) containing atomic positions in d-dimensional space.</p></li>
+<li><p><strong>charges</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'atom'</em><em>]</em>) – Array of shape (atom,) containing the charges of each atom.</p></li>
+<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Array of shape (x, y, z, 3) containing the reciprocal lattice vectors.</p></li>
+<li><p><strong>vol</strong> (<em>Float</em>) – Float representing the volume of the unit cell.</p></li>
+<li><p><strong>ewald_eta</strong> (<em>Float</em>) – Float controlling the split between real and reciprocal space contributions. Also known as the Ewald convergence parameter.</p></li>
+<li><p><strong>ewald_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Array of shape (x, y, z, 3) containing real-space translation vectors for the Ewald sum. Can be generated using <a class="reference internal" href="grid.html#jrystal.grid.translation_vectors" title="jrystal.grid.translation_vectors"><code class="xref py py-func docutils literal notranslate"><span class="pre">jrystal.grid.translation_vectors()</span></code></a>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The total Coulomb repulsion energy computed using Ewald summation. Includes both real-space and reciprocal-space contributions, as well as self-interaction corrections.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -409,6 +453,21 @@ document.write(`
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.ewald.ewald_coulomb_repulsion"><code class="docutils literal notranslate"><span class="pre">ewald_coulomb_repulsion()</span></code></a></li>
+</ul>
+  </nav></div>
+
+</div></div>
               
             
           </div>

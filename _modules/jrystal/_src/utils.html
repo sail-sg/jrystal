@@ -369,12 +369,12 @@ document.write(`
 <span class="sd">            specified tolerance.</span>
 
 <span class="sd">    Example:</span>
-<span class="sd">    </span>
+
 <span class="sd">    .. code-block:: python</span>
-<span class="sd">      </span>
+
 <span class="sd">      x = 1.0 + 1e-10j</span>
 <span class="sd">      safe_real(x)  # Returns 1.0</span>
-<span class="sd">      y = 1.0 + 1.0j  </span>
+<span class="sd">      y = 1.0 + 1.0j</span>
 <span class="sd">      safe_real(y)  # Raises ValueError</span>
 <span class="sd">    &quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="n">jnp</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">array</span><span class="p">):</span>
@@ -405,9 +405,9 @@ document.write(`
 <span class="sd">            vmap applications (times).</span>
 
 <span class="sd">    Example:</span>
-<span class="sd">    </span>
+
 <span class="sd">    .. code-block:: python</span>
-<span class="sd">      </span>
+
 <span class="sd">      @vmapstack(2)</span>
 <span class="sd">      def f(x):</span>
 <span class="sd">          return x * 2</span>
@@ -441,14 +441,14 @@ document.write(`
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Computes the squared magnitude of complex numbers in an array.</span>
 
 <span class="sd">    Calculates :math:`|z|^2` for each complex number :math:`z` in the input array by multiplying each element with its complex conjugate. This operation preserves the array shape while converting complex values to their real squared magnitudes.</span>
-<span class="sd">    </span>
+
 <span class="sd">    .. note::</span>
 <span class="sd">        This is equivalent to :math:`(Re(z))^2 + (Im(z))^2` for each complex number :math:`z`, but is computed using complex conjugate multiplication for better numerical stability.</span>
 
 <span class="sd">    Example:</span>
-<span class="sd">    </span>
+
 <span class="sd">    .. code-block:: python</span>
-<span class="sd">      </span>
+
 <span class="sd">      x = 3 + 4j</span>
 <span class="sd">      absolute_square(x)  # Returns 25.0 (|3 + 4j|² = 3² + 4² = 25)</span>
 
@@ -475,9 +475,9 @@ document.write(`
 <span class="sd">        The volume is calculated as :math:`|det(A)|` where :math:`A` is the matrix of cell vectors. This gives the volume of the parallelepiped formed by the three vectors regardless of their orientation.</span>
 
 <span class="sd">    Example:</span>
-<span class="sd">    </span>
+
 <span class="sd">    .. code-block:: python</span>
-<span class="sd">      </span>
+
 <span class="sd">      # For a cubic cell of side length 2</span>
 <span class="sd">      vectors = jnp.array([[2., 0., 0.],</span>
 <span class="sd">                           [0., 2., 0.],</span>
@@ -566,12 +566,12 @@ document.write(`
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Finds the smallest valid FFT size that is &gt;= n.</span>
 
 <span class="sd">    Determines the smallest number greater than or equal to n that can be</span>
-<span class="sd">    factored as </span>
-<span class="sd">    </span>
+<span class="sd">    factored as</span>
+
 <span class="sd">    .. math::</span>
-<span class="sd">    </span>
+
 <span class="sd">        \\text{FFT size} = 2^a \\times 3^b \\times 5^c \\times 7^d \\times 11^e \\times 13^f</span>
-<span class="sd">    </span>
+
 <span class="sd">    where :math:`e` and :math:`f` are either 0 or 1.</span>
 
 <span class="sd">    Args:</span>
@@ -611,7 +611,7 @@ document.write(`
 <span class="sd">        Complex[Array, &quot;spin kpt band x y z&quot;]: The expanded coefficient array with dimensions matching the batch dimensions of coeff_compact (spin, kpt, band) followed by the spatial dimensions of the mask (x, y, z).</span>
 
 <span class="sd">    .. note::</span>
-<span class="sd">    </span>
+
 <span class="sd">        The function first swaps the last two axes of the input coefficients to align with the expected output format, then creates a zero-filled array of the target shape and places the coefficients at the masked positions.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -637,7 +637,7 @@ document.write(`
 <span class="sd">    efficient computation.</span>
 
 <span class="sd">    .. note::</span>
-<span class="sd">    </span>
+
 <span class="sd">        The function extracts values at masked positions and then swaps the last two axes to arrange the output as (spin, kpt, gpt, band) rather than (spin, kpt, band, gpt).</span>
 
 <span class="sd">    Args:</span>
