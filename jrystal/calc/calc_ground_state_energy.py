@@ -194,11 +194,11 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   external = energy.external(
     density_reciprocal, crystal.positions, crystal.charges, g_vec, crystal.vol
   )
-  lda = energy.xc_lda(density, crystal.vol)
+  exc = energy.exc_functional(density, g_vec, crystal.vol, config.xc)
 
   logging.info(f"Hartree Energy: {hartree:.4f} Ha")
   logging.info(f"External Energy: {external:.4f} Ha")
-  logging.info(f"LDA Energy: {lda:.4f} Ha")
+  logging.info(f"XC Energy: {exc:.4f} Ha")
   logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
   logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
   logging.info(f"Total Energy: {etot+ew:.4f} Ha")

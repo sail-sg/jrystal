@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Potentials."""
+import importlib
 from typing import Tuple, Union
 
 import jax
 import jax.numpy as jnp
 from jax.lax import stop_gradient
-from jax_xc.impl.gga_x_pbe import unpol as pbe_jac_xc
 from jax_xc.utils import get_p
 from jaxtyping import Array, Complex, Float
 
@@ -190,39 +190,35 @@ def external(
   return jnp.fft.ifftn(ext_pot_grid_rcprl, axes=range(-3, 0))
 
 
-def _lda_x(density_grid: Float[Array, '*d x y z']) -> Float[Array, '*d x y z']:
-  r"""Calculate the LDA exchange-correlation energy density.
+def get_xc_functional(xc='gga_x_pbe', polarization='unpol'):
+  """Dynamically import XC functional implementation.
 
-  Implements the Local Density Approximation (LDA) for the exchange-correlation
-  energy density in the spin-unpolarized case:
+    Args:
+        functional_type: String like 'pbe', 'b3lyp', etc.
+        polarization: String, either 'unpol' or 'pol' for unpolarized/polarized
 
-  .. math::
-      \varepsilon_{xc}^{\text{LDA}}[n] = -\frac{3}{4}
-      \left(\frac{3}{\pi}\right)^{1/3} n(\mathbf{r})^{1/3}
+    Returns:
+        The requested functional implementation
+    """
+  try:
+    module_path = f"jax_xc.impl.{xc}"
+    module = importlib.import_module(module_path)
+    functional = getattr(module, polarization)
+    return functional
+  except (ImportError, AttributeError) as e:
+    raise ImportError(
+      f"Could not import {polarization} from {module_path}: {e}"
+    )
 
-  where:
 
-  - :math:`n(\mathbf{r})` is the electron density
-  - :math:`\varepsilon_{xc}^{\text{LDA}}` is the exchange-correlation energy density
-
-  Args:
-    density_grid (Float[Array, '*d x y z']): Real-space electron density.
-      May include batch dimensions.
-
-  Returns:
-    Float[Array, '*d x y z']: LDA exchange-correlation energy density.
-      Preserves any batch dimensions from the input.
-  """
-  t3 = 3**(0.1e1 / 0.3e1)
-  t4 = jnp.pi**(0.1e1 / 0.3e1)
-  t8 = 2.220446049250313e-16**(0.1e1 / 0.3e1)
-  t10 = jnp.where(0.1e1 <= 2.22044604925e-16, t8 * 2.22044604925e-16, 1)
-  t11 = density_grid**(0.1e1 / 0.3e1)
-  t15 = jnp.where(
-    density_grid / 0.2e1 <= 1e-15, 0, -0.3e1 / 0.8e1 * t3 / t4 * t10 * t11
-  )
-  res = 0.2e1 * 1. * t15
-  return res
+def vxc_lda(exc, rho_r):
+  grid_sizes = rho_r.shape
+  rho_r_flat = rho_r.reshape(-1)
+  dexc_drho_flat = jax.vmap(jax.grad(exc))(rho_r_flat)
+  t1 = dexc_drho_flat.reshape(grid_sizes) * rho_r
+  t2 = exc(rho_r)
+  vxc_r = t1 + t2
+  return vxc_r
 
 
 def vxc_gga_recp(exc, rho_r, rho_r_grad_norm, gs):
@@ -238,8 +234,6 @@ def vxc_gga_recp(exc, rho_r, rho_r_grad_norm, gs):
   grid_sizes = gs.shape[:-1]
   t = dexc_drho_grad_norm_flat.reshape(grid_sizes) * rho_r
   t = jnp.where(rho_r_grad_norm > 0, t, 0)
-  # # HACK
-  # t = t.at[0, 0, 0].set(0)
 
   g_axes = list(range(gs.ndim - 1))
 
@@ -255,62 +249,8 @@ def vxc_gga_recp(exc, rho_r, rho_r_grad_norm, gs):
   return vxc_G
 
 
-def xc_lda(density_grid: Float[Array, 'x y z'],
-           kohn_sham: bool = False) -> Float[Array, 'x y z']:
-  r"""Calculate the LDA exchange-correlation potential.
-
-  Implements the Local Density Approximation (LDA) for the exchange-correlation
-  potential in the spin-unpolarized case. The potential is obtained as the
-  functional derivative of the LDA energy:
-
-  .. math::
-      v_{xc}^{\text{LDA}}(\mathbf{r}) = -\left(\frac{3\rho(\mathbf{r})}{\pi}
-      \right)^{1/3}
-
-  where:
-
-  - :math:`\rho(\mathbf{r})` is the electron density
-  - :math:`v_{xc}^{\text{LDA}}` is the exchange-correlation potential
-
-  Args:
-    density_grid (Float[Array, 'x y z']): Real-space electron density.
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
-
-  Returns:
-    Float[Array, 'x y z']: LDA exchange-correlation potential.
-  """
-  dim = density_grid.ndim
-  if dim > 3:
-    density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
-
-  if kohn_sham:
-    density_grid = stop_gradient(density_grid)
-    output = -(density_grid * 3. / jnp.pi)**(1 / 3)
-  else:
-    return _lda_x(density_grid)
-
-  return output
-
-
-def _pbe_x(rho_r, rho_r_grad_norm):
-  """wrapper to low level API of jax_xc"""
-  p = get_p("gga_x_pbe", 1)
-  grid_shape = rho_r.shape
-  rho_r_flat = rho_r.reshape(-1)
-  rho_r_grad_norm_flat = rho_r_grad_norm.reshape(-1)
-  out = jax.vmap(pbe_jac_xc, (None, 0, 0),
-                 0)(p, rho_r_flat, rho_r_grad_norm_flat)
-  return out.reshape(grid_shape)
-
-  # kappa, mu = 0.804, 0.21951
-  # kf = (3 * jnp.pi**2 * rho_r)**(1 / 3)
-  # # reduced_density_gradient
-  # div_kf = jnp.where(kf > 0, 1 / kf, 0)
-  # drho = jnp.sqrt(rho_r_grad_norm)
-  # s = jnp.where(rho_r > 0, drho * div_kf / 2 / rho_r, 0)
-  # # enhancement factor
-  # e_f = 1 + kappa - kappa / (1 + mu * s**2 / kappa)
-  # return _lda_x(rho_r) * e_f
+def vxc_gga(exc, rho_r, rho_r_grad_norm, gs):
+  return jnp.fft.ifftn(vxc_gga_recp(exc, rho_r, rho_r_grad_norm, gs))
 
 
 def rho_r_grad_norm_fn(density_grid, gs):
@@ -320,28 +260,23 @@ def rho_r_grad_norm_fn(density_grid, gs):
   return absolute_square(grad_rho_r).sum(-1)
 
 
-def xc_pbe(
-  density_grid: Float[Array, 'x y z'],
-  g_vector_grid,
-  kohn_sham: bool = False
-) -> Float[Array, 'x y z']:
-  """
-  Args:
-    kohn_sham: if True, calculate vxc
-  """
-  dim = density_grid.ndim
-  if dim > 3:
-    density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
+def lda_unpol(xc, rho_r):
+  p = get_p(xc, 1)
+  exc = get_xc_functional(xc, 'unpol')
+  grid_shape = rho_r.shape
+  rho_r_flat = rho_r.reshape(-1)
+  out = jax.vmap(exc, (None, 0), 0)(p, rho_r_flat)
+  return out.reshape(grid_shape)
 
-  grad_norm = rho_r_grad_norm_fn(density_grid, g_vector_grid)
 
-  if kohn_sham:  # return vxc
-    # NOTE: v_eff can be calculated in reciprocal space
-    vxc_G = vxc_gga_recp(_pbe_x, density_grid, grad_norm, g_vector_grid)
-    vxc_r = jnp.fft.ifftn(vxc_G)
-    return vxc_r
-  else:
-    return _pbe_x(density_grid, grad_norm)
+def gga_unpol(xc, rho_r, rho_r_grad_norm):
+  p = get_p(xc, 1)
+  exc = get_xc_functional(xc, 'unpol')
+  grid_shape = rho_r.shape
+  rho_r_flat = rho_r.reshape(-1)
+  rho_r_grad_norm_flat = rho_r_grad_norm.reshape(-1)
+  out = jax.vmap(exc, (None, 0, 0), 0)(p, rho_r_flat, rho_r_grad_norm_flat)
+  return out.reshape(grid_shape)
 
 
 def xc_density(
@@ -350,13 +285,37 @@ def xc_density(
   kohn_sham: bool = False,
   xc: str = "lda_x"
 ):
-  # TODO: support lda_c etc.
-  if xc == 'lda_x':
-    return xc_lda(density_grid, kohn_sham)
-  elif xc == 'pbe':
-    return xc_pbe(density_grid, g_vector_grid, kohn_sham)
+  """TODO: support polarized version"""
+  dim = density_grid.ndim
+  if dim > 3:  # NOTE: sum up spin channel
+    density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
+
+  if "gga" in xc:
+    exc_fn = lambda density, grad_norm: sum(
+      [gga_unpol(xc_, density, grad_norm) for xc_ in xc.split('+')]
+    )
+    grad_norm = rho_r_grad_norm_fn(density_grid, g_vector_grid)
+
+    if kohn_sham:
+      density_grid = stop_gradient(density_grid)
+      vxc_r = vxc_gga(exc_fn, density_grid, grad_norm, g_vector_grid)
+      return vxc_r
+
+    else:
+      return exc_fn(density_grid, grad_norm)
+
   else:
-    raise NotImplementedError(f"XC {xc} not supported.")
+    exc_fn = lambda density: sum(
+      [lda_unpol(xc_, density) for xc_ in xc.split('+')]
+    )
+
+    if kohn_sham:
+      density_grid = stop_gradient(density_grid)
+      vxc_r = vxc_lda(exc_fn, density_grid)
+      return vxc_r
+
+    else:
+      return exc_fn(density_grid)
 
 
 def effective(
