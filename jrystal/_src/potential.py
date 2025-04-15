@@ -250,12 +250,8 @@ def effective(
   v_external = external_reciprocal(position, charge, g_vector_grid, vol)
 
   # real space:
-  if spin_restricted:
-    v_xc = xc_density(density_grid, g_vector_grid, kohn_sham, xc_type)
-  else:
-    v_xp = xc_density(2 * density_grid[0], g_vector_grid, kohn_sham, xc_type)
-    v_xn = xc_density(2 * density_grid[1], g_vector_grid, kohn_sham, xc_type)
-    v_xc = jnp.vstack([[v_xp, v_xn]])
+  v_xc: Float[Array, 's x y z']
+  v_xc = xc_density(density_grid, g_vector_grid, kohn_sham, xc_type)
 
   # transform to real space
   v_hartree = jnp.fft.ifftn(v_hartree, axes=range(-dim, 0))

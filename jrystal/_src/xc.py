@@ -84,8 +84,8 @@ def vxc_gga(
   return jnp.fft.ifftn(vxc_gga_recp(exc, rho_r, rho_r_grad_norm, gs))
 
 
-def rho_r_grad_norm_fn(
-  density_grid: Float[Array, 'x y z'], gs: Float[Array, 'x y z 3']
+def rho_r_grad_fn(
+  density_grid: Float[Array, 's x y z'], gs: Float[Array, 'x y z 3']
 ):
   rho_G = jnp.fft.fftn(density_grid)
   grad_rho_G = rho_G[..., None] * 1j * gs
@@ -103,46 +103,36 @@ def lda_unpol(xc_type: str, rho_r: Float[Array, 'x y z']):
 
 
 def gga_unpol(
-  xc_type: str,
-  rho_r: Float[Array, 'x y z'],
-  rho_r_grad_norm: Float[Array, 'x y z']
+  xc_type: str, rho_r: Float[Array, 'x y z'], rho_r_grad: Float[Array, 'x y z']
 ):
   p = get_p(xc_type, 1)
   exc = get_xc_functional(xc_type, polarized=False)
   grid_shape = rho_r.shape
   rho_r_flat = rho_r.reshape(-1)
-  rho_r_grad_norm_flat = rho_r_grad_norm.reshape(-1)
-  out = jax.vmap(exc, (None, 0, 0), 0)(p, rho_r_flat, rho_r_grad_norm_flat)
+  rho_r_grad_flat = rho_r_grad.reshape(-1)
+  out = jax.vmap(exc, (None, 0, 0), 0)(p, rho_r_flat, rho_r_grad_flat)
   return out.reshape(grid_shape)
 
 
 def xc_density(
-  density_grid: Float[Array, 'x y z'],
+  density_grid: Float[Array, 's x y z'],
   g_vector_grid,
   kohn_sham: bool = False,
   xc_type: str = "lda_x"
 ):
-  """TODO: support polarized version"""
-  dim = density_grid.ndim
-  if dim > 3:  # NOTE: sum up spin channel
-    density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
-
   if "gga" in xc_type:
-    exc_fn = lambda density, grad_norm: sum(
-      [
-        gga_unpol(xc_type_, density, grad_norm)
-        for xc_type_ in xc_type.split('+')
-      ]
+    exc_fn = lambda density, grad: sum(
+      [gga_unpol(xc_type_, density, grad) for xc_type_ in xc_type.split('+')]
     )
-    grad_norm = rho_r_grad_norm_fn(density_grid, g_vector_grid)
+    grad = rho_r_grad_fn(density_grid, g_vector_grid)
 
     if kohn_sham:
       density_grid = stop_gradient(density_grid)
-      vxc_r = vxc_gga(exc_fn, density_grid, grad_norm, g_vector_grid)
+      vxc_r = vxc_gga(exc_fn, density_grid, grad, g_vector_grid)
       return vxc_r
 
     else:
-      return exc_fn(density_grid, grad_norm)
+      return exc_fn(density_grid, grad)
 
   else:
     exc_fn = lambda density: sum(
