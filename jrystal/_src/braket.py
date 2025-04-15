@@ -16,10 +16,11 @@
 This module provides functions for calculating inner products (brakets) and expectation values in both real and reciprocal space, which are fundamental operations in quantum mechanics and density functional theory (DFT) calculations.
 """
 
+from typing import Optional, Union
+
 import einops
 import jax.numpy as jnp
 import numpy as np
-from typing import Union, Optional
 from jaxtyping import Array, Complex, Float
 
 
@@ -33,7 +34,7 @@ def reciprocal_braket(
   Computes the inner product between two wavefunctions in reciprocal space using:
 
   .. math::
-  
+
     \langle f|g \rangle \approx \sum_{\mathbf{G}} f^*(\mathbf{G})g(\mathbf{G}) \frac{vol}{N^2}
 
   where :math:`f^*(\mathbf{G})` is the complex conjugate of :math:`f(\mathbf{G})`, :math:`N` is the number of grid points, and :math:`vol` is the real-space unit cell volume.
@@ -54,7 +55,7 @@ def reciprocal_braket(
   Raises:
       ValueError: If bra and ket shapes do not match.
   """
-  if bra.shape != ket.shape:
+  if bra.shape[-3:] != ket.shape[-3:]:
     raise ValueError(
       f"bra and ket shape are not aligned. Got "
       f"{bra.shape} and {ket.shape}."
@@ -133,7 +134,7 @@ def expectation(
     E_{ij} = \langle \psi_i | \hat{H} | \psi_j \rangle \approx \sum_{\mathbf{q}} \psi_i^*(\mathbf{q}) \hat{H}(\mathbf{q}) \psi_j(\mathbf{q}) \frac{vol}{N^p}
 
   where :math:`\psi_i` and :math:`\psi_j` are wavefunctions, :math:`\hat{H}` is the Hamiltonian operator, :math:`\mathbf{q}` represents either real (:math:`\mathbf{r}`) or reciprocal (:math:`\mathbf{G}`) space coordinates, and :math:`p` depends on the mode:
-  
+
   - For real space: :math:`p = 1`
   - For reciprocal space: :math:`p = 2` (includes Parseval factor)
   - For kinetic terms: :math:`p = 0`

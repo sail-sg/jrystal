@@ -18,14 +18,15 @@ to note that all values are presented in ATOMIC UNITS inside, specifically
 hartree for energy and Bohr for length. The input positions of atoms should be
 in angstrom.
 """
-import ase
-from ase.io import read
-import numpy as np
-import jax.numpy as jnp
-from jaxtyping import Float, Array
-from typing import Optional, Union, List
+from typing import List, Optional, Union
 
+import ase
+import jax.numpy as jnp
+import numpy as np
+from ase.io import read
 from chex import dataclass
+from jaxtyping import Array, Float
+
 from .const import ANGSTROM2BOHR
 
 

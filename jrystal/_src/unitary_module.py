@@ -18,15 +18,13 @@ This module provides functions for generating and working with unitary matrices.
 A unitary matrix is a complex square matrix whose conjugate transpose is equal to its inverse.
 For real matrices, this reduces to an orthogonal matrix where the transpose equals the inverse.
 """
-from functools import partial
+from typing import Dict, List, Optional, Union
 
 import jax
 import jax.numpy as jnp
-
-from jaxtyping import Array
-from typing import Dict, Union, List, Optional
 from jax.sharding import Sharding
-from jrystal._src.spmd.uniform import uniform
+from jaxtyping import Array
+from .spmd.uniform import uniform
 
 
 def unitary_matrix(
@@ -96,14 +94,14 @@ def unitary_matrix_param_init(
   using uniform random distributions.
 
   Example:
-  
+
   .. code-block:: python
-  
+
       key = jax.random.PRNGKey(42)
       params = unitary_matrix_param_init(key, (2, 2))
       sorted(params.keys())
       >>> ['w_im', 'w_re']
-      
+
   Args:
       key (Array): JAX PRNG key for random number generation.
       shape (tuple or List[int]): Tuple of ints specifying the dimensions of the matrix.
@@ -111,7 +109,7 @@ def unitary_matrix_param_init(
 
   Returns:
       dict: Dictionary containing:
-  
+
           - 'w_re': Real weights of shape `shape`
           - 'w_im': Imaginary weights of shape `shape` (if complex=True)
 

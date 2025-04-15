@@ -13,17 +13,16 @@
 # limitations under the License.
 """Utility functions for optimization. """
 import argparse
+import os
 from typing import Callable
 
 import jax
-import os
-import jrystal as jr
 import numpy as np
 import optax
-from optax._src import alias
-import argparse
 from absl import logging
-from typing import Callable
+from optax._src import alias
+
+import jrystal as jr
 
 from .._src.crystal import Crystal
 from .._src.ewald import ewald_coulomb_repulsion
@@ -35,7 +34,7 @@ from .._src.grid import (
   proper_grid_size,
   r_vectors,
   spherical_mask,
-  translation_vectors
+  translation_vectors,
 )
 from .._src.utils import check_spin_number
 from ..config import JrystalConfigDict
@@ -109,7 +108,7 @@ def create_crystal(config: JrystalConfigDict) -> Crystal:
     path = _pkg_path + '/geometry/' + config.crystal + '.xyz'
   else:
     path = config.crystal_file_path_path
-  crystal = Crystal.create_from_file(file_path=path)
+  crystal = Crystal.create_from_file(file_path=path, spin=config.spin)
   check_spin_number(crystal.num_electron, crystal.spin)
   return crystal
 

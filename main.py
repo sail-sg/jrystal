@@ -40,15 +40,10 @@ def main():
     if config.use_pseudopotential:
       jr.calc.energy_normcons(config)
     else:
-      jr.calc.energy(config)
+      jr.calc.energy_all_electrons(config)
+
   elif args.mode == "band":
-
-    gs_output = None
-    if args.load is not None:
-      with open(args.load, 'rb') as f:
-        gs_output = pickle.load(f)
-
     if config.use_pseudopotential:
-      jr.calc.band_normcons(config, gs_output)
+      jr.calc.band_normcons(config)
     else:
-      jr.calc.band(config, gs_output)
+      jr.calc.band_all_electrons(config)

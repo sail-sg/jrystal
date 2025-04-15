@@ -161,30 +161,34 @@ def volume(cell_vectors: Float[Array, '3 3']) -> Float:
 def wave_to_density(
   wave_grid: Complex[Array, 'spin kpt band x y z'],
   occupation: Optional[Float[Array, 'spin kpt band']] = None,
-  axis: Optional[Union[int, Tuple, List]] = None
-) -> Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band']]:
+) -> Union[Float[Array, 'spin x y z'], Float[Array, 'spin kpt band x y z']]:
   """Computes electron density from wave functions in real space.
 
     Calculates the electron density by taking the absolute square of wave functions and optionally applying occupation numbers. The density can be computed for the full grid or reduced along specified dimensions.
 
     Args:
-        wave_grid (Complex[Array, 'spin kpt band x y z']): Complex wave function values on a real-space grid. The array has dimensions for spin, k-points, bands, and spatial coordinates (x,y,z).
-        occupation (Optional[Float[Array, 'spin kpt band']]): Optional occupation numbers for each state (spin, k-point, band). If provided, the density will be weighted by these values. Defaults to None.
-        axis (Optional[Union[int, Tuple, List]]): Optional specification of axes along which to sum the density when applying occupation numbers. If None, sums over spin, k-points, and bands (first three dimensions). Defaults to None.
+      wave_grid (Complex[Array, 'spin kpt band x y z']): Complex wave function
+        values on a real-space grid. The array has dimensions for spin,
+        k-points, bands, and spatial coordinates (x,y,z).
+      occupation (Optional[Float[Array, 'spin kpt band']]): Optional occupation
+        numbers for each state (spin, k-point, band). If provided, the density
+        will be weighted by these values. Defaults to None.
 
     Returns:
-        Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band']]: The electron density grid. If occupation is None, the density grid has the same shape as the input wave_grid. If occupation is provided, the density grid is reduced along the specified axes after applying occupation weights.
+      Union[Float[Array, 'spin x y z'], Float[Array, 'spin kpt band x y z']]:
+        The electron density grid. If occupation is None, the density grid has
+        the same shape as the input wave_grid. If occupation is provided, the
+        density grid is reduced over the k-points and bands dimensions.
 
     Raises:
         ValueError: If the shapes of wave_grid and occupation are incompatible for broadcasting.
     """
   dens = absolute_square(wave_grid)
-  axis = range(0, wave_grid.ndim - 3) if axis is None else axis
 
   if occupation is not None:
     try:
       occupation = jnp.expand_dims(occupation, range(-3, 0))
-      dens = jnp.sum(dens * occupation, axis=axis)
+      dens = jnp.sum(dens * occupation, axis=(1, 2))
     except:
       raise ValueError(
         f"wave_grid's shape ({wave_grid.shape}) and occupation's shape "
@@ -196,8 +200,7 @@ def wave_to_density(
 def wave_to_density_reciprocal(
   wave_grid: Complex[Array, 'spin kpt band x y z'],
   occupation: Optional[Float[Array, 'spin kpt band']] = None,
-  axis: Optional[Union[int, Tuple, List]] = None
-) -> Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band']]:
+) -> Union[Float[Array, 'spin x y z'], Float[Array, 'spin kpt band x y z']]:
   """Computes electron density from wave functions in reciprocal space.
 
     Calculates the electron density by first computing the real-space density
@@ -206,15 +209,18 @@ def wave_to_density_reciprocal(
     reciprocal space, such as computing the Hartree potential.
 
     Args:
-        wave_grid (Complex[Array, 'spin kpt band x y z']): Complex wave function values on a real-space grid. The array has dimensions for spin, k-points, bands, and spatial coordinates (x,y,z).
-        occupation (Optional[Float[Array, 'spin kpt band']]): Optional occupation numbers for each state (spin, k-point, band). If provided, the density will be weighted by these values. Defaults to None.
-        axis (Optional[Union[int, Tuple, List]]): Optional specification of axes along which to sum the density when applying occupation numbers. If None, sums over spin, k-points, and bands (first three dimensions). Defaults to None.
+        wave_grid (Complex[Array, 'spin kpt band x y z']): Complex wave
+          function values on a real-space grid. The array has dimensions for
+          spin, k-points, bands, and spatial coordinates (x,y,z).
+        occupation (Optional[Float[Array, 'spin kpt band']]): Optional
+          occupation numbers for each state (spin, k-point, band). If provided,
+          the density will be weighted by these values. Defaults to None.
 
     Returns:
-        Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band']]: The electron density grid in reciprocal space. If occupation is None, the density grid has the same shape as the input wave_grid. If occupation is provided, the density grid is reduced along the specified axes after applying occupation weights.
+        Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band']]: The electron density grid in reciprocal space. If occupation is None, the density grid has the same shape as the input wave_grid. If occupation is provided, the density grid is reduced over the k-points and bands dimensions.
 
     """
-  dens = wave_to_density(wave_grid, occupation, axis)
+  dens = wave_to_density(wave_grid, occupation)
   return jnp.fft.fftn(dens, axes=range(-3, 0))
 
 

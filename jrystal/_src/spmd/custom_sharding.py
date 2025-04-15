@@ -5,11 +5,13 @@ See:
 https://jax.readthedocs.io/en/latest/jax.experimental.custom_partitioning.html
 """
 
+from typing import Callable
+
 import jax
 from jax.sharding import NamedSharding
-from .custom_partitioning import jrystal_custom_partitioning
 from jax.sharding import PartitionSpec as P
-from typing import Callable
+
+from .custom_partitioning import jrystal_custom_partitioning
 
 
 def _supported_sharding(sharding, shape):

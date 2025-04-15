@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Union, List, Tuple, Optional
-from ml_collections import ConfigDict
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import yaml
+from ml_collections import ConfigDict
 
 
 class JrystalConfigDict(ConfigDict):
   crystal: Optional[str]
   crystal_file_path_path: Optional[str]
+  spin: int
+  save_dir: Optional[str]
   use_pseudopotential: bool
   pseudopotential_file_dir: Optional[str]
   freq_mask_method: str
@@ -33,8 +36,9 @@ class JrystalConfigDict(ConfigDict):
   ewald_args: Dict[str, float]
   epoch: int
   optimizer: str
-  optimizer_args: Dict[str, float]
+  optimizer_args: Dict[str, Any]
   scheduler: Optional[str]
+  convergence_window_size: int
   convergence_condition: float
   band_structure_empty_bands: Optional[int]
   k_path_special_points: Optional[str]
@@ -53,6 +57,8 @@ class JrystalConfigDict(ConfigDict):
 default_config = {
   "crystal": "diamond",
   "crystal_file_path_path": None,
+  "save_dir": None,
+  "spin": 0,
   "xc": "lda_x",
   "use_pseudopotential": False,
   "pseudopotential_file_dir": None,
@@ -73,7 +79,8 @@ default_config = {
     "learning_rate": 1e-2
   },
   "scheduler": None,
-  "convergence_condition": 1e-8,
+  "convergence_window_size": 20,
+  "convergence_condition": 1e-4,
   "band_structure_empty_bands": 8,
   "k_path_special_points": None,
   "num_kpoints": 60,

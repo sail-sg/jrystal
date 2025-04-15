@@ -14,21 +14,21 @@
 """Energy functions."""
 
 from ._src.energy import (
-  hartree,
-  external,
-  kinetic,
-  xc_lda,
-  total_energy,
   band_energy,
-  nuclear_repulsion
+  external,
+  hartree,
+  kinetic,
+  nuclear_repulsion,
+  total_energy,
+  xc_energy,
 )
 
 __all__ = [
   "hartree",
   "external",
   "kinetic",
-  "xc_lda",
   "total_energy",
   "band_energy",
   "nuclear_repulsion",
+  "xc_energy",
 ]

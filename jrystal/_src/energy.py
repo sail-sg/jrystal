@@ -18,7 +18,7 @@ import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, Complex, Float, Int
 
-from . import braket, grid, potential, pw
+from . import braket, potential, pw
 from .ewald import ewald_coulomb_repulsion
 from .grid import translation_vectors
 from .utils import (
@@ -27,7 +27,7 @@ from .utils import (
 
 
 def hartree(
-  density_grid_reciprocal: Complex[Array, 'x y z'],
+  density_grid_reciprocal: Complex[Array, 'spin x y z'],
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
   kohn_sham: bool = False
@@ -54,24 +54,27 @@ def hartree(
   for more details.
 
   Args:
-    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in
-      reciprocal space.
-    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
+    density_grid_reciprocal (Complex[Array, 'spin x y z']): Electron density in
+      reciprocal space. The input density must contains spin axis.
+    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal
+      space.
     vol (Float): Unit cell volume.
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
+    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to
+      False.
 
   Returns:
     Float: Hartree energy.
   """
   dim = g_vector_grid.shape[-1]
 
-  if density_grid_reciprocal.ndim == dim + 1:
-    density_grid_reciprocal = jnp.sum(density_grid_reciprocal, axis=0)
+  assert density_grid_reciprocal.ndim == dim + 1, (
+    'density_grid_reciprocal must contains spin axis'
+  )
 
   v_hartree_reciprocal = potential.hartree_reciprocal(
     density_grid_reciprocal, g_vector_grid, kohn_sham
   )
-
+  v_hartree_reciprocal = jnp.expand_dims(v_hartree_reciprocal, axis=0)
   hartree_energy = braket.reciprocal_braket(
     v_hartree_reciprocal, density_grid_reciprocal, vol
   )
@@ -80,7 +83,7 @@ def hartree(
 
 
 def external(
-  density_grid_reciprocal: Complex[Array, 'x y z'],
+  density_grid_reciprocal: Complex[Array, 'spin x y z'],
   position: Float[Array, 'atom 3'],
   charge: Float[Array, 'atom'],
   g_vector_grid: Float[Array, 'x y z 3'],
@@ -105,8 +108,8 @@ def external(
   - :math:`v(\mathbf{G})` is the Fourier transform of the Coulomb potential
 
   Args:
-    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in
-      reciprocal space.
+    density_grid_reciprocal (Complex[Array, 'spin x y z']): Electron density in
+      reciprocal space. The input density must contains spin axis.
     position (Float[Array, 'atom 3']): Atomic positions in the unit cell.
     charge (Float[Array, 'atom']): Nuclear charges.
     g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
@@ -116,12 +119,15 @@ def external(
     Float: External potential energy.
   """
   dim = g_vector_grid.shape[-1]
-  if density_grid_reciprocal.ndim == dim + 1:
-    density_grid_reciprocal = jnp.sum(density_grid_reciprocal, axis=0)
+
+  assert density_grid_reciprocal.ndim == dim + 1, (
+    'density_grid_reciprocal must contains spin axis'
+  )
 
   v_external_reciprocal = potential.external_reciprocal(
     position, charge, g_vector_grid, vol
   )
+  v_external_reciprocal = jnp.expand_dims(v_external_reciprocal, axis=0)
   external_energy = braket.reciprocal_braket(
     v_external_reciprocal, density_grid_reciprocal, vol
   )
@@ -176,47 +182,8 @@ def kinetic(
   return safe_real(e_kin)
 
 
-def xc_lda(
-  density_grid: Float[Array, 'x y z'],
-  vol: Float,
-  kohn_sham: bool = False
-) -> Float:
-  r"""Calculate the LDA exchange-correlation energy.
-
-  Implements the Local Density Approximation (LDA) for the exchange-correlation
-  energy in the spin-unpolarized case. The exchange energy in LDA is given by:
-
-  .. math::
-      E_x^{\text{LDA}}[\rho] = -\frac{3}{4}\left(\frac{3}{\pi}\right)^{1/3}
-      \int \rho(\mathbf{r})^{4/3} d\mathbf{r}
-
-  Note that this implementation includes both exchange and correlation terms,
-  though only the exchange term is shown in the equation above.
-
-  Args:
-    density_grid (Float[Array, 'x y z']): Real-space electron density.
-    vol (Float): Unit cell volume.
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
-
-  Returns:
-    Float: LDA exchange-correlation energy.
-  """
-
-  assert density_grid.ndim in [3, 4]
-
-  if density_grid.ndim == 4:  # have spin channel
-    density_grid = jnp.sum(density_grid, axis=0)
-
-  num_grid = jnp.prod(jnp.array(density_grid.shape))
-  lda_density = potential.xc_lda(density_grid, kohn_sham)
-  e_lda = jnp.sum(lda_density * density_grid)
-  e_lda = safe_real(e_lda)
-
-  return e_lda * vol / num_grid
-
-
-def exc_functional(
-  density_grid: Float[Array, 'x y z'],
+def xc_energy(
+  density_grid: Float[Array, 'spin x y z'],
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
   xc: str,
@@ -225,7 +192,8 @@ def exc_functional(
   r"""Calculate the exchange-correlation energy of the input density.
 
   Args:
-    density_grid (Float[Array, 'x y z']): Real-space electron density.
+    density_grid (Float[Array, 'spin x y z']): Real-space electron density.
+      The input density must contains spin axis.
     vol (Float): Unit cell volume.
     kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
 
@@ -233,13 +201,12 @@ def exc_functional(
     Float: exchange-correlation energy.
   """
 
-  assert density_grid.ndim in [3, 4]
+  assert density_grid.ndim == 4, ('density_grid must contains spin axis')
 
-  if density_grid.ndim == 4:  # have spin channel
-    density_grid = jnp.sum(density_grid, axis=0)
-
-  num_grid = jnp.prod(jnp.array(density_grid.shape))
-  exc_density = potential.xc_density(density_grid, g_vector_grid, kohn_sham, xc)
+  num_grid = jnp.prod(jnp.array(density_grid.shape[-3:]))
+  exc_density = potential.xc_functional(
+    density_grid, g_vector_grid, kohn_sham, xc
+  )
   e_xc = jnp.sum(exc_density * density_grid)
   e_xc = safe_real(e_xc)
 
@@ -334,17 +301,7 @@ def total_energy(
   e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
-
-  if spin_restricted:
-    e_xc = exc_functional(density_grid, g_vector_grid, vol, xc, kohn_sham)
-  else:
-    o_alpha, o_beta = occupation
-    den_alpha_grid = wave_to_density(wave_grid_arr[0], o_alpha)
-    den_beta_grid = wave_to_density(wave_grid_arr[1], o_beta)
-    e_xc = (
-      exc_functional(den_alpha_grid * 2, g_vector_grid, vol, xc, kohn_sham) / 2
-      + exc_functional(den_beta_grid * 2, g_vector_grid, vol, xc, kohn_sham) / 2
-    )
+  e_xc = xc_energy(density_grid, g_vector_grid, vol, xc, kohn_sham)
 
   if split:
     return e_kin, e_ext, e_har, e_xc
@@ -361,7 +318,7 @@ def band_energy(
   vol: Float,
   occupation: Float[Array, "spin kpt band"],
   kohn_sham: bool = False,
-  xc: str = 'lda'
+  xc: str = 'lda_x'
 ):
   r"""Calculate the energy eigenvalues for each electronic state.
 

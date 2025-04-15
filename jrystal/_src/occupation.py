@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Occupation module."""
+from typing import Optional, Union
+
 import einops
 import jax.numpy as jnp
 from jax.lax import stop_gradient
-from typing import Optional, Union
-from jaxtyping import Float, Array
+from jaxtyping import Array, Float
+
 from .unitary_module import unitary_matrix, unitary_matrix_param_init
 from .utils import check_spin_number
 
@@ -29,24 +31,24 @@ def idempotent_param_init(
   spin: int = 0,
 ) -> dict:
   r"""Initialize the parameters for the idempotent occupation.
-  
+
   This function is an implementation of the method proposed in:
-  
+
   `Li, Tianbo, et al. "Diagonalization without Diagonalization: A Direct Optimization Approach for Solid-State Density Functional Theory." arXiv preprint arXiv:2411.05033 (2024).`
-    
+
   Please also refer to the tutorial :doc:`Occupation <../tutorial/occupation>`  for more details.
-  
+
   Examples:
 
   .. code:: python
-  
+
     from jrystal import occupation
     key = jax.random.PRNGKey(0)
     num_kpts = 1
     num_electrons = 10
-    # number of bands must be greater than or equal to 
+    # number of bands must be greater than or equal to
     # (num_electrons + 1) // 2 for spin-restricted calculation.
-    num_bands = 10   
+    num_bands = 10
     params = occupation.idempotent_param_init(key, num_bands, num_kpts)
     occ = occupation.idempotent(params, num_electrons, num_kpts, spin=0)
 
@@ -79,31 +81,30 @@ def idempotent_param_init(
   return {"param_up": param_up, "param_down": param_down}
 
 
-
 def idempotent(
   params: dict,
   num_kpts: int,
   spin_restricted: bool = True,
 ) -> Float[Array, 'spin kpt band']:
   r"""Calculate the occupation number using the idempotent method.
-  
+
   This function is an implementation of the method proposed in:
-  
+
   `Li, Tianbo, et al. "Diagonalization without Diagonalization: A Direct Optimization Approach for Solid-State Density Functional Theory." arXiv preprint arXiv:2411.05033 (2024).`
-    
+
   Please also refer to the tutorial :doc:`Occupation <../tutorial/occupation>`  for more details.
-  
+
   Examples:
 
   .. code:: python
-  
+
     from jrystal import occupation
     key = jax.random.PRNGKey(0)
     num_kpts = 1
     num_electrons = 10
-    # number of bands must be greater than or equal to 
+    # number of bands must be greater than or equal to
     # (num_electrons + 1) // 2 for spin-restricted calculation.
-    num_bands = 10   
+    num_bands = 10
     params = occupation.idempotent_param_init(key, num_bands, num_kpts)
     occ = occupation.idempotent(params, num_electrons, num_kpts, spin=0)
 
@@ -114,25 +115,25 @@ def idempotent(
 
   Returns:
       Float[Array, 'spin kpt band']: The occupation number.
-  
+
   """
   param_up = params["param_up"]
   param_down = params["param_down"]
-  
+
   _up_shape = param_up["w_re"].shape
   _down_shape = param_down["w_re"].shape
-  
+
   num_bands = _up_shape[0] // num_kpts
-  
+
   def o(params):
-    u = unitary_matrix(params, False)  
+    u = unitary_matrix(params, False)
     # [num_bands * num_kpts, num_elec_up * num_kpts]
     occ = einops.einsum(u, u.T, "nk ik, ik nk -> nk")
     return occ.reshape([num_kpts, num_bands])
-  
+
   occ_up = o(param_up)
   occ_down = o(param_down)
-  
+
   if spin_restricted:
     return occ_up + occ_down
   else:
@@ -253,7 +254,7 @@ def param_init(
 
 def occupation(
   params: dict,
-  num_kpts: int, 
+  num_kpts: int,
   method: str = "fermi-dirac",
   spin_restricted: bool = True
 ) -> Float[Array, 'spin kpt band']:
