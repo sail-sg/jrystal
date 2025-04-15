@@ -12,16 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Potentials."""
-import importlib
 from typing import Tuple, Union
 
-import jax
 import jax.numpy as jnp
 from jax.lax import stop_gradient
-from jax_xc.utils import get_p
 from jaxtyping import Array, Complex, Float
 
-from .utils import absolute_square
+from .xc import xc_density
 
 
 def hartree_reciprocal(
@@ -190,134 +187,6 @@ def external(
   return jnp.fft.ifftn(ext_pot_grid_rcprl, axes=range(-3, 0))
 
 
-def get_xc_functional(xc='gga_x_pbe', polarization='unpol'):
-  """Dynamically import XC functional implementation.
-
-    Args:
-        functional_type: String like 'pbe', 'b3lyp', etc.
-        polarization: String, either 'unpol' or 'pol' for unpolarized/polarized
-
-    Returns:
-        The requested functional implementation
-    """
-  try:
-    module_path = f"jax_xc.impl.{xc}"
-    module = importlib.import_module(module_path)
-    functional = getattr(module, polarization)
-    return functional
-  except (ImportError, AttributeError) as e:
-    raise ImportError(
-      f"Could not import {polarization} from {module_path}: {e}"
-    )
-
-
-def vxc_lda(exc, rho_r):
-  grid_sizes = rho_r.shape
-  rho_r_flat = rho_r.reshape(-1)
-  dexc_drho_flat = jax.vmap(jax.grad(exc))(rho_r_flat)
-  t1 = dexc_drho_flat.reshape(grid_sizes) * rho_r
-  t2 = exc(rho_r)
-  vxc_r = t1 + t2
-  return vxc_r
-
-
-def vxc_gga_recp(exc, rho_r, rho_r_grad_norm, gs):
-  rho_G = jnp.fft.fftn(rho_r)
-  rho_r_flat = rho_r.reshape(-1)
-  rho_r_grad_norm_flat = rho_r_grad_norm.reshape(-1)
-  dexc_drho_flat = jax.vmap(jax.grad(exc))(rho_r_flat, rho_r_grad_norm_flat)
-  dexc_drho_grad_norm_flat = jax.vmap(jax.grad(exc, argnums=1)
-                                     )(rho_r_flat, rho_r_grad_norm_flat)
-  lapl_rho_G = -1 * (gs**2).sum(-1) * rho_G
-  lapl_rho_r = jnp.fft.ifftn(lapl_rho_G)
-
-  grid_sizes = gs.shape[:-1]
-  t = dexc_drho_grad_norm_flat.reshape(grid_sizes) * rho_r
-  t = jnp.where(rho_r_grad_norm > 0, t, 0)
-
-  g_axes = list(range(gs.ndim - 1))
-
-  t1 = dexc_drho_flat.reshape(grid_sizes) * rho_r
-  t2 = exc(rho_r, rho_r_grad_norm)
-  t3 = (
-    jnp.fft.ifftn(1j * gs * jnp.fft.fftn(t)[..., None], axes=g_axes) *
-    jnp.fft.ifftn(1j * gs * rho_G[..., None], axes=g_axes)
-  ).sum(-1)
-  t4 = t * lapl_rho_r
-  integrand = t1 + t2 - 2 * (t3 + t4)
-  vxc_G = jnp.fft.fftn(integrand)
-  return vxc_G
-
-
-def vxc_gga(exc, rho_r, rho_r_grad_norm, gs):
-  return jnp.fft.ifftn(vxc_gga_recp(exc, rho_r, rho_r_grad_norm, gs))
-
-
-def rho_r_grad_norm_fn(density_grid, gs):
-  rho_G = jnp.fft.fftn(density_grid)
-  grad_rho_G = rho_G[..., None] * 1j * gs
-  grad_rho_r = jnp.fft.ifftn(grad_rho_G, axes=(0, 1, 2))
-  return absolute_square(grad_rho_r).sum(-1)
-
-
-def lda_unpol(xc, rho_r):
-  p = get_p(xc, 1)
-  exc = get_xc_functional(xc, 'unpol')
-  grid_shape = rho_r.shape
-  rho_r_flat = rho_r.reshape(-1)
-  out = jax.vmap(exc, (None, 0), 0)(p, rho_r_flat)
-  return out.reshape(grid_shape)
-
-
-def gga_unpol(xc, rho_r, rho_r_grad_norm):
-  p = get_p(xc, 1)
-  exc = get_xc_functional(xc, 'unpol')
-  grid_shape = rho_r.shape
-  rho_r_flat = rho_r.reshape(-1)
-  rho_r_grad_norm_flat = rho_r_grad_norm.reshape(-1)
-  out = jax.vmap(exc, (None, 0, 0), 0)(p, rho_r_flat, rho_r_grad_norm_flat)
-  return out.reshape(grid_shape)
-
-
-def xc_density(
-  density_grid: Float[Array, 'x y z'],
-  g_vector_grid,
-  kohn_sham: bool = False,
-  xc: str = "lda_x"
-):
-  """TODO: support polarized version"""
-  dim = density_grid.ndim
-  if dim > 3:  # NOTE: sum up spin channel
-    density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
-
-  if "gga" in xc:
-    exc_fn = lambda density, grad_norm: sum(
-      [gga_unpol(xc_, density, grad_norm) for xc_ in xc.split('+')]
-    )
-    grad_norm = rho_r_grad_norm_fn(density_grid, g_vector_grid)
-
-    if kohn_sham:
-      density_grid = stop_gradient(density_grid)
-      vxc_r = vxc_gga(exc_fn, density_grid, grad_norm, g_vector_grid)
-      return vxc_r
-
-    else:
-      return exc_fn(density_grid, grad_norm)
-
-  else:
-    exc_fn = lambda density: sum(
-      [lda_unpol(xc_, density) for xc_ in xc.split('+')]
-    )
-
-    if kohn_sham:
-      density_grid = stop_gradient(density_grid)
-      vxc_r = vxc_lda(exc_fn, density_grid)
-      return vxc_r
-
-    else:
-      return exc_fn(density_grid)
-
-
 def effective(
   density_grid: Float[Array, 'x y z'],
   position: Float[Array, "num_atom 3"],
@@ -325,7 +194,7 @@ def effective(
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
   split: bool = False,
-  xc: str = "lda",
+  xc_type: str = "lda_x",
   kohn_sham: bool = False,
   spin_restricted: bool = True,
 ) -> Union[Tuple[
@@ -356,7 +225,7 @@ def effective(
     vol (Float): Volume of the unit cell.
     split (bool, optional): If True, return individual potential components.
       Defaults to False.
-    xc (str, optional): Exchange-correlation functional type. Only "lda" is
+    xc_type (str, optional): Exchange-correlation functional type. Only "lda" is
       currently supported. Defaults to "lda".
     kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
     spin_restricted (bool, optional): If True, use spin-restricted calculation.
@@ -382,10 +251,10 @@ def effective(
 
   # real space:
   if spin_restricted:
-    v_xc = xc_density(density_grid, g_vector_grid, kohn_sham, xc)
+    v_xc = xc_density(density_grid, g_vector_grid, kohn_sham, xc_type)
   else:
-    v_xp = xc_density(2 * density_grid[0], g_vector_grid, kohn_sham, xc)
-    v_xn = xc_density(2 * density_grid[1], g_vector_grid, kohn_sham, xc)
+    v_xp = xc_density(2 * density_grid[0], g_vector_grid, kohn_sham, xc_type)
+    v_xn = xc_density(2 * density_grid[1], g_vector_grid, kohn_sham, xc_type)
     v_xc = jnp.vstack([[v_xp, v_xn]])
 
   # transform to real space

@@ -18,7 +18,7 @@ import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, Complex, Float, Int
 
-from . import braket, grid, potential, pw
+from . import braket, potential, pw, xc
 from .ewald import ewald_coulomb_repulsion
 from .grid import translation_vectors
 from .utils import (
@@ -180,7 +180,7 @@ def exc_functional(
   density_grid: Float[Array, 'x y z'],
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
-  xc: str,
+  xc_type: str,
   kohn_sham: bool = False
 ) -> Float:
   r"""Calculate the exchange-correlation energy.
@@ -200,7 +200,7 @@ def exc_functional(
     density_grid = jnp.sum(density_grid, axis=0)
 
   num_grid = jnp.prod(jnp.array(density_grid.shape))
-  exc_density = potential.xc_density(density_grid, g_vector_grid, kohn_sham, xc)
+  exc_density = xc.xc_density(density_grid, g_vector_grid, kohn_sham, xc_type)
   e_xc = jnp.sum(exc_density * density_grid)
   e_xc = safe_real(e_xc)
 
@@ -323,7 +323,7 @@ def band_energy(
   vol: Float,
   occupation: Float[Array, "spin kpt band"],
   kohn_sham: bool = False,
-  xc: str = 'lda'
+  xc_type: str = "lda_x"
 ):
   r"""Calculate the energy eigenvalues for each electronic state.
 
@@ -347,7 +347,7 @@ def band_energy(
     vol (Float): Unit cell volume.
     occupation (Float[Array, "spin kpt band"]): Occupation numbers.
     kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
-    xc (str, optional): Exchange-correlation functional type. Defaults to 'lda'.
+    xc_type (str, optional): Exchange-correlation functional type. Defaults to 'lda'.
 
   Returns:
     Float[Array, "spin kpt band"]: Energy eigenvalues for each electronic state.
@@ -362,7 +362,7 @@ def band_energy(
     g_vector_grid,
     vol,
     split=False,
-    xc=xc,
+    xc_type=xc_type,
     kohn_sham=kohn_sham
   )
   e_eff = braket.real_braket(density_per_band, v_eff, vol)
