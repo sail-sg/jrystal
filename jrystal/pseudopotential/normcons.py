@@ -12,22 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Norm Conserving Pseudopotential for Plane Waves. """
-import numpy as np
+from typing import List, Optional
+
 import jax
 import jax.numpy as jnp
-from typing import List, Optional
-from jaxtyping import Float, Array, Complex, Int
+import numpy as np
 from einops import einsum
+from jaxtyping import Array, Complex, Float, Int
 
-from .._src import braket, kinetic
-from .._src import potential, energy
+from .._src import braket, energy, kinetic, potential, pw, xc
 from .._src.utils import wave_to_density
-from .._src import pw
-from .spherical import legendre_to_sph_harm
-from .local import (
-  _hamiltonian_local, hamiltonian_local, _energy_local, energy_local
-)
 from .beta import beta_sbt_grid_multi_atoms
+from .local import (
+  _energy_local, _hamiltonian_local, energy_local, hamiltonian_local
+)
+from .spherical import legendre_to_sph_harm
 
 
 def _potential_nonlocal_square_root(
@@ -282,10 +281,10 @@ def _hamiltonian_matrix(
   )
 
   har = potential.hartree_reciprocal(
-    hamiltonian_density_grid_reciprocal, g_vector_grid, kohn_sham = kohn_sham
+    hamiltonian_density_grid_reciprocal, g_vector_grid, kohn_sham=kohn_sham
   )
   har = jnp.fft.ifftn(har, axes=range(-dim, 0))
-  lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham = kohn_sham)
+  lda = xc.xc_density(hamiltonian_density_grid, kohn_sham=kohn_sham)
   v_s = har + lda
   h_s = braket.expectation(wave_grid, v_s, vol, diagonal=False, mode="real")
 
@@ -344,10 +343,10 @@ def hamiltonian_matrix(
   )
 
   har = potential.hartree_reciprocal(
-    hamiltonian_reciprocal_density_grid, g_vector_grid, kohn_sham = kohn_sham
+    hamiltonian_reciprocal_density_grid, g_vector_grid, kohn_sham=kohn_sham
   )
   har = jnp.fft.ifftn(har, axes=range(-dim, 0))
-  lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham = kohn_sham)
+  lda = xc.xc_density(hamiltonian_density_grid, kohn_sham=kohn_sham)
   v_s = har + lda
   h_s = braket.expectation(wave_grid, v_s, vol, diagonal=False, mode="real")
 
@@ -388,12 +387,12 @@ def _hamiltonian_trace(
   )
 
   v_har_reciprocal = potential.hartree_reciprocal(
-    hamiltonian_reciprocal_density_grid, g_vector_grid, kohn_sham = kohn_sham
+    hamiltonian_reciprocal_density_grid, g_vector_grid, kohn_sham=kohn_sham
   )
   v_har = jnp.fft.ifftn(v_har_reciprocal, axes=range(-3, 0))
   har = braket.expectation(wave_grid, v_har, vol, diagonal=True, mode="real")
-  
-  v_lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham = kohn_sham)
+
+  v_lda = xc.xc_density(hamiltonian_density_grid, kohn_sham=kohn_sham)
   lda = braket.expectation(wave_grid, v_lda, vol, diagonal=True, mode="real")
   h_s = jnp.sum(har + lda)
 
@@ -482,7 +481,7 @@ def hamiltonian_trace(
   v_har = jnp.fft.ifftn(v_har_reciprocal, axes=range(-3, 0))
   har = braket.expectation(wave_grid, v_har, vol, diagonal=True, mode="real")
 
-  v_lda = potential.xc_lda(hamiltonian_density_grid, )
+  v_lda = xc.xc_density(hamiltonian_density_grid,)
   lda = braket.expectation(wave_grid, v_lda, vol, diagonal=True, mode="real")
   h_s = jnp.sum(har + lda)
   kin = energy.kinetic(g_vector_grid, kpts, coefficient, occupation)

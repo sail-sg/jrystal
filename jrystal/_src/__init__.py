@@ -12,21 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import band
-from . import pw
-from . import energy
-from . import entropy
-from . import occupation
-from . import const
-from . import crystal
-from . import potential
-from . import hamiltonian
-from . import kinetic
-from . import ewald
-from . import grid
-from . import utils
-from . import unitary_module
-from . import braket
+from . import (
+  band,
+  braket,
+  const,
+  crystal,
+  energy,
+  entropy,
+  ewald,
+  grid,
+  hamiltonian,
+  kinetic,
+  occupation,
+  potential,
+  pw,
+  unitary_module,
+  utils,
+  xc
+)
 
 __all__ = [
   "band",
@@ -44,4 +47,5 @@ __all__ = [
   "utils",
   "unitary_module",
   "braket",
+  "xc"
 ]
