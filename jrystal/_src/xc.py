@@ -7,7 +7,7 @@ from jax.lax import stop_gradient
 from jax_xc.utils import get_p
 from jaxtyping import Array, Float
 
-from .utils import absolute_square
+from .utils import absolute_square, safe_real
 
 
 def get_xc_functional(xc: str = 'gga_x_pbe', polarized: bool = False):
@@ -32,13 +32,49 @@ def get_xc_functional(xc: str = 'gga_x_pbe', polarized: bool = False):
     )
 
 
-def vxc_lda(exc: Callable, rho_r: Float[Array, 'x y z']):
-  grid_sizes = rho_r.shape
+# Constants in libxc
+XC_UNPOLARIZED = 0
+XC_POLARIZED = 1
+
+
+def _lda(xc_type: str, rho_r: Float[Array, 's x y z']):
+  polarized = rho_r.shape[0] == 2
+  p = get_p(xc_type, XC_POLARIZED if polarized else XC_UNPOLARIZED)
+  exc = get_xc_functional(xc_type, polarized=polarized)
+  grid_shape = rho_r.shape
   rho_r_flat = rho_r.reshape(-1)
-  dexc_drho_flat = jax.vmap(jax.grad(exc))(rho_r_flat)
-  t1 = dexc_drho_flat.reshape(grid_sizes) * rho_r
-  t2 = exc(rho_r)
-  vxc_r = t1 + t2
+  out = jax.vmap(exc, (None, 0), 0)(p, rho_r_flat)
+  return out.reshape(grid_shape)
+
+
+def _gga(
+  xc_type: str,
+  rho_r: Float[Array, 's x y z'],
+  rho_r_grad: Float[Array, 's x y z']
+):
+  polarized = rho_r.shape[0] == 2
+  p = get_p(xc_type, XC_POLARIZED if polarized else XC_UNPOLARIZED)
+  exc = get_xc_functional(xc_type, polarized=polarized)
+  grid_shape = rho_r.shape
+  rho_r_flat = rho_r.reshape(-1)
+  rho_r_grad_flat = rho_r_grad.reshape(-1)
+  out = jax.vmap(exc, (None, 0, 0), 0)(p, rho_r_flat, rho_r_grad_flat)
+  return out.reshape(grid_shape)
+
+
+def vxc_lda(exc: Callable, rho_r: Float[Array, 's x y z']):
+  polarized = rho_r.shape[0] == 2
+  grid_sizes = rho_r.shape
+
+  if polarized:
+    pass
+  else:
+    rho_r_flat = rho_r.reshape(-1)
+    dexc_drho_flat = jax.vmap(jax.grad(exc))(rho_r_flat)
+    t1 = dexc_drho_flat.reshape(grid_sizes) * rho_r
+    t2 = exc(rho_r)
+    vxc_r = t1 + t2
+
   return vxc_r
 
 
@@ -86,32 +122,23 @@ def vxc_gga(
 
 def rho_r_grad_fn(
   density_grid: Float[Array, 's x y z'], gs: Float[Array, 'x y z 3']
-):
+) -> Float[Array, 's x y z']:
+  """If polarized, s in the return shape is 3, else 1"""
+  polarized = density_grid.shape[0] == 2
   rho_G = jnp.fft.fftn(density_grid)
   grad_rho_G = rho_G[..., None] * 1j * gs
-  grad_rho_r = jnp.fft.ifftn(grad_rho_G, axes=(0, 1, 2))
-  return absolute_square(grad_rho_r).sum(-1)
-
-
-def lda_unpol(xc_type: str, rho_r: Float[Array, 'x y z']):
-  p = get_p(xc_type, 1)
-  exc = get_xc_functional(xc_type, polarized=False)
-  grid_shape = rho_r.shape
-  rho_r_flat = rho_r.reshape(-1)
-  out = jax.vmap(exc, (None, 0), 0)(p, rho_r_flat)
-  return out.reshape(grid_shape)
-
-
-def gga_unpol(
-  xc_type: str, rho_r: Float[Array, 'x y z'], rho_r_grad: Float[Array, 'x y z']
-):
-  p = get_p(xc_type, 1)
-  exc = get_xc_functional(xc_type, polarized=False)
-  grid_shape = rho_r.shape
-  rho_r_flat = rho_r.reshape(-1)
-  rho_r_grad_flat = rho_r_grad.reshape(-1)
-  out = jax.vmap(exc, (None, 0, 0), 0)(p, rho_r_flat, rho_r_grad_flat)
-  return out.reshape(grid_shape)
+  grad_rho_r = jnp.fft.ifftn(grad_rho_G, axes=range(-3, 0))
+  if polarized:
+    s_alpha, s_beta = grad_rho_r
+    return safe_real(
+      jnp.stack([
+        s_alpha * s_alpha,
+        s_alpha * s_beta,
+        s_beta * s_beta,
+      ])
+    ).sum(-1)
+  else:
+    return absolute_square(grad_rho_r).sum(-1)
 
 
 def xc_density(
@@ -122,7 +149,7 @@ def xc_density(
 ):
   if "gga" in xc_type:
     exc_fn = lambda density, grad: sum(
-      [gga_unpol(xc_type_, density, grad) for xc_type_ in xc_type.split('+')]
+      [_gga(xc_type_, density, grad) for xc_type_ in xc_type.split('+')]
     )
     grad = rho_r_grad_fn(density_grid, g_vector_grid)
 
@@ -134,9 +161,9 @@ def xc_density(
     else:
       return exc_fn(density_grid, grad)
 
-  else:
+  else:  # LDA
     exc_fn = lambda density: sum(
-      [lda_unpol(xc_type_, density) for xc_type_ in xc_type.split('+')]
+      [_lda(xc_type_, density) for xc_type_ in xc_type.split('+')]
     )
 
     if kohn_sham:
