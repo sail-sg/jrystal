@@ -1,7 +1,5 @@
 import argparse
 
-import cloudpickle as pickle
-
 import jrystal as jr
 
 
@@ -47,3 +45,7 @@ def main():
       jr.calc.band_normcons(config)
     else:
       jr.calc.band_all_electrons(config)
+
+
+if __name__ == "__main__":
+  main()

@@ -12,7 +12,8 @@ crystal_file_path_path: null
 #         Exchange-Correlation Setting         #
 ################################################
 # xc functional
-xc: "lda_x"
+# xc: "lda_x+lda_c_pw"
+xc: "gga_x_pbe+gga_c_pbe"
 # xc: "pbe"
 
 ################################################
@@ -124,4 +125,6 @@ jax_enable_x64: True
 verbose: True
 eps: 1.e-08
 
-debug: False
+jax_debug_nans: False
+spin: 0
+convergence_window_size: 50

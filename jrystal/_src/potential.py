@@ -18,7 +18,7 @@ import jax.numpy as jnp
 from jax.lax import stop_gradient
 from jaxtyping import Array, Complex, Float
 
-from .xc import lda_x, pbe_x
+from .xc import xc_density
 
 
 def hartree_reciprocal(
@@ -200,32 +200,6 @@ def external(
   return jnp.fft.ifftn(ext_pot_grid_rcprl, axes=range(-3, 0))
 
 
-def xc_functional(
-  density_grid: Float[Array, 'spin x y z'],
-  g_vector_grid: Float[Array, 'x y z 3'],
-  kohn_sham: bool = False,
-  xc: str = "lda_x"
-) -> Float[Array, 'spin x y z']:
-  """return the exchange-correlation potential.
-
-  Args:
-    density_grid (Float[Array, 'spin x y z']): the electron density evaluated on the real-space grid. The input density must contains spin axis.
-    g_vector_grid (Float[Array, 'x y z 3']): the G-vectors in reciprocal space.
-    kohn_sham (bool, optional): If false, return the exchange-correlation energy density e_xc, otherwise return the exchange-correlation potential v_xc. Defaults to False.
-    xc (str, optional): The exchange-correlation functional. Defaults to "lda_x".
-
-  Returns:
-    Float[Array, 'spin x y z']: the exchange-correlation potential.
-  """
-  assert density_grid.ndim == 4, ('density_grid must contains spin axis')
-  if xc == 'lda_x':
-    return lda_x(density_grid, kohn_sham)
-  elif xc == 'pbe_x':
-    return pbe_x(density_grid, g_vector_grid, kohn_sham)
-  else:
-    raise NotImplementedError(f"XC {xc} not supported.")
-
-
 def effective(
   density_grid: Float[Array, 'spin x y z'],
   position: Float[Array, "num_atom 3"],
@@ -233,7 +207,7 @@ def effective(
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
   split: bool = False,
-  xc: str = "lda_x",
+  xc_type: str = "lda_x",
   kohn_sham: bool = False,
 ) -> Union[Tuple[Float[Array, '... x y z'],
                  Float[Array, '... x y z'],
@@ -292,7 +266,8 @@ def effective(
   v_external = external_reciprocal(position, charge, g_vector_grid, vol)
 
   # real space:
-  v_xc = xc_functional(density_grid, g_vector_grid, kohn_sham, xc)
+  v_xc: Float[Array, 's x y z']
+  v_xc = xc_density(density_grid, g_vector_grid, kohn_sham, xc_type)
 
   # transform to real space
   v_hartree = jnp.fft.ifftn(v_hartree, axes=range(-dim, 0))
