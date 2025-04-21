@@ -127,7 +127,7 @@ def absolute_square(array: Complex[Array, '...']) -> Float[Array, '...']:
         Real-valued array of the same shape as input, containing the squared
         magnitudes of the complex values.
     """
-  return safe_real(jnp.conj(array) * array)
+  return jnp.real(jnp.conj(array) * array)
 
 
 def volume(cell_vectors: Float[Array, '3 3']) -> Float:
