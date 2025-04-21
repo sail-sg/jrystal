@@ -18,7 +18,7 @@ import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, Complex, Float, Int
 
-from . import braket, grid, potential, pw
+from . import braket, potential, pw, xc
 from .ewald import ewald_coulomb_repulsion
 from .grid import translation_vectors
 from .utils import (
@@ -176,53 +176,14 @@ def kinetic(
   return safe_real(e_kin)
 
 
-def xc_lda(
-  density_grid: Float[Array, 'x y z'],
-  vol: Float,
-  kohn_sham: bool = False
-) -> Float:
-  r"""Calculate the LDA exchange-correlation energy.
-
-  Implements the Local Density Approximation (LDA) for the exchange-correlation
-  energy in the spin-unpolarized case. The exchange energy in LDA is given by:
-
-  .. math::
-      E_x^{\text{LDA}}[\rho] = -\frac{3}{4}\left(\frac{3}{\pi}\right)^{1/3}
-      \int \rho(\mathbf{r})^{4/3} d\mathbf{r}
-
-  Note that this implementation includes both exchange and correlation terms,
-  though only the exchange term is shown in the equation above.
-
-  Args:
-    density_grid (Float[Array, 'x y z']): Real-space electron density.
-    vol (Float): Unit cell volume.
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
-
-  Returns:
-    Float: LDA exchange-correlation energy.
-  """
-
-  assert density_grid.ndim in [3, 4]
-
-  if density_grid.ndim == 4:  # have spin channel
-    density_grid = jnp.sum(density_grid, axis=0)
-
-  num_grid = jnp.prod(jnp.array(density_grid.shape))
-  lda_density = potential.xc_lda(density_grid, kohn_sham)
-  e_lda = jnp.sum(lda_density * density_grid)
-  e_lda = safe_real(e_lda)
-
-  return e_lda * vol / num_grid
-
-
 def exc_functional(
   density_grid: Float[Array, 'x y z'],
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
-  xc: str,
+  xc_type: str,
   kohn_sham: bool = False
 ) -> Float:
-  r"""Calculate the exchange-correlation energy of the input density.
+  r"""Calculate the exchange-correlation energy.
 
   Args:
     density_grid (Float[Array, 'x y z']): Real-space electron density.
@@ -239,7 +200,7 @@ def exc_functional(
     density_grid = jnp.sum(density_grid, axis=0)
 
   num_grid = jnp.prod(jnp.array(density_grid.shape))
-  exc_density = potential.xc_density(density_grid, g_vector_grid, kohn_sham, xc)
+  exc_density = xc.xc_density(density_grid, g_vector_grid, kohn_sham, xc_type)
   e_xc = jnp.sum(exc_density * density_grid)
   e_xc = safe_real(e_xc)
 
@@ -362,7 +323,7 @@ def band_energy(
   vol: Float,
   occupation: Float[Array, "spin kpt band"],
   kohn_sham: bool = False,
-  xc: str = 'lda'
+  xc_type: str = "lda_x"
 ):
   r"""Calculate the energy eigenvalues for each electronic state.
 
@@ -386,7 +347,7 @@ def band_energy(
     vol (Float): Unit cell volume.
     occupation (Float[Array, "spin kpt band"]): Occupation numbers.
     kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
-    xc (str, optional): Exchange-correlation functional type. Defaults to 'lda'.
+    xc_type (str, optional): Exchange-correlation functional type. Defaults to 'lda'.
 
   Returns:
     Float[Array, "spin kpt band"]: Energy eigenvalues for each electronic state.
@@ -401,7 +362,7 @@ def band_energy(
     g_vector_grid,
     vol,
     split=False,
-    xc=xc,
+    xc_type=xc_type,
     kohn_sham=kohn_sham
   )
   e_eff = braket.real_braket(density_per_band, v_eff, vol)
