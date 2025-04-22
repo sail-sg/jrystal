@@ -56,12 +56,12 @@ def _lda(xc_type: str, rho_r: Float[Array, 's x y z']):
   if polarized and is_exchange:  # NOTE: exact scaling relation
     f_up = jax.vmap(f, (None, 0), 0)(p, 2 * rho_r_flat[0])
     f_dn = jax.vmap(f, (None, 0), 0)(p, 2 * rho_r_flat[1])
-    f = 0.5 * (f_up + f_dn)
+    f_val = 0.5 * (f_up + f_dn)
   elif polarized:  # and is correlation
-    f = jax.vmap(f, (None, 1), 0)(p, rho_r_flat)
+    f_val = jax.vmap(f, (None, 1), 0)(p, rho_r_flat)
   else:  # not polarized
-    f = jax.vmap(f, (None, 0), 0)(p, rho_r_flat[0])
-  return f.reshape(grid_shape)
+    f_val = jax.vmap(f, (None, 0), 0)(p, rho_r_flat[0])
+  return f_val.reshape(grid_shape)
 
 
 def _gga(
@@ -70,19 +70,19 @@ def _gga(
   sigma_r: Float[Array, 's x y z']
 ):
   polarized, is_exchange, p, f, grid_shape, rho_r_flat = _parse_xc_type(xc_type, rho_r)
-  sigma_r_flat = sigma_r.reshape(sigma_r.shape[0], -1)
+  sigma_r_flat = sigma_r.reshape(3 if polarized else 1, -1)
   if polarized and is_exchange:  # NOTE: exact scaling relation
     f_up = jax.vmap(f, (None, 0, 0),
                     0)(p, 2 * rho_r_flat[0], 4 * sigma_r_flat[0])
     # NOTE: sigma_r_flat[1] is the cross term
     f_dn = jax.vmap(f, (None, 0, 0),
                     0)(p, 2 * rho_r_flat[1], 4 * sigma_r_flat[2])
-    f = 0.5 * (f_up + f_dn)
+    f_val = 0.5 * (f_up + f_dn)
   elif polarized:  # and is correlation
-    f = jax.vmap(f, (None, 1, 1), 0)(p, rho_r_flat, sigma_r_flat)
+    f_val = jax.vmap(f, (None, 1, 1), 0)(p, rho_r_flat, sigma_r_flat)
   else:  # not polarized
-    f = jax.vmap(f, (None, 0, 0), 0)(p, rho_r_flat[0], sigma_r_flat[0])
-  return f.reshape(grid_shape)
+    f_val = jax.vmap(f, (None, 0, 0), 0)(p, rho_r_flat[0], sigma_r_flat[0])
+  return f_val.reshape(grid_shape)
 
 
 def sigma_r_fn(
@@ -94,16 +94,16 @@ def sigma_r_fn(
   polarized = density_grid.shape[0] == 2
   rho_G = jnp.fft.fftn(density_grid, axes=range(-3, 0))
   grad_rho_G = rho_G[..., None] * 1j * gs
-  grad_rho_r = jnp.fft.ifftn(grad_rho_G, axes=range(-3, 0)).real
+  grad_rho_r = jnp.fft.ifftn(grad_rho_G, axes=range(-4, -1))
   if polarized:
     s_up, s_dn = grad_rho_r
     return jnp.stack([
-      s_up * s_up,
-      s_up * s_dn,
-      s_dn * s_dn,
-    ]).sum(-1)
+      s_up.conj() * s_up,
+      s_up.conj() * s_dn,
+      s_dn.conj() * s_dn,
+    ]).sum(-1).real
   else:
-    return absolute_square(grad_rho_r).sum(-1)[None]
+    return absolute_square(grad_rho_r).sum(-1)
 
 
 def vxc_lda(exc: Callable, rho_r: Float[Array, 's x y z']):
@@ -157,14 +157,12 @@ def vxc_gga_recp(
 
   # gradient correction
   axes = list(range(-3, 0))
-  g_axes = list(range(-4, -1))
   rho_G: Float[Array, 's x y z'] = jnp.fft.fftn(rho_r, axes=axes)
+  grad_rho_r = jnp.fft.ifftn(rho_G[..., None] * 1j * gs, axes=axes)
   lapl_rho_G = -1 * (gs**2).sum(-1) * rho_G
   lapl_rho_r: Float[Array, 's x y z'] = jnp.fft.ifftn(lapl_rho_G, axes=axes)
 
-  grad_fft = lambda x: jnp.fft.ifftn(
-    1j * gs * jnp.fft.fftn(x)[..., None], axes=g_axes
-  )
+  grad_fft = lambda x: jnp.fft.ifftn(1j * gs * jnp.fft.fft(x)[..., None], axes=axes)
 
   if polarized:
     dexc_dsigma_flat: Float[Array, '3 num_g']
@@ -173,24 +171,22 @@ def vxc_gga_recp(
 
     t_up = dexc_dsigma_flat[0].reshape(grid_sizes) * rho_r[0]
     t_up = jnp.where(sigma_r[0] > 0, t_up, 0)
-    t3_up = (grad_fft(t_up) * grad_fft(rho_G[0])).sum(-1)
+    t3_up = (grad_fft(t_up) * grad_rho_r[0]).sum(-1)
     t4_up = t_up * lapl_rho_r[0]
 
     t_cross_up = dexc_dsigma_flat[1].reshape(grid_sizes) * rho_r[1]
-    t_cross_up = jnp.where(sigma_r[1] > 0, t_cross_up, 0)
-    t5_up = (grad_fft(t_cross_up) * grad_fft(rho_G[1])).sum(-1)
+    t5_up = (grad_fft(t_cross_up) * grad_rho_r[1]).sum(-1)
     t6_up = t_cross_up * lapl_rho_r[1]
 
     grad_correction_up = 2 * (t3_up + t4_up) + t5_up + t6_up
 
     t_dn = dexc_dsigma_flat[2].reshape(grid_sizes) * rho_r[1]
     t_dn = jnp.where(sigma_r[2] > 0, t_dn, 0)
-    t3_dn = (grad_fft(t_dn) * grad_fft(rho_G[1])).sum(-1)
+    t3_dn = (grad_fft(t_dn) * grad_rho_r[1]).sum(-1)
     t4_dn = t_dn * lapl_rho_r[1]
 
     t_cross_dn = dexc_dsigma_flat[1].reshape(grid_sizes) * rho_r[0]
-    t_cross_dn = jnp.where(sigma_r[1] > 0, t_cross_dn, 0)
-    t5_dn = (grad_fft(t_cross_dn) * grad_fft(rho_G[0])).sum(-1)
+    t5_dn = (grad_fft(t_cross_dn) * grad_rho_r[0]).sum(-1)
     t6_dn = t_cross_dn * lapl_rho_r[0]
 
     grad_correction_dn = 2 * (t3_dn + t4_dn) + t5_dn + t6_dn
@@ -201,15 +197,16 @@ def vxc_gga_recp(
     dexc_dsigma_flat: Float[Array, 'num_g']
     dexc_dsigma_flat = jax.vmap(jax.grad(exc, argnums=1)
                                )(rho_r_flat[0], sigma_r_flat[0])
-    t = dexc_dsigma_flat.reshape(1, *grid_sizes) * rho_r
-    t = jnp.where(sigma_r > 0, t, 0)
-    t3 = (grad_fft(t) * grad_fft(rho_G)).sum(-1)
+    t = dexc_dsigma_flat.reshape(grid_sizes) * rho_r[0]
+    t = jnp.where(sigma_r[0] > 0, t, 0)
+    t3 = (grad_fft(t) * grad_rho_r[0]).sum(-1)
     t4 = t * lapl_rho_r
     grad_correction = 2 * (t3 + t4)
 
   integrand = local_term - grad_correction
 
   vxc_G = jnp.fft.fftn(integrand, axes=axes)
+
   return vxc_G
 
 
@@ -219,7 +216,7 @@ def vxc_gga(
   sigma_r: Float[Array, 'x y z'],
   gs: Float[Array, 'x y z 3']
 ):
-  return jnp.fft.ifftn(vxc_gga_recp(exc, rho_r, sigma_r, gs))
+  return jnp.fft.ifftn(vxc_gga_recp(exc, rho_r, sigma_r, gs), axes=list(range(-3, 0)))
 
 
 def xc_density(
