@@ -15,11 +15,13 @@
 
 This module provides functions for working with spherical coordinates and spherical harmonics, particularly useful for quantum mechanical calculations and pseudopotential transformations.
 """
+import numpy as np
 import jax
 import jax.numpy as jnp
 from jax.scipy.special import sph_harm
 from jaxtyping import Float, Array
 from typing import Callable
+from functools import partial
 from .._src.utils import vmapstack
 
 
@@ -54,8 +56,10 @@ def cartesian_to_spherical(x: Float[Array, "*n 3"],
   return jnp.stack((r, theta, phi), axis=-1)
 
 
+# @partial(jax.jit, static_argnums=(0, 1))
 def legendre_to_sph_harm(
-  l: int = 0, l_max: int = 4
+  l: int = 0,
+  l_max: int = 4
 ) -> Callable[[Float[Array, "*batch 3"]], Float[Array, "*batch m"]]:
   """Convert Legendre polynomials to spherical harmonics decomposition.
 
@@ -79,8 +83,8 @@ def legendre_to_sph_harm(
   Returns:
       Callable that takes Cartesian coordinates of shape (*batch, 3) and returns spherical harmonics coefficients of shape (*batch, m), where m = 2l+1
   """
-  m = jnp.arange(-l, l + 1)
-  n = jnp.array([l])
+  m = np.arange(-l, l + 1)
+  n = np.array([l])
 
   def fun(x):
 
@@ -118,14 +122,18 @@ def legendre_kernel_trick(l: int = 0) -> Callable:  # noqa
       [n1 n2 n3 new_dim] where new_dim is decided using kernel trick.
   """
   if l == 0:
+
     def phi(x):
       return jnp.sqrt(3) / 3 + jnp.zeros_like(x)
+
     return phi
   elif l == 1:
+
     def phi(x):
-      x = x / jnp.sqrt(jnp.sum(x ** 2, axis=-1, keepdims=True))
+      x = x / jnp.sqrt(jnp.sum(x**2, axis=-1, keepdims=True))
       x = jnp.where(jnp.isnan(x), 0, x)
       return jnp.sqrt(3) * x
+
     # sqrt(3) is due to the (2l+1) factor
     return phi
   else:

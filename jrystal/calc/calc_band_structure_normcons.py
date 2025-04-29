@@ -12,34 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Band Structure Calculator. """
-import jax
-import numpy as np
-import jax.numpy as jnp
-import optax
-from math import ceil
-
 import time
-from typing import Optional
 from dataclasses import dataclass
+from functools import partial
+from math import ceil
+from typing import Optional
+
+import jax
+import jax.numpy as jnp
+import numpy as np
+import optax
 from absl import logging
 from tqdm import tqdm
 
-from .calc_ground_state_energy_normcons import calc as energy_calc
-from .calc_ground_state_energy_normcons import GroundStateEnergyOutput
-from .opt_utils import set_env_params, create_crystal, create_freq_mask
-from .opt_utils import create_grids, create_optimizer, create_pseudopotential
-
-from ..config import JrystalConfigDict
-from .._src import pw, occupation
+from .._src import pw
 from .._src.band import get_k_path
 from .._src.crystal import Crystal
-from ..pseudopotential import local, normcons
+from ..config import JrystalConfigDict
+from ..pseudopotential import local, nloc
+from .calc_ground_state_energy_normcons import GroundStateEnergyOutput
+from .calc_ground_state_energy_normcons import calc as energy_calc
+from .opt_utils import (
+  create_crystal,
+  create_freq_mask,
+  create_grids,
+  create_optimizer,
+  create_pseudopotential,
+  set_env_params,
+)
 
 
 @dataclass
 class BandStructureOutput:
-  """Output of the band structure calculation. 
-  
+  """Output of the band structure calculation.
+
   Args:
     config (JrystalConfigDict): The configuration for the calculation.
     crystal (Crystal): The crystal object.
@@ -77,6 +83,7 @@ def calc(
   g_vec, r_vec, k_vec = create_grids(config)
   freq_mask = create_freq_mask(config)
   xc = config.xc
+  logging.info(f"XC functional: {config.xc}")
 
   # generate K-path.
   logging.info("===> Generating K-path...")
@@ -88,7 +95,14 @@ def calc(
   )
   logging.info(f"{k_path.shape[0]} k-points generated.")
 
-  # initialize pseudopotential
+  # optimitimize ground state energy if not provided.
+  if ground_state_energy_output is None:
+    logging.info("===> Starting total energy minimization...")
+    start = time.time()
+    ground_state_density_grid = energy_calc(config)
+
+  jax.clear_caches()
+  logging.info("Initializing pseudopotential (local)...")
   potential_loc = local._potential_local_reciprocal(
     crystal.positions,
     g_vec,
@@ -97,53 +111,44 @@ def calc(
     pseudopot.local_potential_charge,
     crystal.vol
   )
-  potential_nl = normcons._potential_nonlocal_square_root(
-    crystal.positions,
-    g_vec,
-    k_path,
+  logging.info("Initializing pseudopotential (Spherical Bessel Transform)...")
+  start = time.time()
+  beta_gk = nloc.beta_sbt_grid_multi_atoms(
     pseudopot.r_grid,
     pseudopot.nonlocal_beta_grid,
     pseudopot.nonlocal_angular_momentum,
+    g_vec,
+    k_path,
+  )  # shape: [kpt beta x y z]
+  end = time.time()
+  logging.info(
+    f"Spherical Bessel Transform done. Times: {end - start:.2f} seconds"
   )
 
-  # optimitimize ground state energy if not provided.
-  if ground_state_energy_output is None:
-    logging.info("===> Starting total energy minimization...")
-    start = time.time()
-    ground_state_energy_output = energy_calc(config)
-    logging.info(
-      f" Total energy minimization done. "
-      f"Time: {time.time()-start:.3f} "
+  def get_potential_nl(kpt, beta_gk):
+    return nloc._potential_nonlocal_square_root(
+      crystal.positions,
+      g_vec,
+      kpt,
+      pseudopot.r_grid,
+      pseudopot.nonlocal_beta_grid,
+      pseudopot.nonlocal_angular_momentum,
+      pseudopot.nonlocal_d_matrix,
+      beta_gk
     )
 
-  params_pw_ground_state = ground_state_energy_output.params_pw
-  params_occ_ground_state = ground_state_energy_output.params_occ
-
-  # Calculate ground state density at grid points.
-  def get_occupation(params):
-    return occupation.idempotent(
-      params, valence_charges, k_vec.shape[0], crystal.spin
-    )
-
-  coeff_ground_state = pw.coeff(params_pw_ground_state, freq_mask)
-  occ_ground_state = get_occupation(params_occ_ground_state)
-  ground_state_density_grid = pw.density_grid(
-    coeff_ground_state, crystal.vol, occ_ground_state
-  )
-
-  # Define the objective function for band structure calculation.
   def hamiltonian_trace(params_pw_band, kpts, g_vector_grid, potential_nl):
     coeff_band = pw.coeff(params_pw_band, freq_mask)
-
-    return normcons._hamiltonian_trace(
+    return nloc._hamiltonian_trace(
       coeff_band,
       ground_state_density_grid,
       potential_loc,
       potential_nl,
       g_vector_grid,
       kpts,
-      pseudopot.nonlocal_d_matrix,
-      crystal.vol
+      crystal.vol,
+      xc=xc,
+      kohn_sham=True
     )
 
   # Initialize parameters and optimizer.
@@ -166,87 +171,115 @@ def calc(
 
   # the main loop for band structure calculation.
   logging.info("===> Starting band structure calculation...")
+  logging.info(f"Number of bands: {num_bands}")
   logging.info("Optimizing the first K point...")
 
-  params_kpoint_list = []
-  eigen_values = []
+  @partial(jax.pmap, in_axes=(0, 0, 0, 0), devices=jax.devices())
+  def optimize_eigenvalues(kpts, beta_gk, params_pw_band, opt_state):
 
-  if config.verbose:
-    iters = tqdm(range(config.band_structure_epoch))
-  else:
-    iters = tqdm(range(config.band_structure_epoch), disable=True)
+    logging.info("===> Optimizing the first K point...")
+    eigen_values = []
 
-  start = time.time()
-  for i in iters:
-    params_pw_band, opt_state, hamil_trace = update(
-      params_pw_band, opt_state, k_path[0:1], g_vec, potential_nl[0:1]
-    )
-    iters.set_description(f"Hamiltonian trace: {hamil_trace:.4E}")
-
-  # TODO: introduce convergence tracker.
-  converged = True
-
-  params_kpoint_list.append(params_pw_band)
-  logging.info(f" Converged: {converged}.")
-  logging.info(f" Total epochs run: {i+1}.")
-  logging.info(f" Training Time: {(time.time() - start):.3f}s.")
-  logging.info("===> Starting fine-tuning the rest k points...")
-  logging.info(f" fine tuning steps: {config.k_path_fine_tuning_epoch}")
-
-  if config.verbose:
-    iters = tqdm(range(1, k_path.shape[0]))
-  else:
-    iters = tqdm(range(1, k_path.shape[0]), disable=True)
-
-  for i in iters:
-    for _ in range(config.k_path_fine_tuning_epoch):
+    def update_scan(carry, xs):
+      params_pw_band, opt_state, potential_nl_k, kpts = carry
       params_pw_band, opt_state, hamil_trace = update(
-        params_pw_band, opt_state, k_path[i:(i+1)], g_vec, potential_nl[i:(i+1)]
+        params_pw_band, opt_state, kpts, g_vec, potential_nl_k
       )
-    iters.set_description(f" Loss(the {i+1}th k point): {hamil_trace:.4E}")
-    params_kpoint_list.append(params_pw_band)
+      return (params_pw_band, opt_state, potential_nl_k, kpts), None
 
-  logging.info("===> Band structure calculation done.")
-  ########################################################
-  # One-time eigen decomposition
-  logging.info("===> Diagonalizing the Hamiltonian matrix...")
+    potential_nl_k = get_potential_nl(kpts[0:1], beta_gk[0:1])
+    carry, _ = jax.lax.scan(
+      update_scan, (params_pw_band, opt_state, potential_nl_k, kpts[0:1]),
+      length=config.band_structure_epoch, unroll = 1
+    )
+    params_first_kpt, opt_state, _, _ = carry
 
-  @jax.jit
-  def eig_fn(param, kpts, g_vector_grid, potential_nl):
-    coeff_i = pw.coeff(param, freq_mask)
-    hamil_matrix = normcons._hamiltonian_matrix(
-      coeff_i,
-      ground_state_density_grid,
-      potential_loc,
-      potential_nl,
-      g_vector_grid,
-      kpts,
-      pseudopot.nonlocal_d_matrix,
-      crystal.vol
+    logging.info("===> Fine-tuning the rest K points...")
+
+    def finetuning(carry, x):
+      kpts, beta_gk = x
+      kpts = jnp.expand_dims(kpts, axis=0)
+      beta_gk = jnp.expand_dims(beta_gk, axis=0)
+      params_pw_band, opt_state = carry
+      potential_nl_k = get_potential_nl(kpts, beta_gk)
+
+      carry, _ = jax.lax.scan(
+        update_scan, (params_pw_band, opt_state, potential_nl_k, kpts),
+        length=config.k_path_fine_tuning_epoch, unroll = 1
+      )
+      params_pw_band, opt_state, _, _ = carry
+
+      return (params_pw_band, opt_state), params_pw_band
+
+    carry, params_fine_tuning = jax.lax.scan(
+      finetuning, (params_first_kpt, opt_state),
+      xs = (kpts[1:], beta_gk[1:])
     )
 
-    return jnp.linalg.eigvalsh(hamil_matrix[0])
+    logging.info("===> Eigen decomposition...")
 
-  iters = tqdm(range(len(params_kpoint_list)))
-  for i in iters:
-    prm = params_kpoint_list[i]
-    k = k_path[i:(i + 1), :]
-    v_nl = potential_nl[i:(i + 1)]
-    iters.set_description(f"Diagonolizing the {i+1}th k points")
-    eig = eig_fn(prm, k, g_vec, v_nl)
-    eigen_values.append(eig)
+    def eig_fn(param, kpts, potential_nl, g_vector_grid):
+      coeff_i = pw.coeff(param, freq_mask)
+      hamil_matrix = nloc._hamiltonian_matrix(
+        coeff_i,
+        ground_state_density_grid,
+        potential_loc,
+        potential_nl,
+        g_vector_grid,
+        kpts,
+        crystal.vol,
+        xc,
+        kohn_sham=True
+      )
+      return jnp.linalg.eigvalsh(hamil_matrix[0])
 
-  eigen_values = jnp.vstack(eigen_values)
+    eigen_values = [
+      eig_fn(
+        params_first_kpt,
+        kpts[0:1],
+        get_potential_nl(kpts[0:1], beta_gk[0:1]),
+        g_vec
+      )
+    ]
+
+    def eig_scan(carry, x):
+      k, b, prm = x
+      k = jnp.expand_dims(k, axis=0)
+      b = jnp.expand_dims(b, axis=0)
+      potential_nl_k = get_potential_nl(k, b)
+      eig = eig_fn(prm, k, potential_nl_k, g_vec)
+      return None, eig
+
+    carry, ys = jax.lax.scan(
+      eig_scan, None, xs=(kpts[1:], beta_gk[1:], params_fine_tuning)
+    )
+    eigen_values += list(ys)
+
+    return eigen_values
+
+  num_devices = jax.device_count()
+  k_path = jnp.reshape(k_path, (num_devices, -1, 3))
+  beta_gk = jnp.reshape(beta_gk, (num_devices, -1, *beta_gk.shape[1:]))
+  params_pw_band = jax.tree.map(
+    lambda x: jnp.stack([x] * num_devices, axis=0), params_pw_band
+  )
+  opt_state = jax.tree.map(
+    lambda x: jnp.stack([x] * num_devices, axis=0), opt_state
+  )
+  time_start = time.time()
+  eigen_values = optimize_eigenvalues(
+    k_path, beta_gk, params_pw_band, opt_state
+  )
+  time_end = time.time()
+  logging.info(
+    f"Band structure calculation: {time_end - time_start:.2f} seconds"
+  )
+  eigen_values = jnp.stack(eigen_values)
+  eigen_values = jnp.reshape(
+    eigen_values, (-1, eigen_values.shape[-1]), order="F"
+  )
+
   logging.info("===> Eigen decomposition done.")
   save_file = ''.join(crystal.symbol) + "_band_structure.npy"
   logging.info(f"Results saved in {save_file}")
   jnp.save(save_file, eigen_values)
-
-  return BandStructureOutput(
-    config=config,
-    crystal=crystal,
-    params_pw=params_pw_band,
-    ground_state_energy_output=ground_state_energy_output,
-    k_path=k_path,
-    band_structure=eigen_values,
-  )

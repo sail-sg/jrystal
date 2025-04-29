@@ -28,6 +28,10 @@ from .local import (
   _hamiltonian_local, hamiltonian_local, _energy_local, energy_local
 )
 from .beta import beta_sbt_grid_multi_atoms
+from .utils import stack_with_padding
+
+from jax.sharding import NamedSharding
+from jax.sharding import PartitionSpec as P
 
 
 def _potential_nonlocal_square_root(
@@ -36,11 +40,12 @@ def _potential_nonlocal_square_root(
   kpts: Float[Array, "kpt 3"],
   r_grid: List[Float[Array, "r"]],
   nonlocal_beta_grid: List[Float[Array, "beta r"]],
-  nonlocal_angular_momentum: List[List[int]]
+  nonlocal_angular_momentum: List[List[int]],
+  sharding: Optional[NamedSharding] = None,
 ) -> Complex[Array, "kpt atom beta x y z phi"]:
   """
-  Compute the square root of the nonlocal pseudopotential. 
-  
+  Compute the square root of the nonlocal pseudopotential.
+
   The Nonlocal pseudopotential hamiltonian is defined by:
 
   .. math::
@@ -48,7 +53,7 @@ def _potential_nonlocal_square_root(
       < C | V_\text{nl}(G, G') | C >
 
   where :math:`V_\text{nl} = F D F^\dagger`, where :math:`F` can be obtained from this function, and :math:`D` is the diagonal matrix of the beta functions. This function returns :math:`F`.
-    
+
   Args:
     position (Float[Array, "atom 3"]): The positions of the atoms.
     g_vector_grid (Float[Array, "x y z 3"]): The grid of the reciprocal vectors.
@@ -66,10 +71,15 @@ def _potential_nonlocal_square_root(
     kpts, axis=(1, 2, 3)
   ) + jnp.expand_dims(g_vector_grid, 0)  # [nk x y z 3]
 
+  mesh = sharding.mesh
+  gk_vector_grid = jax.device_put(gk_vector_grid, NamedSharding(mesh, P("k")))
+
   # sbt for beta function and intepolate
   beta_gk = beta_sbt_grid_multi_atoms(
     r_grid, nonlocal_beta_grid, nonlocal_angular_momentum, gk_vector_grid
   )  # shape [num_atom num_beta nk x y z]
+  beta_gk = jnp.swapaxes(beta_gk, 0, 2)  # shape [nk num_beta natom x y z]
+  beta_gk = jax.device_put(beta_gk, NamedSharding(mesh, P("k")))
 
   # kernel trick for legendre polynormials.
   kappa_all = []
@@ -80,23 +90,27 @@ def _potential_nonlocal_square_root(
     kappa = []
     for k in kappa_list:
       kappa.append(k(gk_vector_grid))
-    kappa = jnp.stack(kappa)  # shape: [num_beta nk x y z dim_phi]
+    kappa = np.stack(kappa)  # shape: [beta nk x y z phi]
     kappa_all.append(kappa)
 
-  kappa = jnp.stack(kappa_all)  # shape: [num_atom num_beta nk x y z dim_phi]
+  kappa = stack_with_padding(kappa_all)  # shape: [atom beta nk x y z phi]
+  kappa = np.swapaxes(kappa, 0, 2)  # shape: [nk atom beta x y z phi]
+  kappa = jax.device_put(kappa, NamedSharding(mesh, P("k")))
 
   # structure factor
   structure_factor = jnp.exp(
-    1.j * jnp.matmul(gk_vector_grid, position.transpose())
+    -1.j * jnp.matmul(gk_vector_grid, position.transpose())
   )
   # shape: [nk x y z na]
 
-  return einsum(
+  output = einsum(
     kappa,
     structure_factor,
     beta_gk,
-    "na nb nk a b c nphi, nk a b c na, na nb nk a b c -> nk na nb a b c nphi"
+    "nk nb na a b c nphi, nk a b c na, nk nb na a b c -> nk na nb a b c nphi"
   ) / jnp.sqrt(2)  # factor of 1/2 is due to the conversion of unit.
+
+  return output
 
 
 def hamiltonian_nonlocal(
@@ -141,16 +155,16 @@ def _hamiltonian_nonlocal(
 ) -> Complex[Array, "spin kpt band band"]:
   """
   Compute the nonlocal pseudopotential hamiltonian.
-  
+
   .. Note::
     This function is for seperating the :math:`\sqrt{V_{nl}}` part that may not be tracable by jax.
-  
+
   Args:
     pw_coefficients (Complex[Array, "spin kpt band x y z"]): The plane wave coefficients.
     potential_nl_sqrt (Complex[Array, "kpt atom beta x y z phi"]): The square root of the nonlocal pseudopotential.
     nonlocal_d_matrix (Float[Array, "j j"]): The diagonal matrix of the beta functions.
     vol (Float): The volume of the unit cell.
-    
+
   Returns:
     Complex[Array, "spin kpt band band"]: The nonlocal pseudopotential hamiltonian.
   """
@@ -163,7 +177,7 @@ def _hamiltonian_nonlocal(
 
   return 4 * jnp.pi / vol * einsum(
     jnp.conj(_f_matrix),
-    jnp.stack(nonlocal_d_matrix),
+    stack_with_padding(nonlocal_d_matrix),
     _f_matrix,
     "ns nk b1 na j1 nphi, na j1 j2, ns nk b2 na j2 nphi -> ns nk b1 b2"
   )
@@ -178,17 +192,17 @@ def _energy_nonlocal(
 ) -> Float:
   """
   Compute the nonlocal pseudopotential energy.
-  
+
   .. Note::
     This function is for seperating the :math:`\sqrt{V_{nl}}` part that may not be tracable by jax.
-    
+
   Args:
     pw_coefficients (Complex[Array, "spin kpt band x y z"]): The plane wave coefficients.
     potential_nl_sqrt (Complex[Array, "kpt atom beta x y z phi"]): The square root of the nonlocal pseudopotential.
     nonlocal_d_matrix (Float[Array, "j j"]): The diagonal matrix of the beta functions.
     vol (Float): The volume of the unit cell.
     occupation (Optional[OccupationArray]): The occupation of the states.
-    
+
   Returns:
     Float: The nonlocal pseudopotential energy.
   """
@@ -214,7 +228,7 @@ def energy_nonlocal(
 ) -> Float:
   """
   Compute the nonlocal pseudopotential energy.
-  
+
   Args:
     pw_coefficients (Complex[Array, "spin kpt band x y z"]): The plane wave coefficients.
     positions (Float[Array, "atom 3"]): The positions of the atoms.
@@ -225,7 +239,7 @@ def energy_nonlocal(
 
   Returns:
     Float: The nonlocal pseudopotential energy.
-    
+
   """
   hamil_nl = hamiltonian_nonlocal(
     pw_coefficients,
@@ -250,12 +264,12 @@ def _hamiltonian_matrix(
   kpts: Float[Array, "num_k 3"],
   nonlocal_d_matrix: List[Float[Array, "beta beta"]],
   vol: Float,
-  xc: str = 'lda',
+  xc: str = 'lda_x',
   kohn_sham: bool = True
 ):
   """
   Compute the nonlocal pseudopotential hamiltonian.
-  
+
   Args:
     coefficient (Complex[Array, "spin kpt band *ndim"]): The plane wave coefficients.
     hamiltonian_density_grid (ScalarGrid[Float, 3]): The hamiltonian density grid.
@@ -282,10 +296,10 @@ def _hamiltonian_matrix(
   )
 
   har = potential.hartree_reciprocal(
-    hamiltonian_density_grid_reciprocal, g_vector_grid, kohn_sham = kohn_sham
+    hamiltonian_density_grid_reciprocal, g_vector_grid, kohn_sham=kohn_sham
   )
   har = jnp.fft.ifftn(har, axes=range(-dim, 0))
-  lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham = kohn_sham)
+  lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham=kohn_sham)
   v_s = har + lda
   h_s = braket.expectation(wave_grid, v_s, vol, diagonal=False, mode="real")
 
@@ -307,7 +321,7 @@ def hamiltonian_matrix(
   nonlocal_d_matrix: List[Float[Array, "beta beta"]],
   nonlocal_angular_momentum: List[List[int]],
   vol: Float,
-  xc: str = 'lda',
+  xc: str = 'lda_x',
   kohn_sham: bool = True
 ):
   dim = positions.shape[-1]
@@ -344,10 +358,10 @@ def hamiltonian_matrix(
   )
 
   har = potential.hartree_reciprocal(
-    hamiltonian_reciprocal_density_grid, g_vector_grid, kohn_sham = kohn_sham
+    hamiltonian_reciprocal_density_grid, g_vector_grid, kohn_sham=kohn_sham
   )
   har = jnp.fft.ifftn(har, axes=range(-dim, 0))
-  lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham = kohn_sham)
+  lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham=kohn_sham)
   v_s = har + lda
   h_s = braket.expectation(wave_grid, v_s, vol, diagonal=False, mode="real")
 
@@ -388,12 +402,12 @@ def _hamiltonian_trace(
   )
 
   v_har_reciprocal = potential.hartree_reciprocal(
-    hamiltonian_reciprocal_density_grid, g_vector_grid, kohn_sham = kohn_sham
+    hamiltonian_reciprocal_density_grid, g_vector_grid, kohn_sham=kohn_sham
   )
   v_har = jnp.fft.ifftn(v_har_reciprocal, axes=range(-3, 0))
   har = braket.expectation(wave_grid, v_har, vol, diagonal=True, mode="real")
-  
-  v_lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham = kohn_sham)
+
+  v_lda = potential.xc_lda(hamiltonian_density_grid, kohn_sham=kohn_sham)
   lda = braket.expectation(wave_grid, v_lda, vol, diagonal=True, mode="real")
   h_s = jnp.sum(har + lda)
 
@@ -424,7 +438,7 @@ def hamiltonian_trace(
 ):
   """
   Compute the trace of the hamiltonian.
-  
+
   Args:
     coefficient (Complex[Array, "spin kpt band x y z"]): The plane wave coefficients.
     hamiltonian_density_grid (ScalarGrid[Float, 3]): The hamiltonian density grid.
@@ -482,7 +496,7 @@ def hamiltonian_trace(
   v_har = jnp.fft.ifftn(v_har_reciprocal, axes=range(-3, 0))
   har = braket.expectation(wave_grid, v_har, vol, diagonal=True, mode="real")
 
-  v_lda = potential.xc_lda(hamiltonian_density_grid, )
+  v_lda = potential.xc_lda(hamiltonian_density_grid,)
   lda = braket.expectation(wave_grid, v_lda, vol, diagonal=True, mode="real")
   h_s = jnp.sum(har + lda)
   kin = energy.kinetic(g_vector_grid, kpts, coefficient, occupation)

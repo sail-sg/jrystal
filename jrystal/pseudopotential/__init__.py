@@ -27,6 +27,7 @@ from . import local
 from . import load
 from . import utils
 from . import normcons
+from . import nloc
 from . import interpolate
 from . import spherical
 from . import beta
@@ -41,5 +42,6 @@ __all__ = [
   'spherical',
   'beta',
   'utils',
-  'normcons'
+  'normcons',
+  'nloc',
 ]

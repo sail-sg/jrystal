@@ -14,7 +14,7 @@
 """Interpolation Functions"""
 import numpy as np
 from jaxtyping import Float, Array
-from scipy.interpolate import CubicSpline 
+from scipy.interpolate import CubicSpline
 # from interpax import CubicSpline
 
 
@@ -40,7 +40,5 @@ def cubic_spline(
   cs = CubicSpline(x, y, axis=-1)
   new_y = np.apply_along_axis(cs, -1, new_x)
   y_batch_dim = y.ndim - 1
-  new_y = np.moveaxis(
-    new_y, range(-y_batch_dim - 1, -1), range(0, y_batch_dim)
-  )
+  new_y = np.moveaxis(new_y, range(-y_batch_dim - 1, -1), range(0, y_batch_dim))
   return new_y

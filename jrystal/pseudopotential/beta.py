@@ -54,7 +54,7 @@ def beta_sbt_grid_single_atom(
   """
   assert len(nonlocal_angular_momentum) == nonlocal_beta_grid.shape[0]
   assert r_grid.shape[0] == nonlocal_beta_grid.shape[1]
-  
+
   if kpts is not None:
     gk_vector_grid = np.expand_dims(
       kpts, axis=(1, 2, 3)
