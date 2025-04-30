@@ -38,9 +38,9 @@ cutoff_energy: 40
 # grid sizes for the FFT grid
 grid_sizes: 48
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
-k_grid_sizes: 1
+k_grid_sizes: 2
 # Occupation method
-occupation: "gamma"
+occupation: "fermi-dirac"
 # occupation support {"fermi-dirac", "gamma", "uniform"}
 
 # smearing factor for the Fermi-Dirac distribution

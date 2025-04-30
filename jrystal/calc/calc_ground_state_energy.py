@@ -95,13 +95,18 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Potentially-occupied bands: {num_bands}")
 
   def get_occupation(params):
-    return occupation.idempotent(
-      params,
-      crystal.num_electron,
-      num_kpts,
-      crystal.spin,
-      config.spin_restricted,
-    )
+    if config.occupation == "fermi-dirac":
+      return occupation.idempotent(
+        params,
+        crystal.num_electron,
+        num_kpts,
+        crystal.spin,
+        config.spin_restricted,
+      )
+
+  # elif config.occupation == "uniform":
+  #   return occupation.uniform(
+  #      num_kpts,
 
   def total_energy(params_pw, params_occ, g_vec=g_vec):
     coeff = pw.coeff(params_pw, freq_mask)
