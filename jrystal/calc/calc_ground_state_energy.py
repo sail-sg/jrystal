@@ -102,17 +102,16 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     else:
       raise ValueError(f"Unknown occupation: {config.occupation}")
 
-    # return jax.lax.stop_gradient(params)
-
-    return jax.lax.stop_gradient(
-      occ_fn(
-        params,
-        crystal.num_electron,
-        num_kpts,
-        crystal.spin,
-        config.spin_restricted,
-      )
+    occ = occ_fn(
+      params,
+      crystal.num_electron,
+      num_kpts,
+      crystal.spin,
+      config.spin_restricted,
     )
+
+    occ = jax.lax.stop_gradient(occ)
+    return occ
 
   def total_energy(params_pw, params_occ, g_vec=g_vec):
     coeff = pw.coeff(params_pw, freq_mask)
@@ -156,16 +155,17 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     params_occ = None
 
   # DEBUG
-  proj_occ = occupation.capped_simplex(
-    params_occ,
-    crystal.num_electron,
-    num_kpts,
-    crystal.spin,
-    config.spin_restricted,
-  )
-  print(proj_occ[0])
-  print(params_occ.sum(0))
-  breakpoint()
+  if config.occupation == "capped-simplex":
+    proj_occ = occupation.capped_simplex(
+      params_occ,
+      crystal.num_electron,
+      num_kpts,
+      crystal.spin,
+      config.spin_restricted,
+    )
+    print(proj_occ[0])
+    print(params_occ.sum(0))
+    breakpoint()
 
   params = {"pw": params_pw, "occ": params_occ}
   opt_state = optimizer.init(params)
