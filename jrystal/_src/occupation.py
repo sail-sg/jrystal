@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Occupation module."""
+from functools import partial
 from typing import Optional, Union
 
 import einops
@@ -76,7 +77,7 @@ def idempotent_param_init(
     key, [num_bands * num_kpts, num_elec_up * num_kpts], complex=False
   )
   if spin_restricted:
-    return  {"param_up": param_up, "param_down": param_up}
+    return {"param_up": param_up, "param_down": param_up}
 
   else:
     param_down = unitary_matrix_param_init(
@@ -254,6 +255,8 @@ def param_init(
     return gamma(num_kpts, num_electrons, spin, num_bands, spin_restricted)
   elif method == "simplex-projector":
     return simplex_projector_init(num_bands, num_kpts)
+  elif method == "capped-simplex":
+    return simplex_projector_init(num_bands, num_kpts)
   else:
     raise ValueError(f"Invalid method: {method}")
 
@@ -274,6 +277,8 @@ def occupation(
     return stop_gradient(params)
   elif method == "simplex-projector":
     return simplex_projector(params, num_electrons, spin, spin_restricted)
+  elif method == "capped-simplex":
+    return capped_simplex(params, num_electrons, spin, spin_restricted)
   else:
     raise ValueError(f"Invalid method: {method}")
 
@@ -283,10 +288,10 @@ def simplex_projector_init(
   num_kpts: int,
 ) -> dict:
   n = num_bands * num_kpts
-  params_up = (jnp.arange(n) - n//2)*0.1
+  params_up = (jnp.arange(n) - n // 2) * 0.1
   params_up = params_up.reshape([num_kpts, num_bands])
 
-  params_down =(jnp.arange(n) - n//2)*0.1
+  params_down = (jnp.arange(n) - n // 2) * 0.1
   params_down = params_down.reshape([num_kpts, num_bands])
 
   return {"param_up": params_up, "param_down": params_down}
@@ -314,9 +319,8 @@ def proj(x: jnp.array, sum: jnp.array):
     _rho = (x_sum - sum - x_cumsum) / (n - jnp.arange(n) - 1)
     k = jnp.argmax(x_sorted > _rho)
     _lambda = jax.lax.select(
-      k == 0,
-      (x_sum - sum) / n,
-      (x_sum - sum - x_cumsum.at[k-1].get()) / (n - k)
+      k == 0, (x_sum - sum) / n,
+      (x_sum - sum - x_cumsum.at[k - 1].get()) / (n - k)
     )
     return jnp.maximum(x - _lambda, 0.)
 
@@ -325,12 +329,13 @@ def proj(x: jnp.array, sum: jnp.array):
     x_sum = jnp.sum(x)
     x_sorted = x_sorted.at[::-1].get()
     x_cumsum = jnp.cumsum(x_sorted)
-    _rho = (x_sum - sum + (jnp.arange(n) + 1 - x_cumsum)) / (n-jnp.arange(n)-1)
+    _rho = (x_sum - sum + (jnp.arange(n) + 1 - x_cumsum)) / (
+      n - jnp.arange(n) - 1
+    )
     k = jnp.argmax(x_sorted - _rho < 1.)
     _lambda = jax.lax.select(
-      k == 0,
-      (sum-x_sum) / n,
-      (sum-x_sum-(k- x_cumsum.at[k-1].get())) / (n - k)
+      k == 0, (sum - x_sum) / n,
+      (sum - x_sum - (k - x_cumsum.at[k - 1].get())) / (n - k)
     )
     return jnp.minimum(x + _lambda, 1.)
 
@@ -364,3 +369,62 @@ def simplex_projector(
     return jnp.sum(occ, axis=0, keepdims=True)
   else:
     return occ
+
+
+@partial(jax.jit, static_argnames=["n_steps"])
+def proj_capped_simplex(y, n: int, n_steps: int = 5):
+  """Jitted version of proj_capped_simplex with static arguments for n and n_steps.
+
+  This version should be used when calling from jitted contexts.
+  """
+  v_fn = lambda gamma: y - gamma
+  x_opt_fn = lambda gamma: jnp.clip(v_fn(gamma), 0, 1)
+
+  def lagrangian(gamma):
+    x = x_opt_fn(gamma)
+    return -0.5 * ((x - y)**2).sum() - gamma * (x.sum() - n)
+
+  w_g_fn = jax.grad(lagrangian)
+  w_gg_fn = jax.grad(jax.grad(lagrangian))
+
+  # Initial value for gamma
+  g_init = 0.0
+
+  # Define a single Newton step function for scan
+  def newton_step(g, _):
+    g_next = g - w_g_fn(g) / w_gg_fn(g)
+    return g_next, None
+
+  # Use scan to perform n_steps of Newton's method
+  g_final, _ = jax.lax.scan(newton_step, g_init, None, length=n_steps)
+
+  return x_opt_fn(g_final)
+
+
+def capped_simplex(
+  params: dict,
+  num_electrons: int,
+  spin: int = 0,
+  spin_restricted: bool = True,
+  n_newton_steps: int = 5,
+) -> Float[Array, 'spin kpt band']:
+  num_kpts = params["param_up"].shape[0]
+  num_bands = params["param_up"].shape[1]
+
+  m_up = (num_electrons + spin) // 2 * num_kpts
+  m_dn = (num_electrons - spin) // 2 * num_kpts
+
+  occ_up_flat = params["param_up"].reshape(-1)
+  proj_up = proj_capped_simplex(occ_up_flat, m_up, n_steps=n_newton_steps)
+  occ_up = proj_up.reshape([num_kpts, num_bands]) / num_kpts
+
+  occ_dn_flat = params["param_down"].reshape(-1)
+  proj_dn = proj_capped_simplex(occ_dn_flat, m_dn, n_steps=n_newton_steps)
+  occ_dn = proj_dn.reshape([num_kpts, num_bands]) / num_kpts
+
+  occ = jnp.stack([occ_up, occ_dn], axis=0)
+
+  if spin_restricted:
+    return jnp.sum(occ, axis=0, keepdims=True)
+
+  return occ
