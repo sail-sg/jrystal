@@ -96,17 +96,23 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
   def get_occupation(params):
     if config.occupation == "fermi-dirac":
-      return occupation.idempotent(
+      occ_fn = occupation.idempotent
+    elif config.occupation == "capped-simplex":
+      occ_fn = occupation.capped_simplex
+    else:
+      raise ValueError(f"Unknown occupation: {config.occupation}")
+
+    # return jax.lax.stop_gradient(params)
+
+    return jax.lax.stop_gradient(
+      occ_fn(
         params,
         crystal.num_electron,
         num_kpts,
         crystal.spin,
         config.spin_restricted,
       )
-
-  # elif config.occupation == "uniform":
-  #   return occupation.uniform(
-  #      num_kpts,
+    )
 
   def total_energy(params_pw, params_occ, g_vec=g_vec):
     coeff = pw.coeff(params_pw, freq_mask)
@@ -139,7 +145,28 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   params_pw = pw.param_init(
     key, num_bands, num_kpts, freq_mask, config.spin_restricted
   )
-  params_occ = occupation.idempotent_param_init(key, num_bands, num_kpts)
+
+  if config.occupation == "fermi-dirac":
+    params_occ = occupation.idempotent_param_init(key, num_bands, num_kpts)
+  elif config.occupation == "capped-simplex":
+    params_occ = occupation.uniform(
+      num_kpts, crystal.num_electron, crystal.spin, num_bands, False
+    )
+  else:
+    params_occ = None
+
+  # DEBUG
+  proj_occ = occupation.capped_simplex(
+    params_occ,
+    crystal.num_electron,
+    num_kpts,
+    crystal.spin,
+    config.spin_restricted,
+  )
+  print(proj_occ[0])
+  print(params_occ.sum(0))
+  breakpoint()
+
   params = {"pw": params_pw, "occ": params_occ}
   opt_state = optimizer.init(params)
 

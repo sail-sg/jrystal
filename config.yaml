@@ -40,7 +40,8 @@ grid_sizes: 48
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
 k_grid_sizes: 2
 # Occupation method
-occupation: "fermi-dirac"
+# occupation: "fermi-dirac"
+occupation: "capped-simplex"
 # occupation support {"fermi-dirac", "gamma", "uniform"}
 
 # smearing factor for the Fermi-Dirac distribution

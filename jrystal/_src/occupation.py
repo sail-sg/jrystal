@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Occupation module."""
-import einops
-import jax.numpy as jnp
+from functools import partial
 from typing import Optional
-from jaxtyping import Float, Array
+
+import einops
+import jax
+import jax.numpy as jnp
+from jaxtyping import Array, Float
+
 from .unitary_module import unitary_matrix, unitary_matrix_param_init
 
 
@@ -206,6 +210,64 @@ def gamma(
   occ = jnp.zeros([2, num_k, num_bands])
   occ = occ.at[0, 0, :(num_electrons + spin) // 2].set(1)
   occ = occ.at[1, 0, :(num_electrons - spin) // 2].set(1)
+
+  if spin_restricted:
+    return jnp.sum(occ, axis=0, keepdims=True)
+
+  return occ
+
+
+@partial(jax.jit, static_argnames=["n_steps"])
+def proj_capped_simplex(y, n: int, n_steps: int = 5):
+  """Jitted version of proj_capped_simplex with static arguments for n and n_steps.
+  
+  This version should be used when calling from jitted contexts.
+  """
+  v_fn = lambda gamma: y - gamma
+  x_opt_fn = lambda gamma: jnp.clip(v_fn(gamma), 0, 1)
+
+  def lagrangian(gamma):
+    x = x_opt_fn(gamma)
+    return -0.5 * ((x - y)**2).sum() - gamma * (x.sum() - n)
+
+  w_g_fn = jax.grad(lagrangian)
+  w_gg_fn = jax.grad(jax.grad(lagrangian))
+
+  # Initial value for gamma
+  g_init = 0.0
+
+  # Define a single Newton step function for scan
+  def newton_step(g, _):
+    g_next = g - w_g_fn(g) / w_gg_fn(g)
+    return g_next, None
+
+  # Use scan to perform n_steps of Newton's method
+  g_final, _ = jax.lax.scan(newton_step, g_init, None, length=n_steps)
+
+  return x_opt_fn(g_final)
+
+
+def capped_simplex(
+  params: Float[Array, 'spin kpt band'],
+  num_electrons: int,
+  num_kpts: int,
+  spin: int = 0,
+  spin_restricted: bool = True,
+) -> Float[Array, 'spin kpt band']:
+  n_up = (num_electrons + spin) // 2
+  n_dn = (num_electrons - spin) // 2
+
+  occ_up_flat = params[0].reshape(-1)
+  # Use the jitted version with static arguments
+  proj_up = proj_capped_simplex(occ_up_flat, n_up, n_steps=5)
+  occ_up = proj_up.reshape([num_kpts, -1])
+
+  occ_dn_flat = params[1].reshape(-1)
+  # Use the jitted version with static arguments
+  proj_dn = proj_capped_simplex(occ_dn_flat, n_dn, n_steps=5)
+  occ_dn = proj_dn.reshape([num_kpts, -1])
+
+  occ = jnp.stack([occ_up, occ_dn])
 
   if spin_restricted:
     return jnp.sum(occ, axis=0, keepdims=True)
