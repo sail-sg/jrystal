@@ -23,6 +23,7 @@ class JrystalConfigDict(ConfigDict):
   crystal_file_path_path: Optional[str]
   spin: int
   save_dir: Optional[str]
+  xc: str
   use_pseudopotential: bool
   pseudopotential_file_dir: Optional[str]
   freq_mask_method: str
@@ -50,6 +51,7 @@ class JrystalConfigDict(ConfigDict):
   seed: int
   xla_preallocate: bool
   jax_enable_x64: bool
+  jax_debug_nans: bool
   verbose: bool
   eps: float
 
@@ -66,7 +68,7 @@ default_config = {
   "cutoff_energy": 100,
   "grid_sizes": 64,
   "k_grid_sizes": 3,
-  "occupation": "fermi-dirac",
+  "occupation": "uniform",
   "smearing": 0.001,
   "empty_bands": 8,
   "spin_restricted": True,
@@ -76,7 +78,9 @@ default_config = {
   "epoch": 5000,
   "optimizer": "adam",
   "optimizer_args": {
-    "learning_rate": 1e-2
+    "learning_rate": 0.01,
+    "b1": 0.9,
+    "b2": 0.99
   },
   "scheduler": None,
   "convergence_window_size": 20,
@@ -91,6 +95,7 @@ default_config = {
   "seed": 123,
   "xla_preallocate": True,
   "jax_enable_x64": True,
+  "jax_debug_nans": False,
   "verbose": True,
   "eps": 1e-8,
 }

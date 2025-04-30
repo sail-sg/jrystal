@@ -35,7 +35,6 @@ from .opt_utils import (
   create_freq_mask,
   create_grids,
   create_optimizer,
-  create_pseudopotential,
   set_env_params,
   get_ewald_coulomb_repulsion
 )
@@ -92,6 +91,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   num_bands = ceil(num_electrons / 2) + config.empty_bands
   logging.info(f"num_bands: {num_bands}")
   logging.info(f"XC functional: {config.xc}")
+  logging.info(f"Occupation method: {config.occupation}")
   freq_mask = create_freq_mask(config)
   ew = get_ewald_coulomb_repulsion(config)
 
@@ -104,6 +104,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     return occupation.occupation(
       params,
       num_kpts,
+      num_electrons,
+      spin = crystal.spin,
       method=config.occupation,
       spin_restricted=config.spin_restricted
     )
@@ -157,7 +159,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     config.occupation,
     spin_restricted=config.spin_restricted
   )
-  params_occ = jax.device_put(params_occ, sharding)
+  # params_occ = jax.device_put(params_occ, sharding)
   params = {"pw": params_pw, "occ": params_occ}
   opt_state = optimizer.init(params)
 

@@ -15,6 +15,7 @@
 from typing import Optional, Union
 
 import einops
+import jax
 import jax.numpy as jnp
 from jax.lax import stop_gradient
 from jaxtyping import Array, Float
@@ -29,6 +30,7 @@ def idempotent_param_init(
   num_electrons: int,
   num_kpts: int,
   spin: int = 0,
+  spin_restricted: bool = True,
 ) -> dict:
   r"""Initialize the parameters for the idempotent occupation.
 
@@ -73,12 +75,14 @@ def idempotent_param_init(
   param_up = unitary_matrix_param_init(
     key, [num_bands * num_kpts, num_elec_up * num_kpts], complex=False
   )
+  if spin_restricted:
+    return  {"param_up": param_up, "param_down": param_up}
 
-  param_down = unitary_matrix_param_init(
-    key, [num_bands * num_kpts, num_elec_down * num_kpts], complex=False
-  )
-
-  return {"param_up": param_up, "param_down": param_down}
+  else:
+    param_down = unitary_matrix_param_init(
+      key, [num_bands * num_kpts, num_elec_down * num_kpts], complex=False
+    )
+    return {"param_up": param_up, "param_down": param_down}
 
 
 def idempotent(
@@ -135,9 +139,9 @@ def idempotent(
   occ_down = o(param_down)
 
   if spin_restricted:
-    return occ_up + occ_down
+    return jnp.expand_dims(occ_up + occ_down, axis=0) / num_kpts
   else:
-    return jnp.stack([occ_up, occ_down], axis=0)
+    return jnp.stack([occ_up, occ_down], axis=0) / num_kpts
 
 
 def uniform(
@@ -239,15 +243,17 @@ def param_init(
   num_electrons: int,
   num_kpts: int,
   spin: int = 0,
-  method: str = "fermi-dirac",
+  method: str = "simplex-projector",
   spin_restricted: bool = True
 ) -> Union[dict, Float[Array, 'spin kpt band']]:
-  if method == "fermi-dirac":
+  if method == "idempotent":
     return idempotent_param_init(key, num_bands, num_electrons, num_kpts, spin)
   elif method == "uniform":
     return uniform(num_kpts, num_electrons, spin, num_bands, spin_restricted)
   elif method == "gamma":
     return gamma(num_kpts, num_electrons, spin, num_bands, spin_restricted)
+  elif method == "simplex-projector":
+    return simplex_projector_init(num_bands, num_kpts)
   else:
     raise ValueError(f"Invalid method: {method}")
 
@@ -255,14 +261,106 @@ def param_init(
 def occupation(
   params: dict,
   num_kpts: int,
-  method: str = "fermi-dirac",
+  num_electrons: Optional[int] = None,
+  spin: int = 0,
+  method: str = "simplex-projector",
   spin_restricted: bool = True
 ) -> Float[Array, 'spin kpt band']:
-  if method == "fermi-dirac":
+  if method == "idempotent":
     return idempotent(params, num_kpts, spin_restricted)
   elif method == "uniform":
     return stop_gradient(params)
   elif method == "gamma":
     return stop_gradient(params)
+  elif method == "simplex-projector":
+    return simplex_projector(params, num_electrons, spin, spin_restricted)
   else:
     raise ValueError(f"Invalid method: {method}")
+
+
+def simplex_projector_init(
+  num_bands: int,
+  num_kpts: int,
+) -> dict:
+  n = num_bands * num_kpts
+  params_up = (jnp.arange(n) - n//2)*0.1
+  params_up = params_up.reshape([num_kpts, num_bands])
+
+  params_down =(jnp.arange(n) - n//2)*0.1
+  params_down = params_down.reshape([num_kpts, num_bands])
+
+  return {"param_up": params_up, "param_down": params_down}
+
+
+def proj(x: jnp.array, sum: jnp.array):
+  """project onto the occupation constraint, such that:
+    sum(x) = sum
+    x >= 0
+    x <= 1
+
+  Args:
+      x (jnp.array): an 1-D array, must be non-negative and less than 1.
+      sum (float): the sum of the output array.
+
+  Returns:
+      jnp.array: an 1-D array, the sum of which is ``sum``.
+  """
+  n = x.shape[0]
+
+  def pushdown(x):
+    x_sorted = jnp.sort(x)
+    x_sum = jnp.sum(x)
+    x_cumsum = jnp.cumsum(x_sorted)
+    _rho = (x_sum - sum - x_cumsum) / (n - jnp.arange(n) - 1)
+    k = jnp.argmax(x_sorted > _rho)
+    _lambda = jax.lax.select(
+      k == 0,
+      (x_sum - sum) / n,
+      (x_sum - sum - x_cumsum.at[k-1].get()) / (n - k)
+    )
+    return jnp.maximum(x - _lambda, 0.)
+
+  def pushup(x):
+    x_sorted = jnp.sort(x)
+    x_sum = jnp.sum(x)
+    x_sorted = x_sorted.at[::-1].get()
+    x_cumsum = jnp.cumsum(x_sorted)
+    _rho = (x_sum - sum + (jnp.arange(n) + 1 - x_cumsum)) / (n-jnp.arange(n)-1)
+    k = jnp.argmax(x_sorted - _rho < 1.)
+    _lambda = jax.lax.select(
+      k == 0,
+      (sum-x_sum) / n,
+      (sum-x_sum-(k- x_cumsum.at[k-1].get())) / (n - k)
+    )
+    return jnp.minimum(x + _lambda, 1.)
+
+  output = jax.lax.select(jnp.sum(x) <= sum, pushup(x), pushdown(x))
+  return output
+
+
+def simplex_projector(
+  params: dict,
+  num_electrons: int,
+  spin: int = 0,
+  spin_restricted: bool = True,
+) -> Float[Array, 'spin kpt band']:
+  num_kpts = params["param_up"].shape[0]
+  num_bands = params["param_up"].shape[1]
+
+  params_up = jax.nn.sigmoid(params["param_up"])
+  params_up = jnp.ravel(params_up)
+  m_up = (num_electrons + spin) // 2 * num_kpts
+  m_down = (num_electrons - spin) // 2 * num_kpts
+  occ_up = proj(params_up, m_up) / num_kpts
+  occ_up = occ_up.reshape([num_kpts, num_bands])
+
+  params_down = jax.nn.sigmoid(params["param_down"])
+  params_down = jnp.ravel(params_down)
+  occ_down = proj(params_down, m_down) / num_kpts
+  occ_down = occ_down.reshape([num_kpts, num_bands])
+  occ = jnp.stack([occ_up, occ_down], axis=0)
+
+  if spin_restricted:
+    return jnp.sum(occ, axis=0, keepdims=True)
+  else:
+    return occ

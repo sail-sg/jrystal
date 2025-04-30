@@ -55,11 +55,11 @@ We also need a Fourier transform frequency cutoff mask:
 	# Set grid parameters
 	grid_size = [48, 48, 48]  # Real and reciprocal space grid
 	kpt_grid = [3, 3, 3]      # k-point sampling
-	
+
 	# Generate grids
 	g_vecs = jr.grid.g_vectors(crystal.cell_vectors, grid_sizes=grid_size)
 	k_vecs = jr.grid.k_vectors(crystal.cell_vectors, grid_sizes=kpt_grid)
-	
+
 	# Create frequency cutoff mask (100 Ha cutoff energy)
 	freq_mask = jr.grid.spherical_mask(
 		cell_vectors=crystal.cell_vectors,
@@ -79,16 +79,16 @@ We need to initialize two sets of parameters:
 	# Set random seed for reproducibility
 	key = jax.random.PRNGKey(0)
 	key1, key2 = jax.random.split(key)
-	
+
 	# Initialize parameters
 	num_bands = 12
 	# Diamond has 12 electrons (2 atoms × 6 electrons)
 	# We use 12 bands to include some empty states
 	# For spin_restricted calculations, with 2 electrons per band, 12 bands are sufficient
-	
+
 	# Initialize plane wave coefficients
 	param_pw = jr.pw.param_init(
-		key1, 
+		key1,
 		num_bands=num_bands,
 		num_kpts=k_vecs.shape[0],
 		freq_mask=freq_mask
@@ -96,7 +96,7 @@ We need to initialize two sets of parameters:
 
 ``jrystal`` provides three methods for handling occupation:
 
-- ``idempotent``: Fermi-Dirac distributed occupation numbers
+- ``idempotent``: Adaptive occupation numbers using the idempotent method
 - ``gamma``: Occupation only at the Gamma point
 - ``uniform``: Uniform occupation across all bands
 
@@ -121,8 +121,8 @@ To find the ground state energy of the diamond crystal, we need to define a func
 	def total_energy(param_pw, param_occ):
 		# Calculate occupation numbers
 		occ = jr.occupation.idempotent(
-			param_occ, 
-			num_electrons=crystal.num_electron, 
+			param_occ,
+			num_electrons=crystal.num_electron,
 			num_kpts=k_vecs.shape[0]
 		)
 
@@ -131,8 +131,8 @@ To find the ground state energy of the diamond crystal, we need to define a func
 
 		# Calculate total energy with LDA exchange-correlation
 		return jr.energy.total_energy(
-			coeff, crystal.positions, crystal.charges, 
-			g_vecs, k_vecs, crystal.vol, occ, 
+			coeff, crystal.positions, crystal.charges,
+			g_vecs, k_vecs, crystal.vol, occ,
 			xc="lda"
 		)
 
@@ -165,9 +165,8 @@ Now we set up the optimizer using ``optax`` and create the optimization loop:
 		e_tot, (param_pw, param_occ), opt_state = update(
 			param_pw, param_occ, opt_state
 		)
-		
+
 		if (i+1) % 100 == 0:
 			print(f"Step {i+1:4d} | Total Energy: {e_tot:.6f} Ha")
 
 The optimization will run for 1000 steps, printing the energy every 100 steps. You should see the total energy converge to a minimum value.
-

@@ -154,6 +154,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     return occupation.occupation(
       params,
       num_kpts,
+      num_electrons=np.sum(pseudopot.valence_charges),
+      spin=crystal.spin,
       method=config.occupation,
       spin_restricted=config.spin_restricted
     )

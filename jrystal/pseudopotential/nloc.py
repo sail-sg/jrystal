@@ -150,8 +150,8 @@ def _hamiltonian_matrix(
     hamiltonian_density_grid_reciprocal, g_vector_grid, kohn_sham=kohn_sham
   )
   har = jnp.fft.ifftn(har, axes=range(-dim, 0))
-  v_xc = potential.xc_functional(
-    hamiltonian_density_grid, g_vector_grid, kohn_sham=kohn_sham, xc=xc
+  v_xc = potential.xc_density(
+    hamiltonian_density_grid, g_vector_grid, kohn_sham=kohn_sham, xc_type=xc
   )
   v_s = har + v_xc
   h_s = braket.expectation(wave_grid, v_s, vol, diagonal=False, mode="real")
@@ -205,8 +205,8 @@ def _hamiltonian_trace(
   v_har = jnp.fft.ifftn(v_har_reciprocal, axes=range(-3, 0))
   har = braket.expectation(wave_grid, v_har, vol, diagonal=True, mode="real")
 
-  v_xc = potential.xc_functional(
-    hamiltonian_density_grid, g_vector_grid, kohn_sham=kohn_sham, xc=xc
+  v_xc = potential.xc_density(
+    hamiltonian_density_grid, g_vector_grid, kohn_sham=kohn_sham, xc_type=xc
   )
   xc_energy = braket.expectation(
     wave_grid, v_xc, vol, diagonal=True, mode="real"

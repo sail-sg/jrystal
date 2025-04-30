@@ -153,8 +153,10 @@ def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
 
 def create_occupation(config: JrystalConfigDict) -> Callable:
   occupation_method = config.occupation
-  if occupation_method == "fermi-dirac":
+  if occupation_method == "idempotent":
     return jr.occupation.idempotent
+  elif occupation_method == "simplex-projector":
+    return jr.occupation.simplex_projector
   elif occupation_method == "uniform":
     return jr.occupation.uniform
   elif occupation_method == "gamma":
