@@ -14,6 +14,9 @@
 
 from functools import wraps
 from typing import List, Callable, Any
+import jax
+import numpy as np
+import jax.numpy as jnp
 
 
 def map_over_atoms(fun: Callable[..., Any]) -> Callable[..., List]:
@@ -42,3 +45,36 @@ def map_over_atoms(fun: Callable[..., Any]) -> Callable[..., List]:
     return output
 
   return map_fun
+
+
+def stack_with_padding(array_list: List[List]):
+  # Input validation
+  if not array_list:
+    raise ValueError("Input list is empty!")
+
+  # Verify all arrays have same number of dimensions
+  ndim = array_list[0].ndim
+  for arr in array_list:
+    if arr.ndim != ndim:
+      raise ValueError("All arrays must have the same number of dimensions!")
+
+  # Compute maximum length for each dimension
+  max_shape = np.max([arr.shape for arr in array_list], axis=0)
+
+  # Pad each array only where dimensions don't match
+  padded_arrays = []
+  for arr in array_list:
+    # Determine padding for each axis:
+    # - (0, pad_size) for mismatched axes
+    # - (0, 0) for already matching axes
+    pad_width = []
+    for axis in range(ndim):
+      if arr.shape[axis] != max_shape[axis]:
+        pad_width.append((0, max_shape[axis] - arr.shape[axis]))
+      else:
+        pad_width.append((0, 0))
+    padded_arr = np.pad(arr, pad_width, mode='constant', constant_values=0)
+    padded_arrays.append(padded_arr)
+
+  # Stack all arrays
+  return np.stack(padded_arrays)
