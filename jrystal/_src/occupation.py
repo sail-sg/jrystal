@@ -417,6 +417,24 @@ def proj_capped_simplex(y, n: int, n_steps: int = 5):
   return x_opt_fn(g_final)
 
 
+@partial(jax.jit, static_argnames=["n_steps"])
+def proj_capped_simplex_analytic(y, n: int, n_steps: int = 5):
+  g_init = jnp.mean(y) - n / y.shape[0]
+
+  def grad_hess(gamma):
+    x_opt = jnp.clip(y - gamma, 0, 1)
+    not_clipped = (y - gamma > 0) & (y - gamma < 1)
+    not_clipped_size = jnp.sum(not_clipped)
+    grad = ((x_opt - y) *
+            not_clipped).sum() + gamma * not_clipped_size - jnp.sum(x_opt) + n
+    hess = not_clipped_size
+    return grad, hess
+
+  grad, hess = grad_hess(g_init)
+  g_final = g_init - grad / hess
+  return jnp.clip(y - g_final, 0, 1)
+
+
 def capped_simplex(
   params: dict,
   num_electrons: int,
@@ -432,12 +450,18 @@ def capped_simplex(
 
   occ_up_flat = params["param_up"].reshape(-1)
   occ_up_flat = jax.nn.sigmoid(occ_up_flat)
-  proj_up = proj_capped_simplex(occ_up_flat, m_up, n_steps=n_newton_steps)
+  # proj_up = proj_capped_simplex(occ_up_flat, m_up, n_steps=n_newton_steps)
+  proj_up = proj_capped_simplex_analytic(
+    occ_up_flat, m_up, n_steps=n_newton_steps
+  )
   occ_up = proj_up.reshape([num_kpts, num_bands]) / num_kpts
 
   occ_dn_flat = params["param_down"].reshape(-1)
   occ_dn_flat = jax.nn.sigmoid(occ_dn_flat)
-  proj_dn = proj_capped_simplex(occ_dn_flat, m_dn, n_steps=n_newton_steps)
+  # proj_dn = proj_capped_simplex(occ_dn_flat, m_dn, n_steps=n_newton_steps)
+  proj_dn = proj_capped_simplex_analytic(
+    occ_dn_flat, m_dn, n_steps=n_newton_steps
+  )
   occ_dn = proj_dn.reshape([num_kpts, num_bands]) / num_kpts
 
   occ = jnp.stack([occ_up, occ_dn], axis=0)
