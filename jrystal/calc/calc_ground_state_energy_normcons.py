@@ -221,6 +221,15 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       (loss_val, es), grad = jax.value_and_grad(loss, has_aux=True)(params)
       updates, opt_state = optimizer.update(grad, opt_state)
       params = optax.apply_updates(params, updates)
+      if config.occupation == "capped-simplex-proj":
+        occ_ = occupation.capped_simplex(
+          params["occ"],
+          num_electrons=np.sum(pseudopot.valence_charges),
+          spin=crystal.spin,
+          spin_restricted=False,
+        )
+        params["occ"]["param_up"] = occ_[0]
+        params["occ"]["param_down"] = occ_[1]
       return params, opt_state, loss_val, es
 
     # Define scheduler for temperature annealing.
@@ -292,5 +301,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
   logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
   logging.info(f"Total Energy: {etot+ew:.4f} Ha")
+
+  np.save(f"occ-{config.occupation}-k{k_vec.shape[0]}-s{config.smearing}-b{config.empty_bands}", occ)
 
   return density

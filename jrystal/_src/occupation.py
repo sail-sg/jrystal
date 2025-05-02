@@ -257,6 +257,10 @@ def param_init(
     return simplex_projector_init(num_bands, num_kpts)
   elif method == "capped-simplex":
     return simplex_projector_init(num_bands, num_kpts)
+  elif method == "capped-simplex-proj":
+    occ_uni = uniform(num_kpts, num_electrons, spin, num_bands, False)
+    params = {"param_up": occ_uni[0], "param_down": occ_uni[1]}
+    return params
   else:
     raise ValueError(f"Invalid method: {method}")
 
@@ -279,6 +283,11 @@ def occupation(
     return simplex_projector(params, num_electrons, spin, spin_restricted)
   elif method == "capped-simplex":
     return capped_simplex(params, num_electrons, spin, spin_restricted)
+  elif method == "capped-simplex-proj":
+    occ_up = params["param_up"]
+    occ_dn = params["param_down"]
+    occ = jnp.stack([occ_up, occ_dn], axis=0)
+    return occ
   else:
     raise ValueError(f"Invalid method: {method}")
 
