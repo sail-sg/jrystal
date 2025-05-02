@@ -287,7 +287,10 @@ def occupation(
     occ_up = params["param_up"]
     occ_dn = params["param_down"]
     occ = jnp.stack([occ_up, occ_dn], axis=0)
-    return occ
+    if spin_restricted:
+      return jnp.sum(occ, axis=0, keepdims=True)
+    else:
+      return occ
   else:
     raise ValueError(f"Invalid method: {method}")
 
@@ -397,7 +400,8 @@ def proj_capped_simplex(y, n: int, n_steps: int = 5):
   w_gg_fn = jax.grad(jax.grad(lagrangian))
 
   # Initial value for gamma
-  g_init = 0.0
+  # g_init = 0.0
+  g_init = jnp.mean(y) - n / y.shape[0]
 
   # Define a single Newton step function for scan
   def newton_step(g, _):
@@ -405,7 +409,10 @@ def proj_capped_simplex(y, n: int, n_steps: int = 5):
     return g_next, None
 
   # Use scan to perform n_steps of Newton's method
-  g_final, _ = jax.lax.scan(newton_step, g_init, None, length=n_steps)
+  if n_steps == 1:
+    g_final = g_init - w_g_fn(g_init) / w_gg_fn(g_init)
+  else:
+    g_final, _ = jax.lax.scan(newton_step, g_init, None, length=n_steps)
 
   return x_opt_fn(g_final)
 
@@ -415,7 +422,7 @@ def capped_simplex(
   num_electrons: int,
   spin: int = 0,
   spin_restricted: bool = True,
-  n_newton_steps: int = 5,
+  n_newton_steps: int = 1,
 ) -> Float[Array, 'spin kpt band']:
   num_kpts = params["param_up"].shape[0]
   num_bands = params["param_up"].shape[1]
@@ -424,10 +431,12 @@ def capped_simplex(
   m_dn = (num_electrons - spin) // 2 * num_kpts
 
   occ_up_flat = params["param_up"].reshape(-1)
+  occ_up_flat = jax.nn.sigmoid(occ_up_flat)
   proj_up = proj_capped_simplex(occ_up_flat, m_up, n_steps=n_newton_steps)
   occ_up = proj_up.reshape([num_kpts, num_bands]) / num_kpts
 
   occ_dn_flat = params["param_down"].reshape(-1)
+  occ_dn_flat = jax.nn.sigmoid(occ_dn_flat)
   proj_dn = proj_capped_simplex(occ_dn_flat, m_dn, n_steps=n_newton_steps)
   occ_dn = proj_dn.reshape([num_kpts, num_bands]) / num_kpts
 
