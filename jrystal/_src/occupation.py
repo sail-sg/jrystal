@@ -430,8 +430,16 @@ def proj_capped_simplex_analytic(y, n: int, n_steps: int = 5):
     hess = not_clipped_size
     return grad, hess
 
-  grad, hess = grad_hess(g_init)
-  g_final = g_init - grad / hess
+  def newton_step(g, _):
+    grad, hess = grad_hess(g)
+    g_next = g - grad / hess
+    return g_next, None
+
+  if n_steps == 1:
+    g_final, _ = newton_step(g_init, None)
+  else:
+    g_final, _ = jax.lax.scan(newton_step, g_init, None, length=n_steps)
+
   return jnp.clip(y - g_final, 0, 1)
 
 
