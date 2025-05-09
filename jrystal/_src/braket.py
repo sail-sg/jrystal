@@ -61,13 +61,13 @@ def reciprocal_braket(
       f"{bra.shape} and {ket.shape}."
     )
 
-  num_grids = np.prod(np.array(bra.shape))
+  num_grids = np.prod(np.array(bra.shape[-3:]))
   # Parseval's theorem
   parseval_factor = 1 / num_grids
   # numerical integration weights
   numerical_integral_weight = vol / num_grids
   product = jnp.sum(
-    jnp.conj(bra) * ket
+    jnp.conj(bra) * ket, axis=(-3, -2, -1)
   ) * parseval_factor * numerical_integral_weight
   return product.real
 
@@ -102,15 +102,17 @@ def real_braket(
   Raises:
       ValueError: If bra and ket shapes do not match.
   """
-  if bra.shape != ket.shape:
+  if bra.shape != ket.shape and (
+    jnp.squeeze(bra).ndim != 3 and jnp.squeeze(ket).ndim != 3
+  ):
     raise ValueError(
       f"bra and ket shape are not aligned. Got "
       f"{bra.shape} and {ket.shape}."
     )
 
-  num_grids = np.prod(np.array(bra.shape))
+  num_grids = np.prod(np.array(bra.shape[-3:]))
   numerical_integral_weight = vol / num_grids
-  product = jnp.sum(bra * ket) * numerical_integral_weight
+  product = jnp.sum(bra * ket, axis=(-3, -2, -1)) * numerical_integral_weight
   return product
 
 

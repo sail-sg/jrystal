@@ -56,9 +56,9 @@ def hartree_reciprocal(
     Complex[Array, 'x y z']: Hartree potential in reciprocal space. If  density_grid_reciprocal has batch axes, they are preserved in the output.
   """
   dim = g_vector_grid.shape[-1]
-  assert density_grid_reciprocal.ndim == dim + 1, (
-    'density_grid_reciprocal must contains spin axis'
-  )
+  assert density_grid_reciprocal.ndim in [
+    dim + 1, dim + 3
+  ], ('density_grid_reciprocal must contains spin axis')
   density_grid_reciprocal = jnp.sum(density_grid_reciprocal, axis=0)
 
   g_vec_square = jnp.sum(g_vector_grid**2, axis=-1)  # [x y z]

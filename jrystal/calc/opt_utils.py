@@ -17,12 +17,11 @@ import os
 from typing import Callable
 
 import jax
+import jrystal as jr
 import numpy as np
 import optax
 from absl import logging
 from optax._src import alias
-
-import jrystal as jr
 
 from .._src.crystal import Crystal
 from .._src.ewald import ewald_coulomb_repulsion
@@ -34,7 +33,7 @@ from .._src.grid import (
   proper_grid_size,
   r_vectors,
   spherical_mask,
-  translation_vectors,
+  translation_vectors
 )
 from .._src.utils import check_spin_number
 from ..config import JrystalConfigDict
@@ -45,6 +44,7 @@ def set_env_params(config: JrystalConfigDict):
   os.environ["MKL_NUM_THREADS"] = "4"
   os.environ["OMP_NUM_THREADS"] = "4"
   jax.config.update("jax_debug_nans", config.jax_debug_nans)
+  jax.config.update("jax_disable_jit", config.jax_debug_nans)
 
   if config.verbose:
     logging.set_verbosity(logging.INFO)

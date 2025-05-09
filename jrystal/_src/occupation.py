@@ -21,6 +21,7 @@ import jax.numpy as jnp
 from jax.lax import stop_gradient
 from jaxtyping import Array, Float
 
+from .mdmm import LagrangeMultiplier
 from .unitary_module import unitary_matrix, unitary_matrix_param_init
 from .utils import check_spin_number
 
@@ -261,6 +262,10 @@ def param_init(
     occ_uni = uniform(num_kpts, num_electrons, spin, num_bands, False)
     params = {"param_up": occ_uni[0], "param_down": occ_uni[1]}
     return params
+  elif method == "mdmm":
+    # parameterize the chemical potential
+    # return LagrangeMultiplier(jnp.zeros(1))
+    return jnp.zeros(1)
   else:
     raise ValueError(f"Invalid method: {method}")
 

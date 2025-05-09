@@ -1,20 +1,19 @@
 """Nonlocal Pseudopotential. """
 
-import numpy as np
-import jax
-import jax.numpy as jnp
 from functools import partial
 from typing import List, Optional
-from jaxtyping import Float, Array, Complex, Int
-from einops import einsum
 
-from .._src import braket, kinetic
-from .._src import potential, energy
+import jax
+import jax.numpy as jnp
+import numpy as np
+from einops import einsum
+from jaxtyping import Array, Complex, Float, Int
+
+from .._src import braket, energy, kinetic, potential, pw
 from .._src.utils import wave_to_density
-from .._src import pw
-from .spherical import legendre_to_sph_harm
-from .local import _hamiltonian_local, _energy_local
 from .beta import beta_sbt_grid_multi_atoms
+from .local import _energy_local, _hamiltonian_local
+from .spherical import legendre_to_sph_harm
 
 
 def _potential_nonlocal_square_root(
@@ -166,8 +165,12 @@ def _energy_nonlocal(
   occupation: Optional[Float[Array, "spin kpt band"]] = None,
 ) -> Float:
   hamil_nl = _hamiltonian_nonlocal(pw_coefficients, potential_nl_sqrt, vol)
-
-  return jnp.sum(jax.vmap(jax.vmap(jnp.diag))(hamil_nl) * occupation).real
+  hamil_nl_diag: Complex[Array, "spin kpt band"]
+  hamil_nl_diag = jax.vmap(jax.vmap(jnp.diag))(hamil_nl)
+  if occupation is None:
+    return hamil_nl_diag.real
+  else:
+    return jnp.sum(hamil_nl_diag * occupation).real
 
 
 def _hamiltonian_trace(

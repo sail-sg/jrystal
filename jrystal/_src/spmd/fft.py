@@ -27,7 +27,7 @@ from typing import Any, Tuple
 import jax
 import jax.interpreters
 import jax.numpy as jnp
-from jax import core
+from jax import core, extend
 from jax._src.interpreters import batching
 from jax.interpreters import mlir
 
@@ -76,11 +76,11 @@ def _fftn_impl(x: jnp.ndarray) -> jnp.ndarray:
 
 
 # Primitive definitions
-_ifftn_p = core.Primitive("ifftn_sharding")
+_ifftn_p = extend.core.Primitive("ifftn_sharding")
 _ifftn_p.def_impl(_ifftn_impl)
 mlir.register_lowering(_ifftn_p, mlir.lower_fun(_ifftn_impl, False))
 
-_fftn_p = core.Primitive("fftn_sharding")
+_fftn_p = extend.core.Primitive("fftn_sharding")
 _fftn_p.def_impl(_fftn_impl)
 mlir.register_lowering(_fftn_p, mlir.lower_fun(_fftn_impl, False))
 

@@ -67,14 +67,15 @@ def hartree(
   """
   dim = g_vector_grid.shape[-1]
 
-  assert density_grid_reciprocal.ndim == dim + 1, (
-    'density_grid_reciprocal must contains spin axis'
-  )
+  assert density_grid_reciprocal.ndim in [
+    dim + 1, dim + 3
+  ], ('density_grid_reciprocal must contains spin axis')
 
   v_hartree_reciprocal = potential.hartree_reciprocal(
     density_grid_reciprocal, g_vector_grid, kohn_sham
   )
   v_hartree_reciprocal = jnp.expand_dims(v_hartree_reciprocal, axis=0)
+
   hartree_energy = braket.reciprocal_braket(
     v_hartree_reciprocal, density_grid_reciprocal, vol
   )

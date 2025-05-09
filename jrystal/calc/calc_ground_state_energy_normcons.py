@@ -17,17 +17,19 @@ from dataclasses import dataclass
 from math import ceil
 from typing import List, Union
 
-import numpy as np
 import jax
+import jax.numpy as jnp
+import numpy as np
 import optax
 from absl import logging
 from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
 from tqdm import tqdm
 
-from .._src import energy, entropy, occupation, pw
+from .._src import braket, energy, entropy, mdmm, occupation, potential, pw
 from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
+from .._src.xc import xc_density
 from ..config import JrystalConfigDict
 from ..pseudopotential import local, nloc
 from .convergence import create_convergence_checker
@@ -37,8 +39,8 @@ from .opt_utils import (
   create_grids,
   create_optimizer,
   create_pseudopotential,
-  set_env_params,
-  get_ewald_coulomb_repulsion
+  get_ewald_coulomb_repulsion,
+  set_env_params
 )
 
 
@@ -160,13 +162,28 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       spin_restricted=config.spin_restricted
     )
 
-  def total_energy(params_pw, params_occ, g_vec, potential_loc, potential_nl):
+  def total_energy(
+    params_pw,
+    params_occ,
+    g_vec,
+    potential_loc,
+    potential_nl,
+    density_old=None,
+    temp=None,
+  ):
+    is_mdmm = density_old is not None
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
-    occ = get_occupation(params_occ)
+
+    if is_mdmm:  # don't contrat orbitals
+      occ = None
+    else:
+      occ = get_occupation(params_occ)
+
     density = pw.density_grid(coeff, crystal.vol, occ)
     density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
+
     kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
-    hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
+    # hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
     external_local = local._energy_local(
       density_reciprocal, v_local_reciprocal=potential_loc, vol=crystal.vol
     )
@@ -174,24 +191,78 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       coeff, potential_nl, vol=crystal.vol, occupation=occ
     )
 
-    xc = energy.xc_energy(
-      density, g_vec, crystal.vol, config.xc, kohn_sham=False
-    )
-    return kinetic + hartree + external_local + external_nonlocal + xc
+    if is_mdmm:  # compute Hxc using old density
+      # NOTE: v_hartree does not have the 0.5 prefactor.
+      v_hartree = potential.hartree_reciprocal(
+        density_old, g_vec, kohn_sham=True
+      )
+      hamil_hartree = braket.reciprocal_braket(
+        v_hartree, density_reciprocal, crystal.vol
+      )
+
+      exc = xc_density(density_old, g_vec, kohn_sham=False, xc_type=config.xc)
+      hamil_exc = braket.real_braket(exc, density, crystal.vol)
+      vxc = xc_density(density_old, g_vec, kohn_sham=True, xc_type=config.xc)
+      hamil_vxc = braket.real_braket(vxc, density, crystal.vol)
+
+      # computes occupation via Fermi-Dirac distribution
+      hamil_diag = kinetic + hamil_hartree + external_local + external_nonlocal + hamil_vxc
+      mu = params_occ  # negative
+      occ = jax.nn.sigmoid(
+        (jax.lax.stop_gradient(hamil_diag.real) + mu) / temp
+      ) / num_kpts
+      occ = jax.lax.stop_gradient(occ)
+
+      # computes the total energy using current occupation
+      e_diag = kinetic + 0.5 * hamil_hartree + external_local + external_nonlocal + hamil_exc
+      e_tot = (e_diag * occ).sum()
+
+      return jnp.squeeze(e_tot), occ
+
+    else:
+
+      hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
+      xc = energy.xc_energy(
+        density, g_vec, crystal.vol, config.xc, kohn_sham=False
+      )
+
+      e_tot = kinetic + hartree + external_local + external_nonlocal + xc
+      return jnp.squeeze(e_tot), None
 
   def get_entropy(params_occ):
     occ = get_occupation(params_occ)
     return entropy.fermi_dirac(occ, eps=EPS)
 
   def free_energy(
-    params_pw, params_occ, temp, g_vec, potential_loc, potential_nl
+    params_pw,
+    params_occ,
+    temp,
+    g_vec,
+    potential_loc,
+    potential_nl,
+    density_old
   ):
-    total = total_energy(
-      params_pw, params_occ, g_vec, potential_loc, potential_nl
+    total, occ = total_energy(
+      params_pw,
+      params_occ,
+      g_vec,
+      potential_loc,
+      potential_nl,
+      density_old,
+      temp
     )
-    etro = get_entropy(params_occ)
-    free = total - temp * etro
-    return free, (total, etro)
+    if config.occupation == "mdmm":  # add the multiplier part to the loss
+      num_electrons = np.sum(pseudopot.valence_charges)
+      infeas = occ.sum() - num_electrons
+      mu = params_occ[0]
+      damping = 10.  # TODO: make this a config parameter
+      etro = entropy.fermi_dirac(occ, eps=EPS)
+      free = total - temp * etro
+      free += 100 * (-mu * infeas + damping * infeas**2 / 2)
+    else:
+      etro = get_entropy(params_occ)
+      free = total - temp * etro
+    return free, (total, etro, occ)
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
@@ -206,7 +277,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   params_occ = occupation.param_init(
     key, num_bands, valence_charges, num_kpts, crystal.spin, config.occupation
   )
-  params_occ = jax.device_put(params_occ, sharding)
+  if config.occupation != "mdmm":
+    params_occ = jax.device_put(params_occ, sharding)
+  # else:  # mark Lagrangian multiplier for gradient ascent
+  #   optimizer = optax.chain(optimizer, mdmm.mdmm_descent_ascent())
   params = {"pw": params_pw, "occ": params_occ}
   opt_state = optimizer.init(params)
 
@@ -214,9 +288,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   with mesh:
 
     @jax.jit
-    def update(params, opt_state, temp, g_vec, potential_nl):
+    def update(params, opt_state, temp, g_vec, potential_nl, density_old):
       loss = lambda x: free_energy(
-        x["pw"], x["occ"], temp, g_vec, potential_loc, potential_nl
+        x["pw"], x["occ"], temp, g_vec, potential_loc, potential_nl, density_old
       )
       (loss_val, es), grad = jax.value_and_grad(loss, has_aux=True)(params)
       updates, opt_state = optimizer.update(grad, opt_state)
@@ -254,13 +328,38 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       iters = tqdm(range(config.epoch), disable=True)
 
     train_time = 0
+
+    @jax.jit
+    def density_fn_jit(params, occ):
+      coeff = pw.coeff(params["pw"], freq_mask)
+      return pw.density_grid(coeff, crystal.vol, occ)
+
+    if config.occupation == "mdmm":  # init occupation
+      occ = occupation.uniform(
+        num_kpts,
+        np.sum(pseudopot.valence_charges),
+        config.spin,
+        num_bands,
+        config.spin_restricted
+      )
+    else:
+      occ = None
+
     for i in iters:
       temp = temperature_scheduler(i)
       start = time.time()
+
+      if config.occupation == "mdmm":
+        density_old = density_fn_jit(params, occ)
+      else:
+        density_old = None
+
       params, opt_state, loss_val, es = update(
-        params, opt_state, temp, g_vec, potential_nl
+        params, opt_state, temp, g_vec, potential_nl, density_old
       )
-      etot, entro = es
+
+      etot, entro, occ = es
+
       etot = jax.block_until_ready(etot)
       train_time += time.time() - start
       converged = convergence_checker.check(etot)
@@ -268,10 +367,13 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
         logging.info("Converged.")
         break
 
-      iters.set_description(
+      desc_str = (
         f"Loss: {loss_val:.4f}|Energy: {etot+ew:.4f}|"
         f"Entropy: {entro:.4f}|T: {temp:.2E}"
       )
+      if config.occupation == "mdmm":
+        desc_str += f"|occ_sum: {occ.sum():.4f}|mu: {params['occ'][0]:.4f}"
+      iters.set_description(desc_str)
 
   if not converged:
     logging.warning("Did not converge.")
@@ -280,7 +382,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   #        END OF OPTIMIZATION        #
   #####################################
   coeff = pw.coeff(params["pw"], freq_mask)
-  occ = get_occupation(params["occ"])
+  if not config.occupation == "mdmm":
+    occ = get_occupation(params["occ"])
   density = pw.density_grid(coeff, crystal.vol, occ)
   density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
   kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
@@ -302,6 +405,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
   logging.info(f"Total Energy: {etot+ew:.4f} Ha")
 
-  np.save(f"occ-{config.occupation}-k{k_vec.shape[0]}-s{config.smearing}-b{config.empty_bands}", occ)
+  np.save(
+    f"occ-{config.occupation}-k{k_vec.shape[0]}-s{config.smearing}-b{config.empty_bands}",
+    occ
+  )
 
   return density

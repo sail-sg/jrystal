@@ -16,7 +16,8 @@ save_dir: null
 ################################################
 # xc functional
 # xc: "lda_x+lda_c_pw"
-xc: "gga_x_pbe+gga_c_pbe"
+xc: "lda_x"
+# xc: "gga_x_pbe+gga_c_pbe"
 # xc: "pbe"
 
 ################################################
@@ -45,7 +46,8 @@ grid_sizes: 32
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
 k_grid_sizes: [2, 2, 2]
 # Occupation method
-occupation: "simplex-projector"
+# occupation: "simplex-projector"
+occupation: "mdmm"
 # occupation support {"gamma", "uniform", "simplex-projector", "idempotent"}
 
 # smearing factor for the Fermi-Dirac distribution
