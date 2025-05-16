@@ -18,6 +18,7 @@ from typing import Optional, Union
 import einops
 import jax
 import jax.numpy as jnp
+import numpy as np
 from jax.lax import stop_gradient
 from jaxtyping import Array, Float
 
@@ -261,6 +262,8 @@ def param_init(
     occ_uni = uniform(num_kpts, num_electrons, spin, num_bands, False)
     params = {"param_up": occ_uni[0], "param_down": occ_uni[1]}
     return params
+  elif method == "fermi-dirac":
+    return simplex_projector_init(num_bands, num_kpts)
   else:
     raise ValueError(f"Invalid method: {method}")
 
@@ -478,3 +481,49 @@ def capped_simplex(
     return jnp.sum(occ, axis=0, keepdims=True)
 
   return occ
+
+
+# def fermi_dirac(
+#   params: dict,
+#   num_electrons: int,
+#   spin: int = 0,
+#   spin_restricted: bool = True,
+#   temperature: float = 1.,
+# ) -> Float[Array, 'spin kpt band']:
+#   """Fermi-Dirac distribution with chemical potential solved via root-finder.
+#   """
+#   num_kpts = params["param_up"].shape[0]
+#   num_bands = params["param_up"].shape[1]
+
+
+def halley_bisection(o, beta, nk, n_steps: int = 3):
+  mu_lo = min(o) - 10 / beta
+  mu_hi = max(o) + 10 / beta
+  F_fn = lambda mu: jax.nn.sigmoid(beta * (mu - o)).sum() - nk
+  mu = 0.5 * (mu_lo + mu_hi)  # initial guess
+  B_fn = lambda mu, mu_lo, mu_hi: (
+    jax.lax.select(F_fn(mu) < 0, mu, mu_lo), jax.lax.
+    select(F_fn(mu) < 0, mu_hi, mu)
+  )
+  F_grad = jax.grad(F_fn)
+  F_hess = jax.grad(F_grad)
+
+  def halley_step(mu):
+    grad, hess = F_grad(mu), F_hess(mu)
+    F = F_fn(mu)
+    return mu - (2 * F * grad) / (2 * grad**2 - F * hess)
+
+  for _ in range(n_steps):
+    mu_lo, mu_hi = B_fn(mu, mu_lo, mu_hi)
+    mu_B = 0.5 * (mu_lo + mu_hi)
+    mu_H = halley_step(mu_B)
+    mu = jax.lax.select(mu_H > mu_lo and mu_H < mu_hi, mu_H, mu_B)
+    print(mu)
+
+  f = jax.nn.sigmoid(beta * (mu - o))
+  return f
+
+
+o = np.random.randn(100)
+f = halley_bisection(o, 1000, nk=70, n_steps=3)
+print(f.sum())
