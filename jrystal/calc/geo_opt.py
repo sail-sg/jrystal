@@ -147,7 +147,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   optimizer = create_optimizer(config)
   params_pw = pw.param_init(key, num_bands, num_kpts, freq_mask, config.spin_restricted)
   params_occ = occupation.idempotent_param_init(key, num_bands, num_kpts)
-  params_pos = jax.random.uniform(key, (2, 3)) @ crystal.cell_vectors
+  params_pos = jax.random.uniform(
+    key, (crystal.charges.shape[0], 3)
+  ) @ crystal.cell_vectors
   params = {"pw": params_pw, "occ": params_occ, "pos": params_pos}
   opt_state = optimizer.init(params)
 
@@ -223,6 +225,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   output = GroundStateEnergyOutput(
      config, crystal, params["pw"], params["occ"], pos, etot, []
    )
+  print(pos @ jnp.linalg.inv(crystal.cell_vectors))
+  breakpoint()
  
   save_file = ''.join(crystal.symbol) + "_ground_state.pkl"
   with open(save_file, "wb") as f:

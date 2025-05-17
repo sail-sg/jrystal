@@ -116,10 +116,15 @@ def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
   config_dict = dict(config.optimizer_args)
   opt = getattr(alias, config.optimizer, None)
   lr = config_dict.pop("learning_rate")
-  if config.scheduler:
+  if config.scheduler == "piecewise_constant_schedule":
+    lr = optax.piecewise_constant_schedule(
+      init_value=lr,
+      boundaries_and_scales={int(b): 0.1
+        for b in np.arange(10000, config.epoch, 10000)
+      }
+    )
+  else:
     raise NotImplementedError("Scheduler is not implemented yet.")
-
-  # TODO: Add scheduler
 
   if opt:
     optimizer = opt(learning_rate=lr, **config_dict)
