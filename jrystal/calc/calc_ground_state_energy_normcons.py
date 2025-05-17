@@ -94,6 +94,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   num_bands = ceil(valence_charges / 2) + config.empty_bands
   logging.info(f"num_bands: {num_bands}")
   logging.info(f"XC functional: {config.xc}")
+  logging.info(f"occupation: {config.occupation}")
   freq_mask = create_freq_mask(config)
   ew = get_ewald_coulomb_repulsion(config)
   valence_charges = np.sum(pseudopot.valence_charges)
@@ -150,19 +151,21 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   )
 
   # Define functions for energy calculation.
-  def get_occupation(params):
+  @jax.jit
+  def get_occupation(params, temp):
     return occupation.occupation(
       params,
       num_kpts,
       num_electrons=np.sum(pseudopot.valence_charges),
       spin=crystal.spin,
       method=config.occupation,
-      spin_restricted=config.spin_restricted
+      spin_restricted=config.spin_restricted,
+      temp=temp,
     )
 
-  def total_energy(params_pw, params_occ, g_vec, potential_loc, potential_nl):
+  def total_energy(params_pw, params_occ, g_vec, potential_loc, potential_nl, temp):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
-    occ = get_occupation(params_occ)
+    occ = get_occupation(params_occ, temp)
     density = pw.density_grid(coeff, crystal.vol, occ)
     density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
     kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
@@ -177,21 +180,20 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     xc = energy.xc_energy(
       density, g_vec, crystal.vol, config.xc, kohn_sham=False
     )
-    return kinetic + hartree + external_local + external_nonlocal + xc
+    return kinetic + hartree + external_local + external_nonlocal + xc, occ
 
-  def get_entropy(params_occ):
-    occ = get_occupation(params_occ)
+  def get_entropy(occ):
     return entropy.fermi_dirac(occ, eps=EPS)
 
   def free_energy(
     params_pw, params_occ, temp, g_vec, potential_loc, potential_nl
   ):
-    total = total_energy(
-      params_pw, params_occ, g_vec, potential_loc, potential_nl
+    total, occ = total_energy(
+      params_pw, params_occ, g_vec, potential_loc, potential_nl, temp
     )
-    etro = get_entropy(params_occ)
+    etro = get_entropy(occ)
     free = total - temp * etro
-    return free, (total, etro)
+    return free, (total, etro, occ)
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
@@ -209,6 +211,18 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   params_occ = jax.device_put(params_occ, sharding)
   params = {"pw": params_pw, "occ": params_occ}
   opt_state = optimizer.init(params)
+
+  # occ_ = get_occupation(params["occ"])
+  # breakpoint()
+
+  # if "capped-simplex" in config.occupation:
+  #   occ_ = occupation.capped_simplex(
+  #     params["occ"],
+  #     num_electrons=np.sum(pseudopot.valence_charges),
+  #     spin=crystal.spin,
+  #     spin_restricted=False,
+  #   )
+  #   breakpoint()
 
   # Define update function.
   with mesh:
@@ -260,7 +274,19 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       params, opt_state, loss_val, es = update(
         params, opt_state, temp, g_vec, potential_nl
       )
-      etot, entro = es
+
+      # if i % 10 == 0:
+        # logging.info(params["occ"])
+        # logging.info(get_occupation(params["occ"]))
+        # occ_ = occupation.capped_simplex(
+        #   params["occ"],
+        #   num_electrons=np.sum(pseudopot.valence_charges),
+        #   spin=crystal.spin,
+        #   spin_restricted=config.spin_restricted,
+        # )
+        # logging.info(occ_)
+
+      etot, entro, occ = es
       etot = jax.block_until_ready(etot)
       train_time += time.time() - start
       converged = convergence_checker.check(etot)
@@ -268,9 +294,15 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
         logging.info("Converged.")
         break
 
+      # iters.set_description(
+      #   f"Loss: {loss_val:.4f}|Energy: {etot+ew:.4f}|"
+      #   f"Entropy: {entro:.4f}|T: {temp:.2E}"
+      # )
+
+      infeas = occ.sum() - np.sum(pseudopot.valence_charges)
       iters.set_description(
         f"Loss: {loss_val:.4f}|Energy: {etot+ew:.4f}|"
-        f"Entropy: {entro:.4f}|T: {temp:.2E}"
+        f"Entropy: {entro:.4f}|T: {temp:.2E}| infeas: {infeas:.6f}"
       )
 
   if not converged:
@@ -280,7 +312,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   #        END OF OPTIMIZATION        #
   #####################################
   coeff = pw.coeff(params["pw"], freq_mask)
-  occ = get_occupation(params["occ"])
+  occ = get_occupation(params["occ"], temp)
   density = pw.density_grid(coeff, crystal.vol, occ)
   density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
   kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)

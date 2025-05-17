@@ -276,7 +276,8 @@ def occupation(
   num_electrons: Optional[int] = None,
   spin: int = 0,
   method: str = "simplex-projector",
-  spin_restricted: bool = True
+  spin_restricted: bool = True,
+  temp: Optional[float] = None,
 ) -> Float[Array, 'spin kpt band']:
   if method == "idempotent":
     return idempotent(params, num_kpts, spin_restricted)
@@ -287,7 +288,7 @@ def occupation(
   elif method == "simplex-projector":
     return simplex_projector(params, num_electrons, spin, spin_restricted)
   elif method == "capped-simplex":
-    return capped_simplex(params, num_electrons, spin, spin_restricted)
+    return capped_simplex(params, num_electrons, spin, spin_restricted, temp=temp)
   elif method == "capped-simplex-proj":
     occ_up = params["param_up"]
     occ_dn = params["param_down"]
@@ -453,7 +454,8 @@ def capped_simplex(
   num_electrons: int,
   spin: int = 0,
   spin_restricted: bool = True,
-  n_newton_steps: int = 1,
+  n_steps: int = 5,
+  temp: float = 1.,
 ) -> Float[Array, 'spin kpt band']:
   num_kpts = params["param_up"].shape[0]
   num_bands = params["param_up"].shape[1]
@@ -462,19 +464,21 @@ def capped_simplex(
   m_dn = (num_electrons - spin) // 2 * num_kpts
 
   occ_up_flat = params["param_up"].reshape(-1)
-  occ_up_flat = jax.nn.sigmoid(occ_up_flat)
-  # proj_up = proj_capped_simplex(occ_up_flat, m_up, n_steps=n_newton_steps)
-  proj_up = proj_capped_simplex_analytic(
-    occ_up_flat, m_up, n_steps=n_newton_steps
-  )
+  # occ_up_flat = jax.nn.sigmoid(occ_up_flat)
+  # proj_up = proj_capped_simplex(occ_up_flat, m_up, n_steps=n_steps)
+  # proj_up = proj_capped_simplex_analytic(
+  #   occ_up_flat, m_up, n_steps=n_steps
+  # )
+  proj_up = householder_bisection(occ_up_flat, 1/temp, m_up, n_steps=n_steps)
   occ_up = proj_up.reshape([num_kpts, num_bands]) / num_kpts
 
   occ_dn_flat = params["param_down"].reshape(-1)
-  occ_dn_flat = jax.nn.sigmoid(occ_dn_flat)
-  # proj_dn = proj_capped_simplex(occ_dn_flat, m_dn, n_steps=n_newton_steps)
-  proj_dn = proj_capped_simplex_analytic(
-    occ_dn_flat, m_dn, n_steps=n_newton_steps
-  )
+  # occ_dn_flat = jax.nn.sigmoid(occ_dn_flat)
+  # proj_dn = proj_capped_simplex(occ_dn_flat, m_dn, n_steps=n_steps)
+  # proj_dn = proj_capped_simplex_analytic(
+  #   occ_dn_flat, m_dn, n_steps=n_steps
+  # )
+  proj_dn = householder_bisection(occ_dn_flat, 1/temp, m_dn, n_steps=n_steps)
   occ_dn = proj_dn.reshape([num_kpts, num_bands]) / num_kpts
 
   occ = jnp.stack([occ_up, occ_dn], axis=0)
@@ -485,9 +489,9 @@ def capped_simplex(
   return occ
 
 
-def householder_bisection(o, beta, nk, n_steps: int = 3, order:int=2, bisect: bool = True):
-  mu_lo = min(o) - 10 / beta
-  mu_hi = max(o) + 10 / beta
+def householder_bisection(o, beta, nk, n_steps: int = 3, order:int = 2, bisect: bool = True):
+  mu_lo = jnp.min(o) - 10 / beta
+  mu_hi = jnp.max(o) + 10 / beta
   F_fn = lambda mu: jax.nn.sigmoid(beta * (mu - o)).sum() - nk
   mu = 0.5 * (mu_lo + mu_hi)  # initial guess
   B_fn = lambda mu, mu_lo, mu_hi: (
@@ -504,7 +508,7 @@ def householder_bisection(o, beta, nk, n_steps: int = 3, order:int=2, bisect: bo
       mu_lo, mu_hi = B_fn(mu, mu_lo, mu_hi)
       mu_B = 0.5 * (mu_lo + mu_hi)
       mu_H = householder_step(mu_B, order)
-      mu = jax.lax.select(mu_H > mu_lo and mu_H < mu_hi, mu_H, mu_B)
+      mu = jax.lax.select(jnp.logical_and(mu_H > mu_lo , mu_H < mu_hi), mu_H, mu_B)
 
   else:
     for _ in range(n_steps):
