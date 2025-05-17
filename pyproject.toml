@@ -1,0 +1,18 @@
+[project]
+name = "jrystal"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ase>=3.25.0",
+    "chex>=0.1.89",
+    "einops>=0.8.1",
+    "jax-xc==0.0.8",
+    "jax[cuda12]==0.5.3",
+    "jaxtyping>=0.3.2",
+    "ml-collections>=1.1.0",
+    "optax>=0.2.4",
+    "pyyaml>=6.0.2",
+    "tqdm>=4.67.1",
+]
