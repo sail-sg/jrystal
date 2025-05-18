@@ -81,7 +81,7 @@ def parse_valence_configuration(valence_lines: list) -> list:
   """Parse the valence configuration section into a list of dictionaries."""
   valence_config = []
   for line in valence_lines:
-    if line.strip() and not line.startswith('Generation configuration'):
+    if line.strip() and 'Generation configuration' not in line:
       valence_data = line.split()
       if valence_data:
         valence_entry = {
@@ -195,6 +195,13 @@ def parse_upf(filepath: str) -> dict:
   header_info = parse_pp_header(root.find('PP_HEADER'))
   mesh_info = parse_pp_mesh(root.find('PP_MESH'))
   nonlocal_dict = parse_pp_nonlocal(root.find('PP_NONLOCAL'))
+  breakpoint()
+  # projectors
+  # nonlocal_dict['PP_BETA'][0].values()
+  # D_IJ
+  # nonlocal_dict['PP_DIJ']: list
+  
+
   local_dict = parse_pp_local(root.find('PP_LOCAL'))
 
   return {

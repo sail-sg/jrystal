@@ -5,7 +5,7 @@
 # Code will load the "$CRYSTAL.xyz" file in the geometry directory if
 # crystal name is provided, otherwise the code will read the from the path
 # specified by "crystal_file_path_path".
-crystal: "si"
+crystal: "diamond1"
 crystal_file_path_path: null
 
 ################################################
@@ -34,11 +34,11 @@ freq_mask_method: "spherical"
 # Only for "spherical" method, the cutoff_energy argument is valid.
 
 # cutoff energy in Hartree
-cutoff_energy: 40
+cutoff_energy: 70
 # grid sizes for the FFT grid
-grid_sizes: 48
+grid_sizes: 72
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
-k_grid_sizes: 1
+k_grid_sizes: 4
 # Occupation method
 occupation: "gamma"
 # occupation support {"fermi-dirac", "gamma", "uniform"}
@@ -60,7 +60,7 @@ ewald_args:
 ################################################
 #           Optimizizer Setting                #
 ################################################
-epoch: 10000
+epoch: 30000
 optimizer: "adam"
 optimizer_args:
   learning_rate: 0.01
@@ -72,7 +72,7 @@ optimizer_args:
 # systems.
 
 # "scheduler": "piecewise_constant_schedule",
-scheduler: null
+scheduler: piecewise_constant_schedule
 # optax scheduler. No scheduler is used if set to None.
 
 convergence_condition: 1.e-8
