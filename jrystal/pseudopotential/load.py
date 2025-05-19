@@ -151,6 +151,11 @@ def parse_pp_nonlocal(pp_nonlocal) -> dict:
     if q_element is not None:
       augmentation_data['PP_Q'] = list(map(float, q_element.text.split()))
 
+    # Parse <PP_MULTIPOLES>
+    multipole_element = augmentation_element.find('PP_MULTIPOLES')
+    if multipole_element is not None:
+      augmentation_data['PP_MULTIPOLES'] = list(map(float, multipole_element.text.split()))
+
     # Parse multiple <PP_QIJ> elements
     # qij_elements = augmentation_element.findall('.//PP_QIJ.1.1')
     qij_elements = [
@@ -177,6 +182,48 @@ def parse_pp_local(pp_local) -> list:
   return [float(i) for i in pp_local.text.split()]
 
 
+def parse_pp_full_wfc(pp_full_wfc) -> dict:
+
+  full_wfc_dict = {}
+  wfc_elements = [
+    elem for elem in pp_full_wfc if elem.tag.startswith('PP_AEWFC')
+  ]
+  if wfc_elements:
+    full_wfc_dict['PP_AEWFC'] = []
+    for beta in wfc_elements:
+      full_wfc_dict['PP_AEWFC'].append(
+        {
+          'index': beta.get('index'),
+          'label': beta.get('label'),
+          'angular_momentum': beta.get('l'),
+          'values': list(map(float, beta.text.split()))
+        }
+      )
+
+  wfc_elements = [
+    elem for elem in pp_full_wfc if elem.tag.startswith('PP_PSWFC')
+  ]
+  if wfc_elements:
+    full_wfc_dict['PP_PSWFC'] = []
+    for beta in wfc_elements:
+      full_wfc_dict['PP_PSWFC'].append(
+        {
+          'index': beta.get('index'),
+          'label': beta.get('label'),
+          'angular_momentum': beta.get('l'),
+          'values': list(map(float, beta.text.split()))
+        }
+      )
+  return full_wfc_dict
+
+
+def parse_pp_paw(pp_paw) -> dict:
+
+  pp_ae_nlcc = [float(i) for i in pp_paw.find('PP_AE_NLCC').text.split()]
+  pp_ae_vloc = [float(i) for i in pp_paw.find('PP_AE_VLOC').text.split()]
+  return {'PP_AE_NLCC': pp_ae_nlcc, 'PP_AE_VLOC': pp_ae_vloc}
+
+
 def parse_upf(filepath: str) -> dict:
   """Main function to parse a UPF file.
     The schema of upf can be find https://github.com/ltalirz/upf-schema.
@@ -195,14 +242,16 @@ def parse_upf(filepath: str) -> dict:
   header_info = parse_pp_header(root.find('PP_HEADER'))
   mesh_info = parse_pp_mesh(root.find('PP_MESH'))
   nonlocal_dict = parse_pp_nonlocal(root.find('PP_NONLOCAL'))
-  breakpoint()
-  # projectors
-  # nonlocal_dict['PP_BETA'][0].values()
-  # D_IJ
-  # nonlocal_dict['PP_DIJ']: list
-  
-
   local_dict = parse_pp_local(root.find('PP_LOCAL'))
+  nlcc_dict = {}
+  full_wfc_dict = {}
+  paw_dict = {}
+  if root.find('PP_NLCC') is not None:
+    nlcc_dict = parse_pp_local(root.find('PP_NLCC'))
+  if root.find('PP_FULL_WFC') is not None:
+    full_wfc_dict = parse_pp_full_wfc(root.find('PP_FULL_WFC'))
+  if root.find('PP_PAW') is not None:
+    paw_dict = parse_pp_paw(root.find('PP_PAW'))
 
   return {
     'PP_INFO': pp_info,
@@ -210,6 +259,9 @@ def parse_upf(filepath: str) -> dict:
     'PP_MESH': mesh_info,
     'PP_NONLOCAL': nonlocal_dict,
     'PP_LOCAL': local_dict,
+    'PP_NLCC': nlcc_dict,
+    'PP_FULL_WFC': full_wfc_dict,
+    'PP_PAW': paw_dict
   }
 
 
