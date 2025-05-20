@@ -31,14 +31,15 @@ def main():
   if _plot:
     """compare the AE_NLCC and NLCC"""
     index = 800
+    s = 0
     plt.plot(
-      pp_dict['PP_MESH']['PP_R'][:index],
-      pp_dict['PP_NLCC'][:index],
+      pp_dict['PP_MESH']['PP_R'][s:index],
+      pp_dict['PP_NLCC'][s:index],
       label=r"$\widetilde{n}_c$"
     )
     plt.plot(
-      pp_dict['PP_MESH']['PP_R'][:index],
-      pp_dict['PP_PAW']['PP_AE_NLCC'][:index],
+      pp_dict['PP_MESH']['PP_R'][s:index],
+      pp_dict['PP_PAW']['PP_AE_NLCC'][s:index],
       label=r"$n_c$"
     )
     plt.legend()
@@ -109,9 +110,25 @@ def main():
     plt.savefig(f"fig/qij{i}_cmp.png", dpi=300)
     plt.close()
 
-  n_c = int_over_grid(
-    np.array(pp_dict['PP_NLCC'])
+  """ compare the V_LOCAL and AE_V_LOCAL"""
+  index = 800
+  s = 0
+  plt.plot(
+    pp_dict['PP_MESH']['PP_R'][s:index],
+    -np.array(pp_dict['PP_LOCAL'][s:index]),
+    label=r"$\widetilde{n}_c$"
   )
+  plt.plot(
+    pp_dict['PP_MESH']['PP_R'][s:index],
+    -np.array(pp_dict['PP_PAW']['PP_AE_VLOC'][s:index]),
+    label=r"$n_c$"
+  )
+  plt.legend()
+  plt.xlabel(r"$r$ (a.u.)")
+  plt.ylabel(r"$\log n_c$ (a.u.)")
+  plt.yscale("log")
+  plt.savefig(f"fig/vlocal_cmp_{index}.png", dpi=300)
+  plt.close()
   breakpoint()
 
 

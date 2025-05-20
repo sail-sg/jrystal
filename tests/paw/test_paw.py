@@ -59,4 +59,10 @@ def test_ae_nlcc():
     jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC']) *
     jnp.array(pp_dict['PP_MESH']['PP_R'])**2
   ) * 4 * jnp.pi
+  # NOTE: the integration of the pseudized NLCC does not have
+  # specific meaning
+  # n_c = int_over_grid(
+  #   jnp.array(pp_dict['PP_NLCC']) *
+  #   jnp.array(pp_dict['PP_MESH']['PP_R'])**2
+  # ) * 4 * jnp.pi
   assert jnp.abs(n_c - 2) < 2e-9
