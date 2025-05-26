@@ -20,21 +20,21 @@ def test_augmentation_charge():
   """Test the augmentation charge integration."""
   for i in range(2):
     for j in range(2):
-      fr = jnp.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][i]['values']) *\
+      qijr = jnp.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][i]['values']) *\
         jnp.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][j]['values']) -\
         jnp.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values']) *\
         jnp.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][j]['values'])
-      q_ij = int_over_grid(fr)
+      q_ij = int_over_grid(qijr)
       assert jnp.abs(
         pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_Q'][i * 4 + j] - q_ij
       ) < 3e-9
   for i in range(2, 4):
     for j in range(2, 4):
-      fr = jnp.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][i]['values']) *\
+      qijr = jnp.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][i]['values']) *\
         jnp.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][j]['values']) -\
         jnp.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values']) *\
         jnp.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][j]['values'])
-      q_ij = int_over_grid(fr)
+      q_ij = int_over_grid(qijr)
       assert jnp.abs(
         pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_Q'][i * 4 + j] - q_ij
       ) < 3e-9

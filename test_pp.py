@@ -67,18 +67,6 @@ def main():
       plt.savefig(f"fig/wfc{i}_cmp.png", dpi=300)
       plt.close()
 
-    """check the orthogonality of PS_WFC and BETA
-    TODO: the accuracy is very low, need to check the implementation
-    """
-    I = np.eye(4)
-    for i in range(4):
-      for j in range(4):
-        fr = np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values']) *\
-          pp_dict['PP_NONLOCAL']['PP_BETA'][j]['values']
-        q_ij = np.sum(fr * np.array(pp_dict['PP_MESH']['PP_RAB']))
-        print(q_ij)
-        # assert (I[i, j] - q_ij) < 1e-8
-
     """check the calculation of PP_QIJ
     TODO: it is weird that currectly Q_{ij}^L(r)/Q_{ij} are not the same for the
     same l and different i, j
@@ -110,26 +98,64 @@ def main():
     plt.savefig(f"fig/qij{i}_cmp.png", dpi=300)
     plt.close()
 
-  """ compare the V_LOCAL and AE_V_LOCAL"""
-  index = 800
-  s = 0
-  plt.plot(
-    pp_dict['PP_MESH']['PP_R'][s:index],
-    -np.array(pp_dict['PP_LOCAL'][s:index]),
-    label=r"$\widetilde{n}_c$"
-  )
-  plt.plot(
-    pp_dict['PP_MESH']['PP_R'][s:index],
-    -np.array(pp_dict['PP_PAW']['PP_AE_VLOC'][s:index]),
-    label=r"$n_c$"
-  )
-  plt.legend()
-  plt.xlabel(r"$r$ (a.u.)")
-  plt.ylabel(r"$\log n_c$ (a.u.)")
-  plt.yscale("log")
-  plt.savefig(f"fig/vlocal_cmp_{index}.png", dpi=300)
-  plt.close()
+    """ compare the V_LOCAL and AE_V_LOCAL"""
+    index = 800
+    s = 0
+    plt.plot(
+      pp_dict['PP_MESH']['PP_R'][s:index],
+      -np.array(pp_dict['PP_LOCAL'][s:index]),
+      label=r"$\widetilde{n}_c$"
+    )
+    plt.plot(
+      pp_dict['PP_MESH']['PP_R'][s:index],
+      -np.array(pp_dict['PP_PAW']['PP_AE_VLOC'][s:index]),
+      label=r"$n_c$"
+    )
+    plt.legend()
+    plt.xlabel(r"$r$ (a.u.)")
+    plt.ylabel(r"$\log n_c$ (a.u.)")
+    plt.yscale("log")
+    plt.savefig(f"fig/vlocal_cmp_{index}.png", dpi=300)
+    plt.close()
+
+  """check the orthogonality of PS_WFC and BETA
+  NOTE: the accuracy is relatively low comparing to other integrations
+  """
+  for i in range(2):
+    for j in range(2):
+      q_ij = int_over_grid(
+        np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values']) *
+        pp_dict['PP_NONLOCAL']['PP_BETA'][j]['values']
+      )
+      print(q_ij)
+  for i in range(2, 4):
+    for j in range(2, 4):
+      q_ij = int_over_grid(
+        np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values']) *
+        pp_dict['PP_NONLOCAL']['PP_BETA'][j]['values']
+      )
+      print(q_ij)
+      # assert (I[i, j] - q_ij) < 1e-8
   breakpoint()
+
+  r"""check the calculation of D_{ij} factor, not work yet"""
+  for i in range(2):
+    for j in range(2):
+      fr = np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values']) *\
+        pp_dict['PP_NONLOCAL']['PP_BETA'][j]['values']
+      # the following line is incorrect according to the definition
+      B_ij = np.sum(fr * np.array(pp_dict['PP_MESH']['PP_RAB']))
+      q_ij = pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_Q'][i * 4 + j]
+      D_ij = pp_dict['PP_NONLOCAL']['PP_DIJ'][i * 4 + j]
+      qijr = np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][i]['values']) *\
+        np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][j]['values']) -\
+        np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values']) *\
+        np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][j]['values'])
+      screen = int_over_grid(qijr * pp_dict['PP_PAW']['PP_AE_VLOC'])
+      D_ij_ = D_ij + screen
+      e_j = (D_ij_ - B_ij) / q_ij
+      print(f"e{j}: {e_j:.4f}")
+      # assert (I[i, j] - q_ij) < 1e-8
 
 
 if __name__ == "__main__":
