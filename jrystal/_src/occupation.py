@@ -15,12 +15,11 @@
 from functools import partial
 from typing import Optional, Union
 
-
-from jax.experimental import jet
 import einops
 import jax
 import jax.numpy as jnp
 import numpy as np
+from jax.experimental import jet
 from jax.lax import stop_gradient
 from jaxtyping import Array, Float
 
@@ -288,7 +287,9 @@ def occupation(
   elif method == "simplex-projector":
     return simplex_projector(params, num_electrons, spin, spin_restricted)
   elif method == "capped-simplex":
-    return capped_simplex(params, num_electrons, spin, spin_restricted, temp=temp)
+    return capped_simplex(
+      params, num_electrons, spin, spin_restricted, temp=temp
+    )
   elif method == "capped-simplex-proj":
     occ_up = params["param_up"]
     occ_dn = params["param_down"]
@@ -469,7 +470,7 @@ def capped_simplex(
   # proj_up = proj_capped_simplex_analytic(
   #   occ_up_flat, m_up, n_steps=n_steps
   # )
-  proj_up = householder_bisection(occ_up_flat, 1/temp, m_up, n_steps=n_steps)
+  proj_up = householder_bisection(occ_up_flat, 1 / temp, m_up, n_steps=n_steps)
   occ_up = proj_up.reshape([num_kpts, num_bands]) / num_kpts
 
   occ_dn_flat = params["param_down"].reshape(-1)
@@ -478,7 +479,7 @@ def capped_simplex(
   # proj_dn = proj_capped_simplex_analytic(
   #   occ_dn_flat, m_dn, n_steps=n_steps
   # )
-  proj_dn = householder_bisection(occ_dn_flat, 1/temp, m_dn, n_steps=n_steps)
+  proj_dn = householder_bisection(occ_dn_flat, 1 / temp, m_dn, n_steps=n_steps)
   occ_dn = proj_dn.reshape([num_kpts, num_bands]) / num_kpts
 
   occ = jnp.stack([occ_up, occ_dn], axis=0)
@@ -489,7 +490,9 @@ def capped_simplex(
   return occ
 
 
-def householder_bisection(o, beta, nk, n_steps: int = 3, order:int = 2, bisect: bool = True):
+def householder_bisection(
+  o, beta, nk, n_steps: int = 3, order: int = 2, bisect: bool = True
+):
   mu_lo = jnp.min(o) - 10 / beta
   mu_hi = jnp.max(o) + 10 / beta
   F_fn = lambda mu: jax.nn.sigmoid(beta * (mu - o)).sum() - nk
@@ -500,7 +503,7 @@ def householder_bisection(o, beta, nk, n_steps: int = 3, order:int = 2, bisect: 
   )
 
   def householder_step(mu, d):
-    _, dF = jet.jet(lambda mu: 1 / F_fn(mu), primals=(mu, ), series=((1., 0.),))
+    _, dF = jet.jet(lambda mu: 1 / F_fn(mu), primals=(mu,), series=((1., 0.),))
     return mu + d * dF[-2] / dF[-1]
 
   if bisect:
@@ -508,7 +511,9 @@ def householder_bisection(o, beta, nk, n_steps: int = 3, order:int = 2, bisect: 
       mu_lo, mu_hi = B_fn(mu, mu_lo, mu_hi)
       mu_B = 0.5 * (mu_lo + mu_hi)
       mu_H = householder_step(mu_B, order)
-      mu = jax.lax.select(jnp.logical_and(mu_H > mu_lo , mu_H < mu_hi), mu_H, mu_B)
+      mu = jax.lax.select(
+        jnp.logical_and(mu_H > mu_lo, mu_H < mu_hi), mu_H, mu_B
+      )
 
   else:
     for _ in range(n_steps):
@@ -517,6 +522,65 @@ def householder_bisection(o, beta, nk, n_steps: int = 3, order:int = 2, bisect: 
   f = jax.nn.sigmoid(beta * (mu - o))
   return f
 
+
+avg_f = 0.7
+B = 10000
+
+
+@jax.custom_vjp
+def elliott(x):  # smooth, (0,1)–bounded
+  return 0.5 * (x / (1.0 + jnp.abs(x)) + 1.0)
+
+
+def elliott_fwd(x):
+  # Forward pass: compute the function and save values needed for backward pass
+  y = elliott(x)
+  return y, x  # Return both output and saved values for backward
+
+
+def elliott_bwd(x, grad_y):
+  # Backward pass: compute gradient with respect to inputs
+  # grad_y is the gradient with respect to the output
+  denom = 1.0 + jnp.abs(x)
+  grad_x = 0.5 / denom**2 * grad_y  # multiply by upstream gradient
+  return (
+    grad_x,
+  )  # Return as tuple, one element per argument of original function
+
+
+# Register the custom gradient
+elliott.defvjp(elliott_fwd, elliott_bwd)
+
+
+def elliott_grad(x):
+  denom = 1.0 + jnp.abs(x)
+  return 0.5 / denom**2  # derivative you need for custom-JVP
+
+
+# speed test
+import time
+
+
+@jax.jit
+def proj_fn(o):
+  # o = jax.nn.sigmoid(o)
+  o = elliott(o)
+  # f = proj_capped_simplex(o, int(avg_f * B), n_steps=1)
+  f = proj(o, int(avg_f * B))
+  return f
+
+
+proj_grad_jit = jax.jit(jax.grad(lambda _o: (proj_fn(_o).sum())))
+
+start = time.time()
+for _ in range(1000):
+  o = np.random.randn(B)
+  # f = proj_fn(o)
+  df_do = proj_grad_jit(o)
+
+jax.block_until_ready(f)
+end = time.time()
+print(f"Time taken for 1000 iterations: {end - start:.4f} seconds")
 
 # for order in range(1, 3):
 #   errors = []
