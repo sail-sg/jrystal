@@ -15,8 +15,9 @@ save_dir: null
 #         Exchange-Correlation Setting         #
 ################################################
 # xc functional
+xc: "lda_x"
 # xc: "lda_x+lda_c_pw"
-xc: "gga_x_pbe+gga_c_pbe"
+# xc: "gga_x_pbe+gga_c_pbe"
 # xc: "pbe"
 
 ################################################
@@ -41,7 +42,7 @@ freq_mask_method: "spherical"
 # cutoff energy in Hartree
 cutoff_energy: 40
 # grid sizes for the FFT grid
-grid_sizes: 32
+grid_sizes: 48
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
 k_grid_sizes: [2, 2, 2]
 # Occupation method
