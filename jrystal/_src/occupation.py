@@ -570,17 +570,17 @@ def proj_fn(o):
   return f
 
 
-proj_grad_jit = jax.jit(jax.grad(lambda _o: (proj_fn(_o).sum())))
+# proj_grad_jit = jax.jit(jax.grad(lambda _o: (proj_fn(_o).sum())))
 
-start = time.time()
-for _ in range(1000):
-  o = np.random.randn(B)
-  # f = proj_fn(o)
-  df_do = proj_grad_jit(o)
+# start = time.time()
+# for _ in range(1000):
+#   o = np.random.randn(B)
+#   # f = proj_fn(o)
+#   df_do = proj_grad_jit(o)
 
-jax.block_until_ready(f)
-end = time.time()
-print(f"Time taken for 1000 iterations: {end - start:.4f} seconds")
+# jax.block_until_ready(f)
+# end = time.time()
+# print(f"Time taken for 1000 iterations: {end - start:.4f} seconds")
 
 # for order in range(1, 3):
 #   errors = []
