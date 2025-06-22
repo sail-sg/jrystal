@@ -11,6 +11,8 @@ def calculate_pseudo_density(wfs):
   return None
 
 def calculate_atomic_density_matrices(D_asp):
+  """need to calculate the inner product between the pseudo-wave
+  with the projectors"""
   return None
 
 def calculate_multipole_moments():
