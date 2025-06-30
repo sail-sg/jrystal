@@ -11,205 +11,156 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Local potential functions for plane waves. """
-import numpy as np
-import jax.numpy as jnp
+"""Local potential functions for plane waves.
+
+This module provides functions for calculating local pseudopotential
+contributions in plane wave basis sets, including reciprocal space
+transformations and Hamiltonian matrix elements.
+"""
 from typing import List
-from jaxtyping import Float, Array, Complex
 
-from .utils import map_over_atoms
-from ..sbt import sbt
+import jax.numpy as jnp
+from interpax import CubicSpline
+from jax.tree_util import tree_map
+from jaxtyping import Array, Complex, Float
+
 from .._src import braket
-from .interpolate import cubic_spline
+from ..grid import g2r_vector_grid
 
 
-def _potential_local_reciprocal(
+def potential_local_reciprocal(
   positions: Float[Array, "atom 3"],
   g_vector_grid: Float[Array, "x y z 3"],
   r_grid: List[Float[Array, "r"]],
   local_potential_grid: List[Float[Array, "r"]],
   local_potential_charge: List[int],
   vol: float,
-) -> Complex[Array, "x y z"]:
+) -> Float[Array, "x y z"]:
   """Calculate the local potential in reciprocal space.
-  
-  .. note::
-    This function is for split the potential and density from energy calculation such that it is differentiable with respect to the density, and can be jitted.
+
+  This function computes the local pseudopotential contribution in
+  reciprocal space by transforming the real-space local potentials
+  and applying structure factors.
+
+  .. math::
+
+    v_{\text{loc}}(\mathbf{r}) =
+    \sum_I v^{\text{loc}}_{I} \bigg( \overline{\mathbf{r} - \mathbf{R}_I} \bigg)
+
+    \tilde{v}_{\text{loc}}(\mathbf{G}) = \sum_I \exp(-\text{i} \mathbf{G}
+    \cdot \mathbf{R}_I) \mathcal{F}[v^{\text{loc}}_{I}](\mathbf{G})
 
   Args:
-      positions (Float[Array, "atom 3"]): The positions of the atoms.
-      g_vector_grid (Float[Array, "x y z 3"]): The grid of the reciprocal vectors.
-      r_grid (List[Float[Array, "r"]]): The grid of the real space.
-      local_potential_grid (List[Float[Array, "r"]]): The local potential in real space.
-      local_potential_charge (List[int]): The charge of the local potential.
-      vol (float): The volume of the unit cell.
+    positions (Float[Array, "atom 3"]): Atomic positions in Cartesian coordinates.
+    g_vector_grid (Float[Array, "x y z 3"]): Reciprocal space grid vectors.
+    r_grid (List[Float[Array, "r"]]): Real-space radial grids for each atom type.
+    local_potential_grid (List[Float[Array, "r"]]): Local potential values on radial grids.
+    local_potential_charge (List[int]): Nuclear charges for each atom type.
+    vol (float): Unit cell volume.
 
   Returns:
-      Complex[Array, "x y z"]: The local potential in reciprocal space.
+    Float[Array, "x y z"]: Local potential in reciprocal space grid.
   """
-
-  # v_loc = (v_loc + Z/r) - Z/r   where v_loc is always negative
-
-  # First part v1 = (v_loc + Z/r)
-  # shape: [na, nr]
+  # Convert reciprocal to real space grid
+  r_vector_grid = g2r_vector_grid(g_vector_grid)
+  r_radius = jnp.sqrt(jnp.sum(r_vector_grid**2, axis=-1))
   g_radius = jnp.sqrt(jnp.sum(g_vector_grid**2, axis=-1))
   num_grids = jnp.prod(jnp.array(g_vector_grid.shape[:-1]))
-  local_potential_charge = jnp.array(local_potential_charge)
 
-  #############################################################
-  # V_r + Z/r - Z/r, where V_r + Z/r is numerical and Z/r is analytical
-  @map_over_atoms
-  def g(r, v_r, z):
-    v_r_prime = v_r + z / r
-    kk, f_k = sbt(r, v_r_prime, l=0, kmax=np.max(g_radius), norm=False)
-    f_k = cubic_spline(kk, f_k, g_radius)
-    f_k *= 4 * np.pi
-    return f_k
+  def _g(r, v_r, z):
+    """Com  pute the modified potential component for a single atom type."""
+    # Add Coulomb tail: v_r + z/r
+    v_r_modified = v_r + z / r
+    # Interpolate to 3D grid
+    cs = CubicSpline(r, v_r_modified)
+    v_r_3d = cs(r_radius)
+    # Transform to reciprocal space
+    v_g_3d = jnp.fft.fftn(v_r_3d, axes=range(-3, 0)) / num_grids
+    return v_g_3d
 
-  v1_g = g(r_grid, local_potential_grid, local_potential_charge)
-  v1_g = jnp.stack(v1_g)  # shape [na x y z]
+  # Compute v1: interpolated local potential in reciprocal space
+  v1_g = tree_map(_g, r_grid, local_potential_grid, local_potential_charge)
+  v1_g = jnp.stack(v1_g)  # shape: [na x y z]
 
-  # Second part v2 = - Z/r in reciprocal space
-  g_radius = g_radius.at[0, 0, 0].set(1e10)
-  v2_g = jnp.expand_dims(
-    local_potential_charge, axis=(1, 2, 3)
-  ) / jnp.expand_dims(g_radius**2, 0)  # [natom x y z]
+  # Compute v2: Coulomb tail correction in reciprocal space
+  # Avoid division by zero at G=0
+  g_radius_safe = g_radius.at[0, 0, 0].set(1e10)
+  charges_expanded = jnp.expand_dims(
+    jnp.array(local_potential_charge), axis=(1, 2, 3)
+  )
+  v2_g = charges_expanded / jnp.expand_dims(g_radius_safe**2, 0)
   v2_g *= 4 * jnp.pi
+  # Set G=0 component to zero (neutralizing background)
   v2_g = v2_g.at[:, 0, 0, 0].set(0)
 
-  # sum up
+  # Combine v1 and v2 components
   v_g = v1_g - v2_g
-  v_g = v_g.at[:, 0, 0, 0].set(0)
+  v_g = v_g.at[:, 0, 0, 0].set(0)  # Neutralize G=0 component
 
-  ################################################################
-  # structure factor
+  # Apply structure factor: exp(-i G · R)
   structure_factor = jnp.exp(
     -1.j * jnp.matmul(g_vector_grid, positions.transpose())
   )  # shape: [x y z na]
   structure_factor = jnp.transpose(structure_factor, axes=(3, 0, 1, 2))
   v_g *= structure_factor
-  v_g = jnp.sum(v_g, axis=0)  # reduce over atoms
+  v_g = jnp.sum(v_g, axis=0)  # Sum over atoms
 
+  # Apply normalization factors
   v_g = v_g * num_grids / vol
-  return v_g / 2  # factor of 1/2 is due to the conversion of unit.
-
-
-def _hamiltonian_local(
-  wave_grid: Complex[Array, "spin kpt band x y z"],
-  potential_local_grid_reciprocal: Complex[Array, "x y z"],
-  vol: Float,
-) -> Complex[Array, "spin kpt band band"]:
-  """The local potential hamiltonian in real space.
-  
-  .. note::
-    This function is for split the potential and density from energy calculation such that it is differentiable with respect to the density, and can be jitted.
-
-  
-  Args:
-    wave_grid (Complex[Array, "spin kpt band x y z"]): The wave function in real space.
-    potential_local_grid_reciprocal (Complex[Array, "x y z"]): The local potential in reciprocal space.
-    vol (Float): The volume of the unit cell.
-
-  Returns:
-      Complex[Array, "spin kpt band band"]: The local potential hamiltonian in real space.
-  """
-  v_loc_r = jnp.fft.ifftn(potential_local_grid_reciprocal, axes=range(-3, 0))
-  hamil = braket.expectation(
-    wave_grid, v_loc_r, vol, diagonal=False, mode="real"
-  )
-  return hamil
+  return v_g / 2  # Factor of 1/2 due to unit conversion
 
 
 def hamiltonian_local(
   wave_grid: Complex[Array, "spin kpt band x y z"],
-  positions: Float[Array, "atom 3"],
-  g_vector_grid: Float[Array, "x y z 3"],
-  r_grid: Float[Array, "r"],
-  local_potential_grid: Float[Array, "r"],
-  local_potential_charge: Float[Array, "atom"],
+  potential_local_grid_reciprocal: Complex[Array, "x y z"],
   vol: Float,
 ) -> Complex[Array, "spin kpt band band"]:
-  """The local potential hamiltonian in reciprocal space.
-  
-  Args:
-    wave_grid (Complex[Array, "spin kpt band x y z"]): The wave function in real space.
-    positions (Float[Array, "atom 3"]): The positions of the atoms.
-    g_vector_grid (Float[Array, "x y z 3"]): The grid of the reciprocal vectors.
-    r_grid (Float[Array, "r"]): The grid of the real space.
-    local_potential_grid (Float[Array, "r"]): The local potential in real space.
-    local_potential_charge (Float[Array, "atom"]): The charge of the local potential.
-    vol (Float): The volume of the unit cell.
+  """Compute the local potential Hamiltonian matrix elements.
 
-  Returns:
-      Complex[Array, "spin kpt band band"]: The local potential hamiltonian in reciprocal space.
-  """
-  v_loc_g = _potential_local_reciprocal(
-    positions,
-    g_vector_grid,
-    r_grid,
-    local_potential_grid,
-    local_potential_charge,
-    vol
-  )
-  v_loc_r = jnp.fft.ifftn(v_loc_g, axes=range(-3, 0))
-  hamil = braket.expectation(
-    wave_grid, v_loc_r, vol, diagonal=False, mode="real"
-  )
-  return hamil
+  This function calculates the matrix elements of the local potential
+  operator in the basis of wave functions. The potential is transformed
+  from reciprocal to real space before computing the matrix elements.
 
-
-def _energy_local(
-  reciprocal_density_grid: Complex[Array, "spin kpt band x y z"],
-  v_local_reciprocal: Complex[Array, "x y z"],
-  vol: Float,
-) -> Float:
-  """The local potential energy in reciprocal space.
-
-  .. note::
-    This function is for split the potential and density from energy calculation such that it is differentiable with respect to the density, and can be jitted.
 
   Args:
-      reciprocal_density_grid (Complex[Array, "spin kpt band x y z"]): The reciprocal density grid.
-      v_local_reciprocal (Complex[Array, "x y z"]): The local potential in reciprocal space.
-      vol (Float): The volume of the unit cell.
+    wave_grid: Wave functions in real space grid.
+    potential_local_grid_reciprocal: Local potential in reciprocal space.
+        Can be obtained from :func:`potential_local_reciprocal`.
+    vol: Unit cell volume.
 
   Returns:
-      Float: The local potential energy in reciprocal space.
+    Local potential Hamiltonian matrix elements.
   """
-
-  return braket.reciprocal_braket(
-    v_local_reciprocal, reciprocal_density_grid, vol
+  # Transform potential from reciprocal to real space
+  v_loc_real = jnp.fft.ifftn(potential_local_grid_reciprocal, axes=range(-3, 0))
+  # Compute matrix elements
+  hamiltonian = braket.expectation(
+    wave_grid, v_loc_real, vol, diagonal=False, mode="real"
   )
+  return hamiltonian
 
 
 def energy_local(
   reciprocal_density_grid: Complex[Array, "spin kpt band x y z"],
-  positions: Float[Array, "atom 3"],
-  g_vector_grid: Float[Array, "x y z 3"],
-  r_grid: Float[Array, "r"],
-  local_potential_grid: Float[Array, "r"],
-  local_potential_charge: Float[Array, "atom"],
+  potential_local_grid_reciprocal: Complex[Array, "x y z"],
   vol: Float,
 ) -> Float:
-  """The local potential energy in reciprocal space.
+  """Compute the local potential energy in reciprocal space.
+
+  This function calculates the energy contribution from the local potential
+  by computing the inner product between the potential and density in
+  reciprocal space.
 
   Args:
-    reciprocal_density_grid (Complex[Array, "spin kpt band x y z"]): The reciprocal density grid.
-    positions (Float[Array, "atom 3"]): The positions of the atoms.
-    g_vector_grid (Float[Array, "x y z 3"]): The grid of the reciprocal vectors.
-  
+    reciprocal_density_grid (Complex[Array, "spin kpt band x y z"]): Electron
+    density in reciprocal space.
+    potential_local_grid_reciprocal (Complex[Array, "x y z"]): Local potential
+    in reciprocal space. Can be obtained from `potential_local_reciprocal`.
+    vol (Float): Unit cell volume.
+
   Returns:
-    Float: The local potential energy in reciprocal space.
+    Float: Local potential energy contribution.
   """
-  v_external_reciprocal = _potential_local_reciprocal(
-    positions,
-    g_vector_grid,
-    r_grid,
-    local_potential_grid,
-    local_potential_charge,
-    vol
+  return braket.reciprocal_braket(
+    potential_local_grid_reciprocal, reciprocal_density_grid, vol
   )
-  external_energy = braket.reciprocal_braket(
-    v_external_reciprocal, reciprocal_density_grid, vol
-  )
-  return external_energy.real
