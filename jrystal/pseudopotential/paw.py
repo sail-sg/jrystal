@@ -21,6 +21,13 @@ def calculate_pseudo_density(wfs):
   """similar to the wave to density func"""
   return None
 
+def calculate_total_density(wfs):
+  for a, D_sii in wfs.D_asii.items():
+    Q_L = xp.einsum('sij, ijL -> L',
+      D_sii[:wfs.ndensities].real, wfs.delta_aiiL[a])
+    Q_L[0] += wfs.delta0_a[a]
+    ccc_aL[a] = Q_L
+
 def calculate_atomic_density_matrices(D_asp):
   """need to calculate the inner product between the pseudo-wave
   with the projectors"""
