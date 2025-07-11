@@ -84,7 +84,7 @@ default_config = {
   },
   "scheduler": None,
   "convergence_window_size": 20,
-  "convergence_condition": 1e-4,
+  "convergence_condition": 1e-6,
   "band_structure_empty_bands": 8,
   "k_path_special_points": None,
   "num_kpoints": 60,

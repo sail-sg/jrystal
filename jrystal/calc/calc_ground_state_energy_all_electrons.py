@@ -61,7 +61,7 @@ class GroundStateEnergyOutput:
 
 
 def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
-  """Calculate the ground state energy of a crystal with norm-conserving pseudopotential.
+  """Calculate the ground state energy of a crystal for all-electron calculations.
 
   Args:
       config (JrystalConfigDict): The configuration for the calculation.
@@ -105,7 +105,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       params,
       num_kpts,
       num_electrons,
-      spin = crystal.spin,
+      spin=crystal.spin,
       method=config.occupation,
       spin_restricted=config.spin_restricted
     )
