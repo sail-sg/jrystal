@@ -225,6 +225,9 @@ def xc_density(
   kohn_sham: bool = False,
   xc_type: str = "lda_x"
 ):
+  if xc_type == "lda_x":
+    return _lda_x(density_grid, kohn_sham)
+
   if "gga" in xc_type:
     exc_fn = lambda density, grad: sum(
       [_gga(xc_type_, density, grad) for xc_type_ in xc_type.split('+')]
@@ -251,3 +254,20 @@ def xc_density(
 
     else:
       return exc_fn(density_grid)
+
+
+def _lda_x(
+  density_grid: Float[Array, 's x y z'],
+  kohn_sham: bool = False
+):
+  dim = density_grid.ndim
+  if dim > 3:
+    density_grid = jnp.sum(density_grid, axis=range(0, dim - 3))
+
+  if kohn_sham:
+    density_grid = stop_gradient(density_grid)
+    output = -(density_grid * 3. / jnp.pi)**(1 / 3)
+  else:
+    output = -(density_grid * 3. / jnp.pi)**(1 / 3) * 0.75
+
+  return output
