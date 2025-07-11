@@ -36,13 +36,27 @@ def main():
 
   if args.mode == "energy":
     if config.use_pseudopotential:
-      jr.calc.energy_normcons(config)
+      if config.pseudopotential_type == "normcons":
+        jr.calc.energy_normcons(config)
+      elif config.pseudopotential_type == "ultrasoft":
+        jr.calc.energy_ultrasoft(config)
+      else:
+        raise ValueError(
+          f"Pseudopotential {config.pseudopotential_type} is not supported."
+        )
     else:
       jr.calc.energy_all_electrons(config)
 
   elif args.mode == "band":
     if config.use_pseudopotential:
-      jr.calc.band_normcons(config)
+      if config.pseudopotential_type == "normcons":
+        jr.calc.band_normcons(config)
+      elif config.pseudopotential_type == "ultrasoft":
+        jr.calc.band_ultrasoft(config)
+      else:
+        raise ValueError(
+          f"Pseudopotential {config.pseudopotential_type} is not supported."
+        )
     else:
       jr.calc.band_all_electrons(config)
 
