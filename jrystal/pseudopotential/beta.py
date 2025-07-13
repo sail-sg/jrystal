@@ -14,7 +14,7 @@
 """Functions for dealing with beta functions. """
 import numpy as np
 from typing import List, Optional
-from jaxtyping import Float, Array
+from jaxtyping import Float, Array, Int
 from ..sbt import batched_sbt
 from .interpolate import cubic_spline
 
@@ -22,18 +22,20 @@ from .interpolate import cubic_spline
 def beta_sbt_grid_single_atom(
   r_grid: Float[Array, "r"],
   nonlocal_beta_grid: Float[Array, "beta r"],
-  nonlocal_angular_momentum: List[int],
+  nonlocal_angular_momentum: Int[Array, "beta"],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Optional[Float[Array, "kpt 3"]] = None
 ) -> Float[Array, "kpt beta x y z"]:
   """
-  Calculate the spherical bessel transform of the beta functions for a single atom.
+  Calculate the spherical bessel transform of the beta functions for a single
+  atom.
 
   .. math::
 
     \beta_l(G) = \int_0^\infty  \beta(r) j_l(Gr) r^2 dr
 
-  Return the beta function value of angular momentum values :math:`l` at the reciprocal vectors :math:`G` per atom
+  Return the beta function value of angular momentum values :math:`l` at the
+  reciprocal vectors :math:`G` per atom
 
   Args:
       r_grid (Float[Array, "r"]): the r grid corresponding to the beta
@@ -55,6 +57,7 @@ def beta_sbt_grid_single_atom(
   assert len(nonlocal_angular_momentum) == nonlocal_beta_grid.shape[0]
   assert r_grid.shape[0] == nonlocal_beta_grid.shape[1]
 
+  nonlocal_angular_momentum = nonlocal_angular_momentum.tolist()
   if kpts is not None:
     gk_vector_grid = np.expand_dims(
       kpts, axis=(1, 2, 3)
@@ -76,7 +79,7 @@ def beta_sbt_grid_single_atom(
 def beta_sbt_grid_multi_atoms(
   r_grid: List[Float[Array, "r"]],
   nonlocal_beta_grid: List[Float[Array, "beta r"]],
-  nonlocal_angular_momentum: List[List[int]],
+  nonlocal_angular_momentum: List[Int[Array, "beta"]],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Optional[Float[Array, "kpt 3"]] = None
 ) -> Float[Array, "kpt beta x y z"]:
@@ -96,7 +99,7 @@ def beta_sbt_grid_multi_atoms(
     nonlocal_angular_momentum (List[List[int]]): angular momentum corresponding to the beta functions.
     g_vector_grid (Float[Array, "x y z 3"]): reciprocal vectors to interpolate.
     kpts (Optional[Float[Array, "kpt 3"]]): k-points. Default is None.
-    
+
   Returns:
     Float[Array, "kpt beta x y z"]: An jax.array of the beta functions evaluated in reciprocal space grid.
 
