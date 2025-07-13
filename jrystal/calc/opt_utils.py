@@ -14,7 +14,7 @@
 """Utility functions for optimization. """
 import argparse
 import os
-from typing import Callable
+from typing import Callable, Union
 
 import jax
 import numpy as np
@@ -35,6 +35,9 @@ from .._src.grid import (
   r_vectors,
   spherical_mask,
   translation_vectors,
+)
+from ..pseudopotential import (
+  NormConservingPseudopotential, UltrasoftPseudopotential
 )
 from .._src.utils import check_spin_number
 from ..config import JrystalConfigDict
@@ -113,13 +116,25 @@ def create_crystal(config: JrystalConfigDict) -> Crystal:
   return crystal
 
 
-def create_pseudopotential(config: JrystalConfigDict):
+def create_pseudopotential(
+  config: JrystalConfigDict
+) -> Union[NormConservingPseudopotential, UltrasoftPseudopotential]:
   assert config.use_pseudopotential
   crystal = create_crystal(config)
   _pkg_path = jr.get_pkg_path()
-  path = _pkg_path + '/pseudopotential/normconserving/'
+  if config.pseudopotential_file_dir is None:
+    path = _pkg_path + '/pseudopotential/' + config.pseudopotential_type + '/'
+  else:
+    path = config.pseudopotential_file_dir
   logging.info(f"Pseudopotential path: {path}")
-  pp = jr.pseudopotential.NormConservingPseudopotential.create(crystal, path)
+  if config.pseudopotential_type == "normcons":
+    pp = jr.pseudopotential.NormConservingPseudopotential.create(crystal, path)
+  elif config.pseudopotential_type == "ultrasoft":
+    pp = jr.pseudopotential.UltrasoftPseudopotential.create(crystal, path)
+  else:
+    raise ValueError(
+      f"Pseudopotential type {config.pseudopotential_type} is not supported."
+    )
   return pp
 
 
