@@ -44,17 +44,16 @@ def potential_local_reciprocal(
 
   .. math::
 
-    v_{\text{loc}}(\mathbf{r}) =
-    \sum_I v^{\text{loc}}_{I} \bigg( \overline{\mathbf{r} - \mathbf{R}_I} \bigg)
-
-    \tilde{v}_{\text{loc}}(\mathbf{G}) = \sum_I \exp(-\text{i} \mathbf{G}
-    \cdot \mathbf{R}_I) \mathcal{F}[v^{\text{loc}}_{I}](\mathbf{G})
+    < v_loc | G >
 
   Args:
-    positions (Float[Array, "atom 3"]): Atomic positions in Cartesian coordinates.
+    positions (Float[Array, "atom 3"]): Atomic positions in Cartesian
+    coordinates.
     g_vector_grid (Float[Array, "x y z 3"]): Reciprocal space grid vectors.
-    r_grid (List[Float[Array, "r"]]): Real-space radial grids for each atom type.
-    local_potential_grid (List[Float[Array, "r"]]): Local potential values on radial grids.
+    r_grid (List[Float[Array, "r"]]): Real-space radial grids for each atom
+    type.
+    local_potential_grid (List[Float[Array, "r"]]): Local potential values on
+    radial grids.
     local_potential_charge (List[int]): Nuclear charges for each atom type.
     vol (float): Unit cell volume.
 
@@ -107,7 +106,7 @@ def potential_local_reciprocal(
 
   # Apply normalization factors
   v_g = v_g * num_grids / vol
-  return v_g / 2  # Factor of 1/2 due to unit conversion
+  return v_g
 
 
 def hamiltonian_local(
