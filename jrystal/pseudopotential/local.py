@@ -32,7 +32,7 @@ def _potential_local_reciprocal(
   vol: float,
 ) -> Complex[Array, "x y z"]:
   """Calculate the local potential in reciprocal space.
-  
+
   .. note::
     This function is for split the potential and density from energy calculation such that it is differentiable with respect to the density, and can be jitted.
 
@@ -91,7 +91,7 @@ def _potential_local_reciprocal(
   v_g = jnp.sum(v_g, axis=0)  # reduce over atoms
 
   v_g = v_g * num_grids / vol
-  return v_g / 2  # factor of 1/2 is due to the conversion of unit.
+  return v_g
 
 
 def _hamiltonian_local(
@@ -100,11 +100,11 @@ def _hamiltonian_local(
   vol: Float,
 ) -> Complex[Array, "spin kpt band band"]:
   """The local potential hamiltonian in real space.
-  
+
   .. note::
     This function is for split the potential and density from energy calculation such that it is differentiable with respect to the density, and can be jitted.
 
-  
+
   Args:
     wave_grid (Complex[Array, "spin kpt band x y z"]): The wave function in real space.
     potential_local_grid_reciprocal (Complex[Array, "x y z"]): The local potential in reciprocal space.
@@ -130,7 +130,7 @@ def hamiltonian_local(
   vol: Float,
 ) -> Complex[Array, "spin kpt band band"]:
   """The local potential hamiltonian in reciprocal space.
-  
+
   Args:
     wave_grid (Complex[Array, "spin kpt band x y z"]): The wave function in real space.
     positions (Float[Array, "atom 3"]): The positions of the atoms.
@@ -197,7 +197,7 @@ def energy_local(
     reciprocal_density_grid (Complex[Array, "spin kpt band x y z"]): The reciprocal density grid.
     positions (Float[Array, "atom 3"]): The positions of the atoms.
     g_vector_grid (Float[Array, "x y z 3"]): The grid of the reciprocal vectors.
-  
+
   Returns:
     Float: The local potential energy in reciprocal space.
   """

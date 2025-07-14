@@ -14,26 +14,28 @@
 """Functions for dealing with beta functions. """
 import numpy as np
 from typing import List, Optional
-from jaxtyping import Float, Array
+from jaxtyping import Float, Array, Int
 from ..sbt import batched_sbt
-from .interpolate import cubic_spline
+from interpax import CubicSpline
 
 
 def beta_sbt_grid_single_atom(
   r_grid: Float[Array, "r"],
   nonlocal_beta_grid: Float[Array, "beta r"],
-  nonlocal_angular_momentum: List[int],
+  nonlocal_angular_momentum: Int[Array, "beta"],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Optional[Float[Array, "kpt 3"]] = None
 ) -> Float[Array, "kpt beta x y z"]:
   """
-  Calculate the spherical bessel transform of the beta functions for a single atom.
+  Calculate the spherical bessel transform of the beta functions for a single
+  atom.
 
   .. math::
 
     \beta_l(G) = \int_0^\infty  \beta(r) j_l(Gr) r^2 dr
 
-  Return the beta function value of angular momentum values :math:`l` at the reciprocal vectors :math:`G` per atom
+  Return the beta function value of angular momentum values :math:`l` at the
+  reciprocal vectors :math:`G` per atom
 
   Args:
       r_grid (Float[Array, "r"]): the r grid corresponding to the beta
@@ -46,14 +48,11 @@ def beta_sbt_grid_single_atom(
       kpts (Optional[Float[Array, "kpt 3"]]): k-points. Default is None.
 
   Returns:
-      Float[Array, "kptbeta x y z"]: the beta functions in reciprocal space.
-
-  .. warning::
-    Cubic spline interpolation is not implemented in JAX. This function uses ``NumPy`` and is not differentiable.
-
+      Float[Array, "kpt beta x y z"]: the beta functions in reciprocal space.
   """
   assert len(nonlocal_angular_momentum) == nonlocal_beta_grid.shape[0]
   assert r_grid.shape[0] == nonlocal_beta_grid.shape[1]
+  nonlocal_angular_momentum = list(nonlocal_angular_momentum)
 
   if kpts is not None:
     gk_vector_grid = np.expand_dims(
@@ -68,7 +67,7 @@ def beta_sbt_grid_single_atom(
     kmax=np.max(radius)
   )
 
-  beta_sbt = cubic_spline(k, beta_k, radius)
+  beta_sbt = CubicSpline(k, beta_k, axis=1)(radius)
   beta_sbt = np.swapaxes(beta_sbt, 0, 1)
   return beta_sbt
 
@@ -81,24 +80,28 @@ def beta_sbt_grid_multi_atoms(
   kpts: Optional[Float[Array, "kpt 3"]] = None
 ) -> Float[Array, "kpt beta x y z"]:
   """
-  Calculate the spherical bessel transform of the beta functions for multiple atoms.
+  Calculate the spherical bessel transform of the beta functions for multiple
+  atoms.
 
   .. math::
 
     \beta_l(G) = \int_0^\infty  \beta(r) j_l(Gr) r^2 dr
 
-  Return the beta function value of angular momentum values :math:`l` at the reciprocal vectors :math:`G` per atom
+  Return the beta function value of angular momentum values :math:`l` at the
+  reciprocal vectors :math:`G` per atom
 
   Args:
     r_grid (List[Float[Array, "r"]]): the r grid corresponding to the beta
       functions.
     nonlocal_beta_grid (List[Float[Array, "beta r"]]): beta values.
-    nonlocal_angular_momentum (List[List[int]]): angular momentum corresponding to the beta functions.
+    nonlocal_angular_momentum (List[List[int]]): angular momentum corresponding
+    to the beta functions.
     g_vector_grid (Float[Array, "x y z 3"]): reciprocal vectors to interpolate.
     kpts (Optional[Float[Array, "kpt 3"]]): k-points. Default is None.
-    
+
   Returns:
-    Float[Array, "kpt beta x y z"]: An jax.array of the beta functions evaluated in reciprocal space grid.
+    Float[Array, "kpt beta x y z"]: An jax.array of the beta functions
+    evaluated in reciprocal space grid.
 
   """
 
