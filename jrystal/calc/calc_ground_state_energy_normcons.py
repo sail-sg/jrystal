@@ -102,7 +102,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   converged = False
   # initialize pseudopotential
   logging.info("Initializing pseudopotential (local)...")
-  potential_loc = local._potential_local_reciprocal(
+  potential_loc = local.potential_local_reciprocal(
     crystal.positions,
     g_vec,
     pseudopot.r_grid,
@@ -167,8 +167,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
     kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
     hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
-    external_local = local._energy_local(
-      density_reciprocal, v_local_reciprocal=potential_loc, vol=crystal.vol
+    external_local = local.energy_local(
+      density_reciprocal, potential_loc, vol=crystal.vol
     )
     external_nonlocal = nloc._energy_nonlocal(
       coeff, potential_nl, vol=crystal.vol, occupation=occ
@@ -276,8 +276,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
   kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
   hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
-  external_local = local._energy_local(
-    density_reciprocal, v_local_reciprocal=potential_loc, vol=crystal.vol
+  external_local = local.energy_local(
+    density_reciprocal, potential_loc, vol=crystal.vol
   )
   external_nonlocal = nloc._energy_nonlocal(
     coeff, potential_nl, vol=crystal.vol, occupation=occ

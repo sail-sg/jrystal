@@ -103,7 +103,7 @@ def calc(
 
   jax.clear_caches()
   logging.info("Initializing pseudopotential (local)...")
-  potential_loc = local._potential_local_reciprocal(
+  potential_loc = local.potential_local_reciprocal(
     crystal.positions,
     g_vec,
     pseudopot.r_grid,
@@ -190,7 +190,7 @@ def calc(
     potential_nl_k = get_potential_nl(kpts[0:1], beta_gk[0:1])
     carry, _ = jax.lax.scan(
       update_scan, (params_pw_band, opt_state, potential_nl_k, kpts[0:1]),
-      length=config.band_structure_epoch, unroll = 1
+      length=config.band_structure_epoch, unroll=1
     )
     params_first_kpt, opt_state, _, _ = carry
 
@@ -205,7 +205,7 @@ def calc(
 
       carry, _ = jax.lax.scan(
         update_scan, (params_pw_band, opt_state, potential_nl_k, kpts),
-        length=config.k_path_fine_tuning_epoch, unroll = 1
+        length=config.k_path_fine_tuning_epoch, unroll=1
       )
       params_pw_band, opt_state, _, _ = carry
 
@@ -213,7 +213,7 @@ def calc(
 
     carry, params_fine_tuning = jax.lax.scan(
       finetuning, (params_first_kpt, opt_state),
-      xs = (kpts[1:], beta_gk[1:])
+      xs=(kpts[1:], beta_gk[1:])
     )
 
     logging.info("===> Eigen decomposition...")

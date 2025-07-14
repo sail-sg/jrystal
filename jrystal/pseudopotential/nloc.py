@@ -13,7 +13,7 @@ from .._src import potential, energy
 from .._src.utils import wave_to_density
 from .._src import pw
 from .spherical import legendre_to_sph_harm
-from .local import _hamiltonian_local, _energy_local
+from .local import hamiltonian_local, energy_local
 from .beta import beta_sbt_grid_multi_atoms
 
 
@@ -135,7 +135,7 @@ def _hamiltonian_matrix(
   ext_nloc = _hamiltonian_nonlocal(
     coefficient, potential_nonlocal_grid_sqrt, vol
   )
-  ext_loc = _hamiltonian_local(wave_grid, potential_local_grid_reciprocal, vol)
+  ext_loc = hamiltonian_local(wave_grid, potential_local_grid_reciprocal, vol)
 
   hamiltonian_density_grid_reciprocal = jnp.fft.fftn(
     hamiltonian_density_grid, axes=range(-dim, 0)
@@ -191,7 +191,7 @@ def _hamiltonian_trace(
   ext_nloc = _energy_nonlocal(
     coefficient, potential_nonlocal_grid_sqrt, vol, occupation
   )
-  ext_loc = _energy_local(
+  ext_loc = energy_local(
     reciprocal_density_grid, potential_local_grid_reciprocal, vol
   )
 
