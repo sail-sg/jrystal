@@ -49,6 +49,8 @@ class JrystalConfigDict(ConfigDict):
   k_path_fine_tuning: bool
   k_path_fine_tuning_epoch: int
   seed: int
+  parallel_over_k_mesh: bool
+  parallel_over_k_path: bool
   xla_preallocate: bool
   jax_enable_x64: bool
   jax_debug_nans: bool
@@ -93,6 +95,8 @@ default_config = {
   "k_path_fine_tuning": True,
   "k_path_fine_tuning_epoch": 300,
   "seed": 123,
+  "parallel_over_k_mesh": False,
+  "parallel_over_k_path": True,
   "xla_preallocate": True,
   "jax_enable_x64": True,
   "jax_debug_nans": False,
