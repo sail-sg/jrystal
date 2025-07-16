@@ -16,8 +16,9 @@ save_dir: null
 ################################################
 # xc functional
 # xc: "lda_x+lda_c_pw"
-xc: "gga_x_pbe+gga_c_pbe"
-# xc: "pbe"
+# xc: "gga_x_pbe+gga_c_pbe"
+xc: "lda_x"
+
 
 ################################################
 #           Pseudopotential Setting            #
@@ -125,6 +126,13 @@ k_path_fine_tuning_epoch: 300
 
 # Random seed
 seed: 123
+
+# Whether to distribute the calculation across multiple devices
+# Total Energy Minimization
+parallel_over_k_mesh: False
+# Band Structure Calculation
+# If True, the code will parallelize the calculation over the k-path.
+parallel_over_k_path: True
 
 # Jax Environment setting
 xla_preallocate: True

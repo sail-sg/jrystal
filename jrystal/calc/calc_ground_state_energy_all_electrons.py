@@ -79,10 +79,16 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Crystal: {crystal.symbol}")
   EPS = config.eps
 
-  mesh = Mesh(np.array(jax.devices()).reshape([1, -1]), ('s', 'k'))
-  sharding = NamedSharding(mesh, P('s', 'k'))  # shard by the kpt dimension.
+  # Initialize the mesh and sharding for the parallelization.
   num_devices = len(jax.devices())
-  logging.info(f"Number of devices: {num_devices}")
+  util_devices = num_devices if config.parallel_over_k_mesh else 1
+  logging.info(f"Parallel over k-mesh: {config.parallel_over_k_mesh}.")
+  logging.info(f"Number of devices (used): {num_devices} ({util_devices}).")
+
+  mesh = Mesh(
+    np.array(jax.devices()[:util_devices]).reshape([1, -1]), ('s', 'k')
+  )
+  sharding = NamedSharding(mesh, P('s', 'k'))  # shard by the kpt dimension.
 
   g_vec, r_vec, k_vec = create_grids(config)
   num_kpts = k_vec.shape[0]

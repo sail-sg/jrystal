@@ -23,7 +23,6 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 from absl import logging
-from tqdm import tqdm
 
 from .._src import pw
 from .._src.band import get_k_path
@@ -94,6 +93,12 @@ def calc(
     fractional=False
   )
   logging.info(f"{k_path.shape[0]} k-points generated.")
+
+  # Initialize the mesh and sharding for the parallelization.
+  num_devices = len(jax.devices())
+  util_devices = num_devices if config.parallel_over_k_path else 1
+  logging.info(f"Parallel over k-path: {config.parallel_over_k_path}.")
+  logging.info(f"Number of devices (used): {num_devices} ({util_devices}).")
 
   # optimitimize ground state energy if not provided.
   if ground_state_energy_output is None:
@@ -174,7 +179,7 @@ def calc(
   logging.info(f"Number of bands: {num_bands}")
   logging.info("Optimizing the first K point...")
 
-  @partial(jax.pmap, in_axes=(0, 0, 0, 0), devices=jax.devices())
+  @partial(jax.pmap, in_axes=(0, 0, 0, 0), devices=jax.devices()[:util_devices])
   def optimize_eigenvalues(kpts, beta_gk, params_pw_band, opt_state):
 
     logging.info("===> Optimizing the first K point...")
@@ -257,14 +262,13 @@ def calc(
 
     return eigen_values
 
-  num_devices = jax.device_count()
-  k_path = jnp.reshape(k_path, (num_devices, -1, 3))
-  beta_gk = jnp.reshape(beta_gk, (num_devices, -1, *beta_gk.shape[1:]))
+  k_path = jnp.reshape(k_path, (util_devices, -1, 3))
+  beta_gk = jnp.reshape(beta_gk, (util_devices, -1, *beta_gk.shape[1:]))
   params_pw_band = jax.tree.map(
-    lambda x: jnp.stack([x] * num_devices, axis=0), params_pw_band
+    lambda x: jnp.stack([x] * util_devices, axis=0), params_pw_band
   )
   opt_state = jax.tree.map(
-    lambda x: jnp.stack([x] * num_devices, axis=0), opt_state
+    lambda x: jnp.stack([x] * util_devices, axis=0), opt_state
   )
   time_start = time.time()
   eigen_values = optimize_eigenvalues(

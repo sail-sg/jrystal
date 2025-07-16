@@ -84,6 +84,12 @@ def calc(config: JrystalConfigDict):
   )
   logging.info(f"{k_path.shape[0]} k-points generated.")
 
+  # Initialize the mesh and sharding for the parallelization.
+  num_devices = len(jax.devices())
+  util_devices = num_devices if config.parallel_over_k_path else 1
+  logging.info(f"Parallel over k-path: {config.parallel_over_k_path}.")
+  logging.info(f"Number of devices (used): {num_devices} ({util_devices}).")
+
   # optimitimize ground state energy if not provided.
   logging.info("===> Starting total energy minimization...")
   ground_state_density_grid = energy_calc(config)
@@ -129,7 +135,7 @@ def calc(config: JrystalConfigDict):
   logging.info(f"Number of bands: {num_bands}")
   logging.info("Optimizing the first K point...")
 
-  @partial(jax.pmap, in_axes=(0, 0, 0), devices=jax.devices())
+  @partial(jax.pmap, in_axes=(0, 0, 0), devices=jax.devices()[:util_devices])
   def optimize_eigenvalues(kpts, params_pw_band, opt_state):
     logging.info("===> Optimizing the first K point...")
     eigen_values = []
