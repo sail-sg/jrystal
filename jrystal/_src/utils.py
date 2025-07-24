@@ -255,7 +255,7 @@ def fft_factor(n: int) -> int:
 
 
 def expand_coefficient(
-  coeff_compact: Complex[Array, "spin kpt band gpt"],
+  coeff_compact: Complex[Array, "spin kpt gpt band"],
   mask: Bool[Array, 'x y z'],
 ) -> Complex[Array, "spin kpt band x y z"]:
   """Expands compact coefficients into a full grid using a boolean mask.
@@ -263,7 +263,7 @@ def expand_coefficient(
     Transforms coefficients from a compact representation (where only significant points are stored) to a full grid representation by placing the coefficients at positions specified by a boolean mask. This is useful for converting between storage-efficient and computation-friendly representations.
 
     Args:
-        coeff_compact (Complex[Array, "spin kpt band gpt"]): Compact coefficient array with dimensions for spin, k-points, bands, and grid points.
+        coeff_compact (Complex[Array, "spin kpt gpt band"]): Compact coefficient array with dimensions for spin, k-points, grid points, and bands.
         mask (Bool[Array, 'x y z']): Boolean mask indicating valid grid points in the expanded representation. The number of True values must match the last dimension of coeff_compact.
 
     Returns:
