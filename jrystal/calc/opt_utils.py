@@ -24,6 +24,7 @@ from optax._src import alias
 
 import jrystal as jr
 
+from ..__init__ import get_pkg_path
 from .._src.crystal import Crystal
 from .._src.ewald import ewald_coulomb_repulsion
 from .._src.grid import (
@@ -182,3 +183,25 @@ def get_ewald_coulomb_repulsion(config: JrystalConfigDict):
     ewald_grid=ewald_grid
   )
   return ew
+
+
+def save_beta_sbt(output, filename=None):
+  if filename is None:
+    cache_dir = os.path.join(get_pkg_path(), "_cache")
+    filename = f"{cache_dir}/beta_sbt.npz"
+  if not os.path.exists(cache_dir):
+    os.makedirs(cache_dir)
+  np.savez(
+    filename,
+    *output
+  )
+
+
+def load_beta_sbt(filename=None):
+  if filename is None:
+    cache_dir = os.path.join(get_pkg_path(), "_cache")
+    filename = f"{cache_dir}/beta_sbt.npz"
+  if not os.path.exists(cache_dir):
+    os.makedirs(cache_dir)
+  output = np.load(filename)
+  return [output[f"arr_{i}"] for i in range(len(output))]

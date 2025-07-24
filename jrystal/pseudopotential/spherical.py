@@ -11,17 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Spherical coordinate system utilities and spherical harmonics transformations.
+"""Spherical coordinate system utilities and spherical harmonics
+transformations.
 
-This module provides functions for working with spherical coordinates and spherical harmonics, particularly useful for quantum mechanical calculations and pseudopotential transformations.
+This module provides functions for working with spherical coordinates and
+spherical harmonics, particularly useful for quantum mechanical calculations
+and pseudopotential transformations.
 """
 import numpy as np
 import jax
 import jax.numpy as jnp
-from jax.scipy.special import sph_harm
+from jax.scipy.special import sph_harm, sph_harm_y
 from jaxtyping import Float, Array
 from typing import Callable
-from functools import partial
 from .._src.utils import vmapstack
 
 
@@ -30,7 +32,7 @@ def cartesian_to_spherical(x: Float[Array, "*n 3"],
   """Convert Cartesian coordinates to spherical coordinates.
 
   Transforms 3D Cartesian coordinates (x, y, z) to spherical coordinates (r, θ, φ), where:
-  
+
   - r is the radial distance from the origin
   - θ (theta) is the azimuthal angle in the x-y plane from the x-axis (0 ≤ θ < 2π)
   - φ (phi) is the polar angle from the z-axis (0 ≤ φ ≤ π)
@@ -40,6 +42,9 @@ def cartesian_to_spherical(x: Float[Array, "*n 3"],
   Args:
     x: Float[Array, "*n 3"]: Cartesian coordinates with shape (..., 3) where ... represents arbitrary batch dimensions
 
+  Warning:
+    The definition of theta and phi is different from the jax convention.
+
   Returns:
     Float[Array, "*n 3"]: Spherical coordinates (r, θ, φ) with same batch shape
   """
@@ -47,29 +52,63 @@ def cartesian_to_spherical(x: Float[Array, "*n 3"],
   r = jnp.where(r == 0., eps, r)
 
   # Polar angle (phi)
-  phi = jnp.arccos(jnp.clip(x[2] / r, -1.0, 1.0))
+  phi = jnp.arccos(jnp.clip(x[..., 2] / r, -1.0, 1.0))
 
   # Azimuthal angle (theta) and shift to range [0, 2*pi)
-  theta = jnp.arctan2(x[1], x[0])
+  theta = jnp.arctan2(x[..., 1], x[..., 0])
   theta = jnp.mod(theta + 2 * jnp.pi, 2 * jnp.pi)
 
   return jnp.stack((r, theta, phi), axis=-1)
 
 
-# @partial(jax.jit, static_argnums=(0, 1))
+def batched_sph_harm(
+  l: int,
+  theta: Float[Array, "*batch"],
+  phi: Float[Array, "*batch"],
+) -> Float[Array, "*batch m"]:
+  """
+    Compute the spherical harmonics for a batch of points.
+
+    this function is used to compute the sum of spherical harmonics:
+
+    .. math::
+
+      Y_{l, m}(theta, phi)
+
+  Args:
+    l (int): The angular momentum quantum number.
+    theta (Float[Array, "*batch"]): The azimuthal angle.
+    phi (Float[Array, "*batch"]): The polar angle.
+
+  Returns:
+    Float[Array, "*batch m"]: The spherical harmonics, where the last dimension is the magnetic quantum number.
+
+  """
+  dim = theta.ndim
+  m = np.arange(-int(l), int(l) + 1)
+  n = np.array([l])
+
+  @vmapstack(dim)
+  def _sph_harm_fun(theta, phi):
+    return sph_harm_y(n, m, phi, theta)
+
+  return _sph_harm_fun(theta, phi)
+
+
 def legendre_to_sph_harm(
   l: int = 0,
   l_max: int = 4
 ) -> Callable[[Float[Array, "*batch 3"]], Float[Array, "*batch m"]]:
   """Convert Legendre polynomials to spherical harmonics decomposition.
 
-  Implements the decomposition of Legendre polynomials into spherical harmonics according to the formula:
+  Implements the decomposition of Legendre polynomials into spherical harmonics
+  according to the formula:
 
   .. math::
     (2l+1) P_l(x^Ty) = 4\pi \sum_m Y_{l, m}(x) Y^*_{l, m}(y)
 
   where:
-  
+
   - l is the angular momentum quantum number
   - P_l is the Legendre polynomial of order l
   - Y_{l,m} are the spherical harmonics
@@ -81,7 +120,9 @@ def legendre_to_sph_harm(
     l (int): Angular momentum quantum number (default: 0)
 
   Returns:
-      Callable that takes Cartesian coordinates of shape (*batch, 3) and returns spherical harmonics coefficients of shape (*batch, m), where m = 2l+1
+      Callable that takes Cartesian coordinates of shape (*batch, 3) and
+      returns spherical harmonics coefficients of shape (*batch, m), where m =
+      2l+1
   """
   m = np.arange(-l, l + 1)
   n = np.array([l])

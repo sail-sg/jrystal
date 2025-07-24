@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Functions for dealing with beta functions. """
-import numpy as np
 from typing import List, Optional
-from jaxtyping import Float, Array, Int
+
+import numpy as np
+# from interpax import CubicSpline
+from scipy.interpolate import CubicSpline
+from jaxtyping import Array, Float, Int
+
 from ..sbt import batched_sbt
-from interpax import CubicSpline
 
 
-def beta_sbt_grid_single_atom(
+def _beta_sbt_single_atom(
   r_grid: Float[Array, "r"],
   nonlocal_beta_grid: Float[Array, "beta r"],
   nonlocal_angular_momentum: Int[Array, "beta"],
@@ -52,6 +55,10 @@ def beta_sbt_grid_single_atom(
   """
   assert len(nonlocal_angular_momentum) == nonlocal_beta_grid.shape[0]
   assert r_grid.shape[0] == nonlocal_beta_grid.shape[1]
+  if r_grid[0] == 0:
+    r_grid = r_grid[1:]
+    nonlocal_beta_grid = nonlocal_beta_grid[:, 1:]
+
   nonlocal_angular_momentum = list(nonlocal_angular_momentum)
 
   if kpts is not None:
@@ -72,13 +79,13 @@ def beta_sbt_grid_single_atom(
   return beta_sbt
 
 
-def beta_sbt_grid_multi_atoms(
+def beta_sbt_grid(
   r_grid: List[Float[Array, "r"]],
   nonlocal_beta_grid: List[Float[Array, "beta r"]],
   nonlocal_angular_momentum: List[List[int]],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Optional[Float[Array, "kpt 3"]] = None
-) -> Float[Array, "kpt beta x y z"]:
+) -> List[Float[Array, "kpt beta x y z"]]:
   """
   Calculate the spherical bessel transform of the beta functions for multiple
   atoms.
@@ -100,13 +107,13 @@ def beta_sbt_grid_multi_atoms(
     kpts (Optional[Float[Array, "kpt 3"]]): k-points. Default is None.
 
   Returns:
-    Float[Array, "kpt beta x y z"]: An jax.array of the beta functions
-    evaluated in reciprocal space grid.
+    List[Float[Array, "kpt beta x y z"]]: A List of jax.array of the beta
+    functions evaluated in reciprocal space grid.
 
   """
-
+  # TODO: parallelize the calculation.
   output = []
   for r, b, l in zip(r_grid, nonlocal_beta_grid, nonlocal_angular_momentum):
-    output.append(beta_sbt_grid_single_atom(r, b, l, g_vector_grid, kpts))
-  output = np.concatenate(output, axis=1)
+    output.append(_beta_sbt_single_atom(r, b, l, g_vector_grid, kpts))
+  # output = np.concatenate(output, axis=1)
   return output
