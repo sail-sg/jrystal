@@ -29,7 +29,7 @@ from .._src import energy, entropy, occupation, pw
 from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
-from ..pseudopotential import local, nloc
+from ..pseudopotential import normcons
 from .convergence import create_convergence_checker
 from .opt_utils import (
   create_crystal,
@@ -38,8 +38,9 @@ from .opt_utils import (
   create_optimizer,
   create_pseudopotential,
   set_env_params,
-  get_ewald_coulomb_repulsion
+  get_ewald_coulomb_repulsion,
 )
+from .pre_calc_beta_sbt import pre_calc_beta_sbt
 
 
 @dataclass
@@ -52,7 +53,8 @@ class GroundStateEnergyOutput:
     params_pw (dict): Parameters for the plane wave basis.
     params_occ (dict): Parameters for the occupation.
     total_energy (Union[float, jax.Array]): The total energy of the crystal.
-    total_energy_history (List[float]): The optimization history of the total energy.
+    total_energy_history (List[float]): The optimization history of the total
+    energy.
   """
   config: JrystalConfigDict
   crystal: Crystal
@@ -63,7 +65,8 @@ class GroundStateEnergyOutput:
 
 
 def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
-  """Calculate the ground state energy of a crystal with norm-conserving pseudopotential.
+  """Calculate the ground state energy of a crystal with norm-conserving
+  pseudopotential.
 
   Args:
       config (JrystalConfigDict): The configuration for the calculation.
@@ -108,7 +111,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   converged = False
   # initialize pseudopotential
   logging.info("Initializing pseudopotential (local)...")
-  potential_loc = local.potential_local_reciprocal(
+  start = time.time()
+  potential_loc = normcons.potential_local_reciprocal(
     crystal.positions,
     g_vec,
     pseudopot.r_grid,
@@ -118,14 +122,15 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   )
 
   k_vec = jax.device_put(k_vec, NamedSharding(mesh, P('k')))
+  logging.info(
+    f"Local pseudopotential done. Time: {time.time() - start:.2f} seconds"
+  )
   logging.info("Initializing pseudopotential (Spherical Bessel Transform)...")
   start = time.time()
-  beta_gk = nloc.beta_sbt_grid_multi_atoms(
-    pseudopot.r_grid,
-    pseudopot.nonlocal_beta_grid,
-    pseudopot.nonlocal_angular_momentum,
-    g_vec,
-    k_vec,
+  beta_gk = pre_calc_beta_sbt(
+    pseudopot,
+    np.array(g_vec),
+    np.array(k_vec)
   )
   beta_gk = jax.device_put(beta_gk, NamedSharding(mesh, P('k')))
   end = time.time()
@@ -134,7 +139,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   )
   logging.info("Initializing pseudopotential (nonlocal)...")
   start = time.time()
-  potential_nl = nloc._potential_nonlocal_square_root(
+  potential_nl = normcons.potential_nonlocal_psi_reciprocal(
     crystal.positions,
     g_vec,
     k_vec,
@@ -152,7 +157,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   potential_nl = jax.device_put(potential_nl, NamedSharding(mesh, P('k')))
   end = time.time()
   logging.info(
-    f"Deploying pseudopotential (nonlocal) done. Times: {end - start:.2f} seconds"
+    f"Deploying pseudopotential (nonlocal) done. "
+    f"Times: {end - start:.2f} seconds"
   )
 
   # Define functions for energy calculation.
@@ -173,10 +179,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
     kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
     hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
-    external_local = local.energy_local(
+    external_local = normcons.energy_local(
       density_reciprocal, potential_loc, vol=crystal.vol
     )
-    external_nonlocal = nloc._energy_nonlocal(
+    external_nonlocal = normcons.energy_nonlocal(
       coeff, potential_nl, vol=crystal.vol, occupation=occ
     )
 
@@ -282,10 +288,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
   kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
   hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
-  external_local = local.energy_local(
+  external_local = normcons.energy_local(
     density_reciprocal, potential_loc, vol=crystal.vol
   )
-  external_nonlocal = nloc._energy_nonlocal(
+  external_nonlocal = normcons.energy_nonlocal(
     coeff, potential_nl, vol=crystal.vol, occupation=occ
   )
 

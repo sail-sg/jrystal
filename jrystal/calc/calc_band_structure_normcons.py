@@ -28,17 +28,18 @@ from .._src import pw
 from .._src.band import get_k_path
 from .._src.crystal import Crystal
 from ..config import JrystalConfigDict
-from ..pseudopotential import local, nloc
+from ..pseudopotential import normcons
 from .calc_ground_state_energy_normcons import GroundStateEnergyOutput
 from .calc_ground_state_energy_normcons import calc as energy_calc
 from .opt_utils import (
-  create_crystal,
-  create_freq_mask,
-  create_grids,
-  create_optimizer,
-  create_pseudopotential,
-  set_env_params,
+    create_crystal,
+    create_freq_mask,
+    create_grids,
+    create_optimizer,
+    create_pseudopotential,
+    set_env_params,
 )
+from .pre_calc_beta_sbt import pre_calc_beta_sbt
 
 
 @dataclass
@@ -49,7 +50,8 @@ class BandStructureOutput:
     config (JrystalConfigDict): The configuration for the calculation.
     crystal (Crystal): The crystal object.
     params_pw (dict): Parameters for the plane wave basis.
-    ground_state_energy_output (GroundStateEnergyOutput): The output of the ground state energy calculation.
+    ground_state_energy_output (GroundStateEnergyOutput): The output of the
+    ground state energy calculation.
     k_path (jax.Array): The K-path.
     band_structure (jax.Array): The band structure.
   """
@@ -65,11 +67,13 @@ def calc(
   config: JrystalConfigDict,
   ground_state_energy_output: Optional[GroundStateEnergyOutput] = None
 ) -> BandStructureOutput:
-  """Calculate the band structure of a crystal with norm-conserving pseudopotential.
+  """Calculate the band structure of a crystal with norm-conserving
+  pseudopotential.
 
   Args:
       config (JrystalConfigDict): The configuration for the calculation.
-      ground_state_energy_output (Optional[GroundStateEnergyOutput], optional): The output of the ground state energy calculation. Defaults to None.
+      ground_state_energy_output (Optional[GroundStateEnergyOutput], optional):
+      The output of the ground state energy calculation. Defaults to None.
 
   Returns:
       BandStructureOutput: The band structure output of the crystal.
@@ -98,17 +102,9 @@ def calc(
   num_devices = len(jax.devices())
   util_devices = num_devices if config.parallel_over_k_path else 1
   logging.info(f"Parallel over k-path: {config.parallel_over_k_path}.")
-  logging.info(f"Number of devices (used): {num_devices} ({util_devices}).")
-
-  # optimitimize ground state energy if not provided.
-  if ground_state_energy_output is None:
-    logging.info("===> Starting total energy minimization...")
-    start = time.time()
-    ground_state_density_grid = energy_calc(config)
-
-  jax.clear_caches()
+  logging.info(f"Number of GPU devices {num_devices}, used: {util_devices}.")
   logging.info("Initializing pseudopotential (local)...")
-  potential_loc = local.potential_local_reciprocal(
+  potential_loc = normcons.potential_local_reciprocal(
     crystal.positions,
     g_vec,
     pseudopot.r_grid,
@@ -118,20 +114,28 @@ def calc(
   )
   logging.info("Initializing pseudopotential (Spherical Bessel Transform)...")
   start = time.time()
-  beta_gk = nloc.beta_sbt_grid_multi_atoms(
-    pseudopot.r_grid,
-    pseudopot.nonlocal_beta_grid,
-    pseudopot.nonlocal_angular_momentum,
-    g_vec,
-    k_path,
+  beta_gk = pre_calc_beta_sbt(
+    pseudopot,
+    np.array(g_vec),
+    np.array(k_path),
   )  # shape: [kpt beta x y z]
   end = time.time()
   logging.info(
     f"Spherical Bessel Transform done. Times: {end - start:.2f} seconds"
   )
 
+  # optimitimize ground state energy if not provided.
+  if ground_state_energy_output is None:
+    logging.info("===> Starting total energy minimization...")
+    start = time.time()
+    ground_state_density_grid = energy_calc(config)
+  jax.clear_caches()
+
+  def select_beta_gk(beta_gk, k_idx):
+    return jax.tree.map(lambda x: x.at[k_idx:(k_idx+1)].get(), beta_gk)
+
   def get_potential_nl(kpt, beta_gk):
-    return nloc._potential_nonlocal_square_root(
+    return normcons.potential_nonlocal_psi_reciprocal(
       crystal.positions,
       g_vec,
       kpt,
@@ -144,7 +148,7 @@ def calc(
 
   def hamiltonian_trace(params_pw_band, kpts, g_vector_grid, potential_nl):
     coeff_band = pw.coeff(params_pw_band, freq_mask)
-    return nloc._hamiltonian_trace(
+    return normcons.hamiltonian_trace(
       coeff_band,
       ground_state_density_grid,
       potential_loc,
@@ -179,6 +183,7 @@ def calc(
   logging.info(f"Number of bands: {num_bands}")
   logging.info("Optimizing the first K point...")
 
+  # the main function for band structure calculation.
   @partial(jax.pmap, in_axes=(0, 0, 0, 0), devices=jax.devices()[:util_devices])
   def optimize_eigenvalues(kpts, beta_gk, params_pw_band, opt_state):
 
@@ -192,7 +197,8 @@ def calc(
       )
       return (params_pw_band, opt_state, potential_nl_k, kpts), None
 
-    potential_nl_k = get_potential_nl(kpts[0:1], beta_gk[0:1])
+    # optimize the first k point.
+    potential_nl_k = get_potential_nl(kpts[0:1], select_beta_gk(beta_gk, 0))
     carry, _ = jax.lax.scan(
       update_scan, (params_pw_band, opt_state, potential_nl_k, kpts[0:1]),
       length=config.band_structure_epoch, unroll=1
@@ -204,7 +210,7 @@ def calc(
     def finetuning(carry, x):
       kpts, beta_gk = x
       kpts = jnp.expand_dims(kpts, axis=0)
-      beta_gk = jnp.expand_dims(beta_gk, axis=0)
+      beta_gk = [jnp.expand_dims(_b, axis=0) for _b in beta_gk]
       params_pw_band, opt_state = carry
       potential_nl_k = get_potential_nl(kpts, beta_gk)
 
@@ -218,14 +224,14 @@ def calc(
 
     carry, params_fine_tuning = jax.lax.scan(
       finetuning, (params_first_kpt, opt_state),
-      xs=(kpts[1:], beta_gk[1:])
+      xs=(kpts[1:], [b[1:] for b in beta_gk])
     )
 
     logging.info("===> Eigen decomposition...")
 
     def eig_fn(param, kpts, potential_nl, g_vector_grid):
       coeff_i = pw.coeff(param, freq_mask)
-      hamil_matrix = nloc._hamiltonian_matrix(
+      hamil_matrix = normcons.hamiltonian_matrix(
         coeff_i,
         ground_state_density_grid,
         potential_loc,
@@ -242,7 +248,7 @@ def calc(
       eig_fn(
         params_first_kpt,
         kpts[0:1],
-        get_potential_nl(kpts[0:1], beta_gk[0:1]),
+        get_potential_nl(kpts[0:1], select_beta_gk(beta_gk, 0)),
         g_vec
       )
     ]
@@ -250,20 +256,22 @@ def calc(
     def eig_scan(carry, x):
       k, b, prm = x
       k = jnp.expand_dims(k, axis=0)
-      b = jnp.expand_dims(b, axis=0)
+      b = [jnp.expand_dims(_b, axis=0) for _b in b]
       potential_nl_k = get_potential_nl(k, b)
       eig = eig_fn(prm, k, potential_nl_k, g_vec)
       return None, eig
 
     carry, ys = jax.lax.scan(
-      eig_scan, None, xs=(kpts[1:], beta_gk[1:], params_fine_tuning)
+      eig_scan, None,
+      xs=(kpts[1:], [b[1:] for b in beta_gk], params_fine_tuning)
     )
     eigen_values += list(ys)
 
     return eigen_values
 
+  # reshape the k-path, beta_gk, and params_pw_band for parallelization.
   k_path = jnp.reshape(k_path, (util_devices, -1, 3))
-  beta_gk = jnp.reshape(beta_gk, (util_devices, -1, *beta_gk.shape[1:]))
+  beta_gk = [jnp.reshape(b, (util_devices, -1, *b.shape[1:])) for b in beta_gk]
   params_pw_band = jax.tree.map(
     lambda x: jnp.stack([x] * util_devices, axis=0), params_pw_band
   )
@@ -271,6 +279,8 @@ def calc(
     lambda x: jnp.stack([x] * util_devices, axis=0), opt_state
   )
   time_start = time.time()
+
+  # perform the band structure calculation. it is parallelized over k-path.
   eigen_values = optimize_eigenvalues(
     k_path, beta_gk, params_pw_band, opt_state
   )
