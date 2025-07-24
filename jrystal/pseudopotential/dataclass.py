@@ -74,6 +74,7 @@ class NormConservingPseudopotential(Pseudopotential):
   """
 
   r_grid: List[Float[Array, "num_r"]]
+  r_ab: List[Float[Array, "num_r"]]
   r_cutoff: List[float]
   l_max: int
   l_max_rho: int
@@ -104,6 +105,7 @@ class NormConservingPseudopotential(Pseudopotential):
 
     valence_charges = []
     r_grid = []
+    r_ab = []
     r_cutoff = []
     l_max = []
     l_max_rho = []
@@ -119,6 +121,7 @@ class NormConservingPseudopotential(Pseudopotential):
     for pp in pp_dict_list:
       valence_charges.append(int(float(pp["PP_HEADER"]["z_valence"])))
       r_grid.append(np.array(pp["PP_MESH"]["PP_R"]))
+      r_ab.append(np.array(pp["PP_MESH"]["PP_RAB"]))
       # r_cutoff.append(float(pp["PP_NONLOCAL"]["PP_BETA"]["cutoff_radius"][0]))
       r_cutoff.append(None)
       l_max.append(int(pp["PP_HEADER"]["l_max"]))
@@ -170,6 +173,7 @@ class NormConservingPseudopotential(Pseudopotential):
       atomic_symbols,
       valence_charges,
       r_grid,
+      r_ab,
       r_cutoff,
       l_max,
       l_max_rho,
@@ -219,7 +223,7 @@ class UltrasoftPseudopotential(NormConservingPseudopotential):
       functions and `l_max` is the maximum angular momentum.
 
       If `q_with_l` is .False., the `nonlocal_augmentation_qij` is an array of
-      shape (num_q, num_q) where `num_q` is the number of augmentation
+      shape (num_q, num_q, 1) where `num_q` is the number of augmentation
       functions.
   """
   nonlocal_augmentation_q_matrix: List[np.ndarray]
