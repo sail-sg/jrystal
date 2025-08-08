@@ -391,14 +391,14 @@ document.write(`
 <h2>Solid state basics<a class="headerlink" href="#solid-state-basics" title="Link to this heading">#</a></h2>
 <p>Solid-state physics mainly deals with crystalline solids, which has a periodic structure that can be described by a Bravais lattice. A crystal can be specified by the cell vectors <span class="math notranslate nohighlight">\(\vb{a}_{i}\)</span> of the unit cell, and the atomic configuration <span class="math notranslate nohighlight">\(\{Z_\ell, \vb*{\tau}_\ell  \}_\ell\)</span> within the unit cell, where <span class="math notranslate nohighlight">\(Z_\ell\)</span> is the charge of atom <span class="math notranslate nohighlight">\(\ell \)</span> and <span class="math notranslate nohighlight">\(\vb*{\tau}_\ell \)</span> is the coordinate. To capture interaction between different translated copies of the unit cells, a finite Bravais lattice with periodic boundary condition (PBC) is typically used. The finite Bravais lattice is commonly referred to as the <strong>simulation cell</strong>.</p>
 <p>Different from molecular systems, in periodic systems the potential is periodic over the unit cell, since at each location <span class="math notranslate nohighlight">\(\vb{r}\)</span> within the unit cell, potentials from all translated unit cells are felt. In other words, the tiling periodizes the non-periodic atomic Hartree and external potential. Bloch theorem [1] states that, for periodic potential <span class="math notranslate nohighlight">\(V(\vb{r} + \vb{R}_{\vb{m}})=V(\vb{r})\)</span>, the eigenstates of the Hamiltonian <span class="math notranslate nohighlight">\(\hat{H}\)</span> takes the form</p>
-<div class="amsmath math notranslate nohighlight" id="equation-c6a5d11e-633f-4a9a-a8e7-92d1294f659d">
-<span class="eqno">(1)<a class="headerlink" href="#equation-c6a5d11e-633f-4a9a-a8e7-92d1294f659d" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:bloch}
+<div class="amsmath math notranslate nohighlight" id="equation-06e3dbd8-78de-4676-9586-91dd7e109d27">
+<span class="eqno">(1)<a class="headerlink" href="#equation-06e3dbd8-78de-4676-9586-91dd7e109d27" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:bloch}
   \psi _{i, \vb{k}}(\vb{r}) = \exp [\text{i} \vb{k} ^{\top} \vb{r}] u_{i, \vb{k}}(\vb{r}), \quad \vb{k} = \sum_{d=1}^3 k_{d} \vb{b}_{d}
 \end{equation}\]</div>
 <p>where <span class="math notranslate nohighlight">\(n\)</span> is the band index and <span class="math notranslate nohighlight">\(u_{n, \vb{k}}\)</span> is a function periodic over the unit cell.</p>
 <p>To make sure that <span class="math notranslate nohighlight">\(\psi _{n, \vb{k}}\)</span> is periodic over the simulation cell of size <span class="math notranslate nohighlight">\(M_1\times M_2\times M_3\)</span>, the k-points <span class="math notranslate nohighlight">\(\vb{k}\)</span> can only take values from the lattice <span class="math notranslate nohighlight">\(k_{d}=m_{d} / M_{d}, m_{d}\in \mathbb{Z}\)</span>. Furthermore, <span class="math notranslate nohighlight">\(\vb{k}\)</span> within the first Brillouin zone (FBZ), i.e. <span class="math notranslate nohighlight">\(m_{i}\in [-\lfloor(M_{i}-1) / 2 \rfloor, \lfloor M_{i} / 2 \rfloor]\)</span>, gives all unique eigenvalues due to the periodicity in the reciprocal space. All <span class="math notranslate nohighlight">\(\vb{k}\)</span> within FBZ forms a reciprocal lattice with size <span class="math notranslate nohighlight">\(M_1\times M_2\times M_3\)</span>. Thus for periodic systems, the KS equation becomes</p>
-<div class="amsmath math notranslate nohighlight" id="equation-a452c23f-051e-498d-8cfc-c2bdc611ccbe">
-<span class="eqno">(2)<a class="headerlink" href="#equation-a452c23f-051e-498d-8cfc-c2bdc611ccbe" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:ks-eqn-periodic}
+<div class="amsmath math notranslate nohighlight" id="equation-88765206-ebe3-48ee-805d-bce4117b3061">
+<span class="eqno">(2)<a class="headerlink" href="#equation-88765206-ebe3-48ee-805d-bce4117b3061" title="Permalink to this equation">#</a></span>\[\begin{equation} \label{eqn:ks-eqn-periodic}
 \hat{H}[\rho]\psi_{i,\vb{k}}  = \epsilon _{i,\vb{k}} \psi_{i,\vb{k}}.
 \end{equation}\]</div>
 <p>For each <span class="math notranslate nohighlight">\(i\)</span>, there are distinct energy levels for each <span class="math notranslate nohighlight">\(\vb{k}\)</span>, and the collection <span class="math notranslate nohighlight">\(\epsilon _{i,\vb{k}}\)</span> for fixed <span class="math notranslate nohighlight">\(i\)</span> forms a line that are commonly referred to as the <span class="math notranslate nohighlight">\(i\)</span>-th <em>band</em>. Analogous to the HOMO-LUMO gap in molecular systems, the narrowest gap between the highest occupied band and the lowest unoccupied band are referred to as the band gap, which is an important indicator of the electronic conductivity of the system.
@@ -407,13 +407,13 @@ The calculation of a collection of orbital energies within some selected bands <
 <section id="k-space-decoupling">
 <h2>K-space decoupling<a class="headerlink" href="#k-space-decoupling" title="Link to this heading">#</a></h2>
 <p>In practical calculation, Galerkin approximation is usually applied to the periodic part of the orbital <span class="math notranslate nohighlight">\(u_{i, \vb{k}}\)</span>, and periodic basis are used to make sure that <span class="math notranslate nohighlight">\(u_{i , \vb{k}}\)</span> is periodic. Multiplying <span class="math notranslate nohighlight">\(e^{-\text{i} \vb{k} \vb{r}}\)</span> to both side of the periodic KS equation, we get</p>
-<div class="amsmath math notranslate nohighlight" id="equation-8cbac93b-70f5-4805-95ed-62fac434f4f4">
-<span class="eqno">(3)<a class="headerlink" href="#equation-8cbac93b-70f5-4805-95ed-62fac434f4f4" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-95ff6bfb-7a58-4492-b3fd-a69dc5c11c04">
+<span class="eqno">(3)<a class="headerlink" href="#equation-95ff6bfb-7a58-4492-b3fd-a69dc5c11c04" title="Permalink to this equation">#</a></span>\[\begin{equation}
   \hat{H}_{\vb{k}}[\rho] u_{i, \vb{k}} = \epsilon _{i, \vb{k}} u_{i, \vb{k}}
 \end{equation}\]</div>
 <p>where</p>
-<div class="amsmath math notranslate nohighlight" id="equation-6780841c-1c41-4e4d-baf6-f7ab339ec83a">
-<span class="eqno">(4)<a class="headerlink" href="#equation-6780841c-1c41-4e4d-baf6-f7ab339ec83a" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-ddc9f450-7d28-411b-b5f9-9c0e61744879">
+<span class="eqno">(4)<a class="headerlink" href="#equation-ddc9f450-7d28-411b-b5f9-9c0e61744879" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \hat{H}_{\vb{k}}[\rho] := e^{-\text{i} \vb{k} \vb{r}}\hat{H}[\rho]e^{\text{i} \vb{k} \vb{r}}.
 \end{equation}\]</div>
 <p>and <span class="math notranslate nohighlight">\(\mathcal{K}\)</span> is the k-path. The periodic KS equation can be solved at each k-point <span class="math notranslate nohighlight">\(\vb{k}\)</span> independently by solving the above eigenvalue problem. This is because orbitals with different k are always orthogonal due to Bloch theorem, which makes the Hamiltonian matrix <span class="math notranslate nohighlight">\(\hat{H}[\rho]\)</span> block diagonal. Therefore diagonalizing each block <span class="math notranslate nohighlight">\(\hat{H}_{\vb{k}}[\rho]\)</span> solves a part of the original eigenvalue problem.</p>
@@ -421,15 +421,15 @@ The calculation of a collection of orbital energies within some selected bands <
 <section id="discretization-and-direct-optimization">
 <h2>Discretization and Direct optimization<a class="headerlink" href="#discretization-and-direct-optimization" title="Link to this heading">#</a></h2>
 <p>Given a basis set <span class="math notranslate nohighlight">\(\{\phi_{\alpha}\}\)</span>, denote the coefficient as <span class="math notranslate nohighlight">\(c_{i, \vb{k}, \alpha }=\braket{\phi _{\alpha }}{u_{i,\vb{k}}}\)</span>, and the Hamiltonian matrix is discretized into the coefficient space as</p>
-<div class="amsmath math notranslate nohighlight" id="equation-43a4177b-a427-4556-a79f-823b0dbd08fd">
-<span class="eqno">(5)<a class="headerlink" href="#equation-43a4177b-a427-4556-a79f-823b0dbd08fd" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-8f4c354f-0294-423c-8cdb-af28e0fcdc39">
+<span class="eqno">(5)<a class="headerlink" href="#equation-8f4c354f-0294-423c-8cdb-af28e0fcdc39" title="Permalink to this equation">#</a></span>\[\begin{equation}
   H_{\vb{k}, ij}[\rho]
   =\mel{u  _{i, \vb{k}}}{\hat{H}_{\vb{k}}[\rho]}{u _{j, \vb{k}}}
   = \sum_{\alpha \beta } c^{*}_{i, \vb{k}, \alpha } c_{j, \vb{k}, \beta  } H_{\vb{k}, \alpha \beta }[\rho].
 \end{equation}\]</div>
 <p>At this point, the band structure calculation becomes a collection of <span class="math notranslate nohighlight">\(\abs{\mathcal{K}}\)</span> finite dimensional eigenvalue problems. One can solve them via direct optimization like in [2], where the trace of each <span class="math notranslate nohighlight">\(H_{\vb{k}, ij}[\rho]\)</span> is minimized. That is, we solve the following optimization problem:</p>
-<div class="amsmath math notranslate nohighlight" id="equation-ea4c8e34-9093-49fd-80e1-fbdf27197efe">
-<span class="eqno">(6)<a class="headerlink" href="#equation-ea4c8e34-9093-49fd-80e1-fbdf27197efe" title="Permalink to this equation">#</a></span>\[\begin{equation}
+<div class="amsmath math notranslate nohighlight" id="equation-c3f3f6b0-67c4-489b-a79a-068a95eb1b31">
+<span class="eqno">(6)<a class="headerlink" href="#equation-c3f3f6b0-67c4-489b-a79a-068a95eb1b31" title="Permalink to this equation">#</a></span>\[\begin{equation}
 \min_{\vb{c}_{\vb{k}}} \tr H_{\vb{k}, ij}[\rho^*]
 \end{equation}\]</div>
 <p>where <span class="math notranslate nohighlight">\(\rho^*\)</span> is the ground state density solved in a total energy calculation. In principle one need to update <span class="math notranslate nohighlight">\(\rho\)</span> self-consistently since we are changing <span class="math notranslate nohighlight">\(\vb{c}\)</span>, however this is expensive and in practice the above approximation is usually applied. This approximation is commonly referred to as the Non-self-consistent-field (NSCF) step.</p>
