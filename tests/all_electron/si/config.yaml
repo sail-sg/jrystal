@@ -125,3 +125,7 @@ verbose: True
 eps: 1.e-08
 
 debug: False
+
+jax_debug_nans: False
+spin: 0
+convergence_window_size: 50

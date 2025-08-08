@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Hessian for Complex-Valued Functions. """
+from typing import Callable
+
 import jax
 import jax.numpy as jnp
-from typing import Callable
 
 
 def complex_hessian(
   f: Callable[[jnp.ndarray], jnp.ndarray],
   primal: jnp.ndarray,
 ) -> jnp.ndarray:
-  """Compute the Hessian of a complex-valued function at a point. 
+  """Compute the Hessian of a complex-valued function at a point.
 
   .. warning::
 

@@ -57,10 +57,11 @@ The configuration file must be in YAML format and contain the following sections
 - ``cutoff_energy``: Planewave kinetic energy cutoff in Hartree (required for ``spherical`` method)
 - ``grid_sizes``: Fast Fourier Transform (FFT) grid dimensions
 - ``k_grid_sizes``: Monkhorst-Pack k-point grid dimensions for Brillouin zone sampling
-- ``occupation``: Electronic state occupation methodology: can be chosen from ``fermi-dirac``, ``gamma``, or ``uniform``:
-    - ``fermi-dirac``: Fermi-Dirac statistical distribution
+- ``occupation``: Electronic state occupation methodology: can be chosen from ``simplex-projector``, ``gamma``, ``uniform``, or ``idempotent``:
+    - ``simplex-projector``: Simplex projector method
     - ``gamma``: Gamma-point sampling scheme
     - ``uniform``: Uniform occupation distribution
+    - ``idempotent``: Idempotent method
 - ``smearing``: Fermi-Dirac distribution temperature parameter in Hartree
 - ``empty_bands``: Number of additional unoccupied bands to compute
 - ``spin_restricted``: Enforces identical spatial orbitals for spin-up and spin-down electrons (``True``/``False``)

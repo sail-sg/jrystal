@@ -18,6 +18,8 @@ from ._src.occupation import (
   idempotent,
   uniform,
   gamma,
+  param_init,
+  occupation,
 )
 
 __all__ = [
@@ -25,4 +27,6 @@ __all__ = [
   "idempotent",
   "uniform",
   "gamma",
+  "param_init",
+  "occupation",
 ]
