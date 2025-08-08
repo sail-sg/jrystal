@@ -340,10 +340,11 @@ document.write(`
 <span class="sd">This module provides functions for calculating inner products (brakets) and expectation values in both real and reciprocal space, which are fundamental operations in quantum mechanics and density functional theory (DFT) calculations.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">einops</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Complex</span><span class="p">,</span> <span class="n">Float</span>
 
 
@@ -359,7 +360,7 @@ document.write(`
 <span class="sd">  Computes the inner product between two wavefunctions in reciprocal space using:</span>
 
 <span class="sd">  .. math::</span>
-<span class="sd">  </span>
+
 <span class="sd">    \langle f|g \rangle \approx \sum_{\mathbf{G}} f^*(\mathbf{G})g(\mathbf{G}) \frac{vol}{N^2}</span>
 
 <span class="sd">  where :math:`f^*(\mathbf{G})` is the complex conjugate of :math:`f(\mathbf{G})`, :math:`N` is the number of grid points, and :math:`vol` is the real-space unit cell volume.</span>
@@ -380,7 +381,7 @@ document.write(`
 <span class="sd">  Raises:</span>
 <span class="sd">      ValueError: If bra and ket shapes do not match.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">bra</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">ket</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+  <span class="k">if</span> <span class="n">bra</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span> <span class="o">!=</span> <span class="n">ket</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]:</span>
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
       <span class="sa">f</span><span class="s2">&quot;bra and ket shape are not aligned. Got &quot;</span>
       <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bra</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">ket</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">.&quot;</span>
@@ -465,7 +466,7 @@ document.write(`
 <span class="sd">    E_{ij} = \langle \psi_i | \hat{H} | \psi_j \rangle \approx \sum_{\mathbf{q}} \psi_i^*(\mathbf{q}) \hat{H}(\mathbf{q}) \psi_j(\mathbf{q}) \frac{vol}{N^p}</span>
 
 <span class="sd">  where :math:`\psi_i` and :math:`\psi_j` are wavefunctions, :math:`\hat{H}` is the Hamiltonian operator, :math:`\mathbf{q}` represents either real (:math:`\mathbf{r}`) or reciprocal (:math:`\mathbf{G}`) space coordinates, and :math:`p` depends on the mode:</span>
-<span class="sd">  </span>
+
 <span class="sd">  - For real space: :math:`p = 1`</span>
 <span class="sd">  - For reciprocal space: :math:`p = 2` (includes Parseval factor)</span>
 <span class="sd">  - For kinetic terms: :math:`p = 0`</span>

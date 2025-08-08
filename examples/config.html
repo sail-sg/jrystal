@@ -441,10 +441,11 @@ document.write(`
 <li><p><code class="docutils literal notranslate"><span class="pre">grid_sizes</span></code>: Fast Fourier Transform (FFT) grid dimensions</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">k_grid_sizes</span></code>: Monkhorst-Pack k-point grid dimensions for Brillouin zone sampling</p></li>
 <li><dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">occupation</span></code>: Electronic state occupation methodology: can be chosen from <code class="docutils literal notranslate"><span class="pre">fermi-dirac</span></code>, <code class="docutils literal notranslate"><span class="pre">gamma</span></code>, or <code class="docutils literal notranslate"><span class="pre">uniform</span></code>:</dt><dd><ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">fermi-dirac</span></code>: Fermi-Dirac statistical distribution</p></li>
+<dt><code class="docutils literal notranslate"><span class="pre">occupation</span></code>: Electronic state occupation methodology: can be chosen from <code class="docutils literal notranslate"><span class="pre">simplex-projector</span></code>, <code class="docutils literal notranslate"><span class="pre">gamma</span></code>, <code class="docutils literal notranslate"><span class="pre">uniform</span></code>, or <code class="docutils literal notranslate"><span class="pre">idempotent</span></code>:</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">simplex-projector</span></code>: Simplex projector method</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">gamma</span></code>: Gamma-point sampling scheme</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">uniform</span></code>: Uniform occupation distribution</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">idempotent</span></code>: Idempotent method</p></li>
 </ul>
 </dd>
 </dl>

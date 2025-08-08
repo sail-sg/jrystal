@@ -499,30 +499,34 @@ document.write(`
 <span class="k">def</span><span class="w"> </span><span class="nf">wave_to_density</span><span class="p">(</span>
   <span class="n">wave_grid</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
   <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-  <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin x y z&#39;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">]]:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Computes electron density from wave functions in real space.</span>
 
 <span class="sd">    Calculates the electron density by taking the absolute square of wave functions and optionally applying occupation numbers. The density can be computed for the full grid or reduced along specified dimensions.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        wave_grid (Complex[Array, &#39;spin kpt band x y z&#39;]): Complex wave function values on a real-space grid. The array has dimensions for spin, k-points, bands, and spatial coordinates (x,y,z).</span>
-<span class="sd">        occupation (Optional[Float[Array, &#39;spin kpt band&#39;]]): Optional occupation numbers for each state (spin, k-point, band). If provided, the density will be weighted by these values. Defaults to None.</span>
-<span class="sd">        axis (Optional[Union[int, Tuple, List]]): Optional specification of axes along which to sum the density when applying occupation numbers. If None, sums over spin, k-points, and bands (first three dimensions). Defaults to None.</span>
+<span class="sd">      wave_grid (Complex[Array, &#39;spin kpt band x y z&#39;]): Complex wave function</span>
+<span class="sd">        values on a real-space grid. The array has dimensions for spin,</span>
+<span class="sd">        k-points, bands, and spatial coordinates (x,y,z).</span>
+<span class="sd">      occupation (Optional[Float[Array, &#39;spin kpt band&#39;]]): Optional occupation</span>
+<span class="sd">        numbers for each state (spin, k-point, band). If provided, the density</span>
+<span class="sd">        will be weighted by these values. Defaults to None.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        Union[Float[Array, &#39;spin kpt band x y z&#39;], Float[Array, &#39;spin kpt band&#39;]]: The electron density grid. If occupation is None, the density grid has the same shape as the input wave_grid. If occupation is provided, the density grid is reduced along the specified axes after applying occupation weights.</span>
+<span class="sd">      Union[Float[Array, &#39;spin x y z&#39;], Float[Array, &#39;spin kpt band x y z&#39;]]:</span>
+<span class="sd">        The electron density grid. If occupation is None, the density grid has</span>
+<span class="sd">        the same shape as the input wave_grid. If occupation is provided, the</span>
+<span class="sd">        density grid is reduced over the k-points and bands dimensions.</span>
 
 <span class="sd">    Raises:</span>
 <span class="sd">        ValueError: If the shapes of wave_grid and occupation are incompatible for broadcasting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
   <span class="n">dens</span> <span class="o">=</span> <span class="n">absolute_square</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">)</span>
-  <span class="n">axis</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">wave_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">3</span><span class="p">)</span> <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">axis</span>
 
   <span class="k">if</span> <span class="n">occupation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">try</span><span class="p">:</span>
       <span class="n">occupation</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">occupation</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-      <span class="n">dens</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dens</span> <span class="o">*</span> <span class="n">occupation</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+      <span class="n">dens</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dens</span> <span class="o">*</span> <span class="n">occupation</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
     <span class="k">except</span><span class="p">:</span>
       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;wave_grid&#39;s shape (</span><span class="si">{</span><span class="n">wave_grid</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">) and occupation&#39;s shape &quot;</span>
@@ -537,8 +541,7 @@ document.write(`
 <span class="k">def</span><span class="w"> </span><span class="nf">wave_to_density_reciprocal</span><span class="p">(</span>
   <span class="n">wave_grid</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
   <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-  <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin x y z&#39;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">]]:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Computes electron density from wave functions in reciprocal space.</span>
 
 <span class="sd">    Calculates the electron density by first computing the real-space density</span>
@@ -547,15 +550,18 @@ document.write(`
 <span class="sd">    reciprocal space, such as computing the Hartree potential.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        wave_grid (Complex[Array, &#39;spin kpt band x y z&#39;]): Complex wave function values on a real-space grid. The array has dimensions for spin, k-points, bands, and spatial coordinates (x,y,z).</span>
-<span class="sd">        occupation (Optional[Float[Array, &#39;spin kpt band&#39;]]): Optional occupation numbers for each state (spin, k-point, band). If provided, the density will be weighted by these values. Defaults to None.</span>
-<span class="sd">        axis (Optional[Union[int, Tuple, List]]): Optional specification of axes along which to sum the density when applying occupation numbers. If None, sums over spin, k-points, and bands (first three dimensions). Defaults to None.</span>
+<span class="sd">        wave_grid (Complex[Array, &#39;spin kpt band x y z&#39;]): Complex wave</span>
+<span class="sd">          function values on a real-space grid. The array has dimensions for</span>
+<span class="sd">          spin, k-points, bands, and spatial coordinates (x,y,z).</span>
+<span class="sd">        occupation (Optional[Float[Array, &#39;spin kpt band&#39;]]): Optional</span>
+<span class="sd">          occupation numbers for each state (spin, k-point, band). If provided,</span>
+<span class="sd">          the density will be weighted by these values. Defaults to None.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        Union[Float[Array, &#39;spin kpt band x y z&#39;], Float[Array, &#39;spin kpt band&#39;]]: The electron density grid in reciprocal space. If occupation is None, the density grid has the same shape as the input wave_grid. If occupation is provided, the density grid is reduced along the specified axes after applying occupation weights.</span>
+<span class="sd">        Union[Float[Array, &#39;spin kpt band x y z&#39;], Float[Array, &#39;spin kpt band&#39;]]: The electron density grid in reciprocal space. If occupation is None, the density grid has the same shape as the input wave_grid. If occupation is provided, the density grid is reduced over the k-points and bands dimensions.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-  <span class="n">dens</span> <span class="o">=</span> <span class="n">wave_to_density</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">occupation</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+  <span class="n">dens</span> <span class="o">=</span> <span class="n">wave_to_density</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">dens</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span></div>
 
 
@@ -596,7 +602,7 @@ document.write(`
 <div class="viewcode-block" id="expand_coefficient">
 <a class="viewcode-back" href="../../../api/_src/utils.html#jrystal._src.utils.expand_coefficient">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">expand_coefficient</span><span class="p">(</span>
-  <span class="n">coeff_compact</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band gpt&quot;</span><span class="p">],</span>
+  <span class="n">coeff_compact</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt gpt band&quot;</span><span class="p">],</span>
   <span class="n">mask</span><span class="p">:</span> <span class="n">Bool</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">]:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Expands compact coefficients into a full grid using a boolean mask.</span>
@@ -604,7 +610,7 @@ document.write(`
 <span class="sd">    Transforms coefficients from a compact representation (where only significant points are stored) to a full grid representation by placing the coefficients at positions specified by a boolean mask. This is useful for converting between storage-efficient and computation-friendly representations.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        coeff_compact (Complex[Array, &quot;spin kpt band gpt&quot;]): Compact coefficient array with dimensions for spin, k-points, bands, and grid points.</span>
+<span class="sd">        coeff_compact (Complex[Array, &quot;spin kpt gpt band&quot;]): Compact coefficient array with dimensions for spin, k-points, grid points, and bands.</span>
 <span class="sd">        mask (Bool[Array, &#39;x y z&#39;]): Boolean mask indicating valid grid points in the expanded representation. The number of True values must match the last dimension of coeff_compact.</span>
 
 <span class="sd">    Returns:</span>

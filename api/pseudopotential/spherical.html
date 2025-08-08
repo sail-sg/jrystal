@@ -43,8 +43,6 @@
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/graph.js?v=6245dd16"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
-    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/pseudopotential/spherical';</script>
     <link rel="icon" href="../../_static/jrystal_logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -347,9 +345,7 @@ document.write(`
   </button>
 `);
 </script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -365,15 +361,6 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.spherical.cartesian_to_spherical"><code class="docutils literal notranslate"><span class="pre">cartesian_to_spherical()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.spherical.legendre_to_sph_harm"><code class="docutils literal notranslate"><span class="pre">legendre_to_sph_harm()</span></code></a></li>
-</ul>
-            </nav>
         </div>
     </div>
 </div>
@@ -383,59 +370,8 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="module-jrystal.pseudopotential.spherical">
-<span id="spherical"></span><h1>spherical<a class="headerlink" href="#module-jrystal.pseudopotential.spherical" title="Link to this heading">#</a></h1>
-<p>Spherical coordinate system utilities and spherical harmonics transformations.</p>
-<p>This module provides functions for working with spherical coordinates and spherical harmonics, particularly useful for quantum mechanical calculations and pseudopotential transformations.</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pseudopotential.spherical.cartesian_to_spherical">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.spherical.</span></span><span class="sig-name descname"><span class="pre">cartesian_to_spherical</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'*n</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-10</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'*n</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/spherical.html#cartesian_to_spherical"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.spherical.cartesian_to_spherical" title="Link to this definition">#</a></dt>
-<dd><p>Convert Cartesian coordinates to spherical coordinates.</p>
-<p>Transforms 3D Cartesian coordinates (x, y, z) to spherical coordinates (r, θ, φ), where:</p>
-<ul class="simple">
-<li><p>r is the radial distance from the origin</p></li>
-<li><p>θ (theta) is the azimuthal angle in the x-y plane from the x-axis (0 ≤ θ &lt; 2π)</p></li>
-<li><p>φ (phi) is the polar angle from the z-axis (0 ≤ φ ≤ π)</p></li>
-</ul>
-<p>For the special case of the origin (0, 0, 0), returns (0, NaN, π/2).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>x</strong> – Float[Array, “<a href="#id1"><span class="problematic" id="id2">*</span></a>n 3”]: Cartesian coordinates with shape (…, 3) where … represents arbitrary batch dimensions</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Spherical coordinates (r, θ, φ) with same batch shape</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Float[Array, “<a href="#id3"><span class="problematic" id="id4">*</span></a>n 3”]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.pseudopotential.spherical.legendre_to_sph_harm">
-<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.spherical.</span></span><span class="sig-name descname"><span class="pre">legendre_to_sph_harm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">l</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.13)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'*batch</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'*batch</span> <span class="pre">m'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/spherical.html#legendre_to_sph_harm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.spherical.legendre_to_sph_harm" title="Link to this definition">#</a></dt>
-<dd><p>Convert Legendre polynomials to spherical harmonics decomposition.</p>
-<p>Implements the decomposition of Legendre polynomials into spherical harmonics according to the formula:</p>
-<div class="math notranslate nohighlight">
-\[(2l+1) P_l(x^Ty) = 4\pi \sum_m Y_{l, m}(x) Y^*_{l, m}(y)\]</div>
-<p>where:</p>
-<ul class="simple">
-<li><p>l is the angular momentum quantum number</p></li>
-<li><p>P_l is the Legendre polynomial of order l</p></li>
-<li><p>Y_{l,m} are the spherical harmonics</p></li>
-<li><p>m is the magnetic quantum number ranging from -l to +l</p></li>
-</ul>
-<p>This transformation is particularly useful for efficient computation of P_l(G^T G’) in quantum mechanical calculations, as it allows replacing expensive pairwise inner products of G vectors with faster spherical harmonics calculations.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>l</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a>) – Angular momentum quantum number (default: 0)</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Callable that takes Cartesian coordinates of shape (<a href="#id5"><span class="problematic" id="id6">*</span></a>batch, 3) and returns spherical harmonics coefficients of shape (<a href="#id7"><span class="problematic" id="id8">*</span></a>batch, m), where m = 2l+1</p>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="spherical">
+<h1>spherical<a class="headerlink" href="#spherical" title="Link to this heading">#</a></h1>
 </section>
 
 
@@ -473,22 +409,6 @@ document.write(`
             </div>
             
             
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.spherical.cartesian_to_spherical"><code class="docutils literal notranslate"><span class="pre">cartesian_to_spherical()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.spherical.legendre_to_sph_harm"><code class="docutils literal notranslate"><span class="pre">legendre_to_sph_harm()</span></code></a></li>
-</ul>
-  </nav></div>
-
-</div></div>
               
             
           </div>

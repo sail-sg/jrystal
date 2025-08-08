@@ -43,8 +43,6 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/graph.js?v=6245dd16"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
-    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/hamiltonian';</script>
     <link rel="icon" href="../_static/jrystal_logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -347,9 +345,7 @@ document.write(`
   </button>
 `);
 </script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -365,15 +361,6 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.hamiltonian.hamiltonian_matrix"><code class="docutils literal notranslate"><span class="pre">hamiltonian_matrix()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.hamiltonian.hamiltonian_matrix_trace"><code class="docutils literal notranslate"><span class="pre">hamiltonian_matrix_trace()</span></code></a></li>
-</ul>
-            </nav>
         </div>
     </div>
 </div>
@@ -383,83 +370,8 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="module-jrystal.hamiltonian">
-<span id="hamiltonian"></span><h1>hamiltonian<a class="headerlink" href="#module-jrystal.hamiltonian" title="Link to this heading">#</a></h1>
-<p>Hamiltonian operations.</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.hamiltonian.hamiltonian_matrix">
-<span class="sig-prename descclassname"><span class="pre">jrystal.hamiltonian.</span></span><span class="sig-name descname"><span class="pre">hamiltonian_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">band_coefficient</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Int</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">effictive_density_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kpts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'kpt</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'lda'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spin_restricted</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kohn_sham</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'kpt</span> <span class="pre">band</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/hamiltonian.html#hamiltonian_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.hamiltonian.hamiltonian_matrix" title="Link to this definition">#</a></dt>
-<dd><p>Compute the full Hamiltonian matrix in the orbital basis.</p>
-<p>This function computes the complete Hamiltonian matrix including both diagonal
-and off-diagonal elements. The matrix elements are defined as:</p>
-<div class="math notranslate nohighlight">
-\[H_{ij} = \langle \psi_i | \hat{H} | \psi_j \rangle\]</div>
-<p>where <span class="math notranslate nohighlight">\(\hat{H} = \hat{T} + \hat{V}_{eff}\)</span> is the total Hamiltonian operator.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>band_coefficient</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>&quot;spin kpt band x y z&quot;</em><em>]</em>) – Plane wave coefficients with shape [spin, kpt, band, x, y, z]. The last three dimensions represent the spatial grid.</p></li>
-<li><p><strong>positions</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;atom 3&quot;</em><em>]</em>) – Atomic positions in Bohr units with shape [atom, 3].</p></li>
-<li><p><strong>charges</strong> (<em>Int</em><em>[</em><em>Array</em><em>, </em><em>&quot;atom&quot;</em><em>]</em>) – Atomic numbers for each atom with shape [atom].</p></li>
-<li><p><strong>effictive_density_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;x y z&quot;</em><em>]</em>) – Electron density for effective potential evaluated on real space grid with shape [x, y, z].</p></li>
-<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;x y z 3&quot;</em><em>]</em>) – G-vector grid in reciprocal space with shape [x, y, z, 3].</p></li>
-<li><p><strong>kpts</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;kpt 3&quot;</em><em>]</em>) – K-points in reciprocal space with shape [kpt, 3]. Currently, only spin-restricted</p></li>
-<li><p><strong>K-points.</strong> (<em>calculation enable parallel calculation for multiple</em>)</p></li>
-<li><p><strong>vol</strong> (<em>Float</em>) – Volume of the unit cell.</p></li>
-<li><p><strong>xc</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a>) – Exchange-correlation functional name. Defaults to ‘lda’.</p></li>
-<li><p><strong>kohn_sham</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a>) – Whether to use Kohn-Sham potential. Defaults to True.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Complex array of shape [kpt, band, band] containing the complete Hamiltonian matrix elements between all pairs of bands at each k-point.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Complex[Array, “kpt band band”]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="jrystal.hamiltonian.hamiltonian_matrix_trace">
-<span class="sig-prename descclassname"><span class="pre">jrystal.hamiltonian.</span></span><span class="sig-name descname"><span class="pre">hamiltonian_matrix_trace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">band_coefficient</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Int</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">effictive_density_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kpts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'kpt</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'lda'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spin_restricted</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kohn_sham</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_kpts_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_spin_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/hamiltonian.html#hamiltonian_matrix_trace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.hamiltonian.hamiltonian_matrix_trace" title="Link to this definition">#</a></dt>
-<dd><p>Calculate the trace of the Hamiltonian matrix.</p>
-<p>The trace is computed as:</p>
-<div class="math notranslate nohighlight">
-\[\text{Tr}(\hat{H}) = \sum_i H_{ii} = \sum_i \langle \psi_i | \hat{H} | \psi_i \rangle\]</div>
-<p>This quantity represents the sum of the diagonal elements of the Hamiltonian matrix,
-which is useful for various physical quantities like total energy calculations.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>band_coefficient</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>&quot;spin kpt band x y z&quot;</em><em>]</em>) – Plane wave coefficients with shape [spin, kpt, band, x, y, z]. The last three dimensions represent the spatial grid.</p></li>
-<li><p><strong>positions</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;atom 3&quot;</em><em>]</em>) – Atomic positions in Bohr units with shape [atom, 3].</p></li>
-<li><p><strong>charges</strong> (<em>Int</em><em>[</em><em>Array</em><em>, </em><em>&quot;atom&quot;</em><em>]</em>) – Atomic numbers for each atom with shape [atom].</p></li>
-<li><p><strong>effictive_density_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;x y z&quot;</em><em>]</em>) – Electron density for effective potential evaluated  on real space grid with shape [x, y, z].</p></li>
-<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;x y z 3&quot;</em><em>]</em>) – G-vector grid in reciprocal space with shape [x, y, z, 3].</p></li>
-<li><p><strong>kpts</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;kpt 3&quot;</em><em>]</em>) – K-points in reciprocal space with shape [kpt, 3].</p></li>
-<li><p><strong>vol</strong> (<em>Float</em>) – Volume of the unit cell.</p></li>
-<li><p><strong>xc</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a>) – Exchange-correlation functional name. Defaults to ‘lda’.</p></li>
-<li><p><strong>kohn_sham</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a>) – Whether to use Kohn-Sham potential. Defaults to True.</p></li>
-<li><p><strong>keep_kpts_axis</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a>) – If True, retains the k-points axis in output. Defaults to False.</p></li>
-<li><p><strong>keep_spin_axis</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a>) – If True, retains the spin axis in output. Defaults to False.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p>The trace of the Hamiltonian matrix. The shape depends on keep_kpts_axis and keep_spin_axis:</p>
-<ul class="simple">
-<li><p>If both False: returns a scalar Float</p></li>
-<li><p>If keep_spin_axis True: returns Float[Array, “spin”]</p></li>
-<li><p>If keep_kpts_axis True: returns Float[Array, “kpt”]</p></li>
-<li><p>If both True: returns Float[Array, “spin kpt”]</p></li>
-</ul>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Union[Float, Float[Array, “spin”],  Float[Array, “spin kpt”]]</p>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="hamiltonian">
+<h1>hamiltonian<a class="headerlink" href="#hamiltonian" title="Link to this heading">#</a></h1>
 </section>
 
 
@@ -497,22 +409,6 @@ which is useful for various physical quantities like total energy calculations.<
             </div>
             
             
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.hamiltonian.hamiltonian_matrix"><code class="docutils literal notranslate"><span class="pre">hamiltonian_matrix()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.hamiltonian.hamiltonian_matrix_trace"><code class="docutils literal notranslate"><span class="pre">hamiltonian_matrix_trace()</span></code></a></li>
-</ul>
-  </nav></div>
-
-</div></div>
               
             
           </div>
