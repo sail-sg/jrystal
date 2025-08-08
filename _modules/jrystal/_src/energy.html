@@ -342,7 +342,7 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Complex</span><span class="p">,</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Int</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">braket</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">potential</span><span class="p">,</span> <span class="n">pw</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">braket</span><span class="p">,</span> <span class="n">potential</span><span class="p">,</span> <span class="n">pw</span><span class="p">,</span> <span class="n">xc</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.ewald</span><span class="w"> </span><span class="kn">import</span> <span class="n">ewald_coulomb_repulsion</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">translation_vectors</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -509,56 +509,16 @@ document.write(`
 
 
 
-<div class="viewcode-block" id="xc_lda">
-<a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.xc_lda">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">xc_lda</span><span class="p">(</span>
-  <span class="n">density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
-  <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
-  <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
-<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the LDA exchange-correlation energy.</span>
-
-<span class="sd">  Implements the Local Density Approximation (LDA) for the exchange-correlation</span>
-<span class="sd">  energy in the spin-unpolarized case. The exchange energy in LDA is given by:</span>
-
-<span class="sd">  .. math::</span>
-<span class="sd">      E_x^{\text{LDA}}[\rho] = -\frac{3}{4}\left(\frac{3}{\pi}\right)^{1/3}</span>
-<span class="sd">      \int \rho(\mathbf{r})^{4/3} d\mathbf{r}</span>
-
-<span class="sd">  Note that this implementation includes both exchange and correlation terms,</span>
-<span class="sd">  though only the exchange term is shown in the equation above.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    density_grid (Float[Array, &#39;x y z&#39;]): Real-space electron density.</span>
-<span class="sd">    vol (Float): Unit cell volume.</span>
-<span class="sd">    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    Float: LDA exchange-correlation energy.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="k">assert</span> <span class="n">density_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
-
-  <span class="k">if</span> <span class="n">density_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>  <span class="c1"># have spin channel</span>
-    <span class="n">density_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-
-  <span class="n">num_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">density_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
-  <span class="n">lda_density</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_lda</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">)</span>
-  <span class="n">e_lda</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">lda_density</span> <span class="o">*</span> <span class="n">density_grid</span><span class="p">)</span>
-  <span class="n">e_lda</span> <span class="o">=</span> <span class="n">safe_real</span><span class="p">(</span><span class="n">e_lda</span><span class="p">)</span>
-
-  <span class="k">return</span> <span class="n">e_lda</span> <span class="o">*</span> <span class="n">vol</span> <span class="o">/</span> <span class="n">num_grid</span></div>
-
-
-
+<div class="viewcode-block" id="exc_functional">
+<a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.exc_functional">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">exc_functional</span><span class="p">(</span>
   <span class="n">density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
   <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
-  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+  <span class="n">xc_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
   <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
-<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the exchange-correlation energy of the input density.</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the exchange-correlation energy.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    density_grid (Float[Array, &#39;x y z&#39;]): Real-space electron density.</span>
@@ -575,11 +535,12 @@ document.write(`
     <span class="n">density_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
   <span class="n">num_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">density_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
-  <span class="n">exc_density</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">xc_density</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">,</span> <span class="n">xc</span><span class="p">)</span>
+  <span class="n">exc_density</span> <span class="o">=</span> <span class="n">xc</span><span class="o">.</span><span class="n">xc_density</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">,</span> <span class="n">xc_type</span><span class="p">)</span>
   <span class="n">e_xc</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">exc_density</span> <span class="o">*</span> <span class="n">density_grid</span><span class="p">)</span>
   <span class="n">e_xc</span> <span class="o">=</span> <span class="n">safe_real</span><span class="p">(</span><span class="n">e_xc</span><span class="p">)</span>
 
-  <span class="k">return</span> <span class="n">e_xc</span> <span class="o">*</span> <span class="n">vol</span> <span class="o">/</span> <span class="n">num_grid</span>
+  <span class="k">return</span> <span class="n">e_xc</span> <span class="o">*</span> <span class="n">vol</span> <span class="o">/</span> <span class="n">num_grid</span></div>
+
 
 
 <div class="viewcode-block" id="nuclear_repulsion">
@@ -706,7 +667,7 @@ document.write(`
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
   <span class="n">occupation</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band&quot;</span><span class="p">],</span>
   <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda&#39;</span>
+  <span class="n">xc_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;lda_x&quot;</span>
 <span class="p">):</span>
 <span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the energy eigenvalues for each electronic state.</span>
 
@@ -730,7 +691,7 @@ document.write(`
 <span class="sd">    vol (Float): Unit cell volume.</span>
 <span class="sd">    occupation (Float[Array, &quot;spin kpt band&quot;]): Occupation numbers.</span>
 <span class="sd">    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.</span>
-<span class="sd">    xc (str, optional): Exchange-correlation functional type. Defaults to &#39;lda&#39;.</span>
+<span class="sd">    xc_type (str, optional): Exchange-correlation functional type. Defaults to &#39;lda&#39;.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    Float[Array, &quot;spin kpt band&quot;]: Energy eigenvalues for each electronic state.</span>
@@ -745,7 +706,7 @@ document.write(`
     <span class="n">g_vector_grid</span><span class="p">,</span>
     <span class="n">vol</span><span class="p">,</span>
     <span class="n">split</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">xc</span><span class="o">=</span><span class="n">xc</span><span class="p">,</span>
+    <span class="n">xc_type</span><span class="o">=</span><span class="n">xc_type</span><span class="p">,</span>
     <span class="n">kohn_sham</span><span class="o">=</span><span class="n">kohn_sham</span>
   <span class="p">)</span>
   <span class="n">e_eff</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">real_braket</span><span class="p">(</span><span class="n">density_per_band</span><span class="p">,</span> <span class="n">v_eff</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
