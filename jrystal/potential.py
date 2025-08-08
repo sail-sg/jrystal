@@ -14,12 +14,12 @@
 """Potential functions."""
 
 from ._src.potential import (
-  hartree_reciprocal,
-  hartree,
-  external_reciprocal,
-  external,
-  xc_lda,
   effective,
+  external,
+  external_reciprocal,
+  hartree,
+  hartree_reciprocal,
+  xc_density
 )
 
 __all__ = [
@@ -27,6 +27,6 @@ __all__ = [
   "hartree",
   "external_reciprocal",
   "external",
-  "xc_lda",
+  "xc_density",
   "effective",
 ]

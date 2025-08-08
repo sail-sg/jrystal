@@ -52,3 +52,7 @@ def main():
       jr.calc.band_normcons(config, gs_output)
     else:
       jr.calc.band(config, gs_output)
+
+
+if __name__ == "__main__":
+  main()

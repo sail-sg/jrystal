@@ -14,10 +14,9 @@
 
 import jax
 import jax.numpy as jnp
+import jrystal as jr
 import numpy as np
 from absl.testing import absltest, parameterized
-
-import jrystal as jr
 from jrystal._src import braket
 
 jax.config.update("jax_enable_x64", True)
