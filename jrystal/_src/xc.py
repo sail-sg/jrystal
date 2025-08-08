@@ -48,13 +48,18 @@ def _lda(xc_type: str, rho_r: Float[Array, 's x y z']):
     p = get_p(xc_type, XC_UNPOLARIZED)
   else:
     p = get_p(xc_type, XC_POLARIZED if polarized else XC_UNPOLARIZED)
-  f = get_xc_functional(xc_type, polarized=polarized)
+  f = get_xc_functional(xc_type, polarized=False if is_exchange else polarized)
   grid_shape = rho_r.shape
+  if polarized:
+    grid_shape = grid_shape[1:]  # remove the spin dimension
   rho_r_flat = rho_r.reshape(2 if polarized else 1, -1)
-  if polarized and is_exchange:  # NOTE: exact scaling relation
-    f_up = jax.vmap(f, (0, 0), 0)(p, 2 * rho_r_flat[0])
-    f_dn = jax.vmap(f, (0, 0), 0)(p, 2 * rho_r_flat[1])
-    f = 0.5 * (f_up + f_dn)
+  if polarized:
+    if is_exchange:  # NOTE: exact scaling relation
+      f_up = jax.vmap(f, (None, 0), 0)(p, 2 * rho_r_flat[0])
+      f_dn = jax.vmap(f, (None, 0), 0)(p, 2 * rho_r_flat[1])
+      f = 0.5 * (f_up + f_dn)
+    else:  # correlation
+      f = jax.vmap(f, (None, 1), 0)(p, rho_r_flat)
   else:
     f = jax.vmap(f, (None, 0), 0)(p, rho_r_flat[0])
   return f.reshape(grid_shape)
@@ -71,14 +76,21 @@ def _gga(
     p = get_p(xc_type, XC_UNPOLARIZED)
   else:
     p = get_p(xc_type, XC_POLARIZED if polarized else XC_UNPOLARIZED)
-  f = get_xc_functional(xc_type, polarized=polarized)
+  f = get_xc_functional(xc_type, polarized=False if is_exchange else polarized)
   grid_shape = rho_r.shape
+  if polarized:
+    grid_shape = grid_shape[1:]  # remove the spin dimension
   rho_r_flat = rho_r.reshape(2 if polarized else 1, -1)
-  sigma_r_flat = sigma_r.reshape(2 if polarized else 1, -1)
-  if polarized and is_exchange:  # NOTE: exact scaling relation
-    f_up = jax.vmap(f, (0, 0), 0)(p, 2 * rho_r_flat[0], 4 * sigma_r_flat[0])
-    f_dn = jax.vmap(f, (0, 0), 0)(p, 2 * rho_r_flat[1], 4 * sigma_r_flat[1])
-    f = 0.5 * (f_up + f_dn)
+  sigma_r_flat = sigma_r.reshape(3 if polarized else 1, -1)
+  if polarized:
+    if is_exchange:  # NOTE: use exact scaling relation
+      f_up = jax.vmap(f, (None, 0, 0),
+                      0)(p, 2 * rho_r_flat[0], 4 * sigma_r_flat[0])
+      f_dn = jax.vmap(f, (None, 0, 0),
+                      0)(p, 2 * rho_r_flat[1], 4 * sigma_r_flat[2])
+      f = 0.5 * (f_up + f_dn)
+    else:  # correlation
+      f = jax.vmap(f, (None, 1, 1), 0)(p, rho_r_flat, sigma_r_flat)
   else:
     f = jax.vmap(f, (None, 0, 0), 0)(p, rho_r_flat[0], sigma_r_flat[0])
   return f.reshape(grid_shape)
@@ -94,11 +106,16 @@ def sigma_r_fn(
   grad_rho_r = jnp.fft.ifftn(grad_rho_G, axes=range(-3, 0))
   if polarized:
     s_up, s_dn = grad_rho_r
-    return safe_real(jnp.stack([
+    # return safe_real(jnp.stack([
+    #   s_up * s_up,
+    #   s_up * s_dn,
+    #   s_dn * s_dn,
+    # ])).sum(-1)
+    return jnp.stack([
       s_up * s_up,
       s_up * s_dn,
       s_dn * s_dn,
-    ])).sum(-1)
+    ]).real.sum(-1)
   else:
     return absolute_square(grad_rho_r).sum(-1)
 
