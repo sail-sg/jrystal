@@ -13,7 +13,7 @@ crystal_file_path_path: null
 ################################################
 # xc functional
 xc: "lda_x"
-# xc: "pbe"
+# xc: "gga_x_pbe"
 
 ################################################
 #           Pseudopotential Setting            #

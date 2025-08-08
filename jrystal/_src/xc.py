@@ -37,8 +37,12 @@ XC_UNPOLARIZED = 0
 XC_POLARIZED = 1
 
 
+def is_polarized(rho_r: Float[Array, '*s x y z']) -> bool:
+  return rho_r.ndim == 4 and rho_r.shape[0] == 2
+
+
 def _lda(xc_type: str, rho_r: Float[Array, 's x y z']):
-  polarized = rho_r.shape[0] == 2
+  polarized = is_polarized(rho_r)
   is_exchange = '_x' in xc_type  # HACK
   if is_exchange:  # NOTE: libxc's polarized exchange functionals might be problematic
     p = get_p(xc_type, XC_UNPOLARIZED)
@@ -52,16 +56,16 @@ def _lda(xc_type: str, rho_r: Float[Array, 's x y z']):
     f_dn = jax.vmap(f, (0, 0), 0)(p, 2 * rho_r_flat[1])
     f = 0.5 * (f_up + f_dn)
   else:
-    f = jax.vmap(f, (None, 1), 0)(p, rho_r_flat)
+    f = jax.vmap(f, (None, 0), 0)(p, rho_r_flat[0])
   return f.reshape(grid_shape)
 
 
 def _gga(
   xc_type: str,
-  rho_r: Float[Array, 's x y z'],
-  sigma_r: Float[Array, 's x y z']
+  rho_r: Float[Array, '*s x y z'],
+  sigma_r: Float[Array, '*s x y z']
 ):
-  polarized = rho_r.shape[0] == 2
+  polarized = is_polarized(rho_r)
   is_exchange = '_x' in xc_type  # HACK
   if is_exchange:  # NOTE: libxc's polarized exchange functionals might be problematic
     p = get_p(xc_type, XC_UNPOLARIZED)
@@ -70,13 +74,13 @@ def _gga(
   f = get_xc_functional(xc_type, polarized=polarized)
   grid_shape = rho_r.shape
   rho_r_flat = rho_r.reshape(2 if polarized else 1, -1)
-  sigma_r_flat = sigma_r.reshape(sigma_r.shape[0], -1)
+  sigma_r_flat = sigma_r.reshape(2 if polarized else 1, -1)
   if polarized and is_exchange:  # NOTE: exact scaling relation
     f_up = jax.vmap(f, (0, 0), 0)(p, 2 * rho_r_flat[0], 4 * sigma_r_flat[0])
     f_dn = jax.vmap(f, (0, 0), 0)(p, 2 * rho_r_flat[1], 4 * sigma_r_flat[1])
     f = 0.5 * (f_up + f_dn)
   else:
-    f = jax.vmap(f, (None, 1, 1), 0)(p, rho_r_flat, sigma_r_flat)
+    f = jax.vmap(f, (None, 0, 0), 0)(p, rho_r_flat[0], sigma_r_flat[0])
   return f.reshape(grid_shape)
 
 
@@ -84,7 +88,7 @@ def sigma_r_fn(
   density_grid: Float[Array, 's x y z'], gs: Float[Array, 'x y z 3']
 ) -> Float[Array, 's x y z']:
   """If polarized, s in the return shape is 3, else 1"""
-  polarized = density_grid.shape[0] == 2
+  polarized = is_polarized(density_grid)
   rho_G = jnp.fft.fftn(density_grid)
   grad_rho_G = rho_G[..., None] * 1j * gs
   grad_rho_r = jnp.fft.ifftn(grad_rho_G, axes=range(-3, 0))
@@ -99,8 +103,8 @@ def sigma_r_fn(
     return absolute_square(grad_rho_r).sum(-1)
 
 
-def vxc_lda(exc: Callable, rho_r: Float[Array, 's x y z']):
-  polarized = rho_r.shape[0] == 2
+def vxc_lda(exc: Callable, rho_r: Float[Array, '*s x y z']):
+  polarized = is_polarized(rho_r)
   grid_sizes = rho_r.shape
 
   rho_r_flat = rho_r.reshape(rho_r.shape[0], -1)
