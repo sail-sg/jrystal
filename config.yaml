@@ -5,21 +5,29 @@
 # Code will load the "$CRYSTAL.xyz" file in the geometry directory if
 # crystal name is provided, otherwise the code will read the from the path
 # specified by "crystal_file_path_path".
-crystal: "si"
+crystal: "diamond"
 crystal_file_path_path: null
+spin: 0  # number of unpaired electrons
 
+# The directory to save the results. If None, the code will not save the results under the current directory.
+save_dir: null
 ################################################
 #         Exchange-Correlation Setting         #
 ################################################
 # xc functional
-xc: "lda_x"
+# xc: "lda_x+lda_c_pw"
+xc: "gga_x_pbe+gga_c_pbe"
+# xc: "gga_c_pbe" # TODO: this gives nan when polarized
+# xc: "lda_x"
 # xc: "gga_x_pbe"
+
 
 ################################################
 #           Pseudopotential Setting            #
 ################################################
 
-use_pseudopotential: False
+# if false, the code will use the all-electron calculation
+use_pseudopotential: true
 pseudopotential_file_dir: null
 # The pseudopotential file directory. If None, the code will use the default
 # pseudopotential file directory.
@@ -36,23 +44,24 @@ freq_mask_method: "spherical"
 # cutoff energy in Hartree
 cutoff_energy: 40
 # grid sizes for the FFT grid
-grid_sizes: 48
+grid_sizes: 16
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
-k_grid_sizes: 1
+# k_grid_sizes: [2, 2, 2]
+k_grid_sizes: [1, 1, 1]
 # Occupation method
-occupation: "gamma"
-# occupation support {"fermi-dirac", "gamma", "uniform"}
+occupation: "simplex-projector"
+# occupation support {"gamma", "uniform", "simplex-projector", "idempotent"}
 
 # smearing factor for the Fermi-Dirac distribution
-smearing: 0.0001
+smearing: 0.001
 # the total number of unoccupapied bands. The Total number of
 # potentially-occupied bands is ceil(num_electron / 2) + empty_bands
-empty_bands: 8
-spin_restricted: True
+empty_bands: 10
+spin_restricted: true
 # whether the calculation is spin_restricted or not, ie., spin-up and spin-down
 # electrons share the same spatial orbitals.
 
-# Hyperparameters for the Ewald sum.
+# Hyperparameters for the Ewald sum. nm,m
 ewald_args:
   ewald_eta: 0.1
   ewald_cutoff: 2.0e+4
@@ -64,6 +73,9 @@ epoch: 10000
 optimizer: "adam"
 optimizer_args:
   learning_rate: 0.01
+  b1: 0.9
+  b2: 0.99
+  # nesterov: false
 
 # arguments for the optimizer. Please refer to optax documentation.
 # https://optax.readthedocs.io/en/latest/api/optimizers.html
@@ -75,11 +87,12 @@ optimizer_args:
 scheduler: null
 # optax scheduler. No scheduler is used if set to None.
 
-convergence_condition: 1.e-8
+convergence_window_size: 20
+convergence_condition: 1.e-6
 # Convergence criterion for optimization.
-# The code monitors the variance of the objective values (e.g., energy)
-# over the last 50 steps (if available). If the computed variance meets
-# the convergence condition, the calculation will terminate.
+# The code monitors the standard deviation of the objective values (e.g.,energy)
+# over the last 50 steps (if available). If the computed standard deviation
+# meets the convergence condition, the calculation will terminate.
 
 ################################################
 # Band Structure Calculation Hyper-parameters. #
@@ -93,16 +106,15 @@ k_path_special_points: null
 # special points for the given unit cell, as defined in ASE.
 # For more details, refer to:
 # https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
-
-"k_path_special_points": "LGXL"
-num_kpoints: 60
+k_path_special_points: "LGXL"
+num_kpoints: 64
 
 # Alternatively, the user can provide a `k_path` file containing k-path
 # vectors. The file must be in `.npy` format and contain a 2D array,
 # where each row represents the relative coordinates of a k-point in
 # reciprocal space.
 k_path_file: null
-band_structure_epoch: 10000
+band_structure_epoch: 5000
 
 # Flag indicating whether fine-tuning is enabled.
 # If True, the optimization will start with the first k-point,
@@ -118,10 +130,25 @@ k_path_fine_tuning_epoch: 300
 # Random seed
 seed: 123
 
-# Environment setting
+# Whether to distribute the calculation across multiple devices
+# Total Energy Minimization
+parallel_over_k_mesh: False
+# Band Structure Calculation
+# If True, the code will parallelize the calculation over the k-path.
+parallel_over_k_path: True
+
+# Jax Environment setting
 xla_preallocate: True
+# whether to use 64-bit precision for JAX operations
 jax_enable_x64: True
+
+# Enable the jax_debug_nans flag to automatically detect when NaNs are produced in jax.jit-compiled code
+jax_debug_nans: False
+
+# whether to print verbose output
 verbose: True
+
+# machine epsilon
 eps: 1.e-08
 
 debug: False

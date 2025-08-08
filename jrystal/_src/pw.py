@@ -17,9 +17,11 @@ from typing import Optional, Tuple, Union
 import jax
 import jax.numpy as jnp
 import numpy as np
+from jax.sharding import Sharding
 from jaxtyping import Array, Bool, Complex, Float
 
 from .grid import g_vectors
+from .spmd.fft import ifftn3d
 from .unitary_module import unitary_matrix, unitary_matrix_param_init
 from .utils import absolute_square, expand_coefficient, volume
 
@@ -30,6 +32,7 @@ def param_init(
   num_kpts: int,
   freq_mask: Bool[Array, 'x y z'],
   spin_restricted: bool = True,
+  sharding: Optional[Sharding] = None
 ) -> dict:
   r'''Initialize the raw parameters.
 
@@ -85,11 +88,13 @@ def param_init(
   num_spin = 1 if spin_restricted else 2
   num_g = np.sum(freq_mask).item()
   shape = (num_spin, num_kpts, num_g, num_bands)
-  return unitary_matrix_param_init(key, shape, complex=True)
+  return unitary_matrix_param_init(key, shape, complex=True, sharding=sharding)
 
 
 def coeff(
-  pw_param: Union[dict, Array, Tuple], freq_mask: Bool[Array, 'x y z']
+  pw_param: Union[dict, Array, Tuple],
+  freq_mask: Bool[Array, 'x y z'],
+  sharding: Optional[Sharding] = None
 ) -> Complex[Array, 'spin kpt band x y z']:
   r'''Create the linear coefficients to combine the frequency components.
 
@@ -128,7 +133,7 @@ def coeff(
     constraint that for any :code:`i,j`, :code:`einsum('kabc,labc->kl', ret[i, j], ret[i, j])`
     is an identity matrix.
   '''
-  coeff = unitary_matrix(pw_param, complex=True)
+  coeff = unitary_matrix(pw_param, complex=True, sharding=sharding)
   return expand_coefficient(coeff, freq_mask)
 
 
@@ -201,7 +206,7 @@ def wave_grid(
     Complex[Array, 'spin kpt band x y z']: Wave function evaluated at the spatial grid.
   '''
   grid_sizes = coeff.shape[-3:]
-  wave_grid = jnp.fft.ifftn(coeff, axes=range(-3, 0))
+  wave_grid = ifftn3d(coeff)
   wave_grid *= np.prod(grid_sizes) / jnp.sqrt(vol)
   return wave_grid
 
@@ -209,8 +214,11 @@ def wave_grid(
 def density_grid(
   coeff: Complex[Array, 'spin kpt band x y z'],
   vol: Float,
-  occupation: Optional[Float[Array, 'spin kpt band']] = None
-) -> Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'spin kpt band']]:
+  occupation: Optional[Float[Array, 'spin kpt band']] = None,
+) -> Union[
+  Float[Array, 'spin kpt band x y z'],
+  Float[Array, 'spin x y z'],
+]:
   r'''Compute the density at the spatial grid.
 
   In a system with electrons, the density of the electron is the result of
@@ -244,21 +252,30 @@ def density_grid(
     e^{i\vb{(G - G')}^\top \vb{r}}
 
   Args:
-    coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension which will be summed to get the overall density. Therefore the shape is :code:`(spin, kpt, band, x, y, z)`.
+    coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch
+      dimension which will be summed to get the overall density. Therefore the
+      shape is :code:`(spin, kpt, band, x, y, z)`.
     vol: Volume of the unit cell, a real scalar.
-    occupation: The occupation over different k frequencies. The shape is :code:`(spin, kpt, band)`, it should have the same leading dimension as :code:`coeff`. This is an optional argument. When :code:`occupation=None`, we compute the density contribution from each :math:`k` without summing them. If :code:`occupation` is provided, we sum up all the density from each :math:`k` weighted by the occupation.
+    occupation: The occupation over different k frequencies. The shape is
+      :code:`(spin, kpt, band)`, it should have the same leading dimension as
+      :code:`coeff`. This is an optional argument. When
+      :code:`occupation=None`, we compute the density contribution from each
+      :math:`k` without summing them. If :code:`occupation` is provided, we sum
+      up all the density from each :math:`k` weighted by the occupation.
 
   Returns:
-    Union[Float[Array, "spin kpt band x y z"], Float[Array, "spin kpt band"]]: A real-valued tensor that represents the density at the spatial grid computed from :py:func:`jrystal.grid.r_vectors`. The shape is :code:`(x, y, z)` if :code:`occupation` is provided, else the shape is :code:`(spin, kpt, band, x, y, z)`.
+    Union[Float[Array, "spin kpt band x y z"], Float[Array, "spin x y z"], Float
+      [Array, "x y z"]]: A real-valued tensor that represents the density at
+      the spatial grid computed from :py:func:`jrystal.grid.r_vectors`. The
+      shape is :code:`(spin, x, y, z)` if :code:`occupation` is provided, else
+      the shape is :code:`(spin, kpt, band, x, y, z)`.
   '''
   wave_grid_arr = wave_grid(coeff, vol)
   dens = absolute_square(wave_grid_arr)
 
   if occupation is not None:
-    occ = jnp.expand_dims(occupation, range(-3, 0))
     try:
-      occ = jnp.broadcast_to(occ, dens.shape)
-      dens = jnp.sum(dens * occ, axis=range(occupation.ndim))
+      dens = jnp.einsum('skb...,skb->s...', dens, occupation)
     except ValueError:
       raise ValueError(
         'Occupation should have a leading dimension that is the same as coeff. '
@@ -270,9 +287,8 @@ def density_grid(
 def density_grid_reciprocal(
   coeff: Complex[Array, 'spin kpt band x y z'],
   vol: Union[float, Array],
-  occupation: Optional[Float[Array, 'spin kpt band']] = None
-) -> Union[Complex[Array, 'spin kpt band x y z'],
-           Complex[Array, 'spin kpt band']]:
+  occupation: Optional[Float[Array, 'spin kpt band']] = None,
+) -> Union[Complex[Array, 'spin kpt band x y z'], Complex[Array, 'spin x y z']]:
   r'''Fourier transform of the density grid.
 
   In a system with electrons, the density of the electron is the result of
@@ -311,8 +327,8 @@ def density_grid_reciprocal(
       :py:func:`density_grid`.
 
   Returns:
-    A complex valued tensor representing :math:`\tilde{\rho}(G)` evaluated at :math:`G`
-    generated from :py:func:`jrystal.grid.g_vectors`.
+    A complex valued tensor representing :math:`\tilde{\rho}(G)` evaluated at
+    :math:`G` generated from :py:func:`jrystal.grid.g_vectors`.
   '''
   dens = density_grid(coeff, vol, occupation)
   return jnp.fft.fftn(dens, axes=range(-3, 0))

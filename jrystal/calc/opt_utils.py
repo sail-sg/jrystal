@@ -13,15 +13,18 @@
 # limitations under the License.
 """Utility functions for optimization. """
 import argparse
+import os
 from typing import Callable
 
 import jax
-import jrystal as jr
 import numpy as np
 import optax
 from absl import logging
 from optax._src import alias
 
+import jrystal as jr
+
+from ..__init__ import get_pkg_path
 from .._src.crystal import Crystal
 from .._src.ewald import ewald_coulomb_repulsion
 from .._src.grid import (
@@ -32,22 +35,25 @@ from .._src.grid import (
   proper_grid_size,
   r_vectors,
   spherical_mask,
-  translation_vectors
+  translation_vectors,
 )
 from .._src.utils import check_spin_number
 from ..config import JrystalConfigDict
 
 
 def set_env_params(config: JrystalConfigDict):
-  if config.debug:
-    jax.config.update("jax_debug_nans", True)
-    jax.config.update("jax_disable_jit", True)
+  os.environ["OPENBLAS_NUM_THREADS"] = "4"
+  os.environ["MKL_NUM_THREADS"] = "4"
+  os.environ["OMP_NUM_THREADS"] = "4"
+  jax.config.update("jax_debug_nans", config.jax_debug_nans)
 
   if config.verbose:
     logging.set_verbosity(logging.INFO)
     logging.info('Versbose mode is on.')
     if config.jax_enable_x64:
       logging.info("Precision: Double (64 bit).")
+    else:
+      logging.info("Precision: Single (32 bit).")
   else:
     logging.set_verbosity(logging.WARNING)
     logging.warning('Versbose mode is off.')
@@ -75,16 +81,21 @@ def create_freq_mask(config: JrystalConfigDict):
   if config.freq_mask_method == "cubic":
     mask = np.array(cubic_mask(grid_sizes))
     max_cutoff = estimate_max_cutoff_energy(crystal.cell_vectors, mask)
-    logging.info(f"maxmum cutoff: {max_cutoff:.2f} Ha")
-    logging.info(f"number of g points: {np.sum(mask)}")
+    logging.info(
+      f"Maxmum cutoff: {max_cutoff:.0f} Ha ({max_cutoff*27.2114:.0f} eV)"
+    )
+    logging.info(f"Number of g points: {np.sum(mask)}")
 
   elif config.freq_mask_method == "spherical":
     mask = spherical_mask(
       crystal.cell_vectors, grid_sizes, config.cutoff_energy
     )
-    logging.info(f"mask percentage: {np.mean(mask)*100:.2f}%")
-    logging.info(f"maxmum cutoff: {config.cutoff_energy}")
-    logging.info(f"number of g points: {np.sum(mask)}")
+    logging.info(f"Mask percentage: {np.mean(mask)*100:.2f}%")
+    logging.info(
+      f"Maxmum cutoff: {config.cutoff_energy:.0f} Ha "
+      f"({config.cutoff_energy*27.2114:.0f} eV)"
+    )
+    logging.info(f"Number of g points: {np.sum(mask)}")
 
   else:
     raise ValueError("freq_mask_method must be either cubic or spherical.")
@@ -94,8 +105,11 @@ def create_freq_mask(config: JrystalConfigDict):
 
 def create_crystal(config: JrystalConfigDict) -> Crystal:
   _pkg_path = jr.get_pkg_path()
-  path = _pkg_path + '/geometry/' + config.crystal + '.xyz'
-  crystal = Crystal.create_from_file(file_path=path)
+  if config.crystal is not None:
+    path = _pkg_path + '/geometry/' + config.crystal + '.xyz'
+  else:
+    path = config.crystal_file_path_path
+  crystal = Crystal.create_from_file(file_path=path, spin=config.spin)
   check_spin_number(crystal.num_electron, crystal.spin)
   return crystal
 
@@ -125,6 +139,7 @@ def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
   config_dict = dict(config.optimizer_args)
   opt = getattr(alias, config.optimizer, None)
   lr = config_dict.pop("learning_rate")
+  logging.info(f"learning rate: {lr}")
   if config.scheduler:
     raise NotImplementedError("Scheduler is not implemented yet.")
 
@@ -139,8 +154,10 @@ def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
 
 def create_occupation(config: JrystalConfigDict) -> Callable:
   occupation_method = config.occupation
-  if occupation_method == "fermi-dirac":
+  if occupation_method == "idempotent":
     return jr.occupation.idempotent
+  elif occupation_method == "simplex-projector":
+    return jr.occupation.simplex_projector
   elif occupation_method == "uniform":
     return jr.occupation.uniform
   elif occupation_method == "gamma":
@@ -166,3 +183,25 @@ def get_ewald_coulomb_repulsion(config: JrystalConfigDict):
     ewald_grid=ewald_grid
   )
   return ew
+
+
+def save_beta_sbt(output, filename=None):
+  if filename is None:
+    cache_dir = os.path.join(get_pkg_path(), "_cache")
+    filename = f"{cache_dir}/beta_sbt.npz"
+  if not os.path.exists(cache_dir):
+    os.makedirs(cache_dir)
+  np.savez(
+    filename,
+    *output
+  )
+
+
+def load_beta_sbt(filename=None):
+  if filename is None:
+    cache_dir = os.path.join(get_pkg_path(), "_cache")
+    filename = f"{cache_dir}/beta_sbt.npz"
+  if not os.path.exists(cache_dir):
+    os.makedirs(cache_dir)
+  output = np.load(filename)
+  return [output[f"arr_{i}"] for i in range(len(output))]

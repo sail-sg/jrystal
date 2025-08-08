@@ -15,20 +15,20 @@
 
 from ._src.energy import (
   band_energy,
-  exc_functional,
   external,
   hartree,
   kinetic,
   nuclear_repulsion,
-  total_energy
+  total_energy,
+  xc_energy,
 )
 
 __all__ = [
   "hartree",
   "external",
   "kinetic",
-  "exc_functional",
   "total_energy",
   "band_energy",
   "nuclear_repulsion",
+  "xc_energy",
 ]

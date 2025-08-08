@@ -26,6 +26,7 @@ from . import (
   occupation,
   potential,
   pw,
+  spmd,
   unitary_module,
   utils,
   xc
@@ -47,5 +48,6 @@ __all__ = [
   "utils",
   "unitary_module",
   "braket",
-  "xc"
+  "spmd",
+  "xc",
 ]

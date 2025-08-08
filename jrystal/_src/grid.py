@@ -22,15 +22,15 @@ It includes utilities for:
 - Grid transformations between real and reciprocal space
 '''
 import itertools
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
 import numpy as np
-from typing import Optional
 from ase.dft.kpoints import monkhorst_pack
 from jax import lax
 from jaxtyping import Array, Bool, Float, Int
+
 from .utils import fft_factor
 
 

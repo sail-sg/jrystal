@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Module for operations related to band structure optimization.
 
 This module is a wrapper of ASE.BandPath modules.
@@ -19,9 +18,9 @@ See: https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
 
 """
 
-from ase import cell
 import numpy as np
-from jaxtyping import Float, Array
+from ase import cell
+from jaxtyping import Array, Float
 from jrystal._src.const import BOHR2ANGSTROM
 
 

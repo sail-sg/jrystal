@@ -12,14 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Union, List, Tuple, Optional
-from ml_collections import ConfigDict
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import yaml
+from ml_collections import ConfigDict
 
 
 class JrystalConfigDict(ConfigDict):
   crystal: Optional[str]
   crystal_file_path_path: Optional[str]
+  spin: int
+  save_dir: Optional[str]
+  xc: str
   use_pseudopotential: bool
   pseudopotential_file_dir: Optional[str]
   freq_mask_method: str
@@ -33,8 +37,9 @@ class JrystalConfigDict(ConfigDict):
   ewald_args: Dict[str, float]
   epoch: int
   optimizer: str
-  optimizer_args: Dict[str, float]
+  optimizer_args: Dict[str, Any]
   scheduler: Optional[str]
+  convergence_window_size: int
   convergence_condition: float
   band_structure_empty_bands: Optional[int]
   k_path_special_points: Optional[str]
@@ -44,8 +49,11 @@ class JrystalConfigDict(ConfigDict):
   k_path_fine_tuning: bool
   k_path_fine_tuning_epoch: int
   seed: int
+  parallel_over_k_mesh: bool
+  parallel_over_k_path: bool
   xla_preallocate: bool
   jax_enable_x64: bool
+  jax_debug_nans: bool
   verbose: bool
   eps: float
 
@@ -53,6 +61,8 @@ class JrystalConfigDict(ConfigDict):
 default_config = {
   "crystal": "diamond",
   "crystal_file_path_path": None,
+  "save_dir": None,
+  "spin": 0,
   "xc": "lda_x",
   "use_pseudopotential": False,
   "pseudopotential_file_dir": None,
@@ -60,7 +70,7 @@ default_config = {
   "cutoff_energy": 100,
   "grid_sizes": 64,
   "k_grid_sizes": 3,
-  "occupation": "fermi-dirac",
+  "occupation": "uniform",
   "smearing": 0.001,
   "empty_bands": 8,
   "spin_restricted": True,
@@ -70,10 +80,13 @@ default_config = {
   "epoch": 5000,
   "optimizer": "adam",
   "optimizer_args": {
-    "learning_rate": 1e-2
+    "learning_rate": 0.01,
+    "b1": 0.9,
+    "b2": 0.99
   },
   "scheduler": None,
-  "convergence_condition": 1e-8,
+  "convergence_window_size": 20,
+  "convergence_condition": 1e-4,
   "band_structure_empty_bands": 8,
   "k_path_special_points": None,
   "num_kpoints": 60,
@@ -82,8 +95,11 @@ default_config = {
   "k_path_fine_tuning": True,
   "k_path_fine_tuning_epoch": 300,
   "seed": 123,
+  "parallel_over_k_mesh": False,
+  "parallel_over_k_path": True,
   "xla_preallocate": True,
   "jax_enable_x64": True,
+  "jax_debug_nans": False,
   "verbose": True,
   "eps": 1e-8,
 }

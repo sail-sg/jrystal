@@ -19,7 +19,6 @@ from ._src.potential import (
   external_reciprocal,
   hartree,
   hartree_reciprocal,
-  xc_density
 )
 
 __all__ = [
@@ -27,6 +26,5 @@ __all__ = [
   "hartree",
   "external_reciprocal",
   "external",
-  "xc_density",
   "effective",
 ]

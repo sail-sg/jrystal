@@ -22,7 +22,7 @@ from .xc import xc_density
 
 
 def hartree_reciprocal(
-  density_grid_reciprocal: Complex[Array, 'x y z'],
+  density_grid_reciprocal: Complex[Array, 'spin x y z'],
   g_vector_grid: Float[Array, 'x y z 3'],
   kohn_sham: bool = False
 ) -> Complex[Array, 'x y z']:
@@ -45,15 +45,22 @@ def hartree_reciprocal(
   for more details.
 
   Args:
-    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in
-      reciprocal space.
-    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
+    density_grid_reciprocal (Complex[Array, 'spin x y z']): Electron density in
+      reciprocal space. The input density must contains spin axis.
+    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal
+      space.
+    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to
+      False.
 
   Returns:
     Complex[Array, 'x y z']: Hartree potential in reciprocal space. If  density_grid_reciprocal has batch axes, they are preserved in the output.
   """
   dim = g_vector_grid.shape[-1]
+  assert density_grid_reciprocal.ndim == dim + 1, (
+    'density_grid_reciprocal must contains spin axis'
+  )
+  density_grid_reciprocal = jnp.sum(density_grid_reciprocal, axis=0)
+
   g_vec_square = jnp.sum(g_vector_grid**2, axis=-1)  # [x y z]
   g_vec_square = g_vec_square.at[(0,) * dim].set(1)
 
@@ -71,7 +78,7 @@ def hartree_reciprocal(
 
 
 def hartree(
-  density_grid_reciprocal: Complex[Array, 'x y z'],
+  density_grid_reciprocal: Complex[Array, 'spin x y z'],
   g_vector_grid: Float[Array, 'x y z 3'],
   kohn_sham: bool = False
 ) -> Complex[Array, 'x y z']:
@@ -91,14 +98,20 @@ def hartree(
   - :math:`\mathcal{F}^{-1}` denotes the inverse Fourier transform
 
   Args:
-    density_grid_reciprocal (Complex[Array, 'x y z']): Electron density in
-      reciprocal space.
-    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
+    density_grid_reciprocal (Complex[Array, 'spin x y z']): Electron density in
+      reciprocal space. The input density must contains spin axis.
+    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal
+      space.
+    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to
+      False.
 
   Returns:
     Complex[Array, 'x y z']: Hartree potential in real space. If density_grid_reciprocal has batch axes, they are preserved in the output.
   """
+  assert density_grid_reciprocal.ndim == 4, (
+    'density_grid_reciprocal must contains spin axis'
+  )
+  density_grid_reciprocal = jnp.sum(density_grid_reciprocal, axis=0)
   har_pot_grid_rcprl = hartree_reciprocal(
     density_grid_reciprocal, g_vector_grid, kohn_sham
   )
@@ -188,7 +201,7 @@ def external(
 
 
 def effective(
-  density_grid: Float[Array, 'x y z'],
+  density_grid: Float[Array, 'spin x y z'],
   position: Float[Array, "num_atom 3"],
   charge: Float[Array, "num_atom"],
   g_vector_grid: Float[Array, 'x y z 3'],
@@ -196,10 +209,10 @@ def effective(
   split: bool = False,
   xc_type: str = "lda_x",
   kohn_sham: bool = False,
-  spin_restricted: bool = True,
-) -> Union[Tuple[
-  Float[Array, 'x y z'], Float[Array, 'x y z'], Float[Array, 'x y z']],
-           Float[Array, 'x y z']]:
+) -> Union[Tuple[Float[Array, '... x y z'],
+                 Float[Array, '... x y z'],
+                 Float[Array, '... x y z']],
+           Float[Array, '... x y z']]:
   r"""Calculate the effective potential for electronic structure calculations.
 
   The effective potential is the sum of three contributions:
@@ -218,34 +231,37 @@ def effective(
     Currently supports only LDA exchange-correlation functional.
 
   Args:
-    density_grid (Float[Array, 'x y z']): Real-space electron density.
+    density_grid (Union[Float[Array, 'x y z'], Float[Array, 'spin x y z']]):
+      Real-space electron density. The dimension of the density grid can be
+      either 3 or 4, where 4 dimension is for spin-polarized calculation (first
+      dimension is spin channel).
     position (Float[Array, "num_atom 3"]): Atomic positions in the unit cell.
     charge (Float[Array, "num_atom"]): Nuclear charges.
-    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
+    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal
+      space.
     vol (Float): Volume of the unit cell.
     split (bool, optional): If True, return individual potential components.
       Defaults to False.
-    xc_type (str, optional): Exchange-correlation functional type. Only "lda" is
-      currently supported. Defaults to "lda".
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
+    xc (str, optional): Exchange-correlation functional type. Only "lda_x" is
+      currently supported. Defaults to "lda_x".
+    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to
+      False.
     spin_restricted (bool, optional): If True, use spin-restricted calculation.
       Defaults to True.
 
   Returns:
-    Union[Tuple[Array, Array, Array], Array]: If split is True, returns (Hartree, external, exchange-correlation) potentials. Otherwise returns their sum as the total effective potential.
+    Union[Tuple[Array, Array, Array], Array]: If split is True, returns (Hartree, external, xc) potentials. Otherwise returns their sum as the total effective potential. For spin-polarized calculation, the shape of the output is [2, x, y, z], else [x, y, z].
   """
   dim = position.shape[-1]
+  assert density_grid.ndim in [dim, dim + 1]
 
-  assert density_grid.ndim in [dim, dim + 1]  # w/w\o spin channel
+  if density_grid.ndim == dim:
+    density_grid = jnp.expand_dims(density_grid, 0)
 
-  grid_size = g_vector_grid.shape[0]
-  # make sure for both spin-polarized (unpolarized) version the shape is
-  # consistent
-  density_grid = density_grid.reshape(-1, grid_size, grid_size, grid_size)
   density_grid_reciprocal = jnp.fft.fftn(density_grid, axes=range(-dim, 0))
   # reciprocal space:
   v_hartree = hartree_reciprocal(
-    jnp.sum(density_grid_reciprocal, axis=0), g_vector_grid, kohn_sham
+    density_grid_reciprocal, g_vector_grid, kohn_sham
   )
   v_external = external_reciprocal(position, charge, g_vector_grid, vol)
 

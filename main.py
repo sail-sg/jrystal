@@ -1,7 +1,5 @@
 import argparse
 
-import cloudpickle as pickle
-
 import jrystal as jr
 
 
@@ -34,24 +32,19 @@ def main():
 
   args = parser.parse_args()
 
-  config = jr.config.get_config("config.yaml")
+  config = jr.config.get_config(args.config)
 
   if args.mode == "energy":
     if config.use_pseudopotential:
       jr.calc.energy_normcons(config)
     else:
-      jr.calc.energy(config)
+      jr.calc.energy_all_electrons(config)
+
   elif args.mode == "band":
-
-    gs_output = None
-    if args.load is not None:
-      with open(args.load, 'rb') as f:
-        gs_output = pickle.load(f)
-
     if config.use_pseudopotential:
-      jr.calc.band_normcons(config, gs_output)
+      jr.calc.band_normcons(config)
     else:
-      jr.calc.band(config, gs_output)
+      jr.calc.band_all_electrons(config)
 
 
 if __name__ == "__main__":
