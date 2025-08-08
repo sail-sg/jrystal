@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function() {
 
-  fetch("/_static/graph.dot?" + new Date().getTime())
+  fetch("_static/graph.dot?" + new Date().getTime())
     .then(function(response) {
       if (!response.ok) {
         throw new Error("Network response was not ok: " + response.statusText);

@@ -14,7 +14,6 @@
 
 import jax
 import jax.numpy as jnp
-
 import jrystal as jr
 import numpy as np
 from absl.testing import absltest, parameterized

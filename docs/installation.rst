@@ -16,14 +16,6 @@ Installation Guide
    We strongly recommend user to install the cuda version of ``JAX`` for better performance, if you have a GPU. ``jrystal`` can be run on CPU, but it is not optimized for CPU and not recommended.
 
 
-Install from PyPI
-~~~~~~~~~~~~~~~~
-
-The easiest way to install ``jrystal`` is via pip:
-
-.. code-block:: console
-
-   $ pip install jrystal
 
 Install from Source
 ~~~~~~~~~~~~~~~~~
@@ -36,6 +28,22 @@ For the latest development version, you can install from source:
    $ cd jrystal
    $ pip install -e .
 
+
+Install from PyPI
+~~~~~~~~~~~~~~~~
+
+.. warning::
+   
+   Install via PyPI is not supported yet. PyPI installation will be available in the future.
+
+
+The easiest way to install ``jrystal`` is via pip:
+
+.. code-block:: console
+
+   $ pip install jrystal
+
+
 Verify Installation
 ~~~~~~~~~~~~~~~~~
 
@@ -44,6 +52,7 @@ To verify that jrystal is installed correctly, you can run:
 .. code-block:: console
 
    $ python -c "import jrystal; print(jrystal.__version__)"
+
 
 Troubleshooting
 ~~~~~~~~~~~~~

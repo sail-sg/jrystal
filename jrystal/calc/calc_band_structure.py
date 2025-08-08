@@ -13,32 +13,37 @@
 # limitations under the License.
 """Band Structure Calculator. """
 
+import time
+from dataclasses import dataclass
+from math import ceil
+from typing import Optional
+
 import jax
 import jax.numpy as jnp
 import optax
-from math import ceil
-
-import time
-from typing import Optional
-from dataclasses import dataclass
 from absl import logging
 from tqdm import tqdm
 
-from .calc_ground_state_energy import calc as energy_calc
-from .calc_ground_state_energy import GroundStateEnergyOutput
-from .opt_utils import set_env_params, create_crystal, create_freq_mask
-from .opt_utils import create_grids, create_optimizer
-
-from ..config import JrystalConfigDict
-from .._src import pw, hamiltonian, occupation
+from .._src import hamiltonian, occupation, pw
 from .._src.band import get_k_path
 from .._src.crystal import Crystal
+from .._src.utils import wave_to_density
+from ..config import JrystalConfigDict
+from .calc_ground_state_energy import GroundStateEnergyOutput
+from .calc_ground_state_energy import calc as energy_calc
+from .opt_utils import (
+  create_crystal,
+  create_freq_mask,
+  create_grids,
+  create_optimizer,
+  set_env_params
+)
 
 
 @dataclass
 class BandStructureOutput:
-  """Output of the band structure calculation. 
-  
+  """Output of the band structure calculation.
+
   Args:
     config (JrystalConfigDict): Configuration for the calculation.
     crystal (Crystal): The crystal object.
@@ -108,7 +113,11 @@ def calc(
   # Calculate ground state density at grid points.
   def get_occupation(params):
     return occupation.idempotent(
-      params, crystal.num_electron, k_vec.shape[0], crystal.spin
+      params,
+      crystal.num_electron,
+      k_vec.shape[0],
+      crystal.spin,
+      config.spin_restricted
     )
 
   coeff_ground_state = pw.coeff(params_pw_ground_state, freq_mask)
@@ -116,9 +125,15 @@ def calc(
   ground_state_density_grid = pw.density_grid(
     coeff_ground_state, crystal.vol, occ_ground_state
   )
+  if not config.spin_restricted:
+    wave_grid_arr = pw.wave_grid(coeff_ground_state, crystal.vol)
+    o_alpha, o_beta = occ_ground_state
+    n_alpha_grid = wave_to_density(wave_grid_arr[0], o_alpha)
+    n_beta_grid = wave_to_density(wave_grid_arr[1], o_beta)
+    ground_state_density_grid = jnp.vstack([n_alpha_grid, n_beta_grid])
 
   # Define the objective function for band structure calculation.
-  def hamiltonian_trace(params_pw_band, kpts):
+  def hamiltonian_trace(params_pw_band, kpts, g_vec=g_vec):
     coeff_band = pw.coeff(params_pw_band, freq_mask)
     energy = hamiltonian.hamiltonian_matrix_trace(
       coeff_band,
@@ -127,20 +142,26 @@ def calc(
       ground_state_density_grid,
       g_vec,
       kpts,
-      crystal.vol
+      crystal.vol,
+      xc,
+      config.spin_restricted,
     )
     return jnp.sum(energy).real
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
   num_bands = ceil(crystal.num_electron / 2) + config.band_structure_empty_bands
-  params_pw_band = pw.param_init(key, num_bands, 1, freq_mask)
+  params_pw_band = pw.param_init(
+    key, num_bands, 1, freq_mask, config.spin_restricted
+  )
   opt_state = optimizer.init(params_pw_band)
 
   # define update function
   @jax.jit
-  def update(params, opt_state, kpts):
-    hamil_trace, grad = jax.value_and_grad(hamiltonian_trace)(params, kpts)
+  def update(params, opt_state, kpts, g_vec):
+    hamil_trace, grad = jax.value_and_grad(hamiltonian_trace)(
+      params, kpts, g_vec
+    )
 
     updates, opt_state = optimizer.update(grad, opt_state)
     params = optax.apply_updates(params, updates)
@@ -163,7 +184,7 @@ def calc(
   start = time.time()
   for i in iters:
     params_pw_band, opt_state, hamil_trace = update(
-      params_pw_band, opt_state, k_path[0:1]
+      params_pw_band, opt_state, k_path[0:1], g_vec
     )
     iters.set_description(f"Hamiltonian trace: {hamil_trace:.4E}")
 
@@ -185,7 +206,7 @@ def calc(
   for i in iters:
     for _ in range(config.k_path_fine_tuning_epoch):
       params_pw_band, opt_state, hamil_trace = update(
-        params_pw_band, opt_state, k_path[i:(i+1)]
+        params_pw_band, opt_state, k_path[i:(i+1)], g_vec
       )
     iters.set_description(f" Loss(the {i+1}th k point): {hamil_trace:.4E}")
     params_kpoint_list.append(params_pw_band)
@@ -197,8 +218,12 @@ def calc(
   logging.info("===> Diagonalizing the Hamiltonian matrix...")
 
   @jax.jit
-  def eig_fn(param, k):
-    coeff_k = pw.coeff(param, freq_mask)
+  def eig_fn(
+    coeff_k,
+    k,
+    ground_state_density_grid,
+    g_vec,
+  ):
     hamil_matrix = hamiltonian.hamiltonian_matrix(
       coeff_k,
       crystal.positions,
@@ -208,10 +233,14 @@ def calc(
       k,
       crystal.vol,
       xc,
+      config.spin_restricted,
       kohn_sham=True,
     )
 
-    eigen_values = jnp.linalg.eigvalsh(hamil_matrix[0])
+    eigen_values = jnp.linalg.eigvalsh(
+      hamil_matrix.reshape(-1, num_bands, num_bands)
+    )
+
     return eigen_values
 
   iters = tqdm(range(len(params_kpoint_list)))
@@ -219,7 +248,8 @@ def calc(
     prm = params_kpoint_list[i]
     k = k_path[i:(i + 1), :]
     iters.set_description(f"Diagonolizing the {i+1}th k points")
-    eig = eig_fn(prm, k)
+    coeff_k = pw.coeff(prm, freq_mask)
+    eig = eig_fn(coeff_k, k, ground_state_density_grid, g_vec)
     eigen_values.append(eig)
 
   # eigen_values = jnp.vstack(eigen_values)

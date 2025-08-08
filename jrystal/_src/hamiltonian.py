@@ -98,6 +98,7 @@ def hamiltonian_matrix_trace(
   kpts: Float[Array, "kpt 3"],
   vol: Float,
   xc: str = 'lda',
+  spin_restricted: bool = True,
   kohn_sham: bool = True,
   keep_kpts_axis: bool = False,
   keep_spin_axis: bool = False,
@@ -134,11 +135,6 @@ def hamiltonian_matrix_trace(
     - If keep_kpts_axis True: returns Float[Array, "kpt"]
     - If both True: returns Float[Array, "spin kpt"]
   """
-  num_spin = band_coefficient.shape[0]
-  if num_spin == 2:
-    raise NotImplementedError(
-      "Spin-unrestricted hamiltonian matrix is not implemented."
-    )
 
   v_eff = potential.effective(
     effictive_density_grid,
@@ -148,7 +144,8 @@ def hamiltonian_matrix_trace(
     vol,
     False,
     xc,
-    kohn_sham
+    kohn_sham,
+    spin_restricted,
   )
   wave_grid = pw.wave_grid(band_coefficient, vol)
   f_eff = braket.expectation(wave_grid, v_eff, vol, diagonal=True, mode="real")
@@ -158,7 +155,11 @@ def hamiltonian_matrix_trace(
     band_coefficient, t_kin, vol, diagonal=True, mode='kinetic'
   )  # [spin, kpt, band]
 
-  hamil_trace = (f_eff + f_kin).real
+  if spin_restricted:
+    hamil_trace = (f_eff + f_kin).real
+  else:
+    hamil_trace = f_kin.at[0, 0].add(f_eff[0, 0])
+    hamil_trace = hamil_trace.at[1, 0].add(f_eff[1, 1])
   if not keep_kpts_axis:
     hamil_trace = jnp.sum(hamil_trace, axis=1)
   if not keep_spin_axis:
@@ -175,6 +176,7 @@ def hamiltonian_matrix(
   kpts: Float[Array, "kpt 3"],
   vol: Float,
   xc: str = 'lda',
+  spin_restricted: bool = True,
   kohn_sham: bool = True,
 ) -> Complex[Array, "kpt band band"]:
   r"""Compute the full Hamiltonian matrix in the orbital basis.
@@ -194,7 +196,8 @@ def hamiltonian_matrix(
     charges (Int[Array, "atom"]): Atomic numbers for each atom with shape [atom].
     effictive_density_grid (Float[Array, "x y z"]): Electron density for effective potential evaluated on real space grid with shape [x, y, z].
     g_vector_grid (Float[Array, "x y z 3"]): G-vector grid in reciprocal space with shape [x, y, z, 3].
-    kpts (Float[Array, "kpt 3"]): K-points in reciprocal space with shape [kpt, 3].
+    kpts (Float[Array, "kpt 3"]): K-points in reciprocal space with shape [kpt, 3]. Currently, only spin-restricted
+    calculation enable parallel calculation for multiple K-points.
     vol (Float): Volume of the unit cell.
     xc (str): Exchange-correlation functional name. Defaults to 'lda'.
     kohn_sham (bool): Whether to use Kohn-Sham potential. Defaults to True.
@@ -203,20 +206,15 @@ def hamiltonian_matrix(
     Complex[Array, "kpt band band"]: Complex array of shape [kpt, band, band] containing the complete Hamiltonian matrix elements between all pairs of bands at each k-point.
   """
   num_bands = band_coefficient.shape[-4]
-  num_spin = band_coefficient.shape[0]
-
-  if num_spin == 2:
-    raise NotImplementedError(
-      "Spin-unrestricted hamiltonian matrix is not implemented."
-    )
 
   def hamil_k(k, coeff_k):
     k = jnp.reshape(k, [-1, 3])
-    coeff_k = jnp.expand_dims(coeff_k, axis=1)
 
     def efun(u):
-      _coeff = jnp.einsum("i, *n i a b c -> *n a b c", u, coeff_k)
-      _coeff = jnp.expand_dims(_coeff, axis=-4)
+      _coeff = jnp.einsum(
+        "si, sixyz -> sxyz", u.reshape(-1, num_bands), coeff_k
+      )
+      _coeff = jnp.expand_dims(_coeff, axis=(-5, -4))
 
       band_energies = hamiltonian_matrix_trace(
         _coeff,
@@ -227,16 +225,29 @@ def hamiltonian_matrix(
         k,
         vol,
         xc,
+        spin_restricted,
         kohn_sham,
       )
 
       return 0.5 * jnp.sum(band_energies).astype(band_coefficient.dtype)
 
-    x = jnp.ones(num_bands, dtype=band_coefficient.dtype)
+    if spin_restricted:
+      x = jnp.ones(num_bands, dtype=band_coefficient.dtype)
+    else:
+      x = jnp.ones(2 * num_bands, dtype=band_coefficient.dtype)
     return complex_hessian(efun, x)
 
-  h1 = jax.vmap(hamil_k, in_axes=(0, 1), out_axes=0)(kpts, band_coefficient)
-  return h1  # shape: [kpt, band, band]
+  if spin_restricted:
+    h1 = jax.vmap(hamil_k, in_axes=(0, 1), out_axes=0)(kpts, band_coefficient)
+    h1 = h1[None, ...]
+    # shape: [1, k, band, band]
+  else:
+    h1_ = hamil_k(kpts, band_coefficient[:, 0])
+    h1 = jnp.zeros((2, 1, num_bands, num_bands))
+    h1 = h1.at[0, 0].set(h1_[:num_bands, :num_bands])
+    h1 = h1.at[1, 0].set(h1_[num_bands:, num_bands:])
+    # shape: [2, 1, band, band]
+  return h1 
 
 
 def _hamiltonian_matrix_basis(
