@@ -455,7 +455,7 @@ def capped_simplex(
   num_electrons: int,
   spin: int = 0,
   spin_restricted: bool = True,
-  n_steps: int = 5,
+  n_steps: int = 1,
   temp: float = 1.,
 ) -> Float[Array, 'spin kpt band']:
   num_kpts = params["param_up"].shape[0]
