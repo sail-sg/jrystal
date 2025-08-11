@@ -4,30 +4,15 @@ from jrystal.pseudopotential.load import parse_upf
 from jrystal._src.energy import kinetic, hartree, exc_functional
 
 pp_dict = parse_upf("/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF")
-# parameters for the pseudized wave functions
-g_vector_grid = None
-vol = None
-kpts = None
-coeff_grid = None
-occupation = None
-kohn_sham = True
-
-"""parameters for the augmented wave functions
-
-
-
-D_aii (list[Array]): list of ndarray with shape (n_projectors, n_projectors) for each atom
-
-"""
 lmax = 4   # NOTE: not sure if the n_L is uniform for all atoms
-atoms_list = []
 n_projectors = []
 delta_aiiL = []
 delta0_a = []
 D_aii = []
 n_rgd = 1000
-r_g = jnp.linspace(0, 1, n_rgd)
-dr_g = r_g[1] - r_g[0]
+r_g = pp_dict['PP_MESH']['PP_R']
+dr_g = pp_dict['PP_MESH']['PP_RAB']
+
 nj = n_projectors[atom]
 psi = jnp.zeros((n_rgd, nj))
 psit = jnp.zeros((n_rgd, nj))
@@ -75,27 +60,26 @@ Delta0 = jnp.dot(nc_g - nct_g, r_g**2 * dr_g) - Z / sqrt(4 * pi)
 """Projectors overlap matrix + overlap correction
 I am not sure whether we should implement the overlap matrix for projectors
 """
-# def calculate_projector_overlaps(self, pt_jg):
-#   """Compute projector function overlaps B_ii = <pt_i | pt_i>."""
-#   nj = len(pt_jg)
-#   B_jj = np.zeros((nj, nj))
-#   for j1, pt1_g in enumerate(pt_jg):
-#       for j2, pt2_g in enumerate(pt_jg):
-#           B_jj[j1, j2] = self.rgd.integrate(pt1_g * pt2_g) / (4 * pi)
-#   B_ii = np.zeros((self.ni, self.ni))
-#   i1 = 0
-#   for j1, l1 in enumerate(self.l_j):
-#       for m1 in range(2 * l1 + 1):
-#           i2 = 0
-#           for j2, l2 in enumerate(self.l_j):
-#               for m2 in range(2 * l2 + 1):
-#                   if l1 == l2 and m1 == m2:
-#                       B_ii[i1, i2] = B_jj[j1, j2]
-#                   i2 += 1
-#           i1 += 1
-#   return B_ii
-
-
+def calculate_projector_overlaps(pt_jg):
+  """Compute projector function overlaps B_ii = <pt_i | pt_i>."""
+  nj = len(pt_jg)
+  B_jj = jnp.zeros((nj, nj))
+  for j1, pt1_g in enumerate(pt_jg):
+      for j2, pt2_g in enumerate(pt_jg):
+          B_jj[j1, j2] = rgd.integrate(pt1_g * pt2_g) / (4 * jnp.pi)
+  B_ii = jnp.zeros((ni, ni))
+  i1 = 0
+  for j1, l1 in enumerate(l_j):
+      for m1 in range(2 * l1 + 1):
+          i2 = 0
+          for j2, l2 in enumerate(l_j):
+              for m2 in range(2 * l2 + 1):
+                  if l1 == l2 and m1 == m2:
+                      B_ii[i1, i2] = B_jj[j1, j2]
+                  i2 += 1
+          i1 += 1
+  return B_ii
+B_ii = calculate_projector_overlaps(pt_jg)
 
 for i in range(n_projectors[atom]):
   for j in range(n_projectors[atom]):
@@ -127,6 +111,47 @@ def calculate_atomic_density_matrices(D_asp):
 def calculate_multipole_moments():
 
   return comp_charge, _Q_aL
+
+def poisson_rdl(
+  g_L: jnp.ndarray,
+  r: jnp.ndarray,
+  dr: jnp.ndarray,
+  l: int,
+):
+  r"""Solve the Poisson equation over radial grid
+
+  .. math::
+
+  .. warning::
+
+  Args:
+    g_L (Real[Array, "spin kpts band x y z"]): radial function.
+    r (Real[Array, "spin kpts band x y z"]): radial grid.
+    dr (Real[Array, "spin kpts band x y z"]): radial grid spacing.
+    l (int): angular momentum quantum number.
+
+  Returns:
+    (Real[Array, "spin kpts band x y z"]): radial function.
+  """
+
+  return jnp.cumsum(r**l * g_L * dr) / r**l
+
+def four_center_integral(
+  phi1: jnp.ndarray,
+  phi2: jnp.ndarray,
+  phi3: jnp.ndarray,
+  phi4: jnp.ndarray,
+  r: jnp.ndarray,
+  dr: jnp.ndarray,
+):
+  
+  Lcut = 25
+  result = jnp.zeros((Lcut))
+  for l in range(Lcut):
+    result[l] = jnp.sum(phi1 * phi2 * poisson_rdl(phi3 * phi4, r, dr, l))
+
+  M_pp = jnp.zeros((91, 91))
+  
 
 def correction():
   correction = 0
