@@ -41,7 +41,16 @@ def test_augmentation_charge():
 
 
 def test_augmentation_charge_multipole_moments():
-  """Test the augmentation charge integration with multipole moments."""
+  r"""Test the augmentation charge integration with multipole moments.
+  
+  The multipole moments are defined as
+  .. math::
+
+    Q_{ij}^l = \int_0^{r_c} Q_{ij}^l(r) r^{l + 2} dr
+
+  Notice that the multipole moments provided by the pseudopotential
+  file contains a :math:`4\pi r^2` factor.
+  """
   index = [0, 1, 18, 19, 5, 22, 23, 10, 42, 11, 43, 15, 47]
   l = [0, 0, 1, 1, 0, 1, 1, 0, 2, 0, 2, 0, 2]
   for i in range(len(index)):
@@ -54,7 +63,19 @@ def test_augmentation_charge_multipole_moments():
 
 
 def test_ae_nlcc():
-  """Test the all-electron non-local core charge density."""
+  r"""Test the all-electron non-linear core charge density.
+  
+  The integral of the all-electron non-linear core charge density
+  should equal to the number of electrons in the core.
+
+  .. math::
+
+    4\pi \int_0^{r_c} n_c(r) r^2 dr = Z
+
+  Notice that the non-linear core charge density provided by the pseudopotential
+  file is the true density without any :math:`r, 4\pi` factors.
+
+  """
   n_c = int_over_grid(
     jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC']) *
     jnp.array(pp_dict['PP_MESH']['PP_R'])**2
