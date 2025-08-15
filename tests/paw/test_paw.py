@@ -17,7 +17,9 @@ def int_over_grid(f):
 
 # @pytest.mark.skip
 def test_augmentation_charge():
-  """Test the augmentation charge integration."""
+  """Test the augmentation charge integration.
+  NOTE: currently, only the 0th angular momentum is checked
+  """
   for i in range(2):
     for j in range(2):
       qijr = jnp.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][i]['values']) *\

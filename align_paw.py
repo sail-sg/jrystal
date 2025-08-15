@@ -1,3 +1,5 @@
+from functools import partial
+
 import jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
@@ -58,9 +60,17 @@ def calc_compensation_charges():
   n_qg = (phi_jg[:, None, :] * phi_jg[None])[index]
   nt_qg = (phit_jg[:, None, :] * phit_jg[None])[index]
 
-  Delta_lq = jnp.zeros((lmax + 1, nq))
-  for l in range(lmax + 1):
-    Delta_lq = Delta_lq.at[l].set(jnp.dot(n_qg - nt_qg, r_g**(2 + l) * dr_g))
+  # NOTE: check the calculation of the multipoles moment, similar
+  # results can be observed in test_paw.test_augmentation_charge
+  # Delta_lq_ = jnp.zeros((lmax + 1, nq))
+  # for l in range(lmax + 1):
+  #   Delta_lq_ = Delta_lq_.at[l].set(jnp.dot(n_qg - nt_qg, r_g**l * dr_g))
+  # Delta_lq_ = Delta_lq_.reshape(-1)
+  # Delta_lq = jnp.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_MULTIPOLES'])
+  # index_list = [0, 1, 18, 19, 5, 22, 23, 10, 42, 11, 43, 15, 47]
+  # for i in index_list:
+  #   print(Delta_lq[i] - Delta_lq_[i])
+  # breakpoint()
 
   Lmax = (lmax + 1)**2
   Delta_pL = jnp.zeros((_np, Lmax))
@@ -96,12 +106,12 @@ def calc_compensation_charges():
   #         Delta_lq, Lmax, Delta_pL, Delta0, N0_p)
 
 # load the pseudopotential
-pp_dict = parse_upf("/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF")
+pp_dict = parse_upf('/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF')
 Z = 6
 # Z = int(pp_dict["PP_HEADER"]["Z_valence"])
 r_g = jnp.array(pp_dict['PP_MESH']['PP_R']) # radial grid
 dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB']) # radial grid integration weight
-lmax = int(pp_dict["PP_HEADER"]["l_max"]) # maximum angular momentum
+lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug']) # maximum angular momentum of the augmentation charge
 l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # angular momentum of each projector
 lcut = max(l_j)
 pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
@@ -135,6 +145,15 @@ for l in l_j:
     proj_m.append(m)
   i += 1
 T_Lqp = calculate_T_Lqp()
+n_lqg = jnp.zeros((2 * lcut + 1, nq, n_rgd))
+Delta_lq = jnp.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_MULTIPOLES']).reshape(lmax + 1, nj, nj)
+Delta_lq = jnp.transpose(Delta_lq, (1, 2, 0))[jnp.triu_indices(nj)].T
+for phi in pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ']:
+  n_lqg = n_lqg.at[
+    int(phi['angular_momentum']),
+    int(phi['first_index']) * nj + int(phi['second_index'])
+  ].set(phi['values'])
+
 assert r_g.shape[0] == n_rgd
 assert dr_g.shape[0] == n_rgd
 assert phi_jg.shape[1] == n_rgd
@@ -147,9 +166,15 @@ B_ii = calculate_projector_overlaps()
 
 r_max = jnp.maximum(r_g[None], r_g[:, None])
 
-"""Coulomb related energy corrections"""
 def integrate_radial_function(f_g):
-  return jnp.sum(f_g * r_g**2 * dr_g) * 4 * jnp.pi
+  r"""
+  Integrate the radial function over the radial grid.
+  NOTE: the integrand should not contain extra r factor
+
+  .. math::
+    \int_0^{r_c} f(r) r^2 dr
+  """
+  return jnp.sum(f_g * r_g**2 * dr_g, axis=-1) * 4 * jnp.pi
 
 def poisson_rdl(
   g_L: jnp.ndarray,
@@ -240,17 +265,62 @@ for i in range(ni):
       K_p = K_p.at[j, i].set(K_p[i, j])
 # breakpoint()
 
-def four_center_integral(
-  n1: jnp.ndarray,
-  n2: jnp.ndarray,
-):
-  
-  Lcut = 25
-  result = jnp.zeros((Lcut))
-  for l in range(Lcut):
-    result[l] = jnp.sum(n1 * poisson_rdl(n2, r_g, dr_g, l)) 
+poisson_rdl0 = jax.vmap(partial(poisson_rdl, l=0))
+def calculate_coulomb_corrections():
+  r"""
+  The Coulomb energy corrections are given by:
+
+  .. math::
+    A_q = \frac{1}{2} \left( \int_0^{r_c} n_c(r) \nabla^2 G_0(r) dr + \int_0^{r_c} n_q(r) \nabla^2 G_0(r) dr \right)
+
+  """
+
+  # NOTE: these two terms are the same, only for numerical stability
+  # 1st term in (46)
+  A_q = 0.5 * (integrate_radial_function(nc_g * poisson_rdl0(n_qg)) +
+               integrate_radial_function(n_qg * poisson_rdl0(nc_g.reshape(1, -1))))
+  # 2nd term + 5th termin (46)
+  A_q -= 0.5 * (integrate_radial_function(mct_g * poisson_rdl0(nt_qg)) +
+               integrate_radial_function(nt_qg * poisson_rdl0(mct_g.reshape(1, -1))))
+  # 3rd term in (46)
+  A_q -= 4 * jnp.pi * Z * jnp.dot(n_qg, r_g * dr_g)
+  # 4th term + 6th term in (46)
+  A_q -= 0.5 * (integrate_radial_function(mct_g * poisson_rdl0(n_lqg[0])) +
+                integrate_radial_function(n_lqg[0] * poisson_rdl0(mct_g.reshape(1, -1))))
+  # A_q -= 0.5 * (integrate_radial_function(mct_g * poisson_rdl0(g_lg[0])) +
+  #               integrate_radial_function(g_lg[0] * poisson_rdl0(mct_g.reshape(1, -1)))) * \
+  #     Delta_lq[0]
+  M_p = jnp.dot(A_q, T_Lqp[0])
+
+  A_lqq = []
+  for l in range(2 * lcut + 1):
+    poisson_rdl_ = jax.vmap(partial(poisson_rdl, l=l))
+    # 1st term in (47)
+    A_qq = 0.5 * integrate_radial_function(n_qg[None] * poisson_rdl_(n_qg)[:, None])  
+    # 2nd term in (47)
+    A_qq -= 0.5 * integrate_radial_function(nt_qg[None] * poisson_rdl_(nt_qg)[:, None])  
+    if l <= lmax:
+      A_qq -= 0.5 * integrate_radial_function(poisson_rdl_(nt_qg)[None] * n_lqg[l][:, None])
+      A_qq -= 0.5 * integrate_radial_function(nt_qg[None] * poisson_rdl_(n_lqg[l])[:, None])
+      A_qq -= 0.5 * integrate_radial_function(n_lqg[l][None] * poisson_rdl_(n_lqg[l])[:, None])
+    A_lqq.append(A_qq)
+
+  M_pp = jnp.zeros((_np, _np))
+  L = 0
+  for l in range(2 * lcut + 1):
+    for m in range(2 * l + 1):  # m?
+      M_pp += jnp.dot(jnp.transpose(T_Lqp[L]), jnp.dot(A_lqq[l], T_Lqp[L]))
+      L += 1
+  return M_p, M_pp
+
+M_p, M_pp = calculate_coulomb_corrections()
+breakpoint()
+
+# TODO: the xc correction seems to be very messy here
+xc_correction = get_xc_correction(rgd2, xc, gcut2, lcut)
 
 
+"""Density matrix related quantities"""
 for i in range(n_projectors[atom]):
   for j in range(n_projectors[atom]):
     for l in range((lmax + 1)**2):
@@ -280,7 +350,7 @@ def calculate_atomic_density_matrices(D_asp):
 
 def calculate_multipole_moments():
 
-  return comp_charge, _Q_aL 
+  return comp_charge, _Q_aL
 
 def correction():
   correction = 0
@@ -333,7 +403,6 @@ def total_energy():
     kohn_sham
   )
   
-   
   # core-valence Hartree energy
   e_coulomb = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
 

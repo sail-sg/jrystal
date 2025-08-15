@@ -144,6 +144,7 @@ def parse_pp_nonlocal(pp_nonlocal) -> dict:
       'q_with_l': augmentation_element.get('q_with_l') == 'true',
       'nqf': int(augmentation_element.get('nqf')),
       'nqlc': int(augmentation_element.get('nqlc')),
+      'l_max_aug': int(augmentation_element.get('l_max_aug')),
     }
 
     # Parse <PP_Q>
@@ -169,6 +170,7 @@ def parse_pp_nonlocal(pp_nonlocal) -> dict:
             'first_index': qij.get('first_index'),
             'second_index': qij.get('second_index'),
             'composite_index': qij.get('composite_index'),
+            'angular_momentum': qij.get('angular_momentum'),
             'values': list(map(float, qij.text.split()))
           }
         )
