@@ -38,7 +38,7 @@ def calculate_T_Lqp():
 def calculate_projector_overlaps():
   """Compute projector function overlaps B_ii = <pt_i | pt_i>."""
   B_jj = jnp.sum(pt_jg[:, None, :] * pt_jg[None, :, :] * dr_g, axis=2)
-  breakpoint()
+  # breakpoint()
   B_ii = jnp.zeros((ni, ni))
   i1 = 0
   for j1, l1 in enumerate(l_j):
@@ -52,7 +52,7 @@ def calculate_projector_overlaps():
       i1 += 1
   return B_ii
 
-def get_compensation_charges():
+def calc_compensation_charges():
 
   index = jnp.triu_indices(nj)
   n_qg = (phi_jg[:, None, :] * phi_jg[None])[index]
@@ -99,31 +99,41 @@ def get_compensation_charges():
 pp_dict = parse_upf("/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF")
 Z = 6
 # Z = int(pp_dict["PP_HEADER"]["Z_valence"])
-r_g = jnp.array(pp_dict['PP_MESH']['PP_R'])
-dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB'])
-lmax = int(pp_dict["PP_HEADER"]["l_max"])
-l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])
+r_g = jnp.array(pp_dict['PP_MESH']['PP_R']) # radial grid
+dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB']) # radial grid integration weight
+lmax = int(pp_dict["PP_HEADER"]["l_max"]) # maximum angular momentum
+l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # angular momentum of each projector
 lcut = max(l_j)
-pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])
-phi_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])
-phit_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])
+pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
+phi_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']]) # all-electron wave functions
+phit_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']]) # pseudo wave functions
 r"""
 It is the true charge density, i.e. it will be 
 correctly integrated as \sum_i 4 \pi r_i^2 nlcc_i
 Different from the setting in GPAW, see the discussions
 after (41b)
 """
-nc_g = jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC'])
-nct_g = jnp.array(pp_dict['PP_NLCC'])
-vbar_g = jnp.array(pp_dict['PP_LOCAL'])
+nc_g = jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC']) # all-electron non-linear core charge
+nct_g = jnp.array(pp_dict['PP_NLCC']) # non-linera core charge
+vbar_g = jnp.array(pp_dict['PP_LOCAL']) # local pseudopotential
 
 # check the shape of the arrays
-n_rgd = r_g.shape[0]
-nj = phi_jg.shape[0]
-n_j = np.array([0, 0, 1, 1])
-ni = nj + l_j.sum() * 2
-nq = nj * (nj + 1) // 2
-_np = ni * (ni + 1) // 2
+n_rgd = r_g.shape[0] # number of grid points
+nj = phi_jg.shape[0] # number of projectors radial functions
+n_j = np.array([0, 0, 1, 1]) # TODO: main quantum number, not sure how to calculate
+ni = nj + l_j.sum() * 2 # number of projectors
+nq = nj * (nj + 1) // 2 # number of radial functionpairs
+_np = ni * (ni + 1) // 2 # number of projector pairs
+proj_r = []
+proj_l = []
+proj_m = []
+i = 0
+for l in l_j:
+  for m in range(-l, l + 1):
+    proj_r.append(i)
+    proj_l.append(l)
+    proj_m.append(m)
+  i += 1
 T_Lqp = calculate_T_Lqp()
 assert r_g.shape[0] == n_rgd
 assert dr_g.shape[0] == n_rgd
@@ -132,7 +142,7 @@ assert phit_jg.shape[1] == n_rgd
 assert nc_g.shape[0] == n_rgd
 assert nct_g.shape[0] == n_rgd
 
-n_qg, nt_qg, Delta_lq, Lmax, Delta_pL, Delta0 = get_compensation_charges()
+n_qg, nt_qg, Delta_lq, Lmax, Delta_pL, Delta0 = calc_compensation_charges()
 B_ii = calculate_projector_overlaps()
 
 r_max = jnp.maximum(r_g[None], r_g[:, None])
@@ -165,6 +175,8 @@ A = 0.5 * integrate_radial_function(nc_g * poisson_rdl(nc_g, 0))
 # NOTE: GPAW use jnp.sqrt(4 * jnp.pi) since the n_c is the radial part
 # A -= jnp.sqrt(4 * jnp.pi) * Z * jnp.dot(r_g * dr_g, nc_g)
 A -= 4 * jnp.pi * Z * jnp.dot(r_g * dr_g, nc_g)
+# TODO: need to check g_lg
+g_lg = [0]
 mct_g = nct_g + Delta0 * g_lg[0]
 A -= 0.5 * integrate_radial_function(mct_g * poisson_rdl(mct_g, 0))
 M = A
@@ -173,6 +185,60 @@ MB = -integrate_radial_function(nct_g * vbar_g)
 AB_q = -integrate_radial_function(nt_qg * vbar_g)
 MB_p = jnp.dot(AB_q, T_Lqp[0])
 
+# calculate the linear kinetic correction
+# dekin_nn = (integrate_radial_function(phit_jg[:, None] * phit_jg * vtr_g) / (4 * jnp.pi) -
+#             integrate_radial_function(phi_jg[:, None] * phi_jg * vr_g) / (4 * jnp.pi) +
+#             dH_nn)
+
+# def calc_linear_kinetic_correction(T0_qp):
+#   e_kin_jj = e_kin_jj
+#   nj = len(e_kin_jj)
+#   K_q = []
+#   for j1 in range(nj):
+#     for j2 in range(j1, nj):
+#       K_q.append(e_kin_jj[j1, j2])
+#   K_p = jnp.sqrt(4 * jnp.pi) * jnp.dot(K_q, T0_qp)
+#   return K_p
+
+def calc_kinetic_energy(phi1: jnp.ndarray, phi2: jnp.ndarray, l: int):
+  r"""
+  The kinetic energy of the two-center integral is given by:
+
+  .. math::
+    \big\langle \phi_i \big| -\tfrac{1}{2}\nabla^2 \big| \phi_j \big\rangle
+    = \tfrac{1}{2}\,\delta_{\ell_i\ell_j}\,\delta_{m_i m_j}
+    \int_0^{r_c}\!\left[ u_i'(r)\,u_j'(r)
+    +\frac{\ell(\ell+1)}{r^2}\,u_i(r)\,u_j(r) \right]\; dr 
+
+  """
+
+  def df(f: jnp.ndarray):
+    # NOTE: we are using forward difference to calculate the derivative here
+    f = f.at[1:].add(-f[:-1])
+    return f
+
+  def dfdr(f: jnp.ndarray):
+    return df(f) / df(r_g)
+  
+  dphi1dr = dfdr(phi1)
+  dphi2dr = dfdr(phi2)
+  return (integrate_radial_function(phi1 * phi2 / r_g**4) * l * (l + 1) +
+    integrate_radial_function(dphi1dr * dphi2dr / r_g**2)) / 2
+
+K = jnp.zeros((nj, nj))
+for i in range(nj):
+  for j in range(i, nj):
+    if l_j[i] == l_j[j]:
+      K = K.at[i, j].set(calc_kinetic_energy(phi_jg[i], phi_jg[j], l_j[i]))
+      K = K.at[j, i].set(K[i, j])
+
+K_p = jnp.zeros((ni, ni))
+for i in range(ni):
+  for j in range(i, ni):
+    if proj_l[i] == proj_l[j] and proj_m[i] == proj_m[j]:
+      K_p = K_p.at[i, j].set(K[proj_r[i], proj_r[j]])
+      K_p = K_p.at[j, i].set(K_p[i, j])
+# breakpoint()
 
 def four_center_integral(
   n1: jnp.ndarray,
