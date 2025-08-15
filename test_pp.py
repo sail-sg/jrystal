@@ -50,16 +50,18 @@ def main():
     plt.close()
 
     """compare the AE_WFC and PS_WFC"""
-    index = 1000
+    index = -1
     for i in range(4):
       plt.plot(
         pp_dict['PP_MESH']['PP_R'][:index],
-        pp_dict['PP_FULL_WFC']['PP_AEWFC'][i]['values'][:index],
+        np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][i]['values'][:index])/\
+        np.array(pp_dict['PP_MESH']['PP_R'][:index]),
         label=r"$\psi$"
       )
       plt.plot(
         pp_dict['PP_MESH']['PP_R'][:index],
-        pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values'][:index],
+        np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values'][:index])/\
+        np.array(pp_dict['PP_MESH']['PP_R'][:index]),
         label=r"$\widetilde\psi$"
       )
       plt.legend()
@@ -68,8 +70,9 @@ def main():
       plt.close()
 
     """check the calculation of PP_QIJ
-    TODO: it is weird that currectly Q_{ij}^L(r)/Q_{ij} are not the same for the
-    same l and different i, j
+    NOTE: Q_{ij}^L(r)/Q_{ij} are not the same for the same l and different i, j
+    for the QE PAW pp file, the reason is that QE PAW pp file does not use a unique
+    unit moment function
     """
     index = 800
     i = 0
@@ -103,20 +106,57 @@ def main():
     s = 0
     plt.plot(
       pp_dict['PP_MESH']['PP_R'][s:index],
-      -np.array(pp_dict['PP_LOCAL'][s:index]),
-      label=r"$\widetilde{n}_c$"
+      6/np.array(pp_dict['PP_MESH']['PP_R'][s:index]) + np.array(pp_dict['PP_LOCAL'][s:index]),
+      label=r"$v_{\text{loc}} - Z/r$"
     )
     plt.plot(
       pp_dict['PP_MESH']['PP_R'][s:index],
-      -np.array(pp_dict['PP_PAW']['PP_AE_VLOC'][s:index]),
-      label=r"$n_c$"
+      6/np.array(pp_dict['PP_MESH']['PP_R'][s:index]) + np.array(pp_dict['PP_PAW']['PP_AE_VLOC'][s:index]),
+      label=r"$v_{\text{loc}}^{\text{AE}} - Z/r$"
     )
+    # plt.plot(
+    #   pp_dict['PP_MESH']['PP_R'][s:index],
+    #   6/np.array(pp_dict['PP_MESH']['PP_R'][s:index]),
+    #   label=r"$1/r$"
+    # )
     plt.legend()
     plt.xlabel(r"$r$ (a.u.)")
     plt.ylabel(r"$\log n_c$ (a.u.)")
     plt.yscale("log")
     plt.savefig(f"fig/vlocal_cmp_{index}.png", dpi=300)
     plt.close()
+
+  """ compare the augmentation charge and its smoothed version"""
+  index = 800
+  p1 = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3]
+  p2 = [0, 1, 2, 3, 1, 2, 3, 2, 2, 3, 3, 3, 3]
+  for i in range(len(p1)):
+    plt.plot(
+      pp_dict['PP_MESH']['PP_R'][:index],
+      np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p1[i]]['values'][:index]) *\
+      np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p2[i]]['values'][:index]) -\
+      np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p1[i]]['values'][:index]) *\
+      np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p2[i]]['values'][:index]),
+      label=f"qij", linestyle="--"
+    )
+    plt.plot(
+      pp_dict['PP_MESH']['PP_R'][:index],
+      np.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ'][i]['values'][:index]),
+      label=r"$\widetilde qij$"
+    )
+    print(int_over_grid(
+      np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p1[i]]['values']) *\
+      np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p2[i]]['values']) -\
+      np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p1[i]]['values']) *\
+      np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p2[i]]['values'])
+    ) - int_over_grid(
+      np.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ'][i]['values'])
+    ))
+    plt.legend()
+    plt.xlabel(r"$r$ (a.u.)")
+    plt.savefig(f"fig/qij{i}_cmp.png", dpi=300)
+    plt.close()
+  breakpoint()
 
   """check the orthogonality of PS_WFC and BETA
   NOTE: the accuracy is relatively low comparing to other integrations
