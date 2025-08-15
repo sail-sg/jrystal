@@ -70,7 +70,6 @@ def calc_compensation_charges():
   # index_list = [0, 1, 18, 19, 5, 22, 23, 10, 42, 11, 43, 15, 47]
   # for i in index_list:
   #   print(Delta_lq[i] - Delta_lq_[i])
-  # breakpoint()
 
   Lmax = (lmax + 1)**2
   Delta_pL = jnp.zeros((_np, Lmax))
@@ -109,23 +108,26 @@ def calc_compensation_charges():
 pp_dict = parse_upf('/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF')
 Z = 6
 # Z = int(pp_dict["PP_HEADER"]["Z_valence"])
-r_g = jnp.array(pp_dict['PP_MESH']['PP_R']) # radial grid
-dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB']) # radial grid integration weight
 lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug']) # maximum angular momentum of the augmentation charge
 l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # angular momentum of each projector
 lcut = max(l_j)
-pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
-phi_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']]) # all-electron wave functions
-phit_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']]) # pseudo wave functions
+rcut_j = jnp.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
+gcut_j = jnp.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
+gcut = jnp.max(gcut_j)
+r_g = jnp.array(pp_dict['PP_MESH']['PP_R'])[:gcut] # radial grid
+dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB'])[:gcut] # radial grid integration weight
+pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :gcut] # projector functions
+phi_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :gcut] # all-electron wave functions
+phit_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :gcut] # pseudo wave functions
 r"""
 It is the true charge density, i.e. it will be 
 correctly integrated as \sum_i 4 \pi r_i^2 nlcc_i
 Different from the setting in GPAW, see the discussions
 after (41b)
 """
-nc_g = jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC']) # all-electron non-linear core charge
-nct_g = jnp.array(pp_dict['PP_NLCC']) # non-linera core charge
-vbar_g = jnp.array(pp_dict['PP_LOCAL']) # local pseudopotential
+nc_g = jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:gcut] # all-electron non-linear core charge
+nct_g = jnp.array(pp_dict['PP_NLCC'])[:gcut] # non-linera core charge
+vbar_g = jnp.array(pp_dict['PP_LOCAL'])[:gcut] # local pseudopotential
 
 # check the shape of the arrays
 n_rgd = r_g.shape[0] # number of grid points
@@ -145,14 +147,14 @@ for l in l_j:
     proj_m.append(m)
   i += 1
 T_Lqp = calculate_T_Lqp()
-n_lqg = jnp.zeros((2 * lcut + 1, nq, n_rgd))
+n_lqg = jnp.zeros((2 * lcut + 1, nq, gcut))
 Delta_lq = jnp.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_MULTIPOLES']).reshape(lmax + 1, nj, nj)
 Delta_lq = jnp.transpose(Delta_lq, (1, 2, 0))[jnp.triu_indices(nj)].T
 for phi in pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ']:
   n_lqg = n_lqg.at[
     int(phi['angular_momentum']),
     int(phi['first_index']) * nj + int(phi['second_index'])
-  ].set(phi['values'])
+  ].set(phi['values'][:gcut])
 
 assert r_g.shape[0] == n_rgd
 assert dr_g.shape[0] == n_rgd
