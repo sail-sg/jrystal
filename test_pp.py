@@ -126,37 +126,36 @@ def main():
     plt.savefig(f"fig/vlocal_cmp_{index}.png", dpi=300)
     plt.close()
 
-  """ compare the augmentation charge and its smoothed version"""
-  index = 800
-  p1 = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3]
-  p2 = [0, 1, 2, 3, 1, 2, 3, 2, 2, 3, 3, 3, 3]
-  for i in range(len(p1)):
-    plt.plot(
-      pp_dict['PP_MESH']['PP_R'][:index],
-      np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p1[i]]['values'][:index]) *\
-      np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p2[i]]['values'][:index]) -\
-      np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p1[i]]['values'][:index]) *\
-      np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p2[i]]['values'][:index]),
-      label=f"qij", linestyle="--"
-    )
-    plt.plot(
-      pp_dict['PP_MESH']['PP_R'][:index],
-      np.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ'][i]['values'][:index]),
-      label=r"$\widetilde qij$"
-    )
-    print(int_over_grid(
-      np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p1[i]]['values']) *\
-      np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p2[i]]['values']) -\
-      np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p1[i]]['values']) *\
-      np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p2[i]]['values'])
-    ) - int_over_grid(
-      np.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ'][i]['values'])
-    ))
-    plt.legend()
-    plt.xlabel(r"$r$ (a.u.)")
-    plt.savefig(f"fig/qij{i}_cmp.png", dpi=300)
-    plt.close()
-  breakpoint()
+    """ compare the augmentation charge and its smoothed version"""
+    index = 800
+    p1 = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3]
+    p2 = [0, 1, 2, 3, 1, 2, 3, 2, 2, 3, 3, 3, 3]
+    for i in range(len(p1)):
+      plt.plot(
+        pp_dict['PP_MESH']['PP_R'][:index],
+        np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p1[i]]['values'][:index]) *\
+        np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p2[i]]['values'][:index]) -\
+        np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p1[i]]['values'][:index]) *\
+        np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p2[i]]['values'][:index]),
+        label=f"qij", linestyle="--"
+      )
+      plt.plot(
+        pp_dict['PP_MESH']['PP_R'][:index],
+        np.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ'][i]['values'][:index]),
+        label=r"$\widetilde qij$"
+      )
+      print(int_over_grid(
+        np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p1[i]]['values']) *\
+        np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][p2[i]]['values']) -\
+        np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p1[i]]['values']) *\
+        np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][p2[i]]['values'])
+      ) - int_over_grid(
+        np.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ'][i]['values'])
+      ))
+      plt.legend()
+      plt.xlabel(r"$r$ (a.u.)")
+      plt.savefig(f"fig/qij{i}_cmp.png", dpi=300)
+      plt.close()
 
   """check the orthogonality of PS_WFC and BETA
   NOTE: the accuracy is relatively low comparing to other integrations
@@ -176,7 +175,153 @@ def main():
       )
       print(q_ij)
       # assert (I[i, j] - q_ij) < 1e-8
+
+  n_proj = len(pp_dict['PP_NONLOCAL']['PP_BETA'])
+  n_pswfc = len(pp_dict['PP_FULL_WFC']['PP_PSWFC'])
+  
+  # Verify we have same number of projectors and pseudo wavefunctions
+  assert n_proj == n_pswfc, \
+    f"Number of projectors ({n_proj}) != number of PSWFC ({n_pswfc})"
+  
+  # Test all pairs
+  for i in range(n_proj):
+    for j in range(n_pswfc):
+      # Get angular momentum of projector and wavefunction
+      l_beta = pp_dict['PP_NONLOCAL']['PP_BETA'][i]['angular_momentum']
+      l_pswfc = pp_dict['PP_FULL_WFC']['PP_PSWFC'][j]['angular_momentum']
+      
+      # Only compute if same angular momentum (otherwise orthogonal by symmetry)
+      if l_beta == l_pswfc:
+        # Get cutoff index from projector (convert to int)
+        cutoff = int(pp_dict['PP_NONLOCAL']['PP_BETA'][i]['cutoff_radius_index'])
+        
+        # Compute inner product <beta_i|psi_tilde_j>
+        beta_i = np.array(pp_dict['PP_NONLOCAL']['PP_BETA'][i]['values'][:cutoff])
+        pswfc_j = np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][j]['values'][:cutoff])
+        rab = np.array(pp_dict['PP_MESH']['PP_RAB'][:cutoff])
+        
+        inner_product = np.sum(beta_i * pswfc_j * rab)
+        print(f"<beta_{i}|psi_tilde_{j}> = {inner_product:.6f}")
+        
+        # if i == j:
+        #   # Diagonal elements should be 1
+        #   assert np.abs(inner_product - 1.0) < 1e-7, \
+        #     f"<beta_{i}|psi_tilde_{j}> = {inner_product:.6f}, expected 1.0"
+        # else:
+        #   # Off-diagonal elements should be 0
+        #   assert np.abs(inner_product) < 1e-7, \
+        #     f"<beta_{i}|psi_tilde_{j}> = {inner_product:.6f}, expected 0.0"
   breakpoint()
+
+  # """Test orthonormality of projectors (PP_BETA)
+  # The projectors should satisfy <beta_i|beta_j> = delta_ij within each angular momentum block
+  # """
+  # print("\n" + "="*60)
+  # print("Testing orthonormality of projectors (PP_BETA)")
+  # print("="*60)
+  
+  # n_proj = len(pp_dict['PP_NONLOCAL']['PP_BETA'])
+  # proj_ortho_matrix = np.zeros((n_proj, n_proj))
+  
+  # for i in range(n_proj):
+  #   for j in range(n_proj):
+  #     # Get angular momentum of each projector
+  #     l_i = pp_dict['PP_NONLOCAL']['PP_BETA'][i]['angular_momentum']
+  #     l_j = pp_dict['PP_NONLOCAL']['PP_BETA'][j]['angular_momentum']
+      
+  #     # Only compute if same angular momentum
+  #     if l_i == l_j:
+  #       # Get cutoff indices
+  #       cutoff_i = pp_dict['PP_NONLOCAL']['PP_BETA'][i]['cutoff_radius_index']
+  #       cutoff_j = pp_dict['PP_NONLOCAL']['PP_BETA'][j]['cutoff_radius_index']
+  #       cutoff = min(cutoff_i, cutoff_j)
+        
+  #       # Compute inner product up to cutoff
+  #       beta_i = np.array(pp_dict['PP_NONLOCAL']['PP_BETA'][i]['values'][:cutoff])
+  #       beta_j = np.array(pp_dict['PP_NONLOCAL']['PP_BETA'][j]['values'][:cutoff])
+  #       rab = np.array(pp_dict['PP_MESH']['PP_RAB'][:cutoff])
+        
+  #       proj_ortho_matrix[i, j] = np.sum(beta_i * beta_j * rab)
+        
+  # print("Projector orthonormality matrix (should be identity within blocks):")
+  # print(proj_ortho_matrix)
+  # print("\nDiagonal elements (should be ~1):", np.diag(proj_ortho_matrix))
+  # print("Max off-diagonal in l=0 block:", np.max(np.abs(proj_ortho_matrix[:2, :2] - np.eye(2))))
+  # print("Max off-diagonal in l=1 block:", np.max(np.abs(proj_ortho_matrix[2:4, 2:4] - np.eye(2))))
+
+  # """Test orthonormality of AEWFC (all-electron wavefunctions)
+  # The AE wavefunctions should be orthonormal: <psi_i|psi_j> = delta_ij
+  # """
+  # print("\n" + "="*60)
+  # print("Testing orthonormality of AEWFC")
+  # print("="*60)
+  
+  # n_wfc = len(pp_dict['PP_FULL_WFC']['PP_AEWFC'])
+  # aewfc_ortho_matrix = np.zeros((n_wfc, n_wfc))
+  
+  # for i in range(n_wfc):
+  #   for j in range(n_wfc):
+  #     # Get angular momentum of each wavefunction
+  #     l_i = pp_dict['PP_FULL_WFC']['PP_AEWFC'][i]['l']
+  #     l_j = pp_dict['PP_FULL_WFC']['PP_AEWFC'][j]['l']
+      
+  #     # Only compute if same angular momentum
+  #     if l_i == l_j:
+  #       # Use cutoff from corresponding projectors to avoid numerical issues
+  #       if i < 2 and j < 2:  # l=0 orbitals
+  #         cutoff = 729  # From PP_BETA cutoff for l=0
+  #       else:  # l=1 orbitals
+  #         cutoff = 741  # From PP_BETA cutoff for l=1
+        
+  #       # Compute inner product
+  #       aewfc_i = np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][i]['values'][:cutoff])
+  #       aewfc_j = np.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][j]['values'][:cutoff])
+  #       rab = np.array(pp_dict['PP_MESH']['PP_RAB'][:cutoff])
+        
+  #       aewfc_ortho_matrix[i, j] = np.sum(aewfc_i * aewfc_j * rab)
+  
+  # print("AEWFC orthonormality matrix (should be identity within blocks):")
+  # print(aewfc_ortho_matrix)
+  # print("\nDiagonal elements (should be ~1):", np.diag(aewfc_ortho_matrix))
+  # print("Max off-diagonal in l=0 block:", np.max(np.abs(aewfc_ortho_matrix[:2, :2] - np.eye(2))))
+  # print("Max off-diagonal in l=1 block:", np.max(np.abs(aewfc_ortho_matrix[2:4, 2:4] - np.eye(2))))
+
+  # """Test orthonormality of PSWFC (pseudo wavefunctions)
+  # The PS wavefunctions should be orthonormal: <psi_tilde_i|psi_tilde_j> = delta_ij
+  # """
+  # print("\n" + "="*60)
+  # print("Testing orthonormality of PSWFC")
+  # print("="*60)
+  
+  # n_wfc = len(pp_dict['PP_FULL_WFC']['PP_PSWFC'])
+  # pswfc_ortho_matrix = np.zeros((n_wfc, n_wfc))
+  
+  # for i in range(n_wfc):
+  #   for j in range(n_wfc):
+  #     # Get angular momentum of each wavefunction
+  #     l_i = pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['l']
+  #     l_j = pp_dict['PP_FULL_WFC']['PP_PSWFC'][j]['l']
+      
+  #     # Only compute if same angular momentum
+  #     if l_i == l_j:
+  #       # Use cutoff from corresponding projectors to avoid numerical issues
+  #       if i < 2 and j < 2:  # l=0 orbitals
+  #         cutoff = 729  # From PP_BETA cutoff for l=0
+  #       else:  # l=1 orbitals
+  #         cutoff = 741  # From PP_BETA cutoff for l=1
+        
+  #       # Compute inner product
+  #       pswfc_i = np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values'][:cutoff])
+  #       pswfc_j = np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][j]['values'][:cutoff])
+  #       rab = np.array(pp_dict['PP_MESH']['PP_RAB'][:cutoff])
+        
+  #       pswfc_ortho_matrix[i, j] = np.sum(pswfc_i * pswfc_j * rab)
+  
+  # print("PSWFC orthonormality matrix (should be identity within blocks):")
+  # print(pswfc_ortho_matrix)
+  # print("\nDiagonal elements (should be ~1):", np.diag(pswfc_ortho_matrix))
+  # print("Max off-diagonal in l=0 block:", np.max(np.abs(pswfc_ortho_matrix[:2, :2] - np.eye(2))))
+  # print("Max off-diagonal in l=1 block:", np.max(np.abs(pswfc_ortho_matrix[2:4, 2:4] - np.eye(2))))
 
   r"""check the calculation of D_{ij} factor, not work yet"""
   for i in range(2):
