@@ -1,0 +1,223 @@
+#!/usr/bin/env python
+"""Compare PAW implementation between jrystal and GPAW.
+
+This script loads the same UPF file in both implementations and compares
+the calculated PAW correction matrices: K_p (kinetic), M_p and M_pp (Coulomb).
+"""
+
+import sys
+import numpy as np
+import jax.numpy as jnp
+
+# For align_paw.py
+sys.path.insert(0, '/home/aiops/zhaojx/jrystal')
+
+# For GPAW
+sys.path.insert(0, '/home/aiops/zhaojx/jrystal/gpaw')
+
+
+def run_align_paw():
+    """Run jrystal's align_paw.py and extract matrices."""
+    print("=" * 60)
+    print("Running jrystal align_paw.py")
+    print("=" * 60)
+    
+    # Import and run align_paw
+    exec_globals = {}
+    with open('align_paw.py', 'r') as f:
+        code = f.read()
+    
+    # Execute up to the breakpoint to get K_p, M_p, M_pp
+    code_lines = code.split('\n')
+    # Find the breakpoint after M_p, M_pp calculation
+    for i, line in enumerate(code_lines):
+        if 'M_p, M_pp = calculate_coulomb_corrections()' in line:
+            break_line = i + 1
+            break
+    
+    # Execute up to that point
+    code_to_exec = '\n'.join(code_lines[:break_line])
+    exec(code_to_exec, exec_globals)
+    
+    # Extract the matrices
+    K_p_jrystal = exec_globals['K_p']
+    M_p_jrystal = exec_globals['M_p']
+    M_pp_jrystal = exec_globals['M_pp']
+    
+    print(f"K_p shape: {K_p_jrystal.shape}")
+    print(f"M_p shape: {M_p_jrystal.shape}")
+    print(f"M_pp shape: {M_pp_jrystal.shape}")
+    
+    return K_p_jrystal, M_p_jrystal, M_pp_jrystal
+
+
+def run_gpaw_setup():
+    """Run GPAW's setup.py and extract matrices."""
+    print("\n" + "=" * 60)
+    print("Running GPAW setup.py")
+    print("=" * 60)
+    
+    from gpaw.setup import Setup
+    from gpaw.gaunt import gaunt
+    from jrystal.pseudopotential.load import parse_upf
+    
+    # Load the UPF file using jrystal's parser
+    pp_dict = parse_upf('/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF')
+    
+    # Create a data object with all necessary attributes from pp_dict
+    class UPFData:
+        """Data container for UPF pseudopotential data."""
+        def print_info(self, text, setup):
+            """Print setup information (required by Setup.__init__)."""
+            pass  # Minimal implementation for testing
+    
+    data = UPFData()
+    
+    # Basic information from PP_HEADER
+    data.name = 'upf'
+    data.symbol = pp_dict['PP_HEADER']['element']
+    data.Z = int(float(pp_dict['PP_HEADER']['z_valence']) + 2)  # Total Z (valence + core for C)
+    data.Nv = float(pp_dict['PP_HEADER']['z_valence'])  # Valence electrons
+    data.Nc = data.Z - data.Nv  # Core electrons
+    
+    # Radial grid from PP_MESH
+    from gpaw.atom.radialgd import EquidistantRadialGridDescriptor
+    data.rgd = EquidistantRadialGridDescriptor(0.02)
+    data.rgd.r_g = np.array(pp_dict['PP_MESH']['PP_R'])
+    data.rgd.dr_g = np.array(pp_dict['PP_MESH']['PP_RAB'])
+    
+    data.lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug']) # maximum angular momentum of the augmentation charge
+    data.l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # angular momentum of each projector
+    data.lcut = max(data.l_j)
+    data.rcut_j = jnp.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
+    data.gcut_j = jnp.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
+    data.gcut = jnp.max(data.gcut_j)
+    data.r_g = jnp.array(pp_dict['PP_MESH']['PP_R'])[:data.gcut] # radial grid
+    data.dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB'])[:data.gcut] # radial grid integration weight
+    data.pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :data.gcut] # projector functions
+    data.phi_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :data.gcut] # all-electron wave functions
+    data.phit_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :data.gcut] # pseudo wave functions
+    data.nc_g = jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:data.gcut] # all-electron non-linear core charge
+    data.nct_g = jnp.array(pp_dict['PP_NLCC'])[:data.gcut] # non-linera core charge
+    data.vbar_g = jnp.array(pp_dict['PP_LOCAL'])[:data.gcut] # local pseudopotential
+    
+    # Occupation numbers for Carbon: 2s^2 2p^2
+    data.f_j = []
+    s_count = p_count = 0
+    for l in data.l_j:
+        if l == 0:  # s orbital
+            data.f_j.append(2.0 if s_count == 0 else 0.0)
+            s_count += 1
+        elif l == 1:  # p orbital  
+            data.f_j.append(2.0 if p_count == 0 else 0.0)
+            p_count += 1
+    
+    # Additional required attributes
+    data.generator_version = 2  # Modern generator
+    data.fingerprint = None
+    data.filename = 'C.pbe-n-kjpaw_psl.1.0.0.UPF'
+    data.e_kinetic_core = 0.0  # Will be calculated in Setup
+    data.e_kinetic = 0.0
+    data.extra_xc_data = {}
+    data.phicorehole_g = np.zeros(data.rgd.n)
+    
+    # Add rcutfilter and gcutfilter attributes
+    # These define the maximum radius for augmentation functions
+    if len(data.rcut_j) > 0:
+        data.rcutfilter = max(data.rcut_j)
+        data.gcutfilter = max(data.gcut_j)
+    else:
+        data.rcutfilter = 1.0
+        data.gcutfilter = data.rgd.n - 1
+     # Create Setup object with minimal initialization
+    # We need to provide xc functional
+    from gpaw.xc import XC
+    xc = XC('PBE')
+    
+    try:
+        # Debug: Check the values before Setup
+        print(f"Debug: max(rcut_j) = {max(data.rcut_j) if data.rcut_j else 'N/A'}")
+        print(f"Debug: rgd.N = {data.rgd.N}")
+        print(f"Debug: rgd.r_g[-1] = {data.rgd.r_g[-1]}")
+        print(f"Debug: pt_jg shapes = {[len(pt) for pt in data.pt_jg] if data.pt_jg else 'N/A'}")
+        # Initialize Setup with the UPF data
+        setup = Setup(data, xc, lmax=2, basis=None)
+        
+        # Extract matrices
+        K_p_gpaw = setup.K_p
+        M_p_gpaw = setup.M_p
+        M_pp_gpaw = setup.M_pp
+        
+        print(f"K_p shape: {K_p_gpaw.shape}")
+        print(f"M_p shape: {M_p_gpaw.shape}")
+        print(f"M_pp shape: {M_pp_gpaw.shape}")
+        
+        return K_p_gpaw, M_p_gpaw, M_pp_gpaw
+        
+    except Exception as e:
+        print(f"Error in GPAW setup: {e}")
+        import traceback
+        traceback.print_exc()
+        return None, None, None
+
+
+def compare_matrices(K_p_j, M_p_j, M_pp_j, K_p_g, M_p_g, M_pp_g):
+    """Compare matrices from both implementations."""
+    print("\n" + "=" * 60)
+    print("Comparison Results")
+    print("=" * 60)
+    
+    if K_p_g is None:
+        print("GPAW setup failed, cannot compare")
+        return
+    
+    # Convert jax arrays to numpy for comparison
+    K_p_j = np.array(K_p_j)
+    M_p_j = np.array(M_p_j)
+    M_pp_j = np.array(M_pp_j)
+    
+    # K_p comparison
+    print("\n--- Kinetic correction K_p ---")
+    print(f"jrystal K_p:\n{K_p_j}")
+    print(f"\nGPAW K_p:\n{K_p_g}")
+    if K_p_j.shape == K_p_g.shape:
+        diff_K = np.abs(K_p_j - K_p_g)
+        print(f"Max difference: {np.max(diff_K):.6e}")
+        print(f"Mean difference: {np.mean(diff_K):.6e}")
+    else:
+        print(f"Shape mismatch: jrystal {K_p_j.shape} vs GPAW {K_p_g.shape}")
+    
+    # M_p comparison
+    print("\n--- Coulomb correction M_p ---")
+    print(f"jrystal M_p:\n{M_p_j}")
+    print(f"\nGPAW M_p:\n{M_p_g}")
+    if M_p_j.shape == M_p_g.shape:
+        diff_M = np.abs(M_p_j - M_p_g)
+        print(f"Max difference: {np.max(diff_M):.6e}")
+        print(f"Mean difference: {np.mean(diff_M):.6e}")
+    else:
+        print(f"Shape mismatch: jrystal {M_p_j.shape} vs GPAW {M_p_g.shape}")
+    
+    # M_pp comparison
+    print("\n--- Coulomb correction M_pp ---")
+    print(f"jrystal M_pp shape: {M_pp_j.shape}")
+    print(f"GPAW M_pp shape: {M_pp_g.shape}")
+    if M_pp_j.shape == M_pp_g.shape:
+        diff_Mpp = np.abs(M_pp_j - M_pp_g)
+        print(f"Max difference: {np.max(diff_Mpp):.6e}")
+        print(f"Mean difference: {np.mean(diff_Mpp):.6e}")
+        
+        # Show first few elements for debugging
+        print(f"\njrystal M_pp[:3, :3]:\n{M_pp_j[:3, :3]}")
+        print(f"\nGPAW M_pp[:3, :3]:\n{M_pp_g[:3, :3]}")
+    else:
+        print(f"Shape mismatch: jrystal {M_pp_j.shape} vs GPAW {M_pp_g.shape}")
+
+
+if __name__ == "__main__":
+    # Run both implementations
+    K_p_j, M_p_j, M_pp_j = run_align_paw()
+    K_p_g, M_p_g, M_pp_g = run_gpaw_setup()
+    
+    # Compare results
+    compare_matrices(K_p_j, M_p_j, M_pp_j, K_p_g, M_p_g, M_pp_g)

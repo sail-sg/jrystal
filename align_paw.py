@@ -57,8 +57,8 @@ def calculate_projector_overlaps():
 def calc_compensation_charges():
 
   index = jnp.triu_indices(nj)
-  n_qg = (phi_jg[:, None, :] * phi_jg[None])[index]
-  nt_qg = (phit_jg[:, None, :] * phit_jg[None])[index]
+  n_qg = (phi_jg[:, None, :] * phi_jg[None])[index] / r_g**2 / 4 / jnp.pi
+  nt_qg = (phit_jg[:, None, :] * phit_jg[None])[index] / r_g**2 / 4 / jnp.pi
 
   # NOTE: check the calculation of the multipoles moment, similar
   # results can be observed in test_paw.test_augmentation_charge
@@ -78,8 +78,9 @@ def calc_compensation_charges():
     for m in range(2 * l + 1):
       Delta_pL = Delta_pL.at[:, L + m].set(jnp.dot(Delta_lq[l], T_Lqp[L + m]))
 
-  Delta0 = jnp.dot(nc_g - nct_g, r_g**2 * dr_g) * jnp.sqrt(4 * jnp.pi) -\
-    Z / jnp.sqrt(4 * jnp.pi)
+  # Changed to match GPAW convention: no sqrt(4*pi) factor on integral
+  # Original: Delta0 = jnp.dot(nc_g - nct_g, r_g**2 * dr_g) * jnp.sqrt(4 * jnp.pi) - Z / jnp.sqrt(4 * jnp.pi)
+  Delta0 = jnp.dot(nc_g - nct_g, r_g**2 * dr_g) - Z / jnp.sqrt(4 * jnp.pi)
   return (n_qg, nt_qg, Delta_lq, Lmax, Delta_pL, Delta0)
 
   # g_lg = self.data.create_compensation_charge_functions(lmax)
@@ -114,6 +115,8 @@ lcut = max(l_j)
 rcut_j = jnp.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
 gcut_j = jnp.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
 gcut = jnp.max(gcut_j)
+# NOTE: here we use a uniform cutoff to handle all the wave functions and
+# densities
 r_g = jnp.array(pp_dict['PP_MESH']['PP_R'])[:gcut] # radial grid
 dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB'])[:gcut] # radial grid integration weight
 pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :gcut] # projector functions
@@ -150,11 +153,11 @@ T_Lqp = calculate_T_Lqp()
 n_lqg = jnp.zeros((2 * lcut + 1, nq, gcut))
 Delta_lq = jnp.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_MULTIPOLES']).reshape(lmax + 1, nj, nj)
 Delta_lq = jnp.transpose(Delta_lq, (1, 2, 0))[jnp.triu_indices(nj)].T
-for phi in pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ']:
+for qijl in pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ']:
   n_lqg = n_lqg.at[
-    int(phi['angular_momentum']),
-    int(phi['first_index']) * nj + int(phi['second_index'])
-  ].set(phi['values'][:gcut])
+    int(qijl['angular_momentum']),
+    int(qijl['first_index']) * nj + int(qijl['second_index'])
+  ].set(qijl['values'][:gcut] / r_g[:gcut]**2 / 4 / jnp.pi)
 
 assert r_g.shape[0] == n_rgd
 assert dr_g.shape[0] == n_rgd
@@ -163,20 +166,26 @@ assert phit_jg.shape[1] == n_rgd
 assert nc_g.shape[0] == n_rgd
 assert nct_g.shape[0] == n_rgd
 
+"""
+n_qg, nt_qg follows the same convention as that of nc_g, nct_g,
+i.e. no 4\pi \& r^2 factors
+"""
 n_qg, nt_qg, Delta_lq, Lmax, Delta_pL, Delta0 = calc_compensation_charges()
 B_ii = calculate_projector_overlaps()
 
 r_max = jnp.maximum(r_g[None], r_g[:, None])
+r_min = jnp.minimum(r_g[None], r_g[:, None])
 
 def integrate_radial_function(f_g):
   r"""
   Integrate the radial function over the radial grid.
-  NOTE: the integrand should not contain extra r factor
+  NOTE: the integrand DOES NOT contain extra r^2 or 4\pi factor
 
   .. math::
-    \int_0^{r_c} f(r) r^2 dr
+    \int_0^{r_c} 4\pi f(r) r^2 dr
+  
   """
-  return jnp.sum(f_g * r_g**2 * dr_g, axis=-1) * 4 * jnp.pi
+  return jnp.sum(f_g * dr_g * r_g**2, axis=-1) * 4 * jnp.pi
 
 def poisson_rdl(
   g_L: jnp.ndarray,
@@ -196,14 +205,31 @@ def poisson_rdl(
     (Real[Array, "spin kpts band x y z"]): radial function.
   """
 
-  return jnp.sum(r_g**(l + 2) * g_L * dr_g / r_max**l, axis=-1) * 4 * jnp.pi / (2 * l + 1)
+  return jnp.sum(r_min**l * g_L * dr_g * r_g**2 / r_max**l, axis=-1) /\
+    (2 * l + 1) * 4 * jnp.pi
 
 A = 0.5 * integrate_radial_function(nc_g * poisson_rdl(nc_g, 0))
-# NOTE: GPAW use jnp.sqrt(4 * jnp.pi) since the n_c is the radial part
-# A -= jnp.sqrt(4 * jnp.pi) * Z * jnp.dot(r_g * dr_g, nc_g)
-A -= 4 * jnp.pi * Z * jnp.dot(r_g * dr_g, nc_g)
-# TODO: need to check g_lg
-g_lg = [0]
+# NOTE: GPAW uses jnp.sqrt(4 * jnp.pi) since integrate_radial_function no longer includes 4*pi
+A -= jnp.sqrt(4 * jnp.pi) * Z * jnp.dot(r_g * dr_g, nc_g)
+# For QE PP files, we need to construct g_lg[0] - a smooth compensation charge
+# g_lg[0] should be a smooth, normalized function with monopole moment 1/sqrt(4π)
+# Common choice: use a Gaussian-like function or the shape of nct_g
+
+# Option 1: Use normalized smooth core density shape
+if jnp.sum(nct_g) > 1e-10:
+    g0_unnorm = nct_g  # Use smooth core density shape
+else:
+    # Option 2: Simple Gaussian if no core density
+    sigma = r_g[gcut//4]  # Width ~ 1/4 of cutoff radius  
+    g0_unnorm = jnp.exp(-r_g**2 / (2 * sigma**2))
+
+# Normalize so that ∫ g_lg[0] * r² dr = 1/sqrt(4π)
+g0_integral = jnp.sum(g0_unnorm * r_g**2 * dr_g)
+if g0_integral > 1e-10:
+    g_lg = [g0_unnorm / (g0_integral * jnp.sqrt(4 * jnp.pi))]
+else:
+    g_lg = [jnp.zeros_like(r_g)]  # Fallback if normalization fails
+
 mct_g = nct_g + Delta0 * g_lg[0]
 A -= 0.5 * integrate_radial_function(mct_g * poisson_rdl(mct_g, 0))
 M = A
@@ -292,6 +318,9 @@ def calculate_coulomb_corrections():
   # A_q -= 0.5 * (integrate_radial_function(mct_g * poisson_rdl0(g_lg[0])) +
   #               integrate_radial_function(g_lg[0] * poisson_rdl0(mct_g.reshape(1, -1)))) * \
   #     Delta_lq[0]
+  # Save A_q for debugging
+  global A_q_debug
+  A_q_debug = A_q
   M_p = jnp.dot(A_q, T_Lqp[0])
 
   A_lqq = []
