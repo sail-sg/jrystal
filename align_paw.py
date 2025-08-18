@@ -157,7 +157,7 @@ for qijl in pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ']:
   n_lqg = n_lqg.at[
     int(qijl['angular_momentum']),
     int(qijl['first_index']) * nj + int(qijl['second_index'])
-  ].set(qijl['values'][:gcut] / r_g[:gcut]**2 / 4 / jnp.pi)
+  ].set(jnp.array(qijl['values'][:gcut]) / r_g[:gcut]**2 / 4 / jnp.pi)
 
 assert r_g.shape[0] == n_rgd
 assert dr_g.shape[0] == n_rgd
