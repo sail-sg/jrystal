@@ -162,55 +162,39 @@ def main():
   """
   for i in range(2):
     for j in range(2):
-      q_ij = int_over_grid(
-        np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values']) *
-        pp_dict['PP_NONLOCAL']['PP_BETA'][j]['values']
-      )
-      print(q_ij)
+      integral = []
+      cut = int(pp_dict['PP_NONLOCAL']['PP_BETA'][i]['cutoff_radius_index'])
+      for gcut in range(cut - 5, cut + 5):
+        q_ij = np.sum(
+          np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values'][:gcut]) *
+          pp_dict['PP_NONLOCAL']['PP_BETA'][j]['values'][:gcut] * 
+          np.array(pp_dict['PP_MESH']['PP_RAB'][:gcut])
+        )
+        integral.append(q_ij)
+
+      plt.plot(np.arange(cut - 5, cut + 5), integral)
+      plt.plot(cut, integral[5], "ro", markersize=10)
+      plt.savefig(f"fig/int_gcut_{i}_{j}.png", dpi=300)
+      plt.close()
+      print(f"i: {i}, j: {j}, integral: {integral[5]}")
   for i in range(2, 4):
     for j in range(2, 4):
-      q_ij = int_over_grid(
-        np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values']) *
-        pp_dict['PP_NONLOCAL']['PP_BETA'][j]['values']
-      )
-      print(q_ij)
-      # assert (I[i, j] - q_ij) < 1e-8
+      integral = []
+      cut = int(pp_dict['PP_NONLOCAL']['PP_BETA'][i]['cutoff_radius_index'])
+      for gcut in range(cut + 5, cut + 15):
+        q_ij = np.sum(
+          np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values'][:gcut]) *
+          pp_dict['PP_NONLOCAL']['PP_BETA'][j]['values'][:gcut] * 
+          np.array(pp_dict['PP_MESH']['PP_RAB'][:gcut])
+        )
+        integral.append(q_ij)
 
-  n_proj = len(pp_dict['PP_NONLOCAL']['PP_BETA'])
-  n_pswfc = len(pp_dict['PP_FULL_WFC']['PP_PSWFC'])
-  
-  # Verify we have same number of projectors and pseudo wavefunctions
-  assert n_proj == n_pswfc, \
-    f"Number of projectors ({n_proj}) != number of PSWFC ({n_pswfc})"
-  
-  # Test all pairs
-  for i in range(n_proj):
-    for j in range(n_pswfc):
-      # Get angular momentum of projector and wavefunction
-      l_beta = pp_dict['PP_NONLOCAL']['PP_BETA'][i]['angular_momentum']
-      l_pswfc = pp_dict['PP_FULL_WFC']['PP_PSWFC'][j]['angular_momentum']
-      
-      # Only compute if same angular momentum (otherwise orthogonal by symmetry)
-      if l_beta == l_pswfc:
-        # Get cutoff index from projector (convert to int)
-        cutoff = int(pp_dict['PP_NONLOCAL']['PP_BETA'][i]['cutoff_radius_index'])
-        
-        # Compute inner product <beta_i|psi_tilde_j>
-        beta_i = np.array(pp_dict['PP_NONLOCAL']['PP_BETA'][i]['values'][:cutoff])
-        pswfc_j = np.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][j]['values'][:cutoff])
-        rab = np.array(pp_dict['PP_MESH']['PP_RAB'][:cutoff])
-        
-        inner_product = np.sum(beta_i * pswfc_j * rab)
-        print(f"<beta_{i}|psi_tilde_{j}> = {inner_product:.6f}")
-        
-        # if i == j:
-        #   # Diagonal elements should be 1
-        #   assert np.abs(inner_product - 1.0) < 1e-7, \
-        #     f"<beta_{i}|psi_tilde_{j}> = {inner_product:.6f}, expected 1.0"
-        # else:
-        #   # Off-diagonal elements should be 0
-        #   assert np.abs(inner_product) < 1e-7, \
-        #     f"<beta_{i}|psi_tilde_{j}> = {inner_product:.6f}, expected 0.0"
+      plt.plot(np.arange(cut + 5, cut + 15), integral)
+      plt.plot(cut + 11, integral[6], "ro", markersize=10)
+      plt.savefig(f"fig/int_gcut_{i}_{j}.png", dpi=300)
+      plt.close()
+      print(f"i: {i}, j: {j}, integral: {integral[6]}")
+      # assert (I[i, j] - q_ij) < 1e-8
   breakpoint()
 
   # """Test orthonormality of projectors (PP_BETA)
