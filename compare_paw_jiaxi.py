@@ -70,6 +70,11 @@ def run_gpaw_setup():
         def print_info(self, text, setup):
             """Print setup information (required by Setup.__init__)."""
             pass  # Minimal implementation for testing
+        
+        def find_core_density_cutoff(self, nc_g):
+            """Find cutoff radius for core density."""
+            # Find where core density becomes negligible
+            return self.rgd.r_g[-1]
     
     data = UPFData()
     
@@ -81,10 +86,16 @@ def run_gpaw_setup():
     data.Nc = data.Z - data.Nv  # Core electrons
     
     # Radial grid from PP_MESH
-    from gpaw.atom.radialgd import EquidistantRadialGridDescriptor
-    data.rgd = EquidistantRadialGridDescriptor(0.02)
-    data.rgd.r_g = np.array(pp_dict['PP_MESH']['PP_R'])
-    data.rgd.dr_g = np.array(pp_dict['PP_MESH']['PP_RAB'])
+    from gpaw.atom.radialgd import AbinitRadialGridDescriptor
+    r_g = np.array(pp_dict['PP_MESH']['PP_R'])
+    gcut = 741
+    i = 100
+    assert jnp.allclose((r_g[i+2] - r_g[i+1])/(r_g[i+1] - r_g[i]), (r_g[2*i+2] - r_g[2*i+1])/(r_g[2*i+1] - r_g[2*i]))
+    d = jnp.log((r_g[i+2] - r_g[i+1])/(r_g[i+1] - r_g[i]))
+    a = r_g[0] / (jnp.exp(d) - 1)
+    data.rgd = AbinitRadialGridDescriptor(a, d, gcut)
+    data.rgd.r_g = r_g[:gcut]
+    data.rgd.dr_g = np.array(pp_dict['PP_MESH']['PP_RAB'])[:gcut]
     
     data.lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug']) # maximum angular momentum of the augmentation charge
     data.l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # angular momentum of each projector
@@ -111,15 +122,17 @@ def run_gpaw_setup():
         elif l == 1:  # p orbital  
             data.f_j.append(2.0 if p_count == 0 else 0.0)
             p_count += 1
+    data.l_orb_J = 0
+    data.n_j = np.array([0, 0, 1, 1]) 
     
     # Additional required attributes
     data.generator_version = 2  # Modern generator
+    data.tauct_g = None
     data.fingerprint = None
     data.filename = 'C.pbe-n-kjpaw_psl.1.0.0.UPF'
     data.e_kinetic_core = 0.0  # Will be calculated in Setup
     data.e_kinetic = 0.0
     data.extra_xc_data = {}
-    data.phicorehole_g = np.zeros(data.rgd.n)
     
     # Add rcutfilter and gcutfilter attributes
     # These define the maximum radius for augmentation functions
@@ -136,10 +149,10 @@ def run_gpaw_setup():
     
     try:
         # Debug: Check the values before Setup
-        print(f"Debug: max(rcut_j) = {max(data.rcut_j) if data.rcut_j else 'N/A'}")
+        print(f"Debug: max(rcut_j) = {max(data.rcut_j) if data.rcut_j.any() else 'N/A'}")
         print(f"Debug: rgd.N = {data.rgd.N}")
         print(f"Debug: rgd.r_g[-1] = {data.rgd.r_g[-1]}")
-        print(f"Debug: pt_jg shapes = {[len(pt) for pt in data.pt_jg] if data.pt_jg else 'N/A'}")
+        print(f"Debug: pt_jg shapes = {[len(pt) for pt in data.pt_jg] if data.pt_jg.any() else 'N/A'}")
         # Initialize Setup with the UPF data
         setup = Setup(data, xc, lmax=2, basis=None)
         
