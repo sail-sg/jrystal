@@ -15,3 +15,6 @@ user and then discuss the next plan
 for this
 - Your modification is restricted inside the function run_gpaw_setup() where in the python file this
 is also written, DO NOT MODIFY ANY PART OF THE CODE, BOTH THIS FILE AND OTHERS
+- Whenever you are not sure or have question related to implementation and test, pause and discuss with
+human user
+- Maintain a log to record all your implementing history according to time, be precise but complete

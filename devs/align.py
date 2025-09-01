@@ -23,7 +23,7 @@ def run_align_paw():
     
     # Import and run align_paw
     exec_globals = {}
-    with open('align_paw.py', 'r') as f:
+    with open('devs/align_paw.py', 'r') as f:
         code = f.read()
     
     # Execute up to the breakpoint to get K_p, M_p, M_pp
