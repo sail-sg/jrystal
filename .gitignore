@@ -18,9 +18,12 @@ dist/
 downloads/
 eggs/
 .eggs/
+fig/
+gpaw/
 lib/
 lib64/
 parts/
+pseudopotential/
 sdist/
 var/
 wheels/
@@ -47,6 +50,7 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+.cursor/
 nosetests.xml
 coverage.xml
 *.cover

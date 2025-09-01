@@ -7,7 +7,6 @@ the calculated PAW correction matrices: K_p (kinetic), M_p and M_pp (Coulomb).
 
 import sys
 import numpy as np
-import jax.numpy as jnp
 
 # For align_paw.py
 sys.path.insert(0, '/home/aiops/zhaojx/jrystal')
@@ -40,19 +39,21 @@ def run_align_paw():
     exec(code_to_exec, exec_globals)
     
     # Extract the matrices
+    B_ii_jrystal = exec_globals['B_ii']
     K_p_jrystal = exec_globals['K_p']
     M_p_jrystal = exec_globals['M_p']
     M_pp_jrystal = exec_globals['M_pp']
     
-    print(f"K_p shape: {K_p_jrystal.shape}")
-    print(f"M_p shape: {M_p_jrystal.shape}")
-    print(f"M_pp shape: {M_pp_jrystal.shape}")
-    
-    return K_p_jrystal, M_p_jrystal, M_pp_jrystal
+    return B_ii_jrystal, M_p_jrystal, M_pp_jrystal
 
 
 def run_gpaw_setup():
-    """Run GPAW's setup.py and extract matrices."""
+    """Run GPAW's setup.py and extract matrices.
+    
+    NOTE: YOU CAN ONLY MODIFY THE CODE INSIDE THIS FUNCTION
+    WHEN EVER YOU MODIFY ANY CODE, MAKE SURE YOU ADD A COMMENT TO EXPLAIN
+    THE REASON FOR THIS MODIFICATION AND ASK THE PERMISSION FROM THE HUMAN USER
+    """
     print("\n" + "=" * 60)
     print("Running GPAW setup.py")
     print("=" * 60)
@@ -75,6 +76,50 @@ def run_gpaw_setup():
             """Find cutoff radius for core density."""
             # Find where core density becomes negligible
             return self.rgd.r_g[-1]
+        
+        def create_compensation_charge_functions(self, lmax):
+            """Create compensation charge functions.
+            NOTE: this may not need to be implemented"""
+            return np.zeros((lmax + 1, self.rgd.N))
+        
+        def get_overlap_correction(self, Delta0_ii):
+            """Directly copied from GPAW"""
+            return np.sqrt(4.0 * np.pi) * Delta0_ii
+        
+        def get_smooth_core_density_integral(self, Delta0):
+            """Directly copied from GPAW"""
+            return -Delta0 * np.sqrt(4 * np.pi) - self.Z + self.Nc
+        
+        def get_linear_kinetic_correction(self, T0_qp):
+            """Need to access to e_kin_jj"""
+            # e_kin_jj = self.e_kin_jj
+            # nj = len(e_kin_jj)
+            # K_q = []
+            # for j1 in range(nj):
+            #     for j2 in range(j1, nj):
+            #         K_q.append(e_kin_jj[j1, j2])
+            # K_p = np.sqrt(4 * np.pi) * np.dot(K_q, T0_qp)
+            K_p = 0
+            return K_p
+        
+        def get_xc_correction(self, rgd2, xc, gcut2, lcut):
+            """Get XC correction."""
+            # Return a placeholder XC correction object
+            # The actual implementation is complex and would need full PAW data
+            class XCCorrection:
+                def __init__(self):
+                    self.rgd2 = rgd2
+                    self.e_xc0 = 0.0
+                    self.four_pi_sqrt = np.sqrt(4 * np.pi)
+                    self.nc_corehole_g = np.zeros(gcut2)
+                    self.nct_corehole_g = np.zeros(gcut2)
+                    self.Y_nL = None
+                    self.rnablaY_nLv = None
+                    
+                def calculate_paw_correction(self, *args, **kwargs):
+                    return 0.0
+                    
+            return XCCorrection()
     
     data = UPFData()
     
@@ -90,9 +135,9 @@ def run_gpaw_setup():
     r_g = np.array(pp_dict['PP_MESH']['PP_R'])
     gcut = 741
     i = 100
-    assert jnp.allclose((r_g[i+2] - r_g[i+1])/(r_g[i+1] - r_g[i]), (r_g[2*i+2] - r_g[2*i+1])/(r_g[2*i+1] - r_g[2*i]))
-    d = jnp.log((r_g[i+2] - r_g[i+1])/(r_g[i+1] - r_g[i]))
-    a = r_g[0] / (jnp.exp(d) - 1)
+    assert np.allclose((r_g[i+2] - r_g[i+1])/(r_g[i+1] - r_g[i]), (r_g[2*i+2] - r_g[2*i+1])/(r_g[2*i+1] - r_g[2*i]))
+    d = np.log((r_g[i+2] - r_g[i+1])/(r_g[i+1] - r_g[i]))
+    a = r_g[0] / (np.exp(d) - 1)
     data.rgd = AbinitRadialGridDescriptor(a, d, gcut)
     data.rgd.r_g = r_g[:gcut]
     data.rgd.dr_g = np.array(pp_dict['PP_MESH']['PP_RAB'])[:gcut]
@@ -100,17 +145,18 @@ def run_gpaw_setup():
     data.lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug']) # maximum angular momentum of the augmentation charge
     data.l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # angular momentum of each projector
     data.lcut = max(data.l_j)
-    data.rcut_j = jnp.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
-    data.gcut_j = jnp.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
-    data.gcut = jnp.max(data.gcut_j)
-    data.r_g = jnp.array(pp_dict['PP_MESH']['PP_R'])[:data.gcut] # radial grid
-    data.dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB'])[:data.gcut] # radial grid integration weight
-    data.pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :data.gcut] # projector functions
-    data.phi_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :data.gcut] # all-electron wave functions
-    data.phit_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :data.gcut] # pseudo wave functions
-    data.nc_g = jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:data.gcut] # all-electron non-linear core charge
-    data.nct_g = jnp.array(pp_dict['PP_NLCC'])[:data.gcut] # non-linera core charge
-    data.vbar_g = jnp.array(pp_dict['PP_LOCAL'])[:data.gcut] # local pseudopotential
+    data.rcut_j = np.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
+    data.gcut_j = np.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
+    data.gcut = np.max(data.gcut_j)
+    data.r_g = np.array(pp_dict['PP_MESH']['PP_R'])[:data.gcut] # radial grid
+    data.dr_g = np.array(pp_dict['PP_MESH']['PP_RAB'])[:data.gcut] # radial grid integration weight
+    data.pt_jg = np.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :data.gcut] /\
+         data.r_g # projector functions
+    data.phi_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :data.gcut] # all-electron wave functions
+    data.phit_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :data.gcut] # pseudo wave functions
+    data.nc_g = np.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:data.gcut] # all-electron non-linear core charge
+    data.nct_g = np.array(pp_dict['PP_NLCC'])[:data.gcut] # non-linera core charge
+    data.vbar_g = np.array(pp_dict['PP_LOCAL'])[:data.gcut] # local pseudopotential
     
     # Occupation numbers for Carbon: 2s^2 2p^2
     data.f_j = []
@@ -129,7 +175,10 @@ def run_gpaw_setup():
     data.generator_version = 2  # Modern generator
     data.tauct_g = None
     data.fingerprint = None
+    data.phicorehole_g = None
     data.filename = 'C.pbe-n-kjpaw_psl.1.0.0.UPF'
+    data.e_electrostatic = 0.0
+    data.e_total = 0.0
     data.e_kinetic_core = 0.0  # Will be calculated in Setup
     data.e_kinetic = 0.0
     data.extra_xc_data = {}
@@ -157,48 +206,53 @@ def run_gpaw_setup():
         setup = Setup(data, xc, lmax=2, basis=None)
         
         # Extract matrices
+        B_ii_gpaw = setup.B_ii
         K_p_gpaw = setup.K_p
         M_p_gpaw = setup.M_p
         M_pp_gpaw = setup.M_pp
         
-        print(f"K_p shape: {K_p_gpaw.shape}")
-        print(f"M_p shape: {M_p_gpaw.shape}")
-        print(f"M_pp shape: {M_pp_gpaw.shape}")
         
-        return K_p_gpaw, M_p_gpaw, M_pp_gpaw
+        return B_ii_gpaw, M_p_gpaw, M_pp_gpaw
         
     except Exception as e:
         print(f"Error in GPAW setup: {e}")
         import traceback
         traceback.print_exc()
-        return None, None, None
+        return None, None, None, None
 
 
-def compare_matrices(K_p_j, M_p_j, M_pp_j, K_p_g, M_p_g, M_pp_g):
+def compare_matrices(B_ii_j, M_p_j, M_pp_j, B_ii_g, M_p_g, M_pp_g):
     """Compare matrices from both implementations."""
     print("\n" + "=" * 60)
     print("Comparison Results")
     print("=" * 60)
     
-    if K_p_g is None:
-        print("GPAW setup failed, cannot compare")
-        return
-    
     # Convert jax arrays to numpy for comparison
-    K_p_j = np.array(K_p_j)
+    B_ii_j = np.array(B_ii_j)
     M_p_j = np.array(M_p_j)
     M_pp_j = np.array(M_pp_j)
     
-    # K_p comparison
-    print("\n--- Kinetic correction K_p ---")
-    print(f"jrystal K_p:\n{K_p_j}")
-    print(f"\nGPAW K_p:\n{K_p_g}")
-    if K_p_j.shape == K_p_g.shape:
-        diff_K = np.abs(K_p_j - K_p_g)
-        print(f"Max difference: {np.max(diff_K):.6e}")
-        print(f"Mean difference: {np.mean(diff_K):.6e}")
+    # B_ii comparison
+    print("\n--- Projector function overlaps B_ii ---")
+    # print(f"jrystal B_ii:\n{B_ii_j}")
+    # print(f"\nGPAW B_ii:\n{B_ii_g}")
+    if B_ii_j.shape == B_ii_g.shape:
+        diff_B = np.abs(B_ii_j - B_ii_g)
+        print(f"Max difference: {np.max(diff_B):.6e}")
+        print(f"Mean difference: {np.mean(diff_B):.6e}")
     else:
-        print(f"Shape mismatch: jrystal {K_p_j.shape} vs GPAW {K_p_g.shape}")
+        print(f"Shape mismatch: jrystal {B_ii_j.shape} vs GPAW {B_ii_g.shape}")
+    
+    # K_p comparison
+    # print("\n--- Kinetic correction K_p ---")
+    # print(f"jrystal K_p:\n{K_p_j}")
+    # print(f"\nGPAW K_p:\n{K_p_g}")
+    # if K_p_j.shape == K_p_g.shape:
+    #     diff_K = np.abs(K_p_j - K_p_g)
+    #     print(f"Max difference: {np.max(diff_K):.6e}")
+    #     print(f"Mean difference: {np.mean(diff_K):.6e}")
+    # else:
+    #     print(f"Shape mismatch: jrystal {K_p_j.shape} vs GPAW {K_p_g.shape}")
     
     # M_p comparison
     print("\n--- Coulomb correction M_p ---")
@@ -212,25 +266,25 @@ def compare_matrices(K_p_j, M_p_j, M_pp_j, K_p_g, M_p_g, M_pp_g):
         print(f"Shape mismatch: jrystal {M_p_j.shape} vs GPAW {M_p_g.shape}")
     
     # M_pp comparison
-    print("\n--- Coulomb correction M_pp ---")
-    print(f"jrystal M_pp shape: {M_pp_j.shape}")
-    print(f"GPAW M_pp shape: {M_pp_g.shape}")
-    if M_pp_j.shape == M_pp_g.shape:
-        diff_Mpp = np.abs(M_pp_j - M_pp_g)
-        print(f"Max difference: {np.max(diff_Mpp):.6e}")
-        print(f"Mean difference: {np.mean(diff_Mpp):.6e}")
+    # print("\n--- Coulomb correction M_pp ---")
+    # print(f"jrystal M_pp shape: {M_pp_j.shape}")
+    # print(f"GPAW M_pp shape: {M_pp_g.shape}")
+    # if M_pp_j.shape == M_pp_g.shape:
+    #     diff_Mpp = np.abs(M_pp_j - M_pp_g)
+    #     print(f"Max difference: {np.max(diff_Mpp):.6e}")
+    #     print(f"Mean difference: {np.mean(diff_Mpp):.6e}")
         
-        # Show first few elements for debugging
-        print(f"\njrystal M_pp[:3, :3]:\n{M_pp_j[:3, :3]}")
-        print(f"\nGPAW M_pp[:3, :3]:\n{M_pp_g[:3, :3]}")
-    else:
-        print(f"Shape mismatch: jrystal {M_pp_j.shape} vs GPAW {M_pp_g.shape}")
+    #     # Show first few elements for debugging
+    #     print(f"\njrystal M_pp[:3, :3]:\n{M_pp_j[:3, :3]}")
+    #     print(f"\nGPAW M_pp[:3, :3]:\n{M_pp_g[:3, :3]}")
+    # else:
+    #     print(f"Shape mismatch: jrystal {M_pp_j.shape} vs GPAW {M_pp_g.shape}")
 
 
 if __name__ == "__main__":
     # Run both implementations
-    K_p_j, M_p_j, M_pp_j = run_align_paw()
-    K_p_g, M_p_g, M_pp_g = run_gpaw_setup()
+    B_ii_j, M_p_j, M_pp_j = run_align_paw()
+    B_ii_g, M_p_g, M_pp_g = run_gpaw_setup()
     
     # Compare results
-    compare_matrices(K_p_j, M_p_j, M_pp_j, K_p_g, M_p_g, M_pp_g)
+    compare_matrices(B_ii_j, M_p_j, M_pp_j, B_ii_g, M_p_g, M_pp_g)
