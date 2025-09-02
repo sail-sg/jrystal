@@ -4,7 +4,7 @@
 - You are provided with a python script align.py, this script calculate the same M_p quantity
 using two different methods. IMPORTANT: YOUR GOAL IS TO MODIFY THE CODE SO THAT CALCULATIONS
 FROM TWO METHODS ARE THE SAME
-- Open up a new branch in the gir worktree to implement your task, you have the permission to read
+- You have the permission to read
 any files for this repository, but code modification are RESTRICTED, ask for human user's permission
 - Before you claim you have finished the taks and handle back to human user, run python devs/align.py
 and make sure the difference between two calculated M_p value is smaller than 1e-4.
@@ -17,4 +17,23 @@ for this
 is also written, DO NOT MODIFY ANY PART OF THE CODE, BOTH THIS FILE AND OTHERS
 - Whenever you are not sure or have question related to implementation and test, pause and discuss with
 human user
-- Maintain a log to record all your implementing history according to time, be precise but complete
+
+## Maintain a log according to time
+- Be precise but complete
+- List what quantities (function) have been tested and record the accuracy
+- List what quantities (function) need to be tested and what will be next candidate
+- Whenever our test plan is changed, make sure to update this log, rewrite the test plan
+
+### Log Structure Guidelines:
+1. **Test Results Table**: Track each quantity with values, accuracy, and pass/fail status
+2. **Test Plan**: List completed (✅) and pending (⏳) tests in order
+3. **Root Causes**: Document issues found with specific code locations
+4. **Next Steps**: Priority-ordered actions to resolve issues
+5. **Focus on Testing**: Exclude code refactoring or improvements unless directly related to alignment
+
+## Bottom-up debug
+- Start from the unit function calls, verify all of them are aligned well
+-
+
+## Top-down debug
+- Start from the final alignment results, 

@@ -27,8 +27,6 @@ def _extract_jrystal_results(exec_globals):
     results = {
         'B_ii': exec_globals.get('B_ii'),
         'M': exec_globals.get('M'),
-        'nc_g': exec_globals.get('nc_g'),
-        'nct_g': exec_globals.get('nct_g'),
         'n_qg': exec_globals.get('n_qg'),
         'nt_qg': exec_globals.get('nt_qg'),
         'Delta0': exec_globals.get('Delta0'),
@@ -83,15 +81,13 @@ def _extract_gpaw_results(setup):
     
     if hasattr(setup, 'local_corr'):
         results.update({
-            'nc_g': setup.local_corr.nc_g if hasattr(setup.local_corr, 'nc_g') else None,
-            'nct_g': setup.local_corr.nct_g if hasattr(setup.local_corr, 'nct_g') else None,
             'n_qg': setup.local_corr.n_qg if hasattr(setup.local_corr, 'n_qg') else None,
             'nt_qg': setup.local_corr.nt_qg if hasattr(setup.local_corr, 'nt_qg') else None,
             'rgd2_N': setup.local_corr.rgd2.N if hasattr(setup.local_corr, 'rgd2') else None
         })
     else:
         results.update({
-            'nc_g': None, 'nct_g': None, 'n_qg': None, 'nt_qg': None, 'rgd2_N': None
+            'n_qg': None, 'nt_qg': None, 'rgd2_N': None
         })
     
     return results
@@ -204,10 +200,15 @@ def run_gpaw_setup():
     data.dr_g = np.array(pp_dict['PP_MESH']['PP_RAB'])[:data.gcut] # radial grid integration weight
     data.pt_jg = np.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :data.gcut] /\
          data.r_g # projector functions
-    data.phi_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :data.gcut] # all-electron wave functions
-    data.phit_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :data.gcut] # pseudo wave functions
+    data.phi_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :data.gcut] /\
+         data.r_g # all-electron wave functions
+    data.phit_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :data.gcut] /\
+         data.r_g # pseudo wave functions
     data.nc_g = np.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:data.gcut] # all-electron non-linear core charge
     data.nct_g = np.array(pp_dict['PP_NLCC'])[:data.gcut] # non-linera core charge
+    data.nc_g = data.nc_g * np.sqrt(np.pi * 4)
+    data.nct_g = data.nct_g * np.sqrt(np.pi * 4)
+     # TODO: need to determine the scaling of vbar_g
     data.vbar_g = np.array(pp_dict['PP_LOCAL'])[:data.gcut] # local pseudopotential
     
     # Occupation numbers for Carbon: 2s^2 2p^2
@@ -314,13 +315,13 @@ def _compare_values(val_j, val_g, name, include_sum=False, show_ratio=False):
             print(f"Sum difference: {abs(np.sum(arr_j) - np.sum(arr_g)):.6e}")
 
 
-def compare_results(B_ii_j, M_j, nc_g_j, nct_g_j, n_qg_j, nt_qg_j, Delta0_j, 
-                    B_ii_g, M_g, nc_g_g, nct_g_g, n_qg_g, nt_qg_g, Delta0_g):
+def compare_results(B_ii_j, M_j, n_qg_j, nt_qg_j, Delta0_j, 
+                    B_ii_g, M_g, n_qg_g, nt_qg_g, Delta0_g):
     """Compare densities and M values from both implementations.
     
     Args:
-        B_ii_j, M_j, nc_g_j, nct_g_j, n_qg_j, nt_qg_j, Delta0_j: jrystal results
-        B_ii_g, M_g, nc_g_g, nct_g_g, n_qg_g, nt_qg_g, Delta0_g: GPAW results
+        B_ii_j, M_j, n_qg_j, nt_qg_j, Delta0_j: jrystal results
+        B_ii_g, M_g, n_qg_g, nt_qg_g, Delta0_g: GPAW results
     """
     print("\n" + "=" * 60)
     print("Comparison Results")
@@ -328,7 +329,7 @@ def compare_results(B_ii_j, M_j, nc_g_j, nct_g_j, n_qg_j, nt_qg_j, Delta0_j,
     
     # Convert jax arrays to numpy for comparison
     arrays_to_convert = [
-        ('B_ii_j', B_ii_j), ('nc_g_j', nc_g_j), ('nct_g_j', nct_g_j),
+        ('B_ii_j', B_ii_j),
         ('n_qg_j', n_qg_j), ('nt_qg_j', nt_qg_j)
     ]
     
@@ -342,10 +343,6 @@ def compare_results(B_ii_j, M_j, nc_g_j, nct_g_j, n_qg_j, nt_qg_j, Delta0_j,
     # Convert scalars
     M_j = float(M_j) if M_j is not None else None
     Delta0_j = float(Delta0_j) if Delta0_j is not None else None
-    
-    # Compare all values using unified function
-    _compare_values(converted['nc_g_j'], nc_g_g, "Core density nc_g", include_sum=True)
-    _compare_values(converted['nct_g_j'], nct_g_g, "Smooth core density nct_g", include_sum=True)
     
     # Compare first element of n_qg
     if converted['n_qg_j'] is not None and n_qg_g is not None:
@@ -367,13 +364,13 @@ if __name__ == "__main__":
         print(f"Error in GPAW setup: {e}")
         import traceback
         traceback.print_exc()
-        results_g = {'B_ii': None, 'M': None, 'nc_g': None, 'nct_g': None,
+        results_g = {'B_ii': None, 'M': None,
                      'n_qg': None, 'nt_qg': None, 'Delta0': None}
     
     # Compare results
     compare_results(
-        results_j['B_ii'], results_j['M'], results_j['nc_g'], results_j['nct_g'],
+        results_j['B_ii'], results_j['M'],
         results_j['n_qg'], results_j['nt_qg'], results_j['Delta0'],
-        results_g['B_ii'], results_g['M'], results_g['nc_g'], results_g['nct_g'],
+        results_g['B_ii'], results_g['M'],
         results_g['n_qg'], results_g['nt_qg'], results_g['Delta0']
     )
