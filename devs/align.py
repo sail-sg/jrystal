@@ -15,20 +15,41 @@ sys.path.insert(0, '/home/aiops/zhaojx/jrystal')
 sys.path.insert(0, '/home/aiops/zhaojx/jrystal/gpaw')
 
 
-def run_align_paw():
-    """Run jrystal's align_paw.py and extract matrices."""
-    print("=" * 60)
-    print("Running jrystal align_paw.py")
-    print("=" * 60)
+def _extract_jrystal_results(exec_globals):
+    """Extract results from jrystal execution context.
     
+    Args:
+        exec_globals: Dictionary containing executed jrystal variables
+        
+    Returns:
+        Tuple of extracted values
+    """
+    results = {
+        'B_ii': exec_globals.get('B_ii'),
+        'M': exec_globals.get('M'),
+        'nc_g': exec_globals.get('nc_g'),
+        'nct_g': exec_globals.get('nct_g'),
+        'n_qg': exec_globals.get('n_qg'),
+        'nt_qg': exec_globals.get('nt_qg'),
+        'Delta0': exec_globals.get('Delta0'),
+        'gcut': exec_globals.get('gcut')
+    }
+    return results
+
+
+def run_align_paw():
+    """Run jrystal's align_paw.py and extract results.
+    
+    Returns:
+        Tuple containing (B_ii, M, nc_g, nct_g, n_qg, nt_qg, Delta0) from jrystal
+    """
     # Import and run align_paw
     exec_globals = {}
     with open('devs/align_paw.py', 'r') as f:
         code = f.read()
     
-    # Execute up to the breakpoint to get K_p, M_p, M_pp
+    # Execute up to the breakpoint to get M_p, M_pp calculation
     code_lines = code.split('\n')
-    # Find the breakpoint after M_p, M_pp calculation
     for i, line in enumerate(code_lines):
         if 'M_p, M_pp = calculate_coulomb_corrections()' in line:
             break_line = i + 1
@@ -38,17 +59,42 @@ def run_align_paw():
     code_to_exec = '\n'.join(code_lines[:break_line])
     exec(code_to_exec, exec_globals)
     
-    # Extract the matrices
-    B_ii_jrystal = exec_globals['B_ii']
-    K_p_jrystal = exec_globals['K_p']
-    M_p_jrystal = exec_globals['M_p']
-    M_pp_jrystal = exec_globals['M_pp']
+    # Extract results
+    results = _extract_jrystal_results(exec_globals)
     
-    # Debug: Extract T_Lqp and A_q for comparison
-    T_Lqp_jrystal = exec_globals.get('T_Lqp', None)
-    A_q_jrystal = exec_globals.get('A_q_debug', None)
+    return results
+
+
+def _extract_gpaw_results(setup):
+    """Extract results from GPAW setup object.
     
-    return B_ii_jrystal, M_p_jrystal, M_pp_jrystal, T_Lqp_jrystal, A_q_jrystal
+    Args:
+        setup: GPAW Setup object
+        
+    Returns:
+        Dictionary of extracted values
+    """
+    results = {
+        'B_ii': setup.B_ii if hasattr(setup, 'B_ii') else None,
+        'M': setup.M if hasattr(setup, 'M') else None,
+        'Delta0': setup.Delta0 if hasattr(setup, 'Delta0') else None,
+        'gcut2': setup.gcut2 if hasattr(setup, 'gcut2') else None
+    }
+    
+    if hasattr(setup, 'local_corr'):
+        results.update({
+            'nc_g': setup.local_corr.nc_g if hasattr(setup.local_corr, 'nc_g') else None,
+            'nct_g': setup.local_corr.nct_g if hasattr(setup.local_corr, 'nct_g') else None,
+            'n_qg': setup.local_corr.n_qg if hasattr(setup.local_corr, 'n_qg') else None,
+            'nt_qg': setup.local_corr.nt_qg if hasattr(setup.local_corr, 'nt_qg') else None,
+            'rgd2_N': setup.local_corr.rgd2.N if hasattr(setup.local_corr, 'rgd2') else None
+        })
+    else:
+        results.update({
+            'nc_g': None, 'nct_g': None, 'n_qg': None, 'nt_qg': None, 'rgd2_N': None
+        })
+    
+    return results
 
 
 def run_gpaw_setup():
@@ -57,10 +103,10 @@ def run_gpaw_setup():
     NOTE: YOU CAN ONLY MODIFY THE CODE INSIDE THIS FUNCTION
     WHEN EVER YOU MODIFY ANY CODE, MAKE SURE YOU ADD A COMMENT TO EXPLAIN
     THE REASON FOR THIS MODIFICATION AND ASK THE PERMISSION FROM THE HUMAN USER
+    
+    Returns:
+        Dictionary containing GPAW results
     """
-    print("\n" + "=" * 60)
-    print("Running GPAW setup.py")
-    print("=" * 60)
     
     from gpaw.setup import Setup
     from gpaw.gaunt import gaunt
@@ -212,128 +258,122 @@ def run_gpaw_setup():
         # Initialize Setup with the UPF data
         setup = Setup(data, xc, lmax=2, basis=None)
         
-        # Debug: Extract T_Lqp and A_q for comparison
-        T_Lqp_gpaw = None
-        A_q_gpaw = None
+        # Extract results
+        results = _extract_gpaw_results(setup)
         
-        if hasattr(setup, 'local_corr') and hasattr(setup.local_corr, 'T_Lqp'):
-            T_Lqp_gpaw = setup.local_corr.T_Lqp
-            print(f"\nGPAW T_Lqp[0] shape: {T_Lqp_gpaw[0].shape}")
-            print(f"GPAW T_Lqp[0] (first 5x5):\n{T_Lqp_gpaw[0][:5, :5]}")
-        
-        if hasattr(setup, 'A_q_debug'):
-            A_q_gpaw = setup.A_q_debug
-            print(f"GPAW A_q shape: {A_q_gpaw.shape}")
-            print(f"GPAW A_q (first 5): {A_q_gpaw[:5]}")
-        
-        # Extract matrices
-        B_ii_gpaw = setup.B_ii
-        K_p_gpaw = setup.K_p
-        M_p_gpaw = setup.M_p
-        M_pp_gpaw = setup.M_pp
-        
-        return B_ii_gpaw, M_p_gpaw, M_pp_gpaw, T_Lqp_gpaw, A_q_gpaw
+        return results
         
     except Exception as e:
-        print(f"Error in GPAW setup: {e}")
-        import traceback
-        traceback.print_exc()
-        return None, None, None, None, None
+        # Re-raise the exception to be handled by caller
+        raise e
 
 
-def compare_matrices(B_ii_j, M_p_j, M_pp_j, T_Lqp_j, A_q_j, B_ii_g, M_p_g, M_pp_g, T_Lqp_g, A_q_g):
-    """Compare matrices from both implementations."""
+def _compare_values(val_j, val_g, name, include_sum=False, show_ratio=False):
+    """Compare two values (arrays or scalars) from both implementations.
+    
+    Args:
+        val_j: jrystal value (array or scalar)
+        val_g: GPAW value (array or scalar)
+        name: Name of the value for display
+        include_sum: Whether to include sum comparison (for arrays)
+        show_ratio: Whether to show the ratio (for scalars)
+    """
+    print(f"\n--- {name} comparison ---")
+    
+    # Check for missing data
+    if val_j is None or val_g is None:
+        print(f"Missing data: jrystal={val_j is not None}, GPAW={val_g is not None}")
+        return
+    
+    # Convert to numpy arrays for uniform handling
+    arr_j = np.atleast_1d(val_j)
+    arr_g = np.atleast_1d(val_g)
+    
+    # Check shapes
+    if arr_j.shape != arr_g.shape:
+        print(f"Shape mismatch: jrystal {arr_j.shape} vs GPAW {arr_g.shape}")
+        return
+    
+    # For scalars (size 1 arrays)
+    if arr_j.size == 1:
+        print(f"jrystal {name}: {arr_j[0]:.10f}")
+        print(f"GPAW {name}: {arr_g[0]:.10f}")
+        print(f"Difference: {abs(arr_j[0] - arr_g[0]):.6e}")
+        
+        if show_ratio and abs(arr_j[0]) > 1e-10:
+            print(f"Ratio (GPAW/jrystal): {arr_g[0]/arr_j[0]:.6f}")
+    
+    # For arrays
+    else:
+        diff = np.abs(arr_j - arr_g)
+        print(f"Shape match: {arr_j.shape}")
+        print(f"Max difference: {np.max(diff):.6e}")
+        print(f"Mean difference: {np.mean(diff):.6e}")
+        
+        if include_sum:
+            print(f"Sum difference: {abs(np.sum(arr_j) - np.sum(arr_g)):.6e}")
+
+
+def compare_results(B_ii_j, M_j, nc_g_j, nct_g_j, n_qg_j, nt_qg_j, Delta0_j, 
+                    B_ii_g, M_g, nc_g_g, nct_g_g, n_qg_g, nt_qg_g, Delta0_g):
+    """Compare densities and M values from both implementations.
+    
+    Args:
+        B_ii_j, M_j, nc_g_j, nct_g_j, n_qg_j, nt_qg_j, Delta0_j: jrystal results
+        B_ii_g, M_g, nc_g_g, nct_g_g, n_qg_g, nt_qg_g, Delta0_g: GPAW results
+    """
     print("\n" + "=" * 60)
     print("Comparison Results")
     print("=" * 60)
     
     # Convert jax arrays to numpy for comparison
-    B_ii_j = np.array(B_ii_j)
-    M_p_j = np.array(M_p_j)
-    M_pp_j = np.array(M_pp_j)
-    if T_Lqp_j is not None:
-        T_Lqp_j = np.array(T_Lqp_j)
-    if A_q_j is not None:
-        A_q_j = np.array(A_q_j)
+    arrays_to_convert = [
+        ('B_ii_j', B_ii_j), ('nc_g_j', nc_g_j), ('nct_g_j', nct_g_j),
+        ('n_qg_j', n_qg_j), ('nt_qg_j', nt_qg_j)
+    ]
     
-    # T_Lqp comparison
-    print("\n--- T_Lqp[0] matrix comparison ---")
-    if T_Lqp_j is not None and T_Lqp_g is not None:
-        T_Lqp_j0 = T_Lqp_j[0]
-        T_Lqp_g0 = T_Lqp_g[0]
-        if T_Lqp_j0.shape == T_Lqp_g0.shape:
-            diff_T = np.abs(T_Lqp_j0 - T_Lqp_g0)
-            print(f"Shape match: {T_Lqp_j0.shape}")
-            print(f"Max difference: {np.max(diff_T):.6e}")
-            print(f"Mean difference: {np.mean(diff_T):.6e}")
+    converted = {}
+    for name, arr in arrays_to_convert:
+        if arr is not None:
+            converted[name] = np.array(arr)
         else:
-            print(f"Shape mismatch: jrystal {T_Lqp_j0.shape} vs GPAW {T_Lqp_g0.shape}")
+            converted[name] = None
     
-    # A_q comparison
-    print("\n--- A_q vector comparison ---")
-    if A_q_j is not None and A_q_g is not None:
-        if A_q_j.shape == A_q_g.shape:
-            print(f"Shape match: {A_q_j.shape}")
-            # Show element-wise ratio to understand scaling
-            ratio = A_q_g / (A_q_j + 1e-10)  # Add small value to avoid division by zero
-            print(f"A_q ratio (GPAW/jrystal) first 5: {ratio[:5]}")
-            print(f"Average ratio: {np.mean(np.abs(ratio)):.2e}")
-        else:
-            print(f"Shape mismatch: jrystal {A_q_j.shape} vs GPAW {A_q_g.shape}")
+    # Convert scalars
+    M_j = float(M_j) if M_j is not None else None
+    Delta0_j = float(Delta0_j) if Delta0_j is not None else None
     
-    # B_ii comparison
-    print("\n--- Projector function overlaps B_ii ---")
-    # print(f"jrystal B_ii:\n{B_ii_j}")
-    # print(f"\nGPAW B_ii:\n{B_ii_g}")
-    if B_ii_j.shape == B_ii_g.shape:
-        diff_B = np.abs(B_ii_j - B_ii_g)
-        print(f"Max difference: {np.max(diff_B):.6e}")
-        print(f"Mean difference: {np.mean(diff_B):.6e}")
-    else:
-        print(f"Shape mismatch: jrystal {B_ii_j.shape} vs GPAW {B_ii_g.shape}")
+    # Compare all values using unified function
+    _compare_values(converted['nc_g_j'], nc_g_g, "Core density nc_g", include_sum=True)
+    _compare_values(converted['nct_g_j'], nct_g_g, "Smooth core density nct_g", include_sum=True)
     
-    # K_p comparison
-    # print("\n--- Kinetic correction K_p ---")
-    # print(f"jrystal K_p:\n{K_p_j}")
-    # print(f"\nGPAW K_p:\n{K_p_g}")
-    # if K_p_j.shape == K_p_g.shape:
-    #     diff_K = np.abs(K_p_j - K_p_g)
-    #     print(f"Max difference: {np.max(diff_K):.6e}")
-    #     print(f"Mean difference: {np.mean(diff_K):.6e}")
-    # else:
-    #     print(f"Shape mismatch: jrystal {K_p_j.shape} vs GPAW {K_p_g.shape}")
+    # Compare first element of n_qg
+    if converted['n_qg_j'] is not None and n_qg_g is not None:
+        _compare_values(converted['n_qg_j'][0], n_qg_g[0], "Augmentation density n_qg[0]")
     
-    # M_p comparison
-    print("\n--- Coulomb correction M_p ---")
-    print(f"jrystal M_p:\n{M_p_j}")
-    print(f"\nGPAW M_p:\n{M_p_g}")
-    if M_p_j.shape == M_p_g.shape:
-        diff_M = np.abs(M_p_j - M_p_g)
-        print(f"Max difference: {np.max(diff_M):.6e}")
-        print(f"Mean difference: {np.mean(diff_M):.6e}")
-    else:
-        print(f"Shape mismatch: jrystal {M_p_j.shape} vs GPAW {M_p_g.shape}")
+    # Compare scalars
+    _compare_values(Delta0_j, Delta0_g, "Delta0")
+    _compare_values(M_j, M_g, "Scalar M value", show_ratio=True)
     
-    # M_pp comparison
-    # print("\n--- Coulomb correction M_pp ---")
-    # print(f"jrystal M_pp shape: {M_pp_j.shape}")
-    # print(f"GPAW M_pp shape: {M_pp_g.shape}")
-    # if M_pp_j.shape == M_pp_g.shape:
-    #     diff_Mpp = np.abs(M_pp_j - M_pp_g)
-    #     print(f"Max difference: {np.max(diff_Mpp):.6e}")
-    #     print(f"Mean difference: {np.mean(diff_Mpp):.6e}")
-        
-    #     # Show first few elements for debugging
-    #     print(f"\njrystal M_pp[:3, :3]:\n{M_pp_j[:3, :3]}")
-    #     print(f"\nGPAW M_pp[:3, :3]:\n{M_pp_g[:3, :3]}")
-    # else:
-    #     print(f"Shape mismatch: jrystal {M_pp_j.shape} vs GPAW {M_pp_g.shape}")
+    # Compare B_ii
+    _compare_values(converted['B_ii_j'], B_ii_g, "Projector function overlaps B_ii")
 
 
 if __name__ == "__main__":
-    # Run both implementations
-    B_ii_j, M_p_j, M_pp_j, T_Lqp_j, A_q_j = run_align_paw()
-    B_ii_g, M_p_g, M_pp_g, T_Lqp_g, A_q_g = run_gpaw_setup()
+    results_j = run_align_paw()
+    try:
+        results_g = run_gpaw_setup()
+    except Exception as e:
+        print(f"Error in GPAW setup: {e}")
+        import traceback
+        traceback.print_exc()
+        results_g = {'B_ii': None, 'M': None, 'nc_g': None, 'nct_g': None,
+                     'n_qg': None, 'nt_qg': None, 'Delta0': None}
     
     # Compare results
-    compare_matrices(B_ii_j, M_p_j, M_pp_j, T_Lqp_j, A_q_j, B_ii_g, M_p_g, M_pp_g, T_Lqp_g, A_q_g)
+    compare_results(
+        results_j['B_ii'], results_j['M'], results_j['nc_g'], results_j['nct_g'],
+        results_j['n_qg'], results_j['nt_qg'], results_j['Delta0'],
+        results_g['B_ii'], results_g['M'], results_g['nc_g'], results_g['nct_g'],
+        results_g['n_qg'], results_g['nt_qg'], results_g['Delta0']
+    )
