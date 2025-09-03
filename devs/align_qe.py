@@ -228,7 +228,6 @@ def _compare_values(val_j, val_g, name):
         val_j: jrystal value (array or scalar)
         val_g: GPAW value (array or scalar)
         name: Name of the value for display
-        show_ratio: Whether to show the ratio (for scalars)
     """
     print(f"\n--- {name} comparison ---")
     
@@ -236,18 +235,14 @@ def _compare_values(val_j, val_g, name):
     if val_j is None or val_g is None:
         print(f"Missing data: jrystal={val_j is not None}, GPAW={val_g is not None}")
         return
-    
-    # Convert to numpy arrays for uniform handling
-    arr_j = np.atleast_1d(val_j)
-    arr_g = np.atleast_1d(val_g)
-    
+
     # Check shapes
-    if arr_j.shape != arr_g.shape:
-        print(f"Shape mismatch: jrystal {arr_j.shape} vs GPAW {arr_g.shape}")
+    if val_j.shape != val_g.shape:
+        print(f"Shape mismatch: jrystal {val_j.shape} vs GPAW {val_g.shape}")
         return
     
-    diff = np.abs(arr_j - arr_g)
-    print(f"Shape match: {arr_j.shape}")
+    diff = np.abs(val_j - val_g)
+    print(f"Shape match: {val_j.shape}")
     print(f"Max difference: {np.max(diff):.6e}")
     print(f"Mean difference: {np.mean(diff):.6e}")
 
@@ -264,7 +259,7 @@ def compare_results(results_j, results_g):
     print("=" * 60)
     
     # Define comparison settings for each quantity
-    # Format: (key, display_name, show_ratio)
+    # Format: (key, display_name)
     comparisons = [
         ('n_qg', 'Augmentation density n_qg'),
         ('nt_qg', 'Smooth augmentation density nt_qg'),
@@ -275,22 +270,8 @@ def compare_results(results_j, results_g):
     ]
     
     for key, display_name in comparisons:
-        # Get values from both implementations
-        val_j = results_j.get(key)
-        val_g = results_g.get(key)
-        
-        # Skip if key not in results
-        if val_j is None or val_g is None:
-            continue
-            
-        # Convert JAX arrays to numpy if needed
-        if hasattr(val_j, '__array__'):
-            val_j = np.array(val_j)
-        if hasattr(val_g, '__array__'):
-            val_g = np.array(val_g)
-        
         # Compare values
-        _compare_values(val_j, val_g, display_name)
+        _compare_values(results_j[key], results_g[key], display_name)
 
 
 if __name__ == "__main__":
