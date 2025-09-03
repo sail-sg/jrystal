@@ -78,9 +78,7 @@ def calc_compensation_charges():
     for m in range(2 * l + 1):
       Delta_pL = Delta_pL.at[:, L + m].set(jnp.dot(Delta_lq[l], T_Lqp[L + m]))
 
-  # Changed to match GPAW convention: no sqrt(4*pi) factor on integral
-  # Original: Delta0 = jnp.dot(nc_g - nct_g, r_g**2 * dr_g) * jnp.sqrt(4 * jnp.pi) - Z / jnp.sqrt(4 * jnp.pi)
-  Delta0 = jnp.dot(nc_g - nct_g, r_g**2 * dr_g) - Z / jnp.sqrt(4 * jnp.pi)
+  Delta0 = jnp.dot(nc_g - nct_g, r_g**2 * dr_g) * jnp.sqrt(4 * jnp.pi) - Z / jnp.sqrt(4 * jnp.pi)
   return (n_qg, nt_qg, Delta_lq, Lmax, Delta_pL, Delta0)
 
   # g_lg = self.data.create_compensation_charge_functions(lmax)
@@ -205,7 +203,7 @@ def poisson_rdl(
     (Real[Array, "spin kpts band x y z"]): radial function.
   """
 
-  return jnp.sum(r_min**l * g_L * dr_g * r_g**2 / r_max**l, axis=-1) /\
+  return jnp.sum(r_min**l * g_L * dr_g * r_g**2 / r_max**(l + 1), axis=-1) /\
     (2 * l + 1) * 4 * jnp.pi
 
 A = 0.5 * integrate_radial_function(nc_g * poisson_rdl(nc_g, 0))
@@ -232,7 +230,8 @@ else:
 
 mct_g = nct_g + Delta0 * g_lg[0]
 A -= 0.5 * integrate_radial_function(mct_g * poisson_rdl(mct_g, 0))
-M = A
+# NOTE: THIS IS FOR TESTING, SHOULD BE CHANGED TO THE CORRECT FORMULA
+M = 0.5 * integrate_radial_function(nc_g * poisson_rdl(nc_g, 0))
 MB = -integrate_radial_function(nct_g * vbar_g)
 
 AB_q = -integrate_radial_function(nt_qg * vbar_g)
@@ -345,105 +344,105 @@ def calculate_coulomb_corrections():
   return M_p, M_pp
 
 M_p, M_pp = calculate_coulomb_corrections()
-breakpoint()
+# breakpoint()
 
-# TODO: the xc correction seems to be very messy here
-xc_correction = get_xc_correction(rgd2, xc, gcut2, lcut)
+# # TODO: the xc correction seems to be very messy here
+# xc_correction = get_xc_correction(rgd2, xc, gcut2, lcut)
 
 
-"""Density matrix related quantities"""
-for i in range(n_projectors[atom]):
-  for j in range(n_projectors[atom]):
-    for l in range((lmax + 1)**2):
-      delta_aiiL[atom][i, j, l] = PP_MULTIPOLES[i, j, l]
-delta0_a[atom] = jnp.zeros(1)
+# """Density matrix related quantities"""
+# for i in range(n_projectors[atom]):
+#   for j in range(n_projectors[atom]):
+#     for l in range((lmax + 1)**2):
+#       delta_aiiL[atom][i, j, l] = PP_MULTIPOLES[i, j, l]
+# delta0_a[atom] = jnp.zeros(1)
 
-wave_grid_arr = pw.wave_grid(coefficient, vol)
+# wave_grid_arr = pw.wave_grid(coefficient, vol)
 
-occupation = jnp.ones(
-  shape=coefficient.shape[:3]
-) if occupation is None else occupation
+# occupation = jnp.ones(
+#   shape=coefficient.shape[:3]
+# ) if occupation is None else occupation
 
-density_grid = wave_to_density(wave_grid_arr, occupation)
-density_grid_rec = wave_to_density_reciprocal(wave_grid_arr, occupation)
+# density_grid = wave_to_density(wave_grid_arr, occupation)
+# density_grid_rec = wave_to_density_reciprocal(wave_grid_arr, occupation)
 
-def calculate_pseudo_density(wfs):
-  """similar to the wave to density func"""
-  return None
+# def calculate_pseudo_density(wfs):
+#   """similar to the wave to density func"""
+#   return None
 
-def calculate_total_density(wfs):
-  return None
+# def calculate_total_density(wfs):
+#   return None
 
-def calculate_atomic_density_matrices(D_asp):
-  """need to calculate the inner product between the pseudo-wave
-  with the projectors"""
-  return None
+# def calculate_atomic_density_matrices(D_asp):
+#   """need to calculate the inner product between the pseudo-wave
+#   with the projectors"""
+#   return None
 
-def calculate_multipole_moments():
+# def calculate_multipole_moments():
 
-  return comp_charge, _Q_aL
+#   return comp_charge, _Q_aL
 
-def correction():
-  correction = 0
-  for atom in atoms_list:
-    correction += jnp.einsum("ijkl, ij, kl ->", 
-      M_pp, D_aii[atom], D_aii[atom]
-    )
+# def correction():
+#   correction = 0
+#   for atom in atoms_list:
+#     correction += jnp.einsum("ijkl, ij, kl ->", 
+#       M_pp, D_aii[atom], D_aii[atom]
+#     )
     
-  return correction
+#   return correction
 
-# delta_aiiL = []
-# delta0_a = []
-# D_aii = []
-# D_aii.append(jnp.zeros((nj, nj)))
-# delta_aiiL.append(jnp.zeros((nj, nj, (lmax + 1)**2)))
-# delta0_a.append(jnp.zeros(1))
+# # delta_aiiL = []
+# # delta0_a = []
+# # D_aii = []
+# # D_aii.append(jnp.zeros((nj, nj)))
+# # delta_aiiL.append(jnp.zeros((nj, nj, (lmax + 1)**2)))
+# # delta0_a.append(jnp.zeros(1))
 
-def total_energy():
+# def total_energy():
 
-  # for D_sii, P_ni in zip(D_asii.values(), P_ani.values()):
-  #   D_sii[self.spin] += jnp.einsum('ni, n, nj -> ij',
-  #     P_ni.conj(), occ_n, P_ni).real
-  for D_sii, P_ni in zip(D_asii.values(), P_ani.values()):
-    D_sii[self.spin] += jnp.einsum('ni, n, nj -> ij',
-      P_ni.conj(), occ_n, P_ni).real
+#   # for D_sii, P_ni in zip(D_asii.values(), P_ani.values()):
+#   #   D_sii[self.spin] += jnp.einsum('ni, n, nj -> ij',
+#   #     P_ni.conj(), occ_n, P_ni).real
+#   for D_sii, P_ni in zip(D_asii.values(), P_ani.values()):
+#     D_sii[self.spin] += jnp.einsum('ni, n, nj -> ij',
+#       P_ni.conj(), occ_n, P_ni).real
     
-  for a, D_sii in wfs.D_asii.items():
-    Q_L = jnp.einsum('ij, ijL -> L',
-      D_sii[:wfs.ndensities].real, wfs.delta_aiiL[a])
-    Q_L[0] += wfs.delta0_a[a]
+#   for a, D_sii in wfs.D_asii.items():
+#     Q_L = jnp.einsum('ij, ijL -> L',
+#       D_sii[:wfs.ndensities].real, wfs.delta_aiiL[a])
+#     Q_L[0] += wfs.delta0_a[a]
 
-  # calculate the kinetic energy
-  # valence kinetic energy
-  e_kinetic = kinetic(
-    g_vector_grid,
-    kpts,
-    coeff_grid,
-    occupation
-  )
-  # core kinetic energy
-  # TODO: implement core kinetic energy to match the AE total energy
-  ekin_c = 0
+#   # calculate the kinetic energy
+#   # valence kinetic energy
+#   e_kinetic = kinetic(
+#     g_vector_grid,
+#     kpts,
+#     coeff_grid,
+#     occupation
+#   )
+#   # core kinetic energy
+#   # TODO: implement core kinetic energy to match the AE total energy
+#   ekin_c = 0
 
-  # calculate the exchange-correlation energy
-  exc_cv = exc_functional(
-    density_grid,
-    g_vector_grid,
-    vol,
-    xc,
-    kohn_sham
-  )
+#   # calculate the exchange-correlation energy
+#   exc_cv = exc_functional(
+#     density_grid,
+#     g_vector_grid,
+#     vol,
+#     xc,
+#     kohn_sham
+#   )
   
-  # core-valence Hartree energy
-  e_coulomb = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
+#   # core-valence Hartree energy
+#   e_coulomb = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
 
-  for atom in atoms_list:
-    e_kinetic += jnp.dot(K_p[atom], D_ij[atom]) + Kc[atom]
-    e_zero += MB[atom] + jnp.dot(MB_p[atom], D_p[atom])
-    e_coulomb += M[atom] + jnp.dot(
-      D_p[atom], (M_p[atom] + jnp.dot(M_pp[atom], D_p[atom]))
-    )
-    e_xc += calculate_paw_correction(self.setups[a], D_sp,
-                                                     dH_asp[a], a=a)
+#   for atom in atoms_list:
+#     e_kinetic += jnp.dot(K_p[atom], D_ij[atom]) + Kc[atom]
+#     e_zero += MB[atom] + jnp.dot(MB_p[atom], D_p[atom])
+#     e_coulomb += M[atom] + jnp.dot(
+#       D_p[atom], (M_p[atom] + jnp.dot(M_pp[atom], D_p[atom]))
+#     )
+#     e_xc += calculate_paw_correction(self.setups[a], D_sp,
+#                                                      dH_asp[a], a=a)
 
-  return e_kinetic + e_coulomb + e_zero + e_xc
+#   return e_kinetic + e_coulomb + e_zero + e_xc
