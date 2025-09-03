@@ -39,6 +39,10 @@ def setup_qe():
   nct_g = jnp.array(pp_dict['PP_NLCC'])[:gcut] # non-linera core charge
   vbar_g = jnp.array(pp_dict['PP_LOCAL'])[:gcut] # local pseudopotential
 
+  # Calculate nj and nq before using them
+  nj = len(l_j)  # number of projector radial functions
+  nq = nj * (nj + 1) // 2  # number of radial function pairs
+  
   n_lqg = jnp.zeros((2 * lcut + 1, nq, gcut))
   Delta_lq = jnp.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_MULTIPOLES']).reshape(lmax + 1, nj, nj)
   Delta_lq = jnp.transpose(Delta_lq, (1, 2, 0))[jnp.triu_indices(nj)].T
@@ -48,15 +52,16 @@ def setup_qe():
       int(qijl['first_index']) * nj + int(qijl['second_index'])
     ].set(jnp.array(qijl['values'][:gcut]) / r_g[:gcut]**2 / 4 / jnp.pi)
 
-  assert r_g.shape[0] == n_rgd
-  assert dr_g.shape[0] == n_rgd
-  assert phi_jg.shape[1] == n_rgd
-  assert phit_jg.shape[1] == n_rgd
-  assert nc_g.shape[0] == n_rgd
-  assert nct_g.shape[0] == n_rgd
-  return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, n_lqg, Delta_lq
+  assert r_g.shape[0] == gcut
+  assert dr_g.shape[0] == gcut
+  assert phi_jg.shape[1] == gcut
+  assert phit_jg.shape[1] == gcut
+  assert nc_g.shape[0] == gcut
+  assert nct_g.shape[0] == gcut
+  
+  return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, n_lqg, Delta_lq, l_j, pt_jg, Z, lmax, lcut, gcut
 
-def calc_qe(r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, n_lqg, Delta_lq):
+def calc_qe(r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, n_lqg, Delta_lq, l_j, pt_jg, Z, lmax, lcut, gcut):
 
   def calculate_T_Lqp():
     """copied from gpaw"""
@@ -216,7 +221,17 @@ def calc_qe(r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, n_lqg, Delta_lq):
   A -= 0.5 * integrate_radial_function(mct_g * poisson_rdl(mct_g, 0))
   # NOTE: THIS IS FOR TESTING, SHOULD BE CHANGED TO THE CORRECT FORMULA
   M = 0.5 * integrate_radial_function(nc_g * poisson_rdl(nc_g, 0))
-  return B_ii, M, n_qg, nt_qg, Delta_pL, Delta0, gcut
+  
+  # Return as a dictionary for compatibility with align_qe.py
+  return {
+    'B_ii': B_ii,
+    'M': M,
+    'n_qg': n_qg * 4 * jnp.pi,
+    'nt_qg': nt_qg * 4 * jnp.pi,
+    'Delta_pL': Delta_pL,
+    'Delta0': Delta0,
+    'gcut': gcut
+  }
 
   # NOTE: currently the following code is not tested for QE pp file, but do not delete
   MB = -integrate_radial_function(nct_g * vbar_g)

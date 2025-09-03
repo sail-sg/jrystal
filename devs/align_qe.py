@@ -19,41 +19,12 @@ def run_align_paw():
     """Run jrystal's align_paw.py and extract results.
     
     Returns:
-        Tuple containing (B_ii, M, nc_g, nct_g, n_qg, nt_qg, Delta0) from jrystal
+        Dictionary containing PAW results from jrystal
     """
-    from devs.calc_paw import setup_qe, calc_qe
-    return calc_qe(setup_qe())
-
-
-def _extract_gpaw_results(setup):
-    """Extract results from GPAW setup object.
-    
-    Args:
-        setup: GPAW Setup object
-        
-    Returns:
-        Dictionary of extracted values
-    """
-    results = {
-        'B_ii': setup.B_ii if hasattr(setup, 'B_ii') else None,
-        'M': setup.M if hasattr(setup, 'M') else None,
-        'Delta_pL': setup.Delta_pL if hasattr(setup, 'Delta_pL') else None,
-        'Delta0': setup.Delta0 if hasattr(setup, 'Delta0') else None,
-        'gcut2': setup.gcut2 if hasattr(setup, 'gcut2') else None
-    }
-    
-    if hasattr(setup, 'local_corr'):
-        results.update({
-            'n_qg': setup.local_corr.n_qg if hasattr(setup.local_corr, 'n_qg') else None,
-            'nt_qg': setup.local_corr.nt_qg if hasattr(setup.local_corr, 'nt_qg') else None,
-            'rgd2_N': setup.local_corr.rgd2.N if hasattr(setup.local_corr, 'rgd2') else None
-        })
-    else:
-        results.update({
-            'n_qg': None, 'nt_qg': None, 'rgd2_N': None
-        })
-    
-    return results
+    from calc_paw import setup_qe, calc_qe
+    # setup_qe returns multiple values, pass them all to calc_qe
+    setup_data = setup_qe()
+    return calc_qe(*setup_data)
 
 
 def run_gpaw_setup():
@@ -222,17 +193,26 @@ def run_gpaw_setup():
     xc = XC('PBE')
     
     try:
-        # Debug: Check the values before Setup
-        # print(f"Debug: max(rcut_j) = {max(data.rcut_j) if data.rcut_j.any() else 'N/A'}")
-        # print(f"Debug: rgd.N = {data.rgd.N}")
-        # print(f"Debug: rgd.r_g[-1] = {data.rgd.r_g[-1]}")
-        # print(f"Debug: pt_jg shapes = {[len(pt) for pt in data.pt_jg] if data.pt_jg.any() else 'N/A'}")
-        
         # Initialize Setup with the UPF data
         setup = Setup(data, xc, lmax=2, basis=None)
+        results = {
+        'B_ii': setup.B_ii if hasattr(setup, 'B_ii') else None,
+        'M': setup.M if hasattr(setup, 'M') else None,
+        'Delta_pL': setup.Delta_pL if hasattr(setup, 'Delta_pL') else None,
+        'Delta0': setup.Delta0 if hasattr(setup, 'Delta0') else None,
+        'gcut2': setup.gcut2 if hasattr(setup, 'gcut2') else None
+        }
         
-        # Extract results
-        results = _extract_gpaw_results(setup)
+        if hasattr(setup, 'local_corr'):
+            results.update({
+                'n_qg': setup.local_corr.n_qg if hasattr(setup.local_corr, 'n_qg') else None,
+                'nt_qg': setup.local_corr.nt_qg if hasattr(setup.local_corr, 'nt_qg') else None,
+                'rgd2_N': setup.local_corr.rgd2.N if hasattr(setup.local_corr, 'rgd2') else None
+            })
+        else:
+            results.update({
+                'n_qg': None, 'nt_qg': None, 'rgd2_N': None
+            })
         
         return results
         
@@ -241,14 +221,13 @@ def run_gpaw_setup():
         raise e
 
 
-def _compare_values(val_j, val_g, name, include_sum=False, show_ratio=False):
+def _compare_values(val_j, val_g, name):
     """Compare two values (arrays or scalars) from both implementations.
     
     Args:
         val_j: jrystal value (array or scalar)
         val_g: GPAW value (array or scalar)
         name: Name of the value for display
-        include_sum: Whether to include sum comparison (for arrays)
         show_ratio: Whether to show the ratio (for scalars)
     """
     print(f"\n--- {name} comparison ---")
@@ -267,77 +246,51 @@ def _compare_values(val_j, val_g, name, include_sum=False, show_ratio=False):
         print(f"Shape mismatch: jrystal {arr_j.shape} vs GPAW {arr_g.shape}")
         return
     
-    # For scalars (size 1 arrays)
-    if arr_j.size == 1:
-        print(f"jrystal {name}: {arr_j[0]:.10f}")
-        print(f"GPAW {name}: {arr_g[0]:.10f}")
-        print(f"Difference: {abs(arr_j[0] - arr_g[0]):.6e}")
-        
-        if show_ratio and abs(arr_j[0]) > 1e-10:
-            print(f"Ratio (GPAW/jrystal): {arr_g[0]/arr_j[0]:.6f}")
-    
-    # For arrays
-    else:
-        diff = np.abs(arr_j - arr_g)
-        print(f"Shape match: {arr_j.shape}")
-        print(f"Max difference: {np.max(diff):.6e}")
-        print(f"Mean difference: {np.mean(diff):.6e}")
-        
-        if include_sum:
-            print(f"Sum difference: {abs(np.sum(arr_j) - np.sum(arr_g)):.6e}")
+    diff = np.abs(arr_j - arr_g)
+    print(f"Shape match: {arr_j.shape}")
+    print(f"Max difference: {np.max(diff):.6e}")
+    print(f"Mean difference: {np.mean(diff):.6e}")
 
 
-def compare_results(B_ii_j, M_j, n_qg_j, nt_qg_j, Delta_pL_j, Delta0_j, 
-                    B_ii_g, M_g, n_qg_g, nt_qg_g, Delta_pL_g, Delta0_g):
-    """Compare densities and M values from both implementations.
+def compare_results(results_j, results_g):
+    """Compare PAW results from both implementations.
     
     Args:
-        B_ii_j, M_j, n_qg_j, nt_qg_j, Delta_pL_j, Delta0_j: jrystal results
-        B_ii_g, M_g, n_qg_g, nt_qg_g, Delta_pL_g, Delta0_g: GPAW results
+        results_j: Dictionary of jrystal results
+        results_g: Dictionary of GPAW results
     """
     print("\n" + "=" * 60)
     print("Comparison Results")
     print("=" * 60)
     
-    # Convert jax arrays to numpy for comparison
-    arrays_to_convert = [
-        ('B_ii_j', B_ii_j),
-        ('n_qg_j', n_qg_j), ('nt_qg_j', nt_qg_j),
-        ('Delta_pL_j', Delta_pL_j)
+    # Define comparison settings for each quantity
+    # Format: (key, display_name, show_ratio)
+    comparisons = [
+        ('n_qg', 'Augmentation density n_qg'),
+        ('nt_qg', 'Smooth augmentation density nt_qg'),
+        ('Delta_pL', 'Delta_pL matrix'),
+        ('Delta0', 'Delta0'),
+        ('M', 'Scalar M value'),
+        ('B_ii', 'Projector function overlaps B_ii'),
     ]
     
-    converted = {}
-    for name, arr in arrays_to_convert:
-        if arr is not None:
-            converted[name] = np.array(arr)
-        else:
-            converted[name] = None
-    
-    # Convert scalars
-    M_j = float(M_j) if M_j is not None else None
-    Delta0_j = float(Delta0_j) if Delta0_j is not None else None
-    
-    # Compare first element of n_qg
-    if converted['n_qg_j'] is not None and n_qg_g is not None:
-        _compare_values(converted['n_qg_j'][0], n_qg_g[0], "Augmentation density n_qg[0]")
-    
-    # Compare first element of nt_qg
-    if converted['nt_qg_j'] is not None and nt_qg_g is not None:
-        _compare_values(converted['nt_qg_j'][0], nt_qg_g[0], "Smooth augmentation density nt_qg[0]")
-    
-    # NOTE: Delta_lq comparison removed - not aligned but not an issue for current stage
-    # Both implementations use their own Delta_lq consistently internally
-    
-    # Compare Delta_pL
-    if converted['Delta_pL_j'] is not None and Delta_pL_g is not None:
-        _compare_values(converted['Delta_pL_j'], Delta_pL_g, "Delta_pL matrix")
-    
-    # Compare scalars
-    _compare_values(Delta0_j, Delta0_g, "Delta0")
-    _compare_values(M_j, M_g, "Scalar M value", show_ratio=True)
-    
-    # Compare B_ii
-    _compare_values(converted['B_ii_j'], B_ii_g, "Projector function overlaps B_ii")
+    for key, display_name in comparisons:
+        # Get values from both implementations
+        val_j = results_j.get(key)
+        val_g = results_g.get(key)
+        
+        # Skip if key not in results
+        if val_j is None or val_g is None:
+            continue
+            
+        # Convert JAX arrays to numpy if needed
+        if hasattr(val_j, '__array__'):
+            val_j = np.array(val_j)
+        if hasattr(val_g, '__array__'):
+            val_g = np.array(val_g)
+        
+        # Compare values
+        _compare_values(val_j, val_g, display_name)
 
 
 if __name__ == "__main__":
@@ -348,16 +301,7 @@ if __name__ == "__main__":
         print(f"Error in GPAW setup: {e}")
         import traceback
         traceback.print_exc()
-        results_g = {'B_ii': None, 'M': None,
-                     'n_qg': None, 'nt_qg': None,
-                     'Delta_pL': None, 'Delta0': None}
+        results_g = {}
 
-    # Compare results
-    compare_results(
-        results_j['B_ii'], results_j['M'],
-        results_j['n_qg'], results_j['nt_qg'],
-        results_j['Delta_pL'], results_j['Delta0'],
-        results_g['B_ii'], results_g['M'],
-        results_g['n_qg'], results_g['nt_qg'],
-        results_g['Delta_pL'], results_g['Delta0']
-    )
+    # Compare results using the new simplified interface
+    compare_results(results_j, results_g)
