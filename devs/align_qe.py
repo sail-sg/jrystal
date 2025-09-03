@@ -15,53 +15,14 @@ sys.path.insert(0, '/home/aiops/zhaojx/jrystal')
 sys.path.insert(0, '/home/aiops/zhaojx/jrystal/gpaw')
 
 
-def _extract_jrystal_results(exec_globals):
-    """Extract results from jrystal execution context.
-    
-    Args:
-        exec_globals: Dictionary containing executed jrystal variables
-        
-    Returns:
-        Tuple of extracted values
-    """
-    results = {
-        'B_ii': exec_globals.get('B_ii'),
-        'M': exec_globals.get('M'),
-        'n_qg': exec_globals.get('n_qg') * 4 * np.pi,
-        'nt_qg': exec_globals.get('nt_qg') * 4 * np.pi,
-        'Delta_pL': exec_globals.get('Delta_pL'),
-        'Delta0': exec_globals.get('Delta0'),
-        'gcut': exec_globals.get('gcut')
-    }
-    return results
-
-
 def run_align_paw():
     """Run jrystal's align_paw.py and extract results.
     
     Returns:
         Tuple containing (B_ii, M, nc_g, nct_g, n_qg, nt_qg, Delta0) from jrystal
     """
-    # Import and run align_paw
-    exec_globals = {}
-    with open('devs/align_paw.py', 'r') as f:
-        code = f.read()
-    
-    # Execute up to the breakpoint to get M_p, M_pp calculation
-    code_lines = code.split('\n')
-    for i, line in enumerate(code_lines):
-        if 'M_p, M_pp = calculate_coulomb_corrections()' in line:
-            break_line = i + 1
-            break
-    
-    # Execute up to that point
-    code_to_exec = '\n'.join(code_lines[:break_line])
-    exec(code_to_exec, exec_globals)
-    
-    # Extract results
-    results = _extract_jrystal_results(exec_globals)
-    
-    return results
+    from devs.calc_paw import setup_qe, calc_qe
+    return calc_qe(setup_qe())
 
 
 def _extract_gpaw_results(setup):
