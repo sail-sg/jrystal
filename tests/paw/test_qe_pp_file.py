@@ -174,6 +174,7 @@ def test_ae_wavefunction_normalization():
       tested_l.add(l)
       phi_r = jnp.array(wfc['values'])
       rab = jnp.array(pp_dict['PP_MESH']['PP_RAB'])
+      # NOTE: this is integrated over the whole mesh, not just the cutoff radius
       norm = jnp.sum(phi_r**2 * rab)
       error = jnp.abs(norm - 1.0)
       assert error < 1e-6, \

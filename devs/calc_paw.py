@@ -11,42 +11,81 @@ from jrystal.pseudopotential.load import parse_upf
 from jrystal._src.energy import kinetic, hartree, exc_functional
 
 def setup_qe():
-
+  """Load and parse QE UPF pseudopotential file.
+  
+  This function reads a Quantum ESPRESSO UPF file and extracts PAW data.
+  Values are returned in QE's native storage convention without conversion.
+  
+  QE UPF Storage Conventions (as documented in paw_pp_file_documentation.md):
+  
+  Radial Functions Storage:
+  - Wave functions (PP_AEWFC, PP_PSWFC): φ(r) * r * √(4π)
+    Physical: φ(r), Stored: φ(r) * r * √(4π) [includes BOTH r and √(4π)]
+  - Projectors (PP_BETA): β(r) * r * √(4π)
+    Physical: β(r), Stored: β(r) * r * √(4π) [includes BOTH r and √(4π)]
+  - Core densities (PP_AE_NLCC): n(r)
+    Physical: n_c(r), Stored: n_c(r) [NO factors applied]
+  - Augmentation (PP_QIJ): Q(r) * r²
+    Physical: Q(r), Stored: Q(r) * r² [includes r² factor]
+  - Local potential (PP_LOCAL): V_loc(r) [no special factors]
+  
+  Normalization Conventions:
+  - Wave functions: ∫|stored|² * rab = 1  [simple integration with PP_RAB]
+  - Core density: ∫ n_c(r) * 4π * r² dr = N_core
+  
+  Grid Properties:
+  - Units: Bohr (atomic units for distances)
+  - PP_RAB = r * dr for integration (r * differential)
+  - For logarithmic grids: PP_RAB[i] / PP_R[i] = dx (constant)
+  
+  Cutoff Radii (for Carbon example):
+  - 2S state: Rcut = 1.0 Bohr, Rcut_US = 1.2 Bohr
+  - 2P state: Rcut = 0.9 Bohr, Rcut_US = 1.4 Bohr
+  - Matching: AE and PS wavefunctions match for r > Rcut_US
+  
+  Returns:
+    Tuple of arrays containing PAW data in QE native convention
+  """
+  
   # load the pseudopotential
   pp_dict = parse_upf('/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF')
-  Z = 6
-  # Z = int(pp_dict["PP_HEADER"]["Z_valence"])
-  lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug']) # maximum angular momentum of the augmentation charge
-  l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # angular momentum of each projector
-  lcut = max(l_j)
-  rcut_j = jnp.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
-  gcut_j = jnp.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
-  gcut = jnp.max(gcut_j)
-  # NOTE: here we use a uniform cutoff to handle all the wave functions and
-  # densities
-  r_g = jnp.array(pp_dict['PP_MESH']['PP_R'])[:gcut] # radial grid
-  dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB'])[:gcut] # radial grid integration weight
-  pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :gcut] # projector functions
-  phi_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :gcut] # all-electron wave functions
-  phit_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :gcut] # pseudo wave functions
-  r"""
-  It is the true charge density, i.e. it will be 
-  correctly integrated as \sum_i 4 \pi r_i^2 nlcc_i
-  Different from the setting in GPAW, see the discussions
-  after (41b)
-  """
-  nc_g = jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:gcut] # all-electron non-linear core charge
-  nct_g = jnp.array(pp_dict['PP_NLCC'])[:gcut] # non-linera core charge
-  vbar_g = jnp.array(pp_dict['PP_LOCAL'])[:gcut] # local pseudopotential
-
-  # Calculate nj and nq before using them
-  nj = len(l_j)  # number of projector radial functions
-  nq = nj * (nj + 1) // 2  # number of radial function pairs
+  Z = 6  # Atomic number for Carbon
+  lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug'])  # Max l for augmentation
+  l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # l for each projector
+  lcut = max(l_j)  # Maximum l among projectors
+  rcut_j = jnp.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # Rcut for projectors
+  gcut_j = jnp.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # Grid indices
+  gcut = jnp.max(gcut_j)  # Use maximum grid index for uniform cutoff
   
+  # Extract radial grid (units: Bohr)
+  r_g = jnp.array(pp_dict['PP_MESH']['PP_R'])[:gcut]  # Radial points
+  dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB'])[:gcut]  # r * dr for integration
+  
+  # Extract radial functions (in QE storage convention)
+  pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :gcut]  # β(r) * r * √(4π)
+  phi_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :gcut]  # φ(r) * r * √(4π)
+  phit_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :gcut]  # φ̃(r) * r * √(4π)
+  # Core densities (stored as n(r) without factors in QE)
+  # Integration: ∫ n_c(r) * 4π * r² dr = N_core
+  nc_g = jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:gcut]  # AE core density n_c(r)
+  nct_g = jnp.array(pp_dict['PP_NLCC'])[:gcut]  # Pseudo core density ñ_c(r)
+  vbar_g = jnp.array(pp_dict['PP_LOCAL'])[:gcut]  # Local pseudopotential V_loc(r)
+
+  # Augmentation charge setup
+  nj = len(l_j)  # Number of projector radial functions
+  nq = nj * (nj + 1) // 2  # Number of unique pairs (upper triangular)
+  
+  # Augmentation functions Q_ij^l(r) - stored as Q(r) * r² in QE
+  # Convert to physical Q(r) by dividing by r² and 4π
   n_lqg = jnp.zeros((2 * lcut + 1, nq, gcut))
+  
+  # Multipole moments Δ_lq from PP_MULTIPOLES
   Delta_lq = jnp.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_MULTIPOLES']).reshape(lmax + 1, nj, nj)
   Delta_lq = jnp.transpose(Delta_lq, (1, 2, 0))[jnp.triu_indices(nj)].T
+  
+  # Extract augmentation functions Q_ij^l(r) from PP_QIJ
   for qijl in pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ']:
+    # QE stores Q(r) * r², convert to Q(r) / 4π for internal use
     n_lqg = n_lqg.at[
       int(qijl['angular_momentum']),
       int(qijl['first_index']) * nj + int(qijl['second_index'])
@@ -61,10 +100,102 @@ def setup_qe():
   
   return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, n_lqg, Delta_lq, l_j, pt_jg, Z, lmax, lcut, gcut
 
-def calc_qe(r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, n_lqg, Delta_lq, l_j, pt_jg, Z, lmax, lcut, gcut):
+def calc(
+  r_g: np.ndarray,
+  dr_g: np.ndarray,
+  phi_jg: np.ndarray,
+  phit_jg: np.ndarray,
+  nc_g: np.ndarray,
+  nct_g: np.ndarray,
+  vbar_g: np.ndarray,
+  n_lqg: np.ndarray,
+  Delta_lq: np.ndarray,
+  l_j: np.ndarray,
+  pt_jg: np.ndarray,
+  Z: int,
+  lmax: int,
+  lcut: int,
+  gcut: int):
+  """Calculate PAW correction terms using QE UPF data in native convention.
+  
+  Input Convention (QE UPF as loaded by setup_qe):
+  -------------------------------------------------
+  Arrays passed to this function maintain QE's native storage convention:
+  
+  Radial Functions:
+  - phi_jg, phit_jg: AE/PS wavefunctions stored as φ(r)*r*√(4π)
+  - pt_jg: Projector functions stored as β(r)*r*√(4π)
+  - nc_g, nct_g: Core densities stored as n(r) (physical density)
+  - n_lqg: Augmentation Q(r) (already converted from Q(r)*r² by dividing by r²/4π)
+  
+  Grid and Integration:
+  - r_g: Radial grid points in Bohr
+  - dr_g: Integration weights PP_RAB = r*dr (includes r factor)
+  - Integration: ∫f(r)dr → Σ f[i]*dr_g[i] for radial integrals
+  
+  Angular Momentum:
+  - l_j: Angular momentum for each projector
+  - lmax: Maximum l for augmentation
+  - lcut: Maximum l among projectors
+  
+  This function computes PAW quantities including:
+  - Augmentation density n_qg
+  - Smooth augmentation density nt_qg  
+  - Multipole moments Delta_pL
+  - Coulomb correction scalar M
+  - Projector overlaps B_ii
+  
+  All calculations respect QE's storage convention with appropriate
+  factor handling for physical correctness.
+  
+  Args:
+    r_g (np.ndarray): Radial grid points, shape (gcut,)
+    dr_g (np.ndarray): Radial grid integration weights (dr), shape (gcut,)
+    phi_jg (np.ndarray): All-electron partial waves φ(r)*r, shape (nj, gcut)
+                        These match the true AE wavefunctions inside core region
+    phit_jg (np.ndarray): Pseudo partial waves φ̃(r)*r, shape (nj, gcut)
+                         Smooth functions matching φ outside core region
+    nc_g (np.ndarray): All-electron core density n_c(r), shape (gcut,)
+                       True electron density of core states
+    nct_g (np.ndarray): Smooth core density ñ_c(r), shape (gcut,)
+                        Pseudized version of nc_g, smooth at origin
+    vbar_g (np.ndarray): Local pseudopotential V_loc(r), shape (gcut,)
+    n_lqg (np.ndarray): Augmentation functions Q_ij^l(r), shape (2*lcut+1, nq, gcut)
+                       Multipole moments of augmentation charges
+    Delta_lq (np.ndarray): Multipole moments of Q_ij, shape (lmax+1, nq)
+                          ∫ r^l [n_ij(r) - ñ_ij(r)] dr
+    l_j (np.ndarray): Angular momentum for each projector, shape (nj,)
+    pt_jg (np.ndarray): Projector functions p̃(r)*r, shape (nj, gcut)
+                       Dual functions to φ̃, satisfying ⟨p̃_i|φ̃_j⟩ = δ_ij
+    Z (int): Atomic number (total nuclear charge)
+    lmax (int): Maximum angular momentum for augmentation
+    lcut (int): Maximum angular momentum for projectors
+    gcut (int): Number of radial grid points (cutoff index)
+  
+  Returns:
+    dict: Dictionary containing PAW correction terms:
+      - B_ii: Projector overlap matrix ⟨p̃_i|p̃_j⟩
+      - M: Scalar Coulomb correction for core-core interaction
+      - n_qg: Augmentation densities from AE waves
+      - nt_qg: Augmentation densities from pseudo waves
+      - Delta_pL: Multipole moments in (p,L) representation
+      - Delta0: Monopole compensation charge deficit
+      - gcut: Grid cutoff index
+  """
+  
+  # Calculate derived quantities first
+  n_rgd = r_g.shape[0]  # number of grid points
+  nj = phi_jg.shape[0]  # number of projectors radial functions
+  n_j = np.array([0, 0, 1, 1])  # TODO: main quantum number, not sure how to calculate
+  ni = nj + l_j.sum() * 2  # number of projectors
+  nq = nj * (nj + 1) // 2  # number of radial function pairs
+  _np = ni * (ni + 1) // 2  # number of projector pairs
 
   def calculate_T_Lqp():
-    """copied from gpaw"""
+    """Calculate Gaunt coefficients T_Lqp for angular momentum coupling.
+    
+    These coefficients couple pairs of projectors (q index) with 
+    spherical harmonics (L index) for multipole expansions."""
     Lcut = (2 * lcut + 1)**2
     G_LLL = gaunt(lcut)[:, :, :Lcut]
     LGcut = G_LLL.shape[2]
@@ -134,23 +265,6 @@ def calc_qe(r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, n_lqg, Delta_lq, l_
     Delta0 = jnp.dot(nc_g - nct_g, r_g**2 * dr_g) * jnp.sqrt(4 * jnp.pi) - Z / jnp.sqrt(4 * jnp.pi)
     return (n_qg, nt_qg, Delta_lq, Lmax, Delta_pL, Delta0)
 
-  # check the shape of the arrays
-  n_rgd = r_g.shape[0] # number of grid points
-  nj = phi_jg.shape[0] # number of projectors radial functions
-  n_j = np.array([0, 0, 1, 1]) # TODO: main quantum number, not sure how to calculate
-  ni = nj + l_j.sum() * 2 # number of projectors
-  nq = nj * (nj + 1) // 2 # number of radial functionpairs
-  _np = ni * (ni + 1) // 2 # number of projector pairs
-  proj_r = []
-  proj_l = []
-  proj_m = []
-  i = 0
-  for l in l_j:
-    for m in range(-l, l + 1):
-      proj_r.append(i)
-      proj_l.append(l)
-      proj_m.append(m)
-    i += 1
   T_Lqp = calculate_T_Lqp()
 
   """

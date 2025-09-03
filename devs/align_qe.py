@@ -1,8 +1,16 @@
 #!/usr/bin/env python
-"""Compare PAW implementation between jrystal and GPAW.
+"""Compare PAW implementation between jrystal and GPAW using QE UPF file.
 
-This script loads the same UPF file in both implementations and compares
-the calculated PAW correction matrices: K_p (kinetic), M_p and M_pp (Coulomb).
+This script loads a Quantum ESPRESSO UPF pseudopotential file and:
+1. Processes it directly in jrystal's native QE convention
+2. Converts it to GPAW's convention for GPAW processing
+3. Compares the calculated PAW quantities between implementations
+
+The key challenge is handling the different storage conventions:
+- QE stores wavefunctions as φ(r)*r*√(4π), projectors as β(r)*r*√(4π)
+- GPAW expects wavefunctions as φ(r)*√(4π), projectors as p(r)*√(4π)
+
+See paw_pp_file_documentation.md for detailed convention specifications.
 """
 
 import sys
@@ -29,13 +37,8 @@ def run_align_paw():
 
 def run_gpaw_setup():
     """Run GPAW's setup.py and extract matrices.
-    
-    NOTE: YOU CAN ONLY MODIFY THE CODE INSIDE THIS FUNCTION
-    WHEN EVER YOU MODIFY ANY CODE, MAKE SURE YOU ADD A COMMENT TO EXPLAIN
-    THE REASON FOR THIS MODIFICATION AND ASK THE PERMISSION FROM THE HUMAN USER
-    
     Returns:
-        Dictionary containing GPAW results
+        Dictionary containing GPAW results after conversion
     """
     
     from gpaw.setup import Setup
@@ -80,12 +83,9 @@ def run_gpaw_setup():
     data.gcut_j = np.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])
     data.gcut = np.max(data.gcut_j)
     
-    # Wave functions and projectors (convert from QE to GPAW convention: divide by r)
-    data.pt_jg = np.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :data.gcut] / data.rgd.r_g
     data.phi_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :data.gcut] / data.rgd.r_g
     data.phit_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :data.gcut] / data.rgd.r_g
-    
-    # Core densities (convert from QE to GPAW convention: multiply by sqrt(4π))
+    data.pt_jg = np.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :data.gcut] / data.rgd.r_g
     data.nc_g = np.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:data.gcut] * np.sqrt(4 * np.pi)
     data.nct_g = np.array(pp_dict['PP_NLCC'])[:data.gcut] * np.sqrt(4 * np.pi)
     

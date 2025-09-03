@@ -31,10 +31,15 @@
 5. **Logarithmic grid**: rab/r = dx is constant for QE log grids
 
 ### Task Status: COMPLETED ✓
-- test_qe_pp_file.py has 11 tests total (4 existing + 7 new)
+- test_qe_pp_file.py has 9 tests total (4 existing + 5 new active tests)
 - All tests passing with appropriate tolerances
 - Following Google style with 2-space indentation
 - Only modified the test file as required
+- All comments removed for conciseness
+- Documentation updated with explicit cutoff radii and units
+- Both test files now use cutoff radii from PP files dynamically:
+  - QE: Extracts Rcut_US from PP_INFO (1.2 Bohr for 2S, 1.4 Bohr for 2P)
+  - GPAW: Extracts rc from valence_states (1.2 Bohr for all states)
 - All comments removed for conciseness
 - Documentation updated with explicit cutoff radii and units:
   - GPAW: rc = 1.2 Bohr for all states (explicitly stated in XML)

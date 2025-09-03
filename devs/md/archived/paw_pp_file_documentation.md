@@ -122,7 +122,7 @@ Note: In actual UPF files, beta tags include indices (e.g., PP_BETA.1, PP_BETA.2
 
 | Element | Shape | r factor | √(4π) factor | Storage Convention | GPAW Equivalent |
 |---------|-------|----------|--------------|-------------------|-----------------|
-| **PP_BETA.values** | (mesh_size,) | YES (multiplied) | NO | β(r) * r | pt_jg * r / √(4π) |
+| **PP_BETA.values** | (mesh_size,) | YES (multiplied) | NO | β(r) * r * √(4π) | pt_jg * r |
 | **angular_momentum** | int | - | - | l quantum number | l_j |
 | **cutoff_radius** | float | - | - | r_cut (Bohr) | rcut_j |
 | **cutoff_radius_index** | int | - | - | Grid index at r_cut | gcut_j |
@@ -130,8 +130,8 @@ Note: In actual UPF files, beta tags include indices (e.g., PP_BETA.1, PP_BETA.2
 **QE Convention:**
 ```
 Physical: β(r) [true projector]
-Stored: β(r) * r  [includes r factor, NO √(4π)]
-Conversion to GPAW: pt_gpaw = β_qe / r / √(4π)
+Stored: β(r) * r * √(4π)  [includes BOTH r and √(4π)]
+Conversion to GPAW: pt_gpaw = β_qe / r  [√(4π) present in both]
 Cutoff: Specified per projector (typically 0.9-1.0 Bohr for Carbon)
 ```
 
@@ -200,7 +200,7 @@ Integration: ∫ n_c(r) * 4π * r² dr = N_core
 | Quantity | GPAW Storage | QE Storage | r factor diff | √(4π) factor diff |
 |----------|--------------|------------|---------------|-------------------|
 | **Wave functions (phi, phit)** | u(r)/r × √(4π) | u(r) × √(4π) | QE has r, GPAW doesn't | Both have √(4π) |
-| **Projectors (pt, beta)** | p(r) × √(4π) | p(r) × r | QE has r, GPAW doesn't | GPAW has √(4π), QE doesn't |
+| **Projectors (pt, beta)** | p(r) × √(4π) | p(r) × r × √(4π) | QE has r, GPAW doesn't | Both have √(4π) |
 | **Core densities** | n(r) × √(4π) | n(r) | None | GPAW has √(4π), QE doesn't |
 | **Augmentation (Q)** | Q(r) | Q(r) × r² | QE has r², GPAW doesn't | Neither has √(4π) |
 
@@ -280,16 +280,16 @@ I = sum(f_g * r_g**2 * dr_g) * 4*pi
 
 ### From QE to GPAW:
 ```python
-phi_gpaw = phi_qe / r / sqrt(4*pi)
-pt_gpaw = pt_qe / r / sqrt(4*pi)
+phi_gpaw = phi_qe / r  # Both have sqrt(4*pi)
+pt_gpaw = pt_qe / r    # Both have sqrt(4*pi)
 nc_gpaw = nc_qe * sqrt(4*pi)
 n_qg_gpaw = n_qg_qe / r**2 / (4*pi)
 ```
 
 ### From GPAW to QE:
 ```python
-phi_qe = phi_gpaw * r * sqrt(4*pi)
-pt_qe = pt_gpaw * r * sqrt(4*pi)
+phi_qe = phi_gpaw * r  # Both have sqrt(4*pi)
+pt_qe = pt_gpaw * r    # Both have sqrt(4*pi)
 nc_qe = nc_gpaw / sqrt(4*pi)
 n_qg_qe = n_qg_gpaw * r**2 * (4*pi)
 ```

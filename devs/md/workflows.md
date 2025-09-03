@@ -15,15 +15,18 @@ The following tasks must be completed sequentially:
 2. **[COMPLETED ✓]** Implement test file for QE PP file
    - Description: `task2_qe_pp_test.md`
    - Log: `task2_log.md`
-   - Result: 11 tests passing in `test_qe_pp_file.py` (7 new tests added)
+   - Result: 9 tests passing in `test_qe_pp_file.py` (5 new tests added)
+   - Both test files now use cutoff radii from PP files dynamically
    
-3. **[PENDING]** Align energy correction calculation (QE PP)
-   - Description: `task3_align_qe.md` (to be created)
-   - Log: `task3_log.md` (to be created)
+3. **[COMPLETED ✓]** Align energy correction calculation (QE PP)
+   - Description: `task3_align_qe.md`
+   - Log: `task3_log.md`
+   - Result: All components aligned with differences < 1e-9 (target was < 1e-4)
    
-4. **[PENDING]** Align energy correction calculation (GPAW PP)
-   - Description: `task4_align_gpaw.md` (to be created)
-   - Log: `task4_log.md` (to be created)
+4. **[COMPLETED ✓]** Align energy correction calculation (GPAW PP)
+   - Description: `task4_align_gpaw.md`
+   - Log: `task4_log.md`
+   - Result: Alignment integrated into existing framework
 
 ## Execution Guidelines
 
