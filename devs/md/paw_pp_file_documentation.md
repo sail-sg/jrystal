@@ -37,14 +37,14 @@ GPAW uses XML-formatted setup files, typically compressed with gzip. File naming
 
 | Element | Shape | r factor | √(4π) factor | Normalization | Description |
 |---------|-------|----------|--------------|---------------|-------------|
-| **phi_jg** | (n_j, n_g) | NO (stores u(r)/r) | YES | ∫\|φ\|²r²dr = 1/√(4π) | All-electron partial waves |
-| **phit_jg** | (n_j, n_g) | NO (stores u(r)/r) | YES | ∫\|φ̃\|²r²dr = 1/√(4π) | Pseudo partial waves |
-| **pt_jg** | (n_j, n_g) | NO (stores p(r)) | YES | ⟨p̃\|φ̃⟩ = δᵢⱼ | Projector functions |
+| **phi_jg** | (n_j, n_g) | NO | YES | ∫\|φ\|²r²dr = 1 | All-electron partial waves |
+| **phit_jg** | (n_j, n_g) | NO | YES | NA | Pseudo partial waves |
+| **pt_jg** | (n_j, n_g) | NO | YES | ⟨p̃\|φ̃⟩ = δᵢⱼ | Projector functions |
 
 **GPAW Convention:**
 ```
-Physical: φ(r) = u(r)/r * Y_lm(θ,φ)
-Stored: u(r)/r * √(4π)  [includes √(4π) but NOT r]
+Physical: φ(r) = radial(r) * Y_lm(θ,φ)
+Stored: φ(r) * √(4π)  [includes √(4π) factor]
 Normalization: ∫|stored|² r² dr = 1
 ```
 
@@ -57,15 +57,15 @@ Normalization: ∫|stored|² r² dr = 1
 
 | Element | Shape | r factor | √(4π) factor | Description | Properties |
 |---------|-------|----------|--------------|-------------|------------|
-| **ae_core_density** | (n_g,) | NO | YES (multiplied) | All-electron core density n_c | ∫n_stored r²dr = N_core |
+| **ae_core_density** | (n_g,) | NO | YES (multiplied) | All-electron core density n_c | ∫n_stored r²dr * √(4π) = N_core |
 | **pseudo_core_density** | (n_g,) | NO | YES (multiplied) | Smooth core density ñ_c | Matches n_c outside r_c |
-| **pseudo_valence_density** | (n_g,) | NO | YES (multiplied) | Pseudo valence density | Reference configuration |
+| **pseudo_valence_density** | (n_g,) | NO | YES (multiplied) | Pseudo valence density | NA |
 
 **GPAW Density Convention:**
 ```
 Physical: n(r) [true density]
 Stored: n(r) * √(4π)  [includes √(4π) factor]
-Integration: ∫ n_stored r² dr = N_electrons
+Integration: ∫ n_stored r² dr * √(4π) = N_electrons
 ```
 
 ### 1.5 Potentials
@@ -198,10 +198,10 @@ Integration: ∫ n_c(r) * 4π * r² dr = N_core
 
 **GPAW:**
 ```python
-# Wave functions
-∫ |φ(r)|² r² dr = 1/√(4π)
-# Densities
-∫ n(r) r² dr = N_electrons/√(4π)
+# Wave functions (stored with √(4π))
+∫ |φ_stored|² r² dr = 1
+# Densities (stored with √(4π))  
+∫ n_stored r² dr * √(4π) = N_electrons
 ```
 
 **QE:**
