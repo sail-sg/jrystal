@@ -39,81 +39,29 @@ def run_gpaw_setup():
     """
     
     from gpaw.setup import Setup
-    from gpaw.gaunt import gaunt
+    from gpaw.setup_data import SetupData
     from jrystal.pseudopotential.load import parse_upf
+    from gpaw.atom.radialgd import AbinitRadialGridDescriptor
     
     # Load the UPF file using jrystal's parser
     pp_dict = parse_upf('/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF')
     
-    # Create a data object with all necessary attributes from pp_dict
-    class UPFData:
-        """Data container for UPF pseudopotential data."""
-        def print_info(self, text, setup):
-            """Print setup information (required by Setup.__init__)."""
-            pass  # Minimal implementation for testing
-        
-        def find_core_density_cutoff(self, nc_g):
-            """Find cutoff radius for core density."""
-            # Find where core density becomes negligible
-            return self.rgd.r_g[-1]
-        
-        def create_compensation_charge_functions(self, lmax):
-            """Create compensation charge functions.
-            TODO: this g_lg is INCORRECT"""
-            # Initialize g_lg array
-            g_lg = np.zeros((lmax + 1, self.rgd.N))
-            return g_lg
-        
-        def get_overlap_correction(self, Delta0_ii):
-            """Directly copied from GPAW"""
-            return np.sqrt(4.0 * np.pi) * Delta0_ii
-        
-        def get_smooth_core_density_integral(self, Delta0):
-            """Directly copied from GPAW"""
-            return -Delta0 * np.sqrt(4 * np.pi) - self.Z + self.Nc
-        
-        def get_linear_kinetic_correction(self, T0_qp):
-            """Need to access to e_kin_jj"""
-            # e_kin_jj = self.e_kin_jj
-            # nj = len(e_kin_jj)
-            # K_q = []
-            # for j1 in range(nj):
-            #     for j2 in range(j1, nj):
-            #         K_q.append(e_kin_jj[j1, j2])
-            # K_p = np.sqrt(4 * np.pi) * np.dot(K_q, T0_qp)
-            K_p = 0
-            return K_p
-        
-        def get_xc_correction(self, rgd2, xc, gcut2, lcut):
-            """Get XC correction."""
-            # Return a placeholder XC correction object
-            # The actual implementation is complex and would need full PAW data
-            class XCCorrection:
-                def __init__(self):
-                    self.rgd2 = rgd2
-                    self.e_xc0 = 0.0
-                    self.four_pi_sqrt = np.sqrt(4 * np.pi)
-                    self.nc_corehole_g = np.zeros(gcut2)
-                    self.nct_corehole_g = np.zeros(gcut2)
-                    self.Y_nL = None
-                    self.rnablaY_nLv = None
-                    
-                def calculate_paw_correction(self, *args, **kwargs):
-                    return 0.0
-                    
-            return XCCorrection()
+    # REFACTORING: Use SetupData directly since it already has all required methods
+    # No need for custom subclass - SetupData has everything we need!
+    data = SetupData(
+        symbol=pp_dict['PP_HEADER']['element'],
+        xcsetupname='PBE',
+        name='upf',
+        readxml=False,  # We'll populate manually from UPF
+        generator_version=2
+    )
     
-    data = UPFData()
-    
-    # Basic information from PP_HEADER
-    data.name = 'upf'
-    data.symbol = pp_dict['PP_HEADER']['element']
+    # Populate basic atomic information
     data.Z = int(float(pp_dict['PP_HEADER']['z_valence']) + 2)  # Total Z (valence + core for C)
     data.Nv = float(pp_dict['PP_HEADER']['z_valence'])  # Valence electrons
     data.Nc = data.Z - data.Nv  # Core electrons
     
-    # Radial grid from PP_MESH
-    from gpaw.atom.radialgd import AbinitRadialGridDescriptor
+    # Setup radial grid
     r_g = np.array(pp_dict['PP_MESH']['PP_R'])
     gcut = 741
     i = 100
@@ -124,26 +72,28 @@ def run_gpaw_setup():
     data.rgd.r_g = r_g[:gcut]
     data.rgd.dr_g = np.array(pp_dict['PP_MESH']['PP_RAB'])[:gcut]
     
-    data.lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug']) # maximum angular momentum of the augmentation charge
-    data.l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # angular momentum of each projector
+    # Angular momentum and cutoff parameters  
+    data.lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug'])
+    data.l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])
     data.lcut = max(data.l_j)
-    data.rcut_j = np.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
-    data.gcut_j = np.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']]) # projector functions
+    data.rcut_j = np.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])
+    data.gcut_j = np.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])
     data.gcut = np.max(data.gcut_j)
-    data.r_g = np.array(pp_dict['PP_MESH']['PP_R'])[:data.gcut] # radial grid
-    data.dr_g = np.array(pp_dict['PP_MESH']['PP_RAB'])[:data.gcut] # radial grid integration weight
-    data.pt_jg = np.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :data.gcut] /\
-         data.r_g # projector functions
-    data.phi_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :data.gcut] /\
-         data.r_g # all-electron wave functions
-    data.phit_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :data.gcut] /\
-         data.r_g # pseudo wave functions
-    data.nc_g = np.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:data.gcut] # all-electron non-linear core charge
-    data.nct_g = np.array(pp_dict['PP_NLCC'])[:data.gcut] # non-linera core charge
-    data.nc_g = data.nc_g * np.sqrt(np.pi * 4)
-    data.nct_g = data.nct_g * np.sqrt(np.pi * 4)
-     # TODO: need to determine the scaling of vbar_g
-    data.vbar_g = np.array(pp_dict['PP_LOCAL'])[:data.gcut] # local pseudopotential
+    
+    # Wave functions and projectors (convert from QE to GPAW convention: divide by r)
+    data.pt_jg = np.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :data.gcut] / data.rgd.r_g
+    data.phi_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :data.gcut] / data.rgd.r_g
+    data.phit_jg = np.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :data.gcut] / data.rgd.r_g
+    
+    # Core densities (convert from QE to GPAW convention: multiply by sqrt(4π))
+    data.nc_g = np.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:data.gcut] * np.sqrt(4 * np.pi)
+    data.nct_g = np.array(pp_dict['PP_NLCC'])[:data.gcut] * np.sqrt(4 * np.pi)
+    
+    # Local potential
+    data.vbar_g = np.array(pp_dict['PP_LOCAL'])[:data.gcut]
+    
+    # Set shape function to avoid errors
+    data.shape_function = {'type': 'gauss', 'rc': 0.5}
     
     # Occupation numbers for Carbon: 2s^2 2p^2
     data.f_j = []
@@ -158,35 +108,13 @@ def run_gpaw_setup():
     data.l_orb_J = 0
     data.n_j = np.array([0, 0, 1, 1]) 
     
-    # Additional required attributes
-    data.eps_j = None
-    data.ExxC = None
-    data.ExxC_w = [0]
-    data.X_p = None
-    data.X_wp = None
-    data.X_pg = None
-    data.orbital_free = None
-    data.fcorehole = None
-    data.lcorehole = None
-    data.generator_version = 2  # Modern generator
-    data.tauct_g = None
-    data.fingerprint = None
-    data.phicorehole_g = None
-    data.filename = 'C.pbe-n-kjpaw_psl.1.0.0.UPF'
-    data.e_electrostatic = 0.0
-    data.e_total = 0.0
-    data.e_kinetic_core = 0.0  # Will be calculated in Setup
-    data.e_kinetic = 0.0
-    data.extra_xc_data = {}
+    # Only set attributes that differ from SetupData defaults or are required
+    data.e_kin_jj = np.zeros((len(data.l_j), len(data.l_j)))  # Required for get_linear_kinetic_correction
+    data.ExxC_w = []  # Override default {} to avoid HSE warnings
     
-    # Add rcutfilter and gcutfilter attributes
-    # These define the maximum radius for augmentation functions
-    if len(data.rcut_j) > 0:
-        data.rcutfilter = max(data.rcut_j)
-        data.gcutfilter = max(data.gcut_j)
-    else:
-        data.rcutfilter = 1.0
-        data.gcutfilter = data.rgd.n - 1
+    # Set rcutfilter and gcutfilter (required by Setup)
+    data.rcutfilter = max(data.rcut_j) if len(data.rcut_j) > 0 else 1.0
+    data.gcutfilter = max(data.gcut_j) if len(data.gcut_j) > 0 else data.rgd.n - 1
      # Create Setup object with minimal initialization
     # We need to provide xc functional
     from gpaw.xc import XC
