@@ -163,3 +163,89 @@ def test_projector_pswfc_biorthonormality():
       f"Bi-orthonormality matrix:\n{biortho_matrix}\n",
       UserWarning
     )
+
+
+def test_ae_wavefunction_normalization():
+  """Test that all-electron wavefunctions are normalized."""
+  tested_l = set()
+  for i, wfc in enumerate(pp_dict['PP_FULL_WFC']['PP_AEWFC']):
+    l = wfc['angular_momentum']
+    if l not in tested_l:
+      tested_l.add(l)
+      phi_r = jnp.array(wfc['values'])
+      rab = jnp.array(pp_dict['PP_MESH']['PP_RAB'])
+      norm = jnp.sum(phi_r**2 * rab)
+      error = jnp.abs(norm - 1.0)
+      assert error < 1e-6, \
+        f"AE wavefunction {i} (l={wfc['angular_momentum']}) norm = {norm:.6f}, error = {error:.6e}"
+
+
+def test_ae_ps_wavefunction_matching():
+  """Test that AE and PS wavefunctions match outside core region."""
+  valence_configs = pp_dict['PP_INFO']['Valence configuration']
+  rcut_us_values = []
+  for config in valence_configs:
+    l = config['l']
+    rcut_us = config['Rcut_US']
+    if l == 0:
+      rcut_us_values.extend([rcut_us, rcut_us])
+    elif l == 1:
+      rcut_us_values.extend([rcut_us, rcut_us])
+  
+  for i in range(len(pp_dict['PP_FULL_WFC']['PP_AEWFC'])):
+    ae_wfc = jnp.array(pp_dict['PP_FULL_WFC']['PP_AEWFC'][i]['values'])
+    ps_wfc = jnp.array(pp_dict['PP_FULL_WFC']['PP_PSWFC'][i]['values'])
+    r = jnp.array(pp_dict['PP_MESH']['PP_R'])
+    rcut_us = rcut_us_values[i]
+    match_idx = jnp.argmin(jnp.abs(r - rcut_us))
+    diff_outside = jnp.abs(ae_wfc[match_idx:] - ps_wfc[match_idx:])
+    max_diff = jnp.max(diff_outside)
+    assert max_diff < 1e-14, \
+      f"Wavefunction {i} doesn't match outside Rcut_US={rcut_us}: max diff = {max_diff:.6e}"
+
+
+def test_dij_matrix_properties():
+  """Test properties of the DIJ matrix."""
+  dij = jnp.array(pp_dict['PP_NONLOCAL']['PP_DIJ'])
+  n_proj = len(pp_dict['PP_NONLOCAL']['PP_BETA'])
+  
+  if len(dij) == n_proj * n_proj:
+    matrix = dij.reshape((n_proj, n_proj))
+  elif len(dij) == n_proj * (n_proj + 1) // 2:
+    matrix = jnp.zeros((n_proj, n_proj))
+    idx = 0
+    for i in range(n_proj):
+      for j in range(i, n_proj):
+        matrix = matrix.at[i, j].set(dij[idx])
+        if i != j:
+          matrix = matrix.at[j, i].set(dij[idx])
+        idx += 1
+  else:
+    pytest.skip(f"DIJ has unusual size: {len(dij)} for {n_proj} projectors")
+  
+  assert jnp.allclose(matrix, matrix.T, atol=1e-12), \
+    "DIJ matrix is not symmetric"
+
+
+def test_valence_charge_consistency():
+  """Test consistency of valence charge information."""
+  z_valence = float(pp_dict['PP_HEADER']['z_valence'])
+  valence_config = pp_dict['PP_INFO']['Valence configuration']
+  total_occ = sum(config['occ'] for config in valence_config)
+  
+  assert jnp.abs(z_valence - total_occ) < 1e-10, \
+    f"Header z_valence ({z_valence}) != sum of occupations ({total_occ})"
+  
+  assert jnp.abs(z_valence - 4.0) < 1e-10, \
+    f"Carbon should have 4 valence electrons, got {z_valence}"
+
+
+def test_mesh_consistency():
+  """Test that mesh arrays are consistent."""
+  r = jnp.array(pp_dict['PP_MESH']['PP_R'])
+  rab = jnp.array(pp_dict['PP_MESH']['PP_RAB'])
+  
+  assert jnp.all(rab[r > 0] > 0), "RAB should be positive where r > 0"
+  
+  dx = float(pp_dict['PP_MESH']['info']['dx'])
+  assert jnp.allclose(rab/r, dx, atol=1e-10)

@@ -12,9 +12,10 @@ The following tasks must be completed sequentially:
    - Result: 7 tests passing in `test_gpaw_pp_file.py` with optimized tolerances
    - Documentation updated to correct GPAW conventions
    
-2. **[PENDING]** Implement test file for QE PP file
-   - Description: `task2_qe_pp_test.md` (to be created)
-   - Log: `task2_log.md` (to be created)
+2. **[COMPLETED ✓]** Implement test file for QE PP file
+   - Description: `task2_qe_pp_test.md`
+   - Log: `task2_log.md`
+   - Result: 11 tests passing in `test_qe_pp_file.py` (7 new tests added)
    
 3. **[PENDING]** Align energy correction calculation (QE PP)
    - Description: `task3_align_qe.md` (to be created)
@@ -28,7 +29,8 @@ The following tasks must be completed sequentially:
 
 ### Before Starting a Task
 1. Check for existing task description file
-2. If no description exists: PAUSE and create placeholder file for human manager
+2. If no description exists: PAUSE and create placeholder file for human manager,
+DO NOT create the task desciption by yourself, or you can create with your plan and ask human manager to modify 
 3. Read previous task logs if encountering related errors
 
 ### During Task Execution

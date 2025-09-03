@@ -103,10 +103,17 @@ QE uses XML-based Unified Pseudopotential Format (UPF).
 
 ### 2.2 PP_MESH Section
 
-| Element | Shape | Description | Difference from GPAW |
-|---------|-------|-------------|----------------------|
-| **PP_R** | (mesh_size,) | Radial grid r | Same concept |
-| **PP_RAB** | (mesh_size,) | dr * r | QE stores r*dr, GPAW stores dr |
+| Element | Shape | Description | Units | Difference from GPAW |
+|---------|-------|-------------|-------|----------------------|
+| **PP_R** | (mesh_size,) | Radial grid r | Bohr | Same concept |
+| **PP_RAB** | (mesh_size,) | r * dr for integration | Bohr² | QE stores r*dr, GPAW stores dr |
+
+**Grid Properties:**
+- **Units: Bohr** (atomic units for distances)
+- Grid type: Logarithmic with dx = 0.0125 (explicitly stated in PP_MESH)
+- For logarithmic grids: PP_RAB[i] / PP_R[i] = dx = 0.0125 (constant)
+- Maximum radius: **rmax = 100 Bohr** (explicitly stated)
+- Mesh size: 1073 points
 
 ### 2.3 PP_NONLOCAL Section
 
@@ -117,7 +124,7 @@ Note: In actual UPF files, beta tags include indices (e.g., PP_BETA.1, PP_BETA.2
 |---------|-------|----------|--------------|-------------------|-----------------|
 | **PP_BETA.values** | (mesh_size,) | YES (multiplied) | NO | β(r) * r | pt_jg * r / √(4π) |
 | **angular_momentum** | int | - | - | l quantum number | l_j |
-| **cutoff_radius** | float | - | - | r_cut | rcut_j |
+| **cutoff_radius** | float | - | - | r_cut (Bohr) | rcut_j |
 | **cutoff_radius_index** | int | - | - | Grid index at r_cut | gcut_j |
 
 **QE Convention:**
@@ -125,6 +132,7 @@ Note: In actual UPF files, beta tags include indices (e.g., PP_BETA.1, PP_BETA.2
 Physical: β(r) [true projector]
 Stored: β(r) * r  [includes r factor, NO √(4π)]
 Conversion to GPAW: pt_gpaw = β_qe / r / √(4π)
+Cutoff: Specified per projector (typically 0.9-1.0 Bohr for Carbon)
 ```
 
 #### Augmentation (PP_AUGMENTATION)
@@ -155,7 +163,9 @@ Note: The tag name includes indices (e.g., PP_QIJL.1.2.0 for i=1, j=2, l=0)
 Physical: φ(r) [true wave function]
 Stored: φ(r) * r * √(4π)  [includes BOTH r and √(4π)]
 Conversion to GPAW: phi_gpaw = φ_qe / r / √(4π)
-Normalization: ∫|φ_physical|² r² dr * 4π = 1
+Normalization: ∫|stored|² * rab = 1
+Cutoff (Rcut_US): Specified per state (typically 1.2-1.4 Bohr for Carbon)
+Matching: AE and PS match for r > Rcut_US
 ```
 
 ### 2.5 PP_PAW Section
@@ -206,9 +216,9 @@ Integration: ∫ n_c(r) * 4π * r² dr = N_core
 
 **QE:**
 ```python
-# Wave functions  
-∫ |φ(r)|² r² dr * 4π = 1
-# Densities
+# Wave functions (stored as φ(r) * r * √(4π))
+∫ |stored|² * rab = 1  # Simple integration with PP_RAB
+# Densities (stored as n(r), no factors)
 ∫ n(r) 4π r² dr = N_electrons
 ```
 
@@ -286,7 +296,53 @@ n_qg_qe = n_qg_gpaw * r**2 * (4*pi)
 
 ---
 
-## 6. Common Pitfalls
+## 6. Cutoff Radii and Units
+
+### 6.1 Units Convention
+- **Both GPAW and QE use Bohr (atomic units) for distances**
+  - GPAW: Explicitly stated in file: "<!-- Units: Hartree and Bohr radii. -->"
+  - QE: Uses atomic units convention (Bohr for distances, Hartree for energies)
+- Energy units: Hartree for both PP files (eV used in GPAW code interface)
+- Grid extent:
+  - GPAW: Defined by equation r=a*i/(n-i) with a=0.4, n=300
+  - QE: rmax = 100 Bohr (explicitly stated in PP_MESH)
+
+### 6.2 Cutoff Radii in Files (Explicitly Stated)
+
+**GPAW (C.PBE file):**
+```xml
+<!-- Units: Hartree and Bohr radii. -->
+<state n="2" l="0" f="2"  rc="1.200" e="-0.50533" id="C-2s"/>
+<state n="2" l="1" f="2"  rc="1.200" e="-0.19420" id="C-2p"/>
+<state       l="0"        rc="1.200" e=" 0.49467" id="C-s1"/>
+<state       l="1"        rc="1.200" e=" 0.80580" id="C-p1"/>
+<state       l="2"        rc="1.200" e=" 0.00000" id="C-d1"/>
+```
+- All states (valence and virtual): **rc = 1.2 Bohr** (explicitly stated)
+- Units: **Bohr radii** (explicitly stated in file comment)
+- Matching test at 1.5 Bohr is appropriate (> 1.2 Bohr)
+
+**QE (C.pbe-n-kjpaw_psl.1.0.0.UPF file):**
+```
+Valence configuration:
+  nl pn  l   occ       Rcut    Rcut US       E pseu
+  2S  1  0  2.00      1.000      1.200    -1.010678
+  2P  2  1  2.00      0.900      1.400    -0.393470
+```
+- 2S state: **Rcut = 1.0 Bohr, Rcut_US = 1.2 Bohr** (explicitly stated)
+- 2P state: **Rcut = 0.9 Bohr, Rcut_US = 1.4 Bohr** (explicitly stated)
+- Projector cutoffs match Rcut values (0.9-1.0 Bohr)
+- Units: **Bohr** (implicit from atomic units convention)
+- Matching test at 1.5 Bohr is appropriate (> max Rcut_US = 1.4 Bohr)
+
+### 6.3 Physical Meaning
+- **rc/Rcut**: Cutoff for norm-conserving part
+- **Rcut_US**: Ultrasoft/PAW augmentation sphere radius
+- **Matching radius**: Beyond this, AE and PS wavefunctions should match
+
+---
+
+## 7. Common Pitfalls
 
 1. **Forgetting r factors**: QE stores r×φ, GPAW stores φ
 2. **Missing 4π vs √(4π)**: Different spherical harmonic conventions

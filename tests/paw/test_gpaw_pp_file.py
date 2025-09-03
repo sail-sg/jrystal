@@ -142,12 +142,12 @@ def test_core_density_smoothness():
     f"Core density lengths differ: {len(nc_g)} vs {len(nct_g)}"
   
   r_g, _ = construct_radial_grid(pp_data['radial_grid'], len(nc_g))
-  match_radius = 1.5
-  match_idx = jnp.argmin(jnp.abs(r_g - match_radius))
+  rc = max(state['rc'] for state in pp_data['valence_states'])
+  match_idx = jnp.argmin(jnp.abs(r_g - rc))
   diff_outside = jnp.abs(nc_g[match_idx:] - nct_g[match_idx:])
   max_diff_outside = jnp.max(diff_outside)
   assert max_diff_outside < 1e-10, \
-    f"Core densities don't match outside r={match_radius}: max diff = {max_diff_outside:.6e}"
+    f"Core densities don't match outside rc={rc}: max diff = {max_diff_outside:.6e}"
 
 
 def test_partial_wave_matching():
@@ -163,12 +163,15 @@ def test_partial_wave_matching():
     phi_g = phi_g[:min_len]
     phit_g = phit_g[:min_len]
     r_g, _ = construct_radial_grid(pp_data['radial_grid'], min_len)
-    match_radius = 1.5
-    match_idx = jnp.argmin(jnp.abs(r_g - match_radius))
+    if i < len(pp_data['valence_states']):
+      rc = pp_data['valence_states'][i]['rc']
+    else:
+      rc = pp_data['valence_states'][0]['rc']
+    match_idx = jnp.argmin(jnp.abs(r_g - rc))
     diff_outside = jnp.abs(phi_g[match_idx:] - phit_g[match_idx:])
     max_diff = jnp.max(diff_outside)
     assert max_diff < 1e-10, \
-      f"Wave {i} (state={ae_waves[i]['state']}) doesn't match outside r={match_radius}: " \
+      f"Wave {i} (state={ae_waves[i]['state']}) doesn't match outside rc={rc}: " \
       f"max diff = {max_diff:.6e}"
 
 
