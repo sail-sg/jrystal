@@ -21,10 +21,10 @@ def run_align_paw():
     Returns:
         Dictionary containing PAW results from jrystal
     """
-    from calc_paw import setup_qe, calc_qe
-    # setup_qe returns multiple values, pass them all to calc_qe
+    from calc_paw import setup_qe, calc
+    # setup_qe returns multiple values, pass them all to calc
     setup_data = setup_qe()
-    return calc_qe(*setup_data)
+    return calc(*setup_data)
 
 
 def run_gpaw_setup():
