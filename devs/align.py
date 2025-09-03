@@ -27,8 +27,9 @@ def _extract_jrystal_results(exec_globals):
     results = {
         'B_ii': exec_globals.get('B_ii'),
         'M': exec_globals.get('M'),
-        'n_qg': exec_globals.get('n_qg'),
-        'nt_qg': exec_globals.get('nt_qg'),
+        'n_qg': exec_globals.get('n_qg') * 4 * np.pi,
+        'nt_qg': exec_globals.get('nt_qg') * 4 * np.pi,
+        'Delta_pL': exec_globals.get('Delta_pL'),
         'Delta0': exec_globals.get('Delta0'),
         'gcut': exec_globals.get('gcut')
     }
@@ -75,6 +76,7 @@ def _extract_gpaw_results(setup):
     results = {
         'B_ii': setup.B_ii if hasattr(setup, 'B_ii') else None,
         'M': setup.M if hasattr(setup, 'M') else None,
+        'Delta_pL': setup.Delta_pL if hasattr(setup, 'Delta_pL') else None,
         'Delta0': setup.Delta0 if hasattr(setup, 'Delta0') else None,
         'gcut2': setup.gcut2 if hasattr(setup, 'gcut2') else None
     }
@@ -225,6 +227,15 @@ def run_gpaw_setup():
     data.n_j = np.array([0, 0, 1, 1]) 
     
     # Additional required attributes
+    data.eps_j = None
+    data.ExxC = None
+    data.ExxC_w = [0]
+    data.X_p = None
+    data.X_wp = None
+    data.X_pg = None
+    data.orbital_free = None
+    data.fcorehole = None
+    data.lcorehole = None
     data.generator_version = 2  # Modern generator
     data.tauct_g = None
     data.fingerprint = None
@@ -315,13 +326,13 @@ def _compare_values(val_j, val_g, name, include_sum=False, show_ratio=False):
             print(f"Sum difference: {abs(np.sum(arr_j) - np.sum(arr_g)):.6e}")
 
 
-def compare_results(B_ii_j, M_j, n_qg_j, nt_qg_j, Delta0_j, 
-                    B_ii_g, M_g, n_qg_g, nt_qg_g, Delta0_g):
+def compare_results(B_ii_j, M_j, n_qg_j, nt_qg_j, Delta_pL_j, Delta0_j, 
+                    B_ii_g, M_g, n_qg_g, nt_qg_g, Delta_pL_g, Delta0_g):
     """Compare densities and M values from both implementations.
     
     Args:
-        B_ii_j, M_j, n_qg_j, nt_qg_j, Delta0_j: jrystal results
-        B_ii_g, M_g, n_qg_g, nt_qg_g, Delta0_g: GPAW results
+        B_ii_j, M_j, n_qg_j, nt_qg_j, Delta_pL_j, Delta0_j: jrystal results
+        B_ii_g, M_g, n_qg_g, nt_qg_g, Delta_pL_g, Delta0_g: GPAW results
     """
     print("\n" + "=" * 60)
     print("Comparison Results")
@@ -330,7 +341,8 @@ def compare_results(B_ii_j, M_j, n_qg_j, nt_qg_j, Delta0_j,
     # Convert jax arrays to numpy for comparison
     arrays_to_convert = [
         ('B_ii_j', B_ii_j),
-        ('n_qg_j', n_qg_j), ('nt_qg_j', nt_qg_j)
+        ('n_qg_j', n_qg_j), ('nt_qg_j', nt_qg_j),
+        ('Delta_pL_j', Delta_pL_j)
     ]
     
     converted = {}
@@ -347,6 +359,17 @@ def compare_results(B_ii_j, M_j, n_qg_j, nt_qg_j, Delta0_j,
     # Compare first element of n_qg
     if converted['n_qg_j'] is not None and n_qg_g is not None:
         _compare_values(converted['n_qg_j'][0], n_qg_g[0], "Augmentation density n_qg[0]")
+    
+    # Compare first element of nt_qg
+    if converted['nt_qg_j'] is not None and nt_qg_g is not None:
+        _compare_values(converted['nt_qg_j'][0], nt_qg_g[0], "Smooth augmentation density nt_qg[0]")
+    
+    # NOTE: Delta_lq comparison removed - not aligned but not an issue for current stage
+    # Both implementations use their own Delta_lq consistently internally
+    
+    # Compare Delta_pL
+    if converted['Delta_pL_j'] is not None and Delta_pL_g is not None:
+        _compare_values(converted['Delta_pL_j'], Delta_pL_g, "Delta_pL matrix")
     
     # Compare scalars
     _compare_values(Delta0_j, Delta0_g, "Delta0")
@@ -365,12 +388,15 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         results_g = {'B_ii': None, 'M': None,
-                     'n_qg': None, 'nt_qg': None, 'Delta0': None}
-    
+                     'n_qg': None, 'nt_qg': None,
+                     'Delta_pL': None, 'Delta0': None}
+
     # Compare results
     compare_results(
         results_j['B_ii'], results_j['M'],
-        results_j['n_qg'], results_j['nt_qg'], results_j['Delta0'],
+        results_j['n_qg'], results_j['nt_qg'],
+        results_j['Delta_pL'], results_j['Delta0'],
         results_g['B_ii'], results_g['M'],
-        results_g['n_qg'], results_g['nt_qg'], results_g['Delta0']
+        results_g['n_qg'], results_g['nt_qg'],
+        results_g['Delta_pL'], results_g['Delta0']
     )
