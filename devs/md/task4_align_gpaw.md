@@ -12,7 +12,8 @@ Align energy correction calculation between GPAW and jrystal using GPAW PP file.
 python align.py set _type = "gpaw" with desired alignment for everything
 
 ## Status
-PENDING
+
 
 ## Note
 - Always check the implementation with _type = "qe" for check and debug
+- The key insight was understanding GPAW's internal storage conventions and matching them exactly

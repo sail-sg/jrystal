@@ -133,7 +133,6 @@ def run_gpaw(_type: str):
             'M': setup.M if hasattr(setup, 'M') else None,
             'Delta_pL': setup.Delta_pL if hasattr(setup, 'Delta_pL') else None,
             'Delta0': setup.Delta0 if hasattr(setup, 'Delta0') else None,
-            'gcut2': setup.gcut2 if hasattr(setup, 'gcut2') else None
             }
             
             if hasattr(setup, 'local_corr'):
@@ -176,7 +175,7 @@ def run_gpaw(_type: str):
                 'M': setup.M if hasattr(setup, 'M') else None,
                 'Delta_pL': setup.Delta_pL if hasattr(setup, 'Delta_pL') else None,
                 'Delta0': setup.Delta0 if hasattr(setup, 'Delta0') else None,
-                'gcut2': setup.gcut2 if hasattr(setup, 'gcut2') else None
+                'g_lg': setup.g_lg if hasattr(setup, 'g_lg') else None,
             }
             
             if hasattr(setup, 'local_corr'):
@@ -245,6 +244,7 @@ def compare_results(results_j, results_g):
         ('Delta0', 'Delta0'),
         ('M', 'Scalar M value'),
         ('B_ii', 'Projector function overlaps B_ii'),
+        ('g_lg', 'Shape functions g_lg'),
     ]
     
     for key, display_name in comparisons:

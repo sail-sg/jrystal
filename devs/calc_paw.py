@@ -80,6 +80,7 @@ def setup_qe():
   n_lqg = jnp.zeros((2 * lcut + 1, nq, gcut))
   
   # Multipole moments Δ_lq from PP_MULTIPOLES
+  # NOTE: this is the same as our calculation, we do not use it
   Delta_lq = jnp.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_MULTIPOLES']).reshape(lmax + 1, nj, nj)
   Delta_lq = jnp.transpose(Delta_lq, (1, 2, 0))[jnp.triu_indices(nj)].T
   
@@ -98,7 +99,7 @@ def setup_qe():
   assert nc_g.shape[0] == gcut
   assert nct_g.shape[0] == gcut
   
-  return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, n_lqg, Delta_lq, l_j, pt_jg, Z, lmax, lcut, gcut
+  return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, l_j, pt_jg, Z, lmax, lcut, gcut
 
 
 def setup_gpaw():
@@ -110,14 +111,19 @@ def setup_gpaw():
   - Integration: ∫n_stored * r² * dr * √(4π) = N_electrons
   
   Returns:
-    Same tuple as setup_qe for compatibility with calc function
+    Tuple with all PAW quantities including g_lg for compensation charges
   """
   import sys
   sys.path.insert(0, '/home/aiops/zhaojx/M_p-align-claude/devs')
+  sys.path.insert(0, '/home/aiops/zhaojx/jrystal/gpaw')
   from gpaw_load import parse_paw_setup
+  from gpaw.setup_data import SetupData
   
   # Load GPAW setup file
   pp_data = parse_paw_setup('/home/aiops/zhaojx/M_p-align-claude/pseudopotential/C.PBE')
+  
+  # Also load using GPAW's native loader to get shape_function parameters
+  data = SetupData('C', 'PBE', readxml=True)
   
   # Extract basic properties
   Z = int(pp_data['atom']['Z'])  # Total atomic number
@@ -127,8 +133,12 @@ def setup_gpaw():
   a = grid_info['a']
   n = grid_info['n']
   i = np.arange(n)
-  r_g = a * i / (n - i)
-  dr_g = a * n / (n - i) ** 2
+  r_g_original = a * i / (n - i)  # Keep original grid for g_lg calculation
+  dr_g_original = a * n / (n - i) ** 2
+  
+  # Make a copy for modification
+  r_g = r_g_original.copy()
+  dr_g = dr_g_original.copy()
   
   # NOTE: this modification is used to avoid the singularity at r=0
   # as well as the integration error
@@ -165,21 +175,51 @@ def setup_gpaw():
   # Local potential, skip r=0 point and apply cutoff
   vbar_g = np.array(pp_data.get('zero_potential', np.zeros(n))[:gcut2])
   
-  # For augmentation, we need to construct n_lqg and Delta_lq
-  # GPAW doesn't store these directly like QE, so we'll create placeholders
-  # or extract from other data if available
-  nj = len(l_j)
-  nq = nj * (nj + 1) // 2
   lmax = lcut  # Maximum l for augmentation should equal lcut for GPAW compatibility
   
-  # Initialize augmentation arrays (these may need proper construction from GPAW data)
-  n_lqg = np.zeros((2 * lcut + 1, nq, len(r_g)))
-  Delta_lq = np.zeros((lmax + 1, nq))
+  # Calculate g_lg shape functions for compensation charges
+  # We need to implement this properly for GPAW files
+  # Using the same Gaussian shape function approach as GPAW
   
-  # Note: GPAW stores augmentation differently, so these would need proper extraction
-  # For now, using placeholders to match the interface
+  # Get shape function parameters from SetupData
+  shape_params = getattr(data, 'shape_function', {'type': 'gauss', 'rc': 3.794733192202e-01})
+  rc = shape_params.get('rc', 3.794733192202e-01)
+  sf_type = shape_params.get('type', 'gauss')
   
-  return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, n_lqg, Delta_lq, l_j, pt_jg, Z, lmax, lcut, gcut2
+  # Initialize g_lg for all l values up to lmax
+  g_lg = np.zeros((lmax + 1, gcut2))
+  
+  # Use the original grid (with r[0] = 0) for g_lg calculation to match GPAW exactly
+  r_g_for_glg = r_g_original[:gcut2]
+  dr_g_for_glg = dr_g_original[:gcut2]
+  
+  if sf_type == 'gauss':
+      # Gaussian shape functions following GPAW's convention
+      # g_lg[0] = 4 / rc^3 / sqrt(pi) * exp(-(r/rc)^2)
+      g_lg[0] = 4 / rc**3 / np.sqrt(np.pi) * np.exp(-(r_g_for_glg / rc)**2)
+      
+      # Higher l components: g_lg[l] = 2/(2l+1)/rc^2 * r * g_lg[l-1]
+      for l in range(1, lmax + 1):
+          g_lg[l] = 2.0 / (2 * l + 1) / rc**2 * r_g_for_glg * g_lg[l - 1]
+      
+      # Normalize each l-component according to GPAW convention
+      # GPAW normalizes so that rgd.integrate(g_lg[l], l) = 4π
+      # Since integrate multiplies by 4π, the raw integral should be 1.0
+      for l in range(lmax + 1):
+          # Calculate integral with 4π factor (like rgd.integrate does)
+          # Skip r=0 point in integration like GPAW does
+          integral_with_4pi = np.sum(g_lg[l, 1:] * r_g_for_glg[1:]**(l + 2) * dr_g_for_glg[1:]) * 4 * np.pi
+          if integral_with_4pi > 1e-10:
+              # Divide by integral and multiply by 4π to get correct normalization
+              g_lg[l] = g_lg[l] / integral_with_4pi * (4 * np.pi)
+  else:
+      # For other shape function types, use simple fallback
+      print(f"Warning: Shape function type '{sf_type}' not fully implemented, using simplified version")
+      g_lg[0] = 4 / rc**3 / np.sqrt(np.pi) * np.exp(-(r_g / rc)**2)
+      for l in range(1, lmax + 1):
+          g_lg[l] = 2.0 / (2 * l + 1) / rc**2 * r_g * g_lg[l - 1]
+  
+  return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, l_j, pt_jg, Z, lmax, lcut, gcut2, g_lg
 
 
 def calc(
@@ -190,14 +230,13 @@ def calc(
   nc_g: np.ndarray,
   nct_g: np.ndarray,
   vbar_g: np.ndarray,
-  n_lqg: np.ndarray,
-  Delta_lq: np.ndarray,
   l_j: np.ndarray,
   pt_jg: np.ndarray,
   Z: int,
   lmax: int,
   lcut: int,
-  gcut: int):
+  gcut: int,
+  g_lg: np.ndarray = None):
   """Calculate PAW correction terms using QE UPF data in native convention.
   
   Input Convention (QE UPF as loaded by setup_qe):
@@ -208,7 +247,6 @@ def calc(
   - phi_jg, phit_jg: AE/PS wavefunctions stored as φ(r)*r*√(4π)
   - pt_jg: Projector functions stored as β(r)*r*√(4π)
   - nc_g, nct_g: Core densities stored as n(r) (physical density)
-  - n_lqg: Augmentation Q(r) (already converted from Q(r)*r² by dividing by r²/4π)
   
   Grid and Integration:
   - r_g: Radial grid points in Bohr
@@ -242,10 +280,6 @@ def calc(
     nct_g (np.ndarray): Smooth core density ñ_c(r), shape (gcut,)
                         Pseudized version of nc_g, smooth at origin
     vbar_g (np.ndarray): Local pseudopotential V_loc(r), shape (gcut,)
-    n_lqg (np.ndarray): Augmentation functions Q_ij^l(r), shape (2*lcut+1, nq, gcut)
-                       Multipole moments of augmentation charges
-    Delta_lq (np.ndarray): Multipole moments of Q_ij, shape (lmax+1, nq)
-                          ∫ r^l [n_ij(r) - ñ_ij(r)] dr
     l_j (np.ndarray): Angular momentum for each projector, shape (nj,)
     pt_jg (np.ndarray): Projector functions p̃(r)*r, shape (nj, gcut)
                        Dual functions to φ̃, satisfying ⟨p̃_i|φ̃_j⟩ = δ_ij
@@ -352,10 +386,10 @@ def calc(
 
     # NOTE: check the calculation of the multipoles moment, similar
     # results can be observed in test_paw.test_augmentation_charge
-    # Delta_lq_ = jnp.zeros((lmax + 1, nq))
-    # for l in range(lmax + 1):
-    #   Delta_lq_ = Delta_lq_.at[l].set(jnp.dot(n_qg - nt_qg, r_g**l * dr_g))
-    # Delta_lq_ = Delta_lq_.reshape(-1)
+    Delta_lq = jnp.zeros((lmax + 1, nq))
+    for l in range(lmax + 1):
+      Delta_lq = Delta_lq.at[l].set(jnp.dot(n_qg - nt_qg, r_g**(l + 2) * dr_g))
+    Delta_lq *= 4 * jnp.pi
     # Delta_lq = jnp.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_MULTIPOLES'])
     # index_list = [0, 1, 18, 19, 5, 22, 23, 10, 42, 11, 43, 15, 47]
     # for i in index_list:
@@ -418,31 +452,14 @@ def calc(
   A = 0.5 * integrate_radial_function(nc_g * poisson_rdl(nc_g, 0))
   # NOTE: GPAW uses jnp.sqrt(4 * jnp.pi) since integrate_radial_function no longer includes 4*pi
   A -= jnp.sqrt(4 * jnp.pi) * Z * jnp.dot(r_g * dr_g, nc_g)
-  # For QE PP files, we need to construct g_lg[0] - a smooth compensation charge
-  # g_lg[0] should be a smooth, normalized function with monopole moment 1/sqrt(4π)
-  # Common choice: use a Gaussian-like function or the shape of nct_g
-
-  # Option 1: Use normalized smooth core density shape
-  if jnp.sum(nct_g) > 1e-10:
-      g0_unnorm = nct_g  # Use smooth core density shape
-  else:
-      # Option 2: Simple Gaussian if no core density
-      sigma = r_g[gcut//4]  # Width ~ 1/4 of cutoff radius  
-      g0_unnorm = jnp.exp(-r_g**2 / (2 * sigma**2))
-
-  # Normalize so that ∫ g_lg[0] * r² dr = 1/sqrt(4π)
-  g0_integral = jnp.sum(g0_unnorm * r_g**2 * dr_g)
-  if g0_integral > 1e-10:
-      g_lg = [g0_unnorm / (g0_integral * jnp.sqrt(4 * jnp.pi))]
-  else:
-      g_lg = [jnp.zeros_like(r_g)]  # Fallback if normalization fails
+  g_lg = jnp.array(g_lg)
 
   mct_g = nct_g + Delta0 * g_lg[0]
   A -= 0.5 * integrate_radial_function(mct_g * poisson_rdl(mct_g, 0))
-  # NOTE: THIS IS FOR TESTING, SHOULD BE CHANGED TO THE CORRECT FORMULA
+
+  # M calculation following GPAW
   M = 0.5 * integrate_radial_function(nc_g * poisson_rdl(nc_g, 0))
   
-  # Return as a dictionary for compatibility with align_qe.py
   return {
     'B_ii': B_ii,
     'M': M,
@@ -450,7 +467,8 @@ def calc(
     'nt_qg': nt_qg * 4 * jnp.pi,
     'Delta_pL': Delta_pL,
     'Delta0': Delta0,
-    'gcut': gcut
+    'gcut': gcut,
+    'g_lg': g_lg,
   }
 
   # NOTE: currently the following code is not tested for QE pp file, but do not delete
@@ -484,6 +502,8 @@ def calc(
       \int_0^{r_c}\!\left[ u_i'(r)\,u_j'(r)
       +\frac{\ell(\ell+1)}{r^2}\,u_i(r)\,u_j(r) \right]\; dr 
 
+    This method is based on a derivation with ChatGPT
+    https://chatgpt.com/c/68798a15-ae84-8002-815c-d0d1566c9ade
     """
 
     def df(f: jnp.ndarray):
