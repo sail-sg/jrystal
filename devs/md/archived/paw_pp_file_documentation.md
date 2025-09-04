@@ -222,13 +222,72 @@ Integration: ∫ n_c(r) * 4π * r² dr = N_core
 ∫ n(r) 4π r² dr = N_electrons
 ```
 
-### 3.3 Angular Momentum Coupling
+### 3.3 Angular Momentum Quantities and Coupling
+
+#### 3.3.1 Core Angular Momentum Variables
+
+| Variable | Symbol | Description | GPAW | QE |
+|----------|--------|-------------|------|-----|
+| **l_j** | l_j | Angular momentum for each projector/orbital | [0,1,0,1,2] for C | [0,0,1,1] for C |
+| **lcut** | l_cut | Maximum l among projectors | max(l_j) = 2 | max(l_j) = 1 |
+| **lmax** | l_max | Maximum l for augmentation/multipoles | Passed to Setup (typ. 2) | From PP_AUGMENTATION/l_max_aug |
+| **Lcut** | L_cut | Total spherical harmonics | (2*lcut+1)² = 25 | (2*lcut+1)² = 9 |
+| **Lmax** | L_max | Total multipole components | (lmax+1)² | (lmax+1)² |
+
+#### 3.3.2 Dimension Relationships
+
+| Quantity | Formula | Description | Example (C) |
+|----------|---------|-------------|-------------|
+| **nj** | len(l_j) | Number of projectors | GPAW: 5, QE: 4 |
+| **nq** | nj*(nj+1)/2 | Projector pairs (upper triangular) | GPAW: 15, QE: 10 |
+| **ni** | nj + Σl_j*2 | Total PAW channels | GPAW: 13, QE: 8 |
+| **np** | ni*(ni+1)/2 | Channel pairs | GPAW: 91, QE: 36 |
+
+#### 3.3.3 Critical Differences
+
+**1. Number of Projectors:**
+- **GPAW**: Includes additional virtual/unoccupied states (e.g., 2s, 2p, virtual s, virtual p, virtual d for Carbon)
+- **QE**: Only includes occupied valence states (e.g., 2s×2, 2p×2 for Carbon)
+
+**2. lmax vs lcut Usage:**
+- **GPAW**: 
+  - `lmax` passed to Setup constructor (typically = lcut)
+  - Used for: Lmax = (lmax+1)²
+  - Delta_pL shape: (np, Lmax)
+- **QE/jrystal**: 
+  - `lmax` from PP_AUGMENTATION/l_max_aug (may be > lcut)
+  - `lcut` = max(l_j)
+  - Inconsistent usage in calc_paw.py (needs careful handling)
+
+**3. Augmentation Arrays:**
+- **n_lqg shape**: (2*lcut+1, nq, gcut)
+- **Delta_lq shape**: (lmax+1, nq)
+- **T_Lqp shape**: (Lcut, nq, np) where Lcut=(2*lcut+1)²
+- **Delta_pL shape**: (np, Lmax) where Lmax=(lmax+1)²
+
+#### 3.3.4 Implementation Notes
+
+```python
+# GPAW convention (setup_gpaw in calc_paw.py)
+lmax = lcut  # For GPAW compatibility
+
+# QE convention (setup_qe in calc_paw.py)  
+lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug'])
+# May differ from lcut = max(l_j)
+
+# Critical for alignment:
+# - Use lmax = lcut for GPAW to match internal Setup behavior
+# - QE may have lmax ≠ lcut, handle separately
+```
+
+#### 3.3.5 Other Angular Momentum Aspects
 
 | Aspect | GPAW | QE |
 |--------|------|-----|
-| **Gaunt coefficients** | Pre-calculated | On-the-fly |
-| **Spherical harmonics** | Real | Complex |
-| **Multipole storage** | Delta_pL matrix | Flattened array |
+| **Gaunt coefficients** | Pre-calculated via gaunt(lcut) | On-the-fly calculation |
+| **Spherical harmonics** | Real Y_lm | Complex Y_lm |
+| **Multipole storage** | Delta_pL matrix | PP_MULTIPOLES array |
+| **Channel indexing** | jlL_i tracking | Direct mapping |
 
 ---
 

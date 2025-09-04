@@ -153,8 +153,48 @@ def run_gpaw(_type: str):
             # Re-raise the exception to be handled by caller
             raise e
     elif _type == 'gpaw':
-        # NOTE: IMPLEMENT YOUR CODE HERE
-        return
+        # Load native GPAW setup file directly
+        from gpaw.setup import Setup
+        from gpaw.setup_data import SetupData
+        from gpaw.xc import XC
+        
+        # Load GPAW's native PAW setup file
+        # SetupData will automatically load all necessary attributes from the XML file
+        data = SetupData('C', 'PBE', readxml=True)
+        
+        # Create Setup object with XC functional
+        xc = XC('PBE')
+        
+        try:
+            # Initialize Setup with the native GPAW data
+            # The Setup class will handle all the necessary initialization
+            setup = Setup(data, xc, lmax=2, basis=None)
+            
+            # Extract the same results as the QE case for comparison
+            results = {
+                'B_ii': setup.B_ii if hasattr(setup, 'B_ii') else None,
+                'M': setup.M if hasattr(setup, 'M') else None,
+                'Delta_pL': setup.Delta_pL if hasattr(setup, 'Delta_pL') else None,
+                'Delta0': setup.Delta0 if hasattr(setup, 'Delta0') else None,
+                'gcut2': setup.gcut2 if hasattr(setup, 'gcut2') else None
+            }
+            
+            if hasattr(setup, 'local_corr'):
+                results.update({
+                    'n_qg': setup.local_corr.n_qg if hasattr(setup.local_corr, 'n_qg') else None,
+                    'nt_qg': setup.local_corr.nt_qg if hasattr(setup.local_corr, 'nt_qg') else None,
+                    'rgd2_N': setup.local_corr.rgd2.N if hasattr(setup.local_corr, 'rgd2') else None
+                })
+            else:
+                results.update({
+                    'n_qg': None, 'nt_qg': None, 'rgd2_N': None
+                })
+            
+            return results
+            
+        except Exception as e:
+            # Re-raise the exception to be handled by caller
+            raise e
     else:
         raise ValueError(f"Invalid type: {_type}")
 
@@ -213,7 +253,7 @@ def compare_results(results_j, results_g):
 
 
 if __name__ == "__main__":
-    _type = 'qe'
+    _type = 'gpaw'
     results_j = run_jrystal(_type)
     try:
         results_g = run_gpaw(_type)
