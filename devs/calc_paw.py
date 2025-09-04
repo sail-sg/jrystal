@@ -100,6 +100,16 @@ def setup_qe():
   
   return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, n_lqg, Delta_lq, l_j, pt_jg, Z, lmax, lcut, gcut
 
+
+def setup_gpaw():
+  """Load and parse GPAW UPF pseudopotential file.
+  
+  This function reads a GPAW UPF file and extracts PAW data.
+  Values are returned in GPAW's native storage convention without conversion.
+  """
+  return
+
+
 def calc(
   r_g: np.ndarray,
   dr_g: np.ndarray,

@@ -53,3 +53,39 @@ DO NOT create the task desciption by yourself, or you can create with your plan 
   - Read both the task description and log file
   - Document fix in current task log
   - Update previous task log if necessary
+
+## General Lessons Learned 
+Add to this part if you made some mistakes and you believe this lesson is general enough for later workflow development
+
+### 1. Documentation Management
+- **Update documentation immediately** when understanding changes
+- **Keep technical details in domain-specific files** (not in general workflow)
+- **Cross-reference related files** for better navigation
+- **Track when and why understanding evolved**
+
+### 2. Code Development Best Practices
+- **Start complete, then optimize**: Get functionality working before simplifying
+- **Extract common patterns**: Use helper functions to reduce redundancy (can reduce code by >50%)
+- **Verify assumptions with actual data**: Parser structure, file formats, etc.
+
+### 4. Debugging Approach
+- **Compare actual vs expected values**: Print concrete numbers
+- **Check scaling and units**: Many errors are factor/unit mismatches
+- **Read raw data directly**: Don't trust parsers blindly
+- **Use multiple implementations**: Helps identify convention differences
+
+### 5. Project Organization
+- **Maintain clear file purposes**: Separate tests, parsers, docs, implementations
+- **Use consistent naming conventions**: test_X.py, X_log.md, X_documentation.md
+- **Keep related files together**: Group by functionality, not file type
+- **Document file relationships**: Note dependencies and connections
+
+### 6. Communication with Team
+- **Create placeholders for human input**: Don't assume requirements
+- **Log decisions and rationale**: Future team members need context
+- **Note temporary workarounds**: Mark code that needs revisiting
+- **Highlight critical corrections**: Especially when fixing misunderstandings
+
+---
+Note: For PAW-specific technical details (storage conventions, formulas, etc.), 
+see `archived/paw_pp_file_documentation.md`

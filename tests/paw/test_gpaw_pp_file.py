@@ -10,57 +10,14 @@ sys.path.insert(0, '/home/aiops/zhaojx/M_p-align-claude/devs')
 import jax
 import jax.numpy as jnp
 import numpy as np
-import xml.etree.ElementTree as ET
 
 jax.config.update('jax_enable_x64', True)
 import pytest
 
 from gpaw_load import parse_paw_setup
 
-with open('/home/aiops/zhaojx/M_p-align-claude/pseudopotential/C.PBE', 'r') as f:
-  content = f.read().lstrip()
-import tempfile
-with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as tmp:
-  tmp.write(content)
-  tmp_path = tmp.name
-pp_data = parse_paw_setup(tmp_path)
-import os
-os.unlink(tmp_path)
-
-def load_paw_data(filepath):
-  """Load additional PAW data not captured by the standard loader."""
-  with open(filepath, 'r') as f:
-    content = f.read()
-  content = content.lstrip()
-  root = ET.fromstring(content)
-  
-  projectors = []
-  for elem in root.findall('projector_function'):
-    state = elem.get('state')
-    values = list(map(float, elem.text.split()))
-    projectors.append({'state': state, 'values': values})
-  
-  
-  ae_waves = []
-  for elem in root.findall('ae_partial_wave'):
-    state = elem.get('state')
-    values = list(map(float, elem.text.split()))
-    ae_waves.append({'state': state, 'values': values})
-  
-  
-  ps_waves = []
-  for elem in root.findall('pseudo_partial_wave'):
-    state = elem.get('state')
-    values = list(map(float, elem.text.split()))
-    ps_waves.append({'state': state, 'values': values})
-  
-  return {
-    'projectors': projectors,
-    'ae_partial_waves': ae_waves,
-    'pseudo_partial_waves': ps_waves
-  }
-
-paw_data = load_paw_data('/home/aiops/zhaojx/M_p-align-claude/pseudopotential/C.PBE')
+# Load the GPAW PAW setup file using the improved parser
+pp_data = parse_paw_setup('/home/aiops/zhaojx/M_p-align-claude/pseudopotential/C.PBE')
 
 
 def construct_radial_grid(grid_info, n_points):
@@ -86,8 +43,8 @@ def test_core_electron_integration():
 
 def test_projector_partial_wave_orthogonality():
   """Test orthogonality: <p_i|phi_tilde_j> = delta_ij"""
-  projectors = paw_data['projectors']
-  partial_waves = paw_data['pseudo_partial_waves']
+  projectors = pp_data['projector_functions']
+  partial_waves = pp_data['pseudo_partial_waves']
   
   n_proj = len(projectors)
   n_waves = len(partial_waves)
@@ -117,7 +74,7 @@ def test_projector_partial_wave_orthogonality():
 
 def test_partial_wave_normalization():
   """Test normalization: integral of |phi(r)|^2 r^2 dr = 1"""
-  partial_waves = paw_data['ae_partial_waves']
+  partial_waves = pp_data['ae_partial_waves']
   
   for i, wave in enumerate(partial_waves):
     if '1' in wave['state']:
@@ -152,8 +109,8 @@ def test_core_density_smoothness():
 
 def test_partial_wave_matching():
   """Test that pseudo and all-electron waves match outside core region."""
-  ae_waves = paw_data['ae_partial_waves']
-  ps_waves = paw_data['pseudo_partial_waves']
+  ae_waves = pp_data['ae_partial_waves']
+  ps_waves = pp_data['pseudo_partial_waves']
   
   for i in range(min(len(ae_waves), len(ps_waves))):
     phi_g = jnp.array(ae_waves[i]['values'])
