@@ -451,14 +451,13 @@ def calc(
 
   A = 0.5 * integrate_radial_function(nc_g * poisson_rdl(nc_g, 0))
   # NOTE: GPAW uses jnp.sqrt(4 * jnp.pi) since integrate_radial_function no longer includes 4*pi
-  A -= jnp.sqrt(4 * jnp.pi) * Z * jnp.dot(r_g * dr_g, nc_g)
+  A -= 4 * jnp.pi * Z * jnp.dot(r_g * dr_g, nc_g)
   g_lg = jnp.array(g_lg)
-
-  mct_g = nct_g + Delta0 * g_lg[0]
+  mct_g = nct_g + Delta0 * g_lg[0] / jnp.sqrt(4 * jnp.pi)
   A -= 0.5 * integrate_radial_function(mct_g * poisson_rdl(mct_g, 0))
-
-  # M calculation following GPAW
-  M = 0.5 * integrate_radial_function(nc_g * poisson_rdl(nc_g, 0))
+  # NOTE: only for QE file testing
+  # M = 0.5 * integrate_radial_function(nc_g * poisson_rdl(nc_g, 0))
+  M = A
   
   return {
     'B_ii': B_ii,
