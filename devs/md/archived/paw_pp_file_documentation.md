@@ -72,12 +72,13 @@ Integration: ∫ n_stored r² dr * √(4π) = N_electrons
 
 | Element | Shape | Description | Properties |
 |---------|-------|-------------|------------|
-| **zero_potential** | (n_g,) | Zero potential v̄(r) | Local pseudopotential |
+| **zero_potential** | (n_g,) | Screened potential v̄(r) | Already screened, localized |
 | **localpotential** | (n_g,) | Local potential | Alternative local part |
 
 **Properties:**
-- v̄(r) → -Z_val/r as r → ∞
+- v̄(r) → 0 rapidly (screened, no -Z/r tail)
 - Smooth at origin (no singularity)
+- Stored pre-screened with Gaussian compensation
 
 ### 1.6 Shape Functions
 
@@ -187,15 +188,56 @@ Integration: ∫ n_c(r) * 4π * r² dr = N_core
 
 | Element | Shape | Description |
 |---------|-------|-------------|
-| **PP_LOCAL** | (mesh_size,) | Local pseudopotential V_loc(r) |
+| **PP_LOCAL** | (mesh_size,) | Local pseudopotential V_loc(r) with -Z/r tail |
 | **PP_NLCC** | (mesh_size,) | Non-linear core correction |
 | **PP_DIJ** | (nbeta*(nbeta+1)/2,) | D_ij matrix elements |
 
 ---
 
-## 3. Key Differences Between GPAW and QE
+## 3. Local Potential Handling: v_local vs vbar
 
-### 3.1 Radial Functions Storage
+### 3.1 Physical Background
+The local pseudopotential v_local(r) has long-range -Z_val/r tail causing numerical issues. Solution: decompose into screened potential plus compensation:
+```
+v_local(r) = vbar(r) + v_Hartree[ρ_comp(r)]
+```
+
+### 3.2 Format Differences
+
+| Format | Stored Quantity | Processing on Load | Compensation |
+|--------|----------------|-------------------|--------------|
+| **GPAW XML** | vbar (screened) | None needed | g_lg shape functions |
+| **QE UPF** | v_local (unscreened) | Apply Gaussian screening | Created during load |
+
+### 3.3 Screening Implementation
+
+**QE/UPF (requires screening on load):**
+```python
+# From gpaw/upf.py
+alpha = 2.0  # Screening parameter
+v_gauss = -Z_val * erf(sqrt(alpha) * r) / r
+vbar = v_local - v_gauss  # Remove long-range part
+rho_comp = -Z_val * (alpha/pi)**(3/2) * exp(-alpha * r**2)
+```
+
+**GPAW/XML (pre-screened):**
+```python
+# From gpaw_load.py
+vbar = parse_zero_potential(xml)  # Already screened, use directly
+# Compensation via g_lg shape functions stored separately
+```
+
+### 3.4 Gauge Invariance
+Different screening choices preserve physical observables:
+- Total energy: E = ∫n(r)vbar(r)dr + E_Hartree[n+ρ_comp] = ∫n(r)v_local(r)dr + E_Hartree[n]
+- Forces and electron density unchanged
+- Choice of α parameter arbitrary (typically 2.0)
+
+---
+
+## 4. Key Differences Between GPAW and QE
+
+### 4.1 Radial Functions Storage
 
 | Quantity | GPAW Storage | QE Storage | r factor diff | √(4π) factor diff |
 |----------|--------------|------------|---------------|-------------------|
@@ -204,7 +246,7 @@ Integration: ∫ n_c(r) * 4π * r² dr = N_core
 | **Core densities** | n(r) × √(4π) | n(r) | None | GPAW has √(4π), QE doesn't |
 | **Augmentation (Q)** | Q(r) | Q(r) × r² | QE has r², GPAW doesn't | Neither has √(4π) |
 
-### 3.2 Normalization Conventions
+### 4.2 Normalization Conventions
 
 **GPAW:**
 ```python
@@ -222,9 +264,9 @@ Integration: ∫ n_c(r) * 4π * r² dr = N_core
 ∫ n(r) 4π r² dr = N_electrons
 ```
 
-### 3.3 Angular Momentum Quantities and Coupling
+### 4.3 Angular Momentum Quantities and Coupling
 
-#### 3.3.1 Core Angular Momentum Variables
+#### 4.3.1 Core Angular Momentum Variables
 
 | Variable | Symbol | Description | GPAW | QE |
 |----------|--------|-------------|------|-----|
@@ -234,7 +276,7 @@ Integration: ∫ n_c(r) * 4π * r² dr = N_core
 | **Lcut** | L_cut | Total spherical harmonics | (2*lcut+1)² = 25 | (2*lcut+1)² = 9 |
 | **Lmax** | L_max | Total multipole components | (lmax+1)² | (lmax+1)² |
 
-#### 3.3.2 Dimension Relationships
+#### 4.3.2 Dimension Relationships
 
 | Quantity | Formula | Description | Example (C) |
 |----------|---------|-------------|-------------|
@@ -243,7 +285,7 @@ Integration: ∫ n_c(r) * 4π * r² dr = N_core
 | **ni** | nj + Σl_j*2 | Total PAW channels | GPAW: 13, QE: 8 |
 | **np** | ni*(ni+1)/2 | Channel pairs | GPAW: 91, QE: 36 |
 
-#### 3.3.3 Critical Differences
+#### 4.3.3 Critical Differences
 
 **1. Number of Projectors:**
 - **GPAW**: Includes additional virtual/unoccupied states (e.g., 2s, 2p, virtual s, virtual p, virtual d for Carbon)
@@ -265,7 +307,7 @@ Integration: ∫ n_c(r) * 4π * r² dr = N_core
 - **T_Lqp shape**: (Lcut, nq, np) where Lcut=(2*lcut+1)²
 - **Delta_pL shape**: (np, Lmax) where Lmax=(lmax+1)²
 
-#### 3.3.4 Implementation Notes
+#### 4.3.4 Implementation Notes
 
 ```python
 # GPAW convention (setup_gpaw in calc_paw.py)
@@ -280,7 +322,7 @@ lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug'])
 # - QE may have lmax ≠ lcut, handle separately
 ```
 
-#### 3.3.5 Other Angular Momentum Aspects
+#### 4.3.5 Other Angular Momentum Aspects
 
 | Aspect | GPAW | QE |
 |--------|------|-----|
@@ -291,9 +333,9 @@ lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug'])
 
 ---
 
-## 4. Mathematical Properties
+## 5. Mathematical Properties
 
-### 4.1 Asymptotic Behavior
+### 5.1 Asymptotic Behavior
 
 | Function | r → 0 | r → ∞ | r > r_cut |
 |----------|-------|-------|-----------|
@@ -303,21 +345,21 @@ lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug'])
 | **n_c(r)** | Finite | ~ exp(-βr) | ~ 0 |
 | **V_loc(r)** | Finite | ~ -Z/r | ~ -Z_val/r |
 
-### 4.2 Orthogonality Relations
+### 5.2 Orthogonality Relations
 
 ```
 ⟨p̃_i|φ̃_j⟩ = δ_ij                    (Projector-wave orthogonality)
 ⟨φ_i|φ_j⟩ = ⟨φ̃_i|φ̃_j⟩ + ⟨φ_i-φ̃_i|φ_j-φ̃_j⟩  (PAW transformation)
 ```
 
-### 4.3 Charge Conservation
+### 5.3 Charge Conservation
 
 ```
 Q_total = ∫[n_v + n_c] dr = Z        (Total charge = atomic number)
 Q_smooth = ∫[ñ_v + ñ_c + n_comp] dr = Z  (Smooth charge conservation)
 ```
 
-### 4.4 Integration Rules
+### 5.4 Integration Rules
 
 **Radial integration:**
 ```python
@@ -335,7 +377,7 @@ I = sum(f_g * r_g**2 * dr_g) * 4*pi
 
 ---
 
-## 5. Practical Conversion Formulas
+## 6. Practical Conversion Formulas
 
 ### From QE to GPAW:
 ```python
@@ -355,9 +397,9 @@ n_qg_qe = n_qg_gpaw * r**2 * (4*pi)
 
 ---
 
-## 6. Cutoff Radii and Units
+## 7. Cutoff Radii and Units
 
-### 6.1 Units Convention
+### 7.1 Units Convention
 - **Both GPAW and QE use Bohr (atomic units) for distances**
   - GPAW: Explicitly stated in file: "<!-- Units: Hartree and Bohr radii. -->"
   - QE: Uses atomic units convention (Bohr for distances, Hartree for energies)
@@ -366,7 +408,7 @@ n_qg_qe = n_qg_gpaw * r**2 * (4*pi)
   - GPAW: Defined by equation r=a*i/(n-i) with a=0.4, n=300
   - QE: rmax = 100 Bohr (explicitly stated in PP_MESH)
 
-### 6.2 Cutoff Radii in Files (Explicitly Stated)
+### 7.2 Cutoff Radii in Files (Explicitly Stated)
 
 **GPAW (C.PBE file):**
 ```xml
@@ -394,7 +436,7 @@ Valence configuration:
 - Units: **Bohr** (implicit from atomic units convention)
 - Matching test at 1.5 Bohr is appropriate (> max Rcut_US = 1.4 Bohr)
 
-### 6.3 Implementation Summary
+### 7.3 Implementation Summary
 
 **Final Status (All Tasks Completed):**
 - ✅ GPAW PP test suite: 7 tests passing
@@ -415,14 +457,14 @@ Valence configuration:
 - Alignment: `devs/align_qe.py`, `devs/calc_paw.py`
 - Documentation: This file + `workflows.md`
 
-### 6.4 Physical Meaning
+### 7.4 Physical Meaning
 - **rc/Rcut**: Cutoff for norm-conserving part
 - **Rcut_US**: Ultrasoft/PAW augmentation sphere radius
 - **Matching radius**: Beyond this, AE and PS wavefunctions should match
 
 ---
 
-## 7. Common Pitfalls
+## 8. Common Pitfalls
 
 1. **Forgetting r factors**: QE stores r×φ, GPAW stores φ
 2. **Missing 4π vs √(4π)**: Different spherical harmonic conventions
@@ -434,21 +476,21 @@ Valence configuration:
 
 ---
 
-## 7. Implementation Notes
+## 9. Implementation Notes
 
-### 7.1 QE UPF Loading (jrystal/pseudopotential/load.py)
+### 9.1 QE UPF Loading (jrystal/pseudopotential/load.py)
 - Uses `xml.etree.ElementTree` for parsing
 - Handles indexed tags with `tag.startswith()` 
 - Returns raw values from UPF file (no conversion)
 - Preserves QE conventions (r×φ for projectors, n(r) for densities)
 
-### 7.2 GPAW Setup Loading (gpaw/setup_data.py)
+### 9.2 GPAW Setup Loading (gpaw/setup_data.py)
 - Uses SAX parser for XML reading
 - Stores values in GPAW convention during parsing
 - Applies √(4π) factor to densities automatically
 - Handles grid truncation based on cutoff radius
 
-### 7.3 Conversion in align_qe.py
+### 9.3 Conversion in align_qe.py
 ```python
 # Convert projectors from QE to GPAW (divide by r)
 data.pt_jg = upf_beta_values / r_g
@@ -459,7 +501,7 @@ data.nc_g = upf_core_density * np.sqrt(4 * np.pi)
 
 ---
 
-## References
+## 10. References
 
 - GPAW documentation: https://wiki.fysik.dtu.dk/gpaw/
 - Quantum ESPRESSO UPF format: https://pseudopotentials.quantum-espresso.org/

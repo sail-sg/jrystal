@@ -458,23 +458,25 @@ def calc(
   # NOTE: only for QE file testing
   # M = 0.5 * integrate_radial_function(nc_g * poisson_rdl(nc_g, 0))
   M = A
+
+  # NOTE: currently the following code is not tested for QE pp file, but do not delete
+  MB = -jnp.sum(nct_g * vbar_g * r_g**2 * dr_g) * np.sqrt(4 * jnp.pi)
+  AB_q = -jnp.sum(nt_qg * vbar_g[None, :] * r_g**2 * dr_g, axis=1) * 4 * jnp.pi
+  MB_p = jnp.dot(AB_q, T_Lqp[0])
   
   return {
     'B_ii': B_ii,
     'M': M,
+    'MB': MB,
+    'MB_p': MB_p,
     'n_qg': n_qg * 4 * jnp.pi,
     'nt_qg': nt_qg * 4 * jnp.pi,
     'Delta_pL': Delta_pL,
     'Delta0': Delta0,
     'gcut': gcut,
     'g_lg': g_lg,
+    'vbar_g': vbar_g
   }
-
-  # NOTE: currently the following code is not tested for QE pp file, but do not delete
-  MB = -integrate_radial_function(nct_g * vbar_g)
-
-  AB_q = -integrate_radial_function(nt_qg * vbar_g)
-  MB_p = jnp.dot(AB_q, T_Lqp[0])
 
   # calculate the linear kinetic correction
   # dekin_nn = (integrate_radial_function(phit_jg[:, None] * phit_jg * vtr_g) / (4 * jnp.pi) -

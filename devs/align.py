@@ -173,9 +173,12 @@ def run_gpaw(_type: str):
             results = {
                 'B_ii': setup.B_ii if hasattr(setup, 'B_ii') else None,
                 'M': setup.M if hasattr(setup, 'M') else None,
+                'MB': setup.MB if hasattr(setup, 'MB') else None,
+                'MB_p': setup.MB_p if hasattr(setup, 'MB_p') else None,
                 'Delta_pL': setup.Delta_pL if hasattr(setup, 'Delta_pL') else None,
                 'Delta0': setup.Delta0 if hasattr(setup, 'Delta0') else None,
                 'g_lg': setup.g_lg if hasattr(setup, 'g_lg') else None,
+                'vbar_g': data.vbar_g[:258] if hasattr(data, 'vbar_g') else None,
             }
             
             if hasattr(setup, 'local_corr'):
@@ -220,7 +223,6 @@ def _compare_values(val_j, val_g, name):
     
     diff = np.abs(val_j - val_g)
     print(f"Shape match: {val_j.shape}")
-    print(f"Max difference: {np.max(diff):.6e}")
     print(f"Mean difference: {np.mean(diff):.6e}")
 
 
@@ -245,6 +247,9 @@ def compare_results(results_j, results_g):
         ('M', 'Scalar M value'),
         ('B_ii', 'Projector function overlaps B_ii'),
         ('g_lg', 'Shape functions g_lg'),
+        ('vbar_g', 'Zero potential vbar_g'),
+        ('MB', 'MB (core-potential integral)'),
+        ('MB_p', 'MB_p (smooth core-potential)'),
     ]
     
     for key, display_name in comparisons:
