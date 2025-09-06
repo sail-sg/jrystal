@@ -173,6 +173,7 @@ def run_gpaw(_type: str):
             results = {
                 'B_ii': setup.B_ii if hasattr(setup, 'B_ii') else None,
                 'M': setup.M if hasattr(setup, 'M') else None,
+                'M_p': setup.M_p if hasattr(setup, 'M_p') else None,
                 'MB': setup.MB if hasattr(setup, 'MB') else None,
                 'MB_p': setup.MB_p if hasattr(setup, 'MB_p') else None,
                 'Delta_pL': setup.Delta_pL if hasattr(setup, 'Delta_pL') else None,
@@ -245,6 +246,7 @@ def compare_results(results_j, results_g):
         ('Delta_pL', 'Delta_pL matrix'),
         ('Delta0', 'Delta0'),
         ('M', 'Scalar M value'),
+        ('M_p', 'M_p (linear electrostatic correction)'),
         ('B_ii', 'Projector function overlaps B_ii'),
         ('g_lg', 'Shape functions g_lg'),
         ('vbar_g', 'Zero potential vbar_g'),

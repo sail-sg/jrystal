@@ -3,7 +3,6 @@ from functools import partial
 import jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
-import numpy as np
 
 from gpaw.gaunt import gaunt
 from gpaw.new import zips
@@ -15,33 +14,7 @@ def setup_qe():
   
   This function reads a Quantum ESPRESSO UPF file and extracts PAW data.
   Values are returned in QE's native storage convention without conversion.
-  
-  QE UPF Storage Conventions (as documented in paw_pp_file_documentation.md):
-  
-  Radial Functions Storage:
-  - Wave functions (PP_AEWFC, PP_PSWFC): φ(r) * r * √(4π)
-    Physical: φ(r), Stored: φ(r) * r * √(4π) [includes BOTH r and √(4π)]
-  - Projectors (PP_BETA): β(r) * r * √(4π)
-    Physical: β(r), Stored: β(r) * r * √(4π) [includes BOTH r and √(4π)]
-  - Core densities (PP_AE_NLCC): n(r)
-    Physical: n_c(r), Stored: n_c(r) [NO factors applied]
-  - Augmentation (PP_QIJ): Q(r) * r²
-    Physical: Q(r), Stored: Q(r) * r² [includes r² factor]
-  - Local potential (PP_LOCAL): V_loc(r) [no special factors]
-  
-  Normalization Conventions:
-  - Wave functions: ∫|stored|² * rab = 1  [simple integration with PP_RAB]
-  - Core density: ∫ n_c(r) * 4π * r² dr = N_core
-  
-  Grid Properties:
-  - Units: Bohr (atomic units for distances)
-  - PP_RAB = r * dr for integration (r * differential)
-  - For logarithmic grids: PP_RAB[i] / PP_R[i] = dx (constant)
-  
-  Cutoff Radii (for Carbon example):
-  - 2S state: Rcut = 1.0 Bohr, Rcut_US = 1.2 Bohr
-  - 2P state: Rcut = 0.9 Bohr, Rcut_US = 1.4 Bohr
-  - Matching: AE and PS wavefunctions match for r > Rcut_US
+  QE UPF Storage Conventions (as documented in paw_pp_file_documentation.md)
   
   Returns:
     Tuple of arrays containing PAW data in QE native convention
@@ -51,7 +24,7 @@ def setup_qe():
   pp_dict = parse_upf('/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF')
   Z = 6  # Atomic number for Carbon
   lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug'])  # Max l for augmentation
-  l_j = np.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # l for each projector
+  l_j = jnp.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # l for each projector
   lcut = max(l_j)  # Maximum l among projectors
   rcut_j = jnp.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # Rcut for projectors
   gcut_j = jnp.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # Grid indices
@@ -132,7 +105,7 @@ def setup_gpaw():
   grid_info = pp_data['radial_grid']
   a = grid_info['a']
   n = grid_info['n']
-  i = np.arange(n)
+  i = jnp.arange(n)
   r_g_original = a * i / (n - i)  # Keep original grid for g_lg calculation
   dr_g_original = a * n / (n - i) ** 2
   
@@ -142,22 +115,12 @@ def setup_gpaw():
   
   # NOTE: this modification is used to avoid the singularity at r=0
   # as well as the integration error
-  r_g[0] = 1e-5
-  dr_g[0] = 0
+  r_g = r_g.at[0].set(1e-5)
+  dr_g = dr_g.at[0].set(0)
   
   # Angular momentum information from valence states
-  l_j = np.array([state['l'] for state in pp_data['valence_states']])
+  l_j = jnp.array([state['l'] for state in pp_data['valence_states']])
   lcut = max(l_j)
-  
-  # Get cutoff radii to determine grid cutoff (GPAW uses 2 * max(rcut_j))
-  # Default to 1.2 Bohr if not available (common for Carbon)
-  rcut_j = np.array([1.2] * len(l_j))  # Default values
-  rcutmax = max(rcut_j)
-  rcut2 = 2 * rcutmax  # GPAW uses 2 * max cutoff radius
-  
-  # Find grid cutoff index where r > rcut2
-  # GPAW internally uses exactly 258 grid points for Carbon
-  # This corresponds to including the point just past rcut2 = 2.4 Bohr
   gcut2 = 258
   if gcut2 > len(r_g):
     gcut2 = len(r_g)
@@ -166,14 +129,14 @@ def setup_gpaw():
   r_g = r_g[:gcut2]
   dr_g = dr_g[:gcut2]
 
-  phi_jg = np.array([wave['values'][:gcut2] * r_g for wave in pp_data['ae_partial_waves']])
-  phit_jg = np.array([wave['values'][:gcut2] * r_g for wave in pp_data['pseudo_partial_waves']])
-  pt_jg = np.array([proj['values'][:gcut2] * r_g for proj in pp_data['projector_functions']])
-  nc_g = np.array(pp_data['ae_core_density'][:gcut2]) / np.sqrt(4 * np.pi)
-  nct_g = np.array(pp_data['pseudo_core_density'][:gcut2]) / np.sqrt(4 * np.pi)
+  phi_jg = jnp.array([wave['values'][:gcut2] for wave in pp_data['ae_partial_waves']]) * r_g
+  phit_jg = jnp.array([wave['values'][:gcut2] for wave in pp_data['pseudo_partial_waves']]) * r_g
+  pt_jg = jnp.array([proj['values'][:gcut2] for proj in pp_data['projector_functions']]) * r_g
+  nc_g = jnp.array(pp_data['ae_core_density'][:gcut2]) / jnp.sqrt(4 * jnp.pi)
+  nct_g = jnp.array(pp_data['pseudo_core_density'][:gcut2]) / jnp.sqrt(4 * jnp.pi)
   
   # Local potential, skip r=0 point and apply cutoff
-  vbar_g = np.array(pp_data.get('zero_potential', np.zeros(n))[:gcut2])
+  vbar_g = jnp.array(pp_data.get('zero_potential', jnp.zeros(n))[:gcut2])
   
   lmax = lcut  # Maximum l for augmentation should equal lcut for GPAW compatibility
   
@@ -187,7 +150,7 @@ def setup_gpaw():
   sf_type = shape_params.get('type', 'gauss')
   
   # Initialize g_lg for all l values up to lmax
-  g_lg = np.zeros((lmax + 1, gcut2))
+  g_lg = jnp.zeros((lmax + 1, gcut2))
   
   # Use the original grid (with r[0] = 0) for g_lg calculation to match GPAW exactly
   r_g_for_glg = r_g_original[:gcut2]
@@ -196,11 +159,11 @@ def setup_gpaw():
   if sf_type == 'gauss':
       # Gaussian shape functions following GPAW's convention
       # g_lg[0] = 4 / rc^3 / sqrt(pi) * exp(-(r/rc)^2)
-      g_lg[0] = 4 / rc**3 / np.sqrt(np.pi) * np.exp(-(r_g_for_glg / rc)**2)
+      g_lg = g_lg.at[0].set(4 / rc**3 / jnp.sqrt(jnp.pi) * jnp.exp(-(r_g_for_glg / rc)**2))
       
       # Higher l components: g_lg[l] = 2/(2l+1)/rc^2 * r * g_lg[l-1]
       for l in range(1, lmax + 1):
-          g_lg[l] = 2.0 / (2 * l + 1) / rc**2 * r_g_for_glg * g_lg[l - 1]
+          g_lg = g_lg.at[l].set(2.0 / (2 * l + 1) / rc**2 * r_g_for_glg * g_lg[l - 1])
       
       # Normalize each l-component according to GPAW convention
       # GPAW normalizes so that rgd.integrate(g_lg[l], l) = 4π
@@ -208,35 +171,35 @@ def setup_gpaw():
       for l in range(lmax + 1):
           # Calculate integral with 4π factor (like rgd.integrate does)
           # Skip r=0 point in integration like GPAW does
-          integral_with_4pi = np.sum(g_lg[l, 1:] * r_g_for_glg[1:]**(l + 2) * dr_g_for_glg[1:]) * 4 * np.pi
+          integral_with_4pi = jnp.sum(g_lg[l, 1:] * r_g_for_glg[1:]**(l + 2) * dr_g_for_glg[1:]) * 4 * jnp.pi
           if integral_with_4pi > 1e-10:
               # Divide by integral and multiply by 4π to get correct normalization
-              g_lg[l] = g_lg[l] / integral_with_4pi * (4 * np.pi)
+              g_lg = g_lg.at[l].set(g_lg[l] / integral_with_4pi * (4 * jnp.pi))
   else:
       # For other shape function types, use simple fallback
       print(f"Warning: Shape function type '{sf_type}' not fully implemented, using simplified version")
-      g_lg[0] = 4 / rc**3 / np.sqrt(np.pi) * np.exp(-(r_g / rc)**2)
+      g_lg = g_lg.at[0].set(4 / rc**3 / jnp.sqrt(jnp.pi) * jnp.exp(-(r_g / rc)**2))
       for l in range(1, lmax + 1):
-          g_lg[l] = 2.0 / (2 * l + 1) / rc**2 * r_g * g_lg[l - 1]
+          g_lg = g_lg.at[l].set(2.0 / (2 * l + 1) / rc**2 * r_g * g_lg[l - 1])
   
   return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, l_j, pt_jg, Z, lmax, lcut, gcut2, g_lg
 
 
 def calc(
-  r_g: np.ndarray,
-  dr_g: np.ndarray,
-  phi_jg: np.ndarray,
-  phit_jg: np.ndarray,
-  nc_g: np.ndarray,
-  nct_g: np.ndarray,
-  vbar_g: np.ndarray,
-  l_j: np.ndarray,
-  pt_jg: np.ndarray,
+  r_g: jnp.ndarray,
+  dr_g: jnp.ndarray,
+  phi_jg: jnp.ndarray,
+  phit_jg: jnp.ndarray,
+  nc_g: jnp.ndarray,
+  nct_g: jnp.ndarray,
+  vbar_g: jnp.ndarray,
+  l_j: jnp.ndarray,
+  pt_jg: jnp.ndarray,
   Z: int,
   lmax: int,
   lcut: int,
   gcut: int,
-  g_lg: np.ndarray = None):
+  g_lg: jnp.ndarray = None):
   """Calculate PAW correction terms using QE UPF data in native convention.
   
   Input Convention (QE UPF as loaded by setup_qe):
@@ -325,7 +288,7 @@ def calc(
         n_j.append(-1)  # virtual p
     else:  # d or higher
       n_j.append(-1)  # virtual
-  n_j = np.array(n_j)
+  n_j = jnp.array(n_j)
   
   ni = nj + l_j.sum() * 2  # number of projectors
   nq = nj * (nj + 1) // 2  # number of radial function pairs
@@ -337,7 +300,7 @@ def calc(
     These coefficients couple pairs of projectors (q index) with 
     spherical harmonics (L index) for multipole expansions."""
     Lcut = (2 * lcut + 1)**2
-    G_LLL = gaunt(lcut)[:, :, :Lcut]
+    G_LLL = gaunt(int(lcut))[:, :, :Lcut]
     LGcut = G_LLL.shape[2]
     T_Lqp = jnp.zeros((Lcut, nq, _np))
     i = 0
@@ -460,23 +423,9 @@ def calc(
   M = A
 
   # NOTE: currently the following code is not tested for QE pp file, but do not delete
-  MB = -jnp.sum(nct_g * vbar_g * r_g**2 * dr_g) * np.sqrt(4 * jnp.pi)
+  MB = -jnp.sum(nct_g * vbar_g * r_g**2 * dr_g) * jnp.sqrt(4 * jnp.pi)
   AB_q = -jnp.sum(nt_qg * vbar_g[None, :] * r_g**2 * dr_g, axis=1) * 4 * jnp.pi
   MB_p = jnp.dot(AB_q, T_Lqp[0])
-  
-  return {
-    'B_ii': B_ii,
-    'M': M,
-    'MB': MB,
-    'MB_p': MB_p,
-    'n_qg': n_qg * 4 * jnp.pi,
-    'nt_qg': nt_qg * 4 * jnp.pi,
-    'Delta_pL': Delta_pL,
-    'Delta0': Delta0,
-    'gcut': gcut,
-    'g_lg': g_lg,
-    'vbar_g': vbar_g
-  }
 
   # calculate the linear kinetic correction
   # dekin_nn = (integrate_radial_function(phit_jg[:, None] * phit_jg * vtr_g) / (4 * jnp.pi) -
@@ -524,15 +473,15 @@ def calc(
   for i in range(nj):
     for j in range(i, nj):
       if l_j[i] == l_j[j]:
-        K = K.at[i, j].set(calc_kinetic_energy(phi_jg[i], phi_jg[j], l_j[i]))
+        K = K.at[i, j].set(calc_kinetic_energy(jnp.array(phi_jg[i]), jnp.array(phi_jg[j]), l_j[i]))
         K = K.at[j, i].set(K[i, j])
 
-  K_p = jnp.zeros((ni, ni))
-  for i in range(ni):
-    for j in range(i, ni):
-      if proj_l[i] == proj_l[j] and proj_m[i] == proj_m[j]:
-        K_p = K_p.at[i, j].set(K[proj_r[i], proj_r[j]])
-        K_p = K_p.at[j, i].set(K_p[i, j])
+  # K_p = jnp.zeros((ni, ni))
+  # for i in range(ni):
+  #   for j in range(i, ni):
+  #     if proj_l[i] == proj_l[j] and proj_m[i] == proj_m[j]:
+  #       K_p = K_p.at[i, j].set(K[proj_r[i], proj_r[j]])
+  #       K_p = K_p.at[j, i].set(K_p[i, j])
   # breakpoint()
 
   poisson_rdl0 = jax.vmap(partial(poisson_rdl, l=0))
@@ -548,21 +497,20 @@ def calc(
     # NOTE: these two terms are the same, only for numerical stability
     # 1st term in (46)
     A_q = 0.5 * (integrate_radial_function(nc_g * poisson_rdl0(n_qg)) +
-                integrate_radial_function(n_qg * poisson_rdl0(nc_g.reshape(1, -1))))
+                integrate_radial_function(n_qg * poisson_rdl0(nc_g.reshape(1, -1)))) * jnp.sqrt(4 * jnp.pi)
     # 2nd term + 5th termin (46)
     A_q -= 0.5 * (integrate_radial_function(mct_g * poisson_rdl0(nt_qg)) +
-                integrate_radial_function(nt_qg * poisson_rdl0(mct_g.reshape(1, -1))))
+                integrate_radial_function(nt_qg * poisson_rdl0(mct_g.reshape(1, -1)))) * jnp.sqrt(4 * jnp.pi)
     # 3rd term in (46)
-    A_q -= 4 * jnp.pi * Z * jnp.dot(n_qg, r_g * dr_g)
+    A_q -= 4 * jnp.pi * Z * jnp.dot(n_qg, r_g * dr_g) * jnp.sqrt(4 * jnp.pi)
     # 4th term + 6th term in (46)
-    A_q -= 0.5 * (integrate_radial_function(mct_g * poisson_rdl0(n_lqg[0])) +
-                  integrate_radial_function(n_lqg[0] * poisson_rdl0(mct_g.reshape(1, -1))))
-    # A_q -= 0.5 * (integrate_radial_function(mct_g * poisson_rdl0(g_lg[0])) +
-    #               integrate_radial_function(g_lg[0] * poisson_rdl0(mct_g.reshape(1, -1)))) * \
-    #     Delta_lq[0]
-    # Save A_q for debugging
-    global A_q_debug
-    A_q_debug = A_q
+    # This is for QE file testing
+    # A_q -= 0.5 * (integrate_radial_function(mct_g * poisson_rdl0(n_lqg[0])) +
+    #               integrate_radial_function(n_lqg[0] * poisson_rdl0(mct_g.reshape(1, -1))))
+    # This is for GPAW file testing
+    A_q -= 0.5 * (integrate_radial_function(mct_g * poisson_rdl0(g_lg[0:1])) +
+                  integrate_radial_function(g_lg[0] * poisson_rdl0(mct_g.reshape(1, -1)))) * \
+        Delta_lq[0] / jnp.sqrt(4 * jnp.pi)
     M_p = jnp.dot(A_q, T_Lqp[0])
 
     A_lqq = []
@@ -572,10 +520,10 @@ def calc(
       A_qq = 0.5 * integrate_radial_function(n_qg[None] * poisson_rdl_(n_qg)[:, None])  
       # 2nd term in (47)
       A_qq -= 0.5 * integrate_radial_function(nt_qg[None] * poisson_rdl_(nt_qg)[:, None])  
-      if l <= lmax:
-        A_qq -= 0.5 * integrate_radial_function(poisson_rdl_(nt_qg)[None] * n_lqg[l][:, None])
-        A_qq -= 0.5 * integrate_radial_function(nt_qg[None] * poisson_rdl_(n_lqg[l])[:, None])
-        A_qq -= 0.5 * integrate_radial_function(n_lqg[l][None] * poisson_rdl_(n_lqg[l])[:, None])
+      # if l <= lmax:
+      #   A_qq -= 0.5 * integrate_radial_function(poisson_rdl_(nt_qg)[None] * n_lqg[l][:, None])
+      #   A_qq -= 0.5 * integrate_radial_function(nt_qg[None] * poisson_rdl_(n_lqg[l])[:, None])
+      #   A_qq -= 0.5 * integrate_radial_function(n_lqg[l][None] * poisson_rdl_(n_lqg[l])[:, None])
       A_lqq.append(A_qq)
 
     M_pp = jnp.zeros((_np, _np))
@@ -587,7 +535,21 @@ def calc(
     return M_p, M_pp
 
   M_p, M_pp = calculate_coulomb_corrections()
-  # breakpoint()
+
+  return {
+    'B_ii': B_ii,
+    'M': M,
+    'M_p': M_p,
+    'MB': MB,
+    'MB_p': MB_p,
+    'n_qg': n_qg * 4 * jnp.pi,
+    'nt_qg': nt_qg * 4 * jnp.pi,
+    'Delta_pL': Delta_pL,
+    'Delta0': Delta0,
+    'gcut': gcut,
+    'g_lg': g_lg,
+    'vbar_g': vbar_g
+  }
 
 # # TODO: the xc correction seems to be very messy here
 # xc_correction = get_xc_correction(rgd2, xc, gcut2, lcut)
