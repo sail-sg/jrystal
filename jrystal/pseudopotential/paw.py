@@ -25,15 +25,56 @@ delta_aiiL = []
 delta0_a = []
 D_aii = []
 for atom in atoms_list:
-  D_aii.append(jnp.zeros((n_projectors[atom], n_projectors[atom])))
-  delta_aiiL.append(
-    jnp.zeros(
-      (n_projectors[atom], n_projectors[atom], (lmax + 1)**2)
-    )
-  )
+  n_rgd = 1000
+  r_g = jnp.linspace(0, 1, n_rgd)
+  dr_g = r_g[1] - r_g[0]
+  nj = n_projectors[atom]
+  psi = jnp.zeros((n_rgd, nj))
+  psit = jnp.zeros((n_rgd, nj))
+  nc_g = jnp.zeros(n_rgd)
+  nct_g = jnp.zeros(n_rgd)
+  assert r_g.shape[0] == n_rgd
+  assert psi.shape[0] == n_rgd
+  assert psit.shape[0] == n_rgd
+  assert nc_g.shape[0] == n_rgd
+  assert nct_g.shape[0] == n_rgd
+  D_aii.append(jnp.zeros((nj, nj)))
+  delta_aiiL.append(jnp.zeros((nj, nj, (lmax + 1)**2)))
   delta0_a.append(jnp.zeros(1))
 
-  # initialize the overlap matrix for the projectors
+  """initialization of delta_aiiL & delta0_a, which does not depend on the 
+  pseudized wave function"""
+  # nq = nj * (nj + 1) // 2
+  # Delta_lq = np.zeros((lmax + 1, nq))
+  # for l in range(lmax + 1):
+  #   Delta_lq[l] = np.dot(n_qg - nt_qg, r_g**(2 + l) * dr_g)
+  # Lmax = (lmax + 1)**2
+  # Delta_pL = np.zeros((_np, Lmax))
+  # for l in range(lmax + 1):
+  #     L = l**2
+  #     for m in range(2 * l + 1):
+  #         delta_p = np.dot(Delta_lq[l], T_Lqp[L + m])
+  #         Delta_pL[:, L + m] = delta_p
+  # Delta0 = np.dot(self.local_corr.nc_g - self.local_corr.nct_g,
+  #                 r_g**2 * dr_g) - self.Z / sqrt(4 * pi)
+  n_qg = (psi[..., None] * psi[:, None]).reshape(-1, nj**2)
+  nt_qg = (psit[..., None] * psit[:, None]).reshape(-1, nj**2)
+  nq = nj * (nj + 1) // 2
+  Delta_lq = jnp.zeros((lmax + 1, nq))
+  for l in range(lmax + 1):
+    Delta_lq[l] = jnp.dot(n_qg - nt_qg, r_g**(2 + l) * dr_g)
+  Lmax = (lmax + 1)**2
+  Delta_pL = jnp.zeros((_np, Lmax))
+  for l in range(lmax + 1):
+      L = l**2
+      for m in range(2 * l + 1):
+          delta_p = jnp.dot(Delta_lq[l], T_Lqp[L + m])
+          Delta_pL[:, L + m] = delta_p
+  Delta0 = jnp.dot(nc_g - nct_g, r_g**2 * dr_g) - Z / sqrt(4 * pi)
+
+  """Projectors overlap matrix + overlap correction
+  I am not sure whether we should implement the overlap matrix for projectors
+  """
   # def calculate_projector_overlaps(self, pt_jg):
   #   """Compute projector function overlaps B_ii = <pt_i | pt_i>."""
   #   nj = len(pt_jg)
@@ -54,23 +95,7 @@ for atom in atoms_list:
   #           i1 += 1
   #   return B_ii
 
-  # initialization of delta_aiiL & delta0_a, which does not depend on the 
-  # pseudized wave function
-  # GPAW code:
-  # nq = nj * (nj + 1) // 2
-  # Delta_lq = np.zeros((lmax + 1, nq))
-  # for l in range(lmax + 1):
-  #   Delta_lq[l] = np.dot(n_qg - nt_qg, r_g**(2 + l) * dr_g)
-  # Lmax = (lmax + 1)**2
-  # Delta_pL = np.zeros((_np, Lmax))
-  # for l in range(lmax + 1):
-  #     L = l**2
-  #     for m in range(2 * l + 1):
-  #         delta_p = np.dot(Delta_lq[l], T_Lqp[L + m])
-  #         Delta_pL[:, L + m] = delta_p
 
-  # Delta0 = np.dot(self.local_corr.nc_g - self.local_corr.nct_g,
-  #                 r_g**2 * dr_g) - self.Z / sqrt(4 * pi)
 
   for i in range(n_projectors[atom]):
     for j in range(n_projectors[atom]):
@@ -128,7 +153,7 @@ def total_energy():
 
   # calculate the kinetic energy
   # valence kinetic energy
-  ekin_v = kinetic(
+  e_kinetic = kinetic(
     g_vector_grid,
     kpts,
     coeff_grid,
@@ -149,6 +174,15 @@ def total_energy():
   
    
   # core-valence Hartree energy
-  eh_cv = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
+  e_coulomb = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
 
-  e_correction = correction()
+  for atom in atoms_list:
+    e_kinetic += jnp.dot(K_p[atom], D_ij[atom]) + Kc[atom]
+    e_zero += MB[atom] + jnp.dot(MB_p[atom], D_p[atom])
+    e_coulomb += M[atom] + jnp.dot(
+      D_p[atom], (M_p[atom] + jnp.dot(M_pp[atom], D_p[atom]))
+    )
+    e_xc += calculate_paw_correction(self.setups[a], D_sp,
+                                                     dH_asp[a], a=a)
+
+  return e_kinetic + e_coulomb + e_zero + e_xc

@@ -39,16 +39,44 @@ def run_align_paw():
     code_to_exec = '\n'.join(code_lines[:break_line])
     exec(code_to_exec, exec_globals)
     
-    # Extract the matrices
+    # Extract the matrices and other useful values
     K_p_jrystal = exec_globals['K_p']
     M_p_jrystal = exec_globals['M_p']
     M_pp_jrystal = exec_globals['M_pp']
     
+    # Also extract intermediate values for debugging
+    Delta0 = exec_globals.get('Delta0', None)
+    MB = exec_globals.get('MB', None)
+    MB_p = exec_globals.get('MB_p', None)
+    T_Lqp = exec_globals.get('T_Lqp', None)
+    AB_q = exec_globals.get('AB_q', None)
+    A_q_debug = exec_globals.get('A_q_debug', None)  # The Coulomb A_q from calculate_coulomb_corrections
+    
     print(f"K_p shape: {K_p_jrystal.shape}")
     print(f"M_p shape: {M_p_jrystal.shape}")
     print(f"M_pp shape: {M_pp_jrystal.shape}")
+    if Delta0 is not None:
+        print(f"Delta0 = {Delta0}")
+    if MB is not None:
+        print(f"MB = {MB}")
+    if AB_q is not None:
+        print(f"AB_q shape: {AB_q.shape if hasattr(AB_q, 'shape') else len(AB_q)}, first few: {AB_q[:3]}")
+    if A_q_debug is not None:
+        import numpy as np
+        A_q_debug = np.array(A_q_debug)
+        print(f"A_q (Coulomb) shape: {A_q_debug.shape}, first few: {A_q_debug[:3]}")
+        # Calculate M_p from A_q for verification
+        if T_Lqp is not None:
+            M_p_calc = np.dot(A_q_debug, T_Lqp[0])
+            print(f"M_p from A_q: first few: {M_p_calc[:3]}")
+    if MB_p is not None:
+        print(f"MB_p shape: {MB_p.shape}, first few values: {MB_p[:3]}")
+    if T_Lqp is not None:
+        print(f"T_Lqp shape: {T_Lqp.shape}")
+        print(f"T_Lqp[0,0,:5] = {T_Lqp[0,0,:5]}")
+        print(f"T_Lqp[0,1,:5] = {T_Lqp[0,1,:5]}")
     
-    return K_p_jrystal, M_p_jrystal, M_pp_jrystal
+    return K_p_jrystal, M_p_jrystal, M_pp_jrystal, exec_globals, A_q_debug
 
 
 def run_gpaw_setup():
@@ -73,12 +101,7 @@ def run_gpaw_setup():
         
         def find_core_density_cutoff(self, nc_g):
             """Find cutoff radius for core density."""
-            # Find where core density becomes negligible
-            threshold = 1e-8
-            for i in range(len(nc_g) - 1, -1, -1):
-                if abs(nc_g[i]) > threshold:
-                    return i + 1
-            return 0
+            return self.rgd.r_g[-1]
         
         def get_overlap_correction(self, Delta0_ii):
             """Get overlap correction matrix."""
@@ -154,18 +177,47 @@ def run_gpaw_setup():
     data.Nc = data.Z - data.Nv  # Core electrons
     
     # Radial grid from PP_MESH
-    from gpaw.atom.radialgd import EquidistantRadialGridDescriptor
+    from gpaw.atom.radialgd import EquidistantRadialGridDescriptor, AERadialGridDescriptor
     r_g = np.array(pp_dict['PP_MESH']['PP_R'])
     dr_g = np.array(pp_dict['PP_MESH']['PP_RAB'])
     
-    # Create a proper EquidistantRadialGridDescriptor
-    # For UPF files, the grid is typically equidistant
-    h = dr_g[0] if len(dr_g) > 0 else 0.02  # Grid spacing
+    # Create the grid descriptor based on grid type
     N = len(r_g)  # Number of grid points
-    h0 = r_g[0] if len(r_g) > 0 else 0.0  # Starting point (usually 0)
     
-    data.rgd = EquidistantRadialGridDescriptor(h, N, h0)
-    # Override with actual grid if different
+    # Check if grid is logarithmic or equidistant
+    if N > 2 and r_g[0] > 0:
+        ratio1 = r_g[1] / r_g[0]
+        ratio2 = r_g[2] / r_g[1]
+        is_logarithmic = abs(ratio1 - ratio2) < 1e-6 * ratio1
+    else:
+        is_logarithmic = False
+    
+    if is_logarithmic:
+        # For logarithmic grid, use AERadialGridDescriptor
+        # AERadialGridDescriptor uses: r = beta * g / (1 + beta * b * g)
+        # where g is the grid index
+        # We need to find beta and b such that they match our grid
+        
+        # For a grid r[i] = r0 * exp(dx*i), we can approximate:
+        # beta ≈ r0 and b ≈ dx/r0
+        r0 = r_g[0]
+        if N > 1:
+            dx = np.log(r_g[1] / r_g[0])
+            b = dx / r0
+            beta = r0
+            # AERadialGridDescriptor takes a = beta * b
+            a = beta * b
+            data.rgd = AERadialGridDescriptor(a, b, N)
+        else:
+            # Fallback for single point
+            data.rgd = AERadialGridDescriptor(0.01, 0.01, N)
+    else:
+        # For equidistant grid
+        h = dr_g[0] if len(dr_g) > 0 else 0.02  # Grid spacing
+        h0 = r_g[0] if len(r_g) > 0 else 0.0  # Starting point (usually 0)
+        data.rgd = EquidistantRadialGridDescriptor(h, N, h0)
+    
+    # Override with actual grid
     data.rgd.r_g = r_g
     data.rgd.dr_g = dr_g
     data.rgd.N = N
@@ -181,22 +233,37 @@ def run_gpaw_setup():
     
     data.rgd.get_cutoff = get_cutoff
     
-    # The EquidistantRadialGridDescriptor r2g method needs fixing
-    # It should convert radius to grid index, not assume equidistant from 0
-    original_r2g = data.rgd.r2g
+    # Override r2g method to work with any grid type
+    # The built-in r2g methods assume specific grid formulas which may not match UPF grids
     def fixed_r2g(r):
-        """Convert radius to grid index."""
+        """Convert radius to grid index using searchsorted."""
         # Find the index where r_g[i] >= r
         idx = np.searchsorted(data.rgd.r_g, r)
-        return min(idx, data.rgd.N - 1)
+        # Handle both scalar and array inputs
+        if np.isscalar(idx):
+            return min(idx, data.rgd.N - 1)
+        else:
+            return np.minimum(idx, data.rgd.N - 1)
     
-    # Override the method
+    # Override the methods
     data.rgd.r2g = fixed_r2g
     
-    # Also need floor method
+    # Also need floor and ceil methods
     def floor(r):
-        return int(np.floor(fixed_r2g(r)))
+        result = np.floor(fixed_r2g(r))
+        if np.isscalar(result):
+            return int(result)
+        else:
+            return result.astype(int)
     data.rgd.floor = floor
+    
+    def ceil(r):
+        result = np.ceil(fixed_r2g(r))
+        if np.isscalar(result):
+            return int(result)
+        else:
+            return result.astype(int)
+    data.rgd.ceil = ceil
     
     # Add spline method wrapper to handle backwards_compatible parameter
     original_spline = data.rgd.spline
@@ -209,11 +276,16 @@ def run_gpaw_setup():
     # Add new method for creating truncated grids
     def new_grid(gcut):
         """Create a new truncated grid."""
-        from gpaw.atom.radialgd import EquidistantRadialGridDescriptor
-        # Create new grid with same spacing but truncated
-        h = data.rgd.dr_g[0] if len(data.rgd.dr_g) > 0 else 0.02
-        h0 = data.rgd.r_g[0] if len(data.rgd.r_g) > 0 else 0.0
-        new_rgd = EquidistantRadialGridDescriptor(h, gcut, h0)
+        # Use the same type of grid descriptor as the parent
+        if isinstance(data.rgd, AERadialGridDescriptor):
+            # For AERadialGridDescriptor, create with same a, b but different N
+            new_rgd = AERadialGridDescriptor(data.rgd.a, data.rgd.b, gcut)
+        else:
+            # For EquidistantRadialGridDescriptor
+            h = data.rgd.dr_g[0] if len(data.rgd.dr_g) > 0 else 0.02
+            h0 = data.rgd.r_g[0] if len(data.rgd.r_g) > 0 else 0.0
+            new_rgd = EquidistantRadialGridDescriptor(h, gcut, h0)
+        
         new_rgd.r_g = data.rgd.r_g[:gcut].copy()
         new_rgd.dr_g = data.rgd.dr_g[:gcut].copy()
         new_rgd.N = gcut
@@ -222,6 +294,7 @@ def run_gpaw_setup():
         new_rgd.get_cutoff = get_cutoff
         new_rgd.r2g = fixed_r2g
         new_rgd.floor = floor
+        new_rgd.ceil = ceil
         new_rgd.spline = spline_wrapper
         new_rgd.new = new_grid  # Recursive definition
         return new_rgd
@@ -261,14 +334,18 @@ def run_gpaw_setup():
             data.f_j.append(2.0 if p_count == 0 else 0.0)
             p_count += 1
     
-    # Projector functions pt_jg (convert to radial functions)
+    # Projector functions pt_jg
+    # UPF convention: projectors are u(r) = r*R(r) where R(r) is the radial function
+    # GPAW convention: expects u(r)/r = R(r) WITHOUT any sqrt(4*pi) factor
+    # But for PAW, projectors should be normalized with sqrt(4*pi) included
     data.pt_jg = []
     for i in proj_order:
         proj = projectors[i]
-        # Projector values are u(r), convert to u(r)/r for GPAW
+        # UPF stores u(r) = r*R(r), GPAW wants R(r)*sqrt(4*pi) for PAW
         pt_g = proj['values'].copy()
-        pt_g[1:] /= data.rgd.r_g[1:len(pt_g)]
+        pt_g[1:] /= data.rgd.r_g[1:len(pt_g)]  # Convert to R(r)
         pt_g[0] = pt_g[1]  # Handle r=0
+        # Note: Don't multiply by sqrt(4*pi) here - GPAW handles it internally
         data.pt_jg.append(np.array(pt_g[:data.rgd.n]))  # Ensure it's numpy array
     
     # Cutoff radii from projector data
@@ -291,20 +368,24 @@ def run_gpaw_setup():
         
         # Reorder wavefunctions to match projector order
         for i in proj_order:
-            # AEWFC - convert u(r) to u(r)/r
+            # AEWFC - UPF stores u(r) = r*R(r), GPAW expects R(r) 
             phi_g = aewfc[i]['values'].copy()
-            phi_g[1:] /= data.rgd.r_g[1:len(phi_g)]
+            phi_g[1:] /= data.rgd.r_g[1:len(phi_g)]  # Convert to R(r)
             phi_g[0] = phi_g[1]
             data.phi_jg.append(np.array(phi_g[:data.rgd.n]))  # Ensure it's numpy array
             
-            # PSWFC - convert u(r) to u(r)/r
+            # PSWFC - UPF stores u(r) = r*R(r), GPAW expects R(r)
             phit_g = pswfc[i]['values'].copy()
-            phit_g[1:] /= data.rgd.r_g[1:len(phit_g)]
+            phit_g[1:] /= data.rgd.r_g[1:len(phit_g)]  # Convert to R(r)
             phit_g[0] = phit_g[1]
             data.phit_jg.append(np.array(phit_g[:data.rgd.n]))  # Ensure it's numpy array
     
     # Local potential and vbar
     vbar_full = np.array(pp_dict['PP_LOCAL'])[:data.rgd.n]
+    
+    # Keep vbar as-is from UPF file for now
+    # We'll check if this matches the jrystal convention
+    
     # Find actual cutoff of vbar (last non-zero value)
     vbar_cutoff = data.rgd.n - 1
     while vbar_cutoff > 0 and abs(vbar_full[vbar_cutoff]) < 1e-10:
@@ -323,6 +404,9 @@ def run_gpaw_setup():
     
     # Core densities from PP_PAW
     if 'PP_PAW' in pp_dict:
+        # Based on align_paw.py comments, the UPF values are n(r) that should be
+        # integrated as ∫ 4πr²n(r) dr, meaning they are the radial density n(r)
+        # GPAW also expects n(r), so we can use them directly
         data.nc_g = np.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:data.rgd.n]
         data.nct_g = np.array(pp_dict['PP_NLCC'])[:data.rgd.n]
         data.tauc_g = np.zeros_like(data.nc_g)  # Kinetic energy density (not in UPF)
@@ -436,7 +520,45 @@ def run_gpaw_setup():
         print(f"M_p shape: {M_p_gpaw.shape}")
         print(f"M_pp shape: {M_pp_gpaw.shape}")
         
-        return K_p_gpaw, M_p_gpaw, M_pp_gpaw
+        # Print intermediate values for debugging
+        print(f"\nGPAW intermediate values:")
+        print(f"Delta0 = {setup.Delta0}")
+        print(f"MB = {setup.MB}")
+        print(f"MB_p shape: {setup.MB_p.shape}, first few: {setup.MB_p[:3]}")
+        if hasattr(setup, 'A_q_debug'):
+            print(f"A_q (Coulomb) shape: {setup.A_q_debug.shape}, first few: {setup.A_q_debug[:3]}")
+        if hasattr(setup.local_corr, 'T_Lqp'):
+            print(f"T_Lqp shape: {setup.local_corr.T_Lqp.shape}")
+            print(f"T_Lqp[0,0,:5] = {setup.local_corr.T_Lqp[0,0,:5]}")
+            print(f"T_Lqp[0,1,:5] = {setup.local_corr.T_Lqp[0,1,:5]}")
+        
+        # Check normalization of core density
+        nc_integral = np.sum(data.nc_g * data.rgd.r_g**2 * data.rgd.dr_g) * 4 * np.pi
+        nct_integral = np.sum(data.nct_g * data.rgd.r_g**2 * data.rgd.dr_g) * 4 * np.pi
+        print(f"\nCore density integrals:")
+        print(f"nc integral = {nc_integral} (should be ~{data.Nc} core electrons)")
+        print(f"nct integral = {nct_integral}")
+        print(f"nc - nct = {nc_integral - nct_integral} (charge deficit)")
+        
+        # Check Delta0 calculation
+        delta0_calc = (nc_integral - nct_integral) / np.sqrt(4 * np.pi) - data.Z / np.sqrt(4 * np.pi)
+        print(f"\nDelta0 calculation check:")
+        print(f"Manual calc: ({nc_integral - nct_integral:.6f})/sqrt(4π) - {data.Z}/sqrt(4π) = {delta0_calc:.6f}")
+        print(f"Setup Delta0: {setup.Delta0:.6f}")
+        
+        # Check what GPAW actually integrated
+        if hasattr(setup, 'local_corr') and setup.local_corr.nc_g is not None:
+            nc_int_gpaw = np.sum(setup.local_corr.nc_g * setup.local_corr.rgd2.r_g**2 * 
+                                setup.local_corr.rgd2.dr_g) * 4 * np.pi
+            nct_int_gpaw = np.sum(setup.local_corr.nct_g * setup.local_corr.rgd2.r_g**2 * 
+                                 setup.local_corr.rgd2.dr_g) * 4 * np.pi
+            print(f"\nGPAW's actual core integrals:")
+            print(f"nc integral = {nc_int_gpaw:.6f}")
+            print(f"nct integral = {nct_int_gpaw:.6f}")
+            print(f"nc - nct = {nc_int_gpaw - nct_int_gpaw:.6f}")
+        
+        A_q_gpaw = setup.A_q_debug if hasattr(setup, 'A_q_debug') else None
+        return K_p_gpaw, M_p_gpaw, M_pp_gpaw, A_q_gpaw
         
     except Exception as e:
         print(f"Error in GPAW setup: {e}")
@@ -447,6 +569,8 @@ def run_gpaw_setup():
 
 def compare_matrices(K_p_j, M_p_j, M_pp_j, K_p_g, M_p_g, M_pp_g):
     """Compare matrices from both implementations."""
+    import numpy as np
+    
     print("\n" + "=" * 60)
     print("Comparison Results")
     print("=" * 60)
@@ -494,14 +618,43 @@ def compare_matrices(K_p_j, M_p_j, M_pp_j, K_p_g, M_p_g, M_pp_g):
         # Show first few elements for debugging
         print(f"\njrystal M_pp[:3, :3]:\n{M_pp_j[:3, :3]}")
         print(f"\nGPAW M_pp[:3, :3]:\n{M_pp_g[:3, :3]}")
+        
+        # Check element-wise ratios for non-zero elements
+        print("\n--- Element-wise ratios (jrystal/GPAW) for M_p ---")
+        import numpy as np
+        nonzero_idx = np.where(np.abs(M_p_g) > 1e-10)[0]
+        for idx in nonzero_idx[:5]:  # Show first 5 non-zero
+            ratio = M_p_j[idx] / M_p_g[idx] if abs(M_p_g[idx]) > 1e-10 else float('inf')
+            print(f"  M_p[{idx}]: {M_p_j[idx]:.6f} / {M_p_g[idx]:.6f} = {ratio:.3f}")
+        
+        print("\n--- Diagonal element ratios for M_pp ---")
+        for i in range(min(5, M_pp_j.shape[0])):
+            if abs(M_pp_g[i,i]) > 1e-10:
+                ratio = M_pp_j[i,i] / M_pp_g[i,i]
+                print(f"  M_pp[{i},{i}]: {M_pp_j[i,i]:.6e} / {M_pp_g[i,i]:.6e} = {ratio:.3f}")
     else:
         print(f"Shape mismatch: jrystal {M_pp_j.shape} vs GPAW {M_pp_g.shape}")
 
 
 if __name__ == "__main__":
     # Run both implementations
-    K_p_j, M_p_j, M_pp_j = run_align_paw()
-    K_p_g, M_p_g, M_pp_g = run_gpaw_setup()
+    K_p_j, M_p_j, M_pp_j, jrystal_globals, A_q_j = run_align_paw()
+    K_p_g, M_p_g, M_pp_g, A_q_g = run_gpaw_setup()
     
     # Compare results
     compare_matrices(K_p_j, M_p_j, M_pp_j, K_p_g, M_p_g, M_pp_g)
+    
+    # Compare A_q values
+    if A_q_j is not None and A_q_g is not None:
+        import numpy as np
+        A_q_j = np.array(A_q_j)
+        print("\n" + "=" * 60)
+        print("A_q Comparison (Coulomb correction components)")
+        print("=" * 60)
+        print(f"jrystal A_q: {A_q_j}")
+        print(f"GPAW A_q: {A_q_g}")
+        print(f"\nElement-wise ratios (jrystal/GPAW):")
+        for i in range(min(len(A_q_j), len(A_q_g))):
+            if abs(A_q_g[i]) > 1e-10:
+                ratio = A_q_j[i] / A_q_g[i]
+                print(f"  A_q[{i}]: {A_q_j[i]:.6f} / {A_q_g[i]:.6f} = {ratio:.3f}")
