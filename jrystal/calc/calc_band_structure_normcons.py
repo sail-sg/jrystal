@@ -39,7 +39,7 @@ from .opt_utils import (
     create_pseudopotential,
     set_env_params,
 )
-from .pre_calc_beta_sbt import pre_calc_beta_sbt
+from .pre_calc import pre_calc_beta_sbt
 
 
 @dataclass

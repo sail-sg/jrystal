@@ -19,10 +19,10 @@ PySBT can be found: https://github.com/QijingZheng/pySBT.git
 
 """
 from .pysbt import pyNumSBT
-from .sbt import sbt, batched_sbt
+from .sbt import batch_sbt, sbt
 
 __all__ = [
   "pyNumSBT",
   "sbt",
-  "batched_sbt",
+  "batch_sbt",
 ]

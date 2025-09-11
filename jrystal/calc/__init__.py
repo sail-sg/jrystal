@@ -18,10 +18,15 @@ from .calc_ground_state_energy_all_electrons import calc as energy_all_electrons
 from .calc_band_structure_all_electrons import calc as band_all_electrons
 from .calc_ground_state_energy_normcons import calc as energy_normcons
 from .calc_band_structure_normcons import calc as band_normcons
+from .calc_ground_state_energy_ultrasoft import calc as energy_ultrasoft
+from .calc_band_structure_ultrasoft import calc as band_ultrasoft
+
 
 __all__ = [
   "band_all_electrons",
   "energy_all_electrons",
   "energy_normcons",
   "band_normcons",
+  "energy_ultrasoft",
+  "band_ultrasoft",
 ]
