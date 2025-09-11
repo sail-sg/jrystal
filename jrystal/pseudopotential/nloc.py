@@ -1,5 +1,6 @@
 """Nonlocal Pseudopotential. """
 
+<<<<<<< HEAD
 import numpy as np
 import jax
 import jax.numpy as jnp
@@ -17,6 +18,25 @@ from .spherical import (
 )
 from .local import hamiltonian_local, energy_local
 from .beta import _beta_sbt_single_atom, beta_sbt_grid
+=======
+from typing import List, Optional
+
+import jax
+import jax.numpy as jnp
+import numpy as np
+from einops import einsum
+from jaxtyping import Array, Complex, Float
+
+from .._src import braket, kinetic, potential, pw
+from .._src.utils import wave_to_density
+from .beta import beta_sbt_grid
+from .local import energy_local, hamiltonian_local
+from .spherical import (
+  batch_sph_harm, cartesian_to_spherical, legendre_to_sph_harm,
+  batch_sph_harm_real,
+)
+from .utils import map_over_atoms
+>>>>>>> refactor_pp
 
 
 def _compute_spherical_harmonics(
@@ -35,6 +55,7 @@ def _compute_spherical_harmonics(
     r_sph = cartesian_to_spherical(r_vector_grid)
     _, r_theta, r_phi = r_sph[..., 0], r_sph[..., 1], r_sph[..., 2]
 
+<<<<<<< HEAD
     y_lm = jnp.zeros((l_max + 1, *ndims, 2 * l_max + 1)) + 0.j
     for i in range(l_max + 1):
       y_lm = y_lm.at[i, ..., :(2 * i + 1)].set(
@@ -44,6 +65,20 @@ def _compute_spherical_harmonics(
 
 
 def _potential_nonlocal_psi_reciprocal(
+=======
+    y_lm = jnp.zeros((l_max + 1, *ndims, 2 * l_max + 1)) + 0.j  # [l x y z m]
+    for i in range(l_max + 1):
+      m_start = l_max - (2 * i + 1) // 2
+      m_end = m_start + (2 * i + 1)
+      y_lm = y_lm.at[i, ..., m_start:m_end].set(
+        batch_sph_harm_real(i, r_theta, r_phi)
+      )
+
+    return y_lm
+
+
+def potential_nonlocal_psi_reciprocal(
+>>>>>>> refactor_pp
   position: Float[Array, "atom 3"],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Float[Array, "kpt 3"],
@@ -52,15 +87,16 @@ def _potential_nonlocal_psi_reciprocal(
   nonlocal_angular_momentum: List[List[int]],
   nonlocal_d_matrix: List[Float[Array, "beta beta"]],
   beta_gk: Optional[List[Float[Array, "kpt beta x y z"]]] = None,
-  fourier_transform_method: str = 'sbt'
-) -> Complex[Array, "kpt beta x y z m"]:
+  fourier_transform_method: str = 'sbt',
+  concat: bool = True,
+) -> Complex[Array, "kpt beta m x y z"]:
   """
   Compute the nonlocal pseudopotential in reciprocal space.
 
     This function returns:
 
   .. math::
-    < \beta_i | (G+k) >
+    < \beta_i | (G+k) > = 4 \pi sbt(beta_i(r)) Y_lm(r)
 
   Args:
     position (Float[Array, "atom 3"]): The position of the atoms.
@@ -78,6 +114,11 @@ def _potential_nonlocal_psi_reciprocal(
     the beta functions. Defaults to None. This can be
     fourier_transform_method (str, optional): The method to compute the
     nonlocal pseudopotential in reciprocal space. Defaults to 'sbt'.
+
+  Return:
+    Complex[Array, "kpt beta m x y z"]: The Psi function in reciprocal space.
+    The shape of the output is [kpt, beta, m, x, y, z], where m is the index of
+    the magnetic momentum.
 
   """
   assert len(nonlocal_beta_grid) == len(nonlocal_angular_momentum)
@@ -107,13 +148,15 @@ def _potential_nonlocal_psi_reciprocal(
     nonlocal_angular_momentum,
     nonlocal_d_matrix,
     beta_gk_single_atom
-  ) -> Complex[Array, "kpt beta x y z m"]:
+  ) -> Complex[Array, "kpt beta m x y z"]:
     y_lm_atom = y_lm[nonlocal_angular_momentum]  # [beta kpt x y z m]
-    d_matrix_sqrt = jnp.linalg.cholesky(nonlocal_d_matrix).T.conj()
+    eigval, eigvec = jnp.linalg.eigh(nonlocal_d_matrix)  # shape: [beta beta]
+    d_matrix_sqrt = einsum(eigvec, jnp.sqrt(eigval + 0.j), "d1 d2, d2 -> d1 d2")
+    # assert jnp.min(eigval) >= 0, "The d_matrix is not positive semi-definite."
     # shape: [beta beta]
     output = einsum(
-      d_matrix_sqrt, y_lm_atom, beta_gk_single_atom,
-      "beta1 beta2, beta2 kpt x y z m, kpt beta2 x y z -> kpt beta1 m x y z"
+      y_lm_atom, beta_gk_single_atom, d_matrix_sqrt,
+      "b1 kpt x y z m, kpt b1 x y z, b1 b2 -> kpt b2 m x y z"
     )
 
     structure_factor = jnp.exp(
@@ -125,17 +168,24 @@ def _potential_nonlocal_psi_reciprocal(
     )
 
     imag_factor = (1.j) ** nonlocal_angular_momentum
+    # for the imaginary factor, please refer to the paper.
+
     output = einsum(
       output, imag_factor, "kpt beta m x y z, beta -> kpt beta m x y z"
     )
-    return output
+    return output * 4 * jnp.pi
 
-  return _get_psi(
+  output = _get_psi(
     position, nonlocal_angular_momentum, nonlocal_d_matrix, beta_gk
   )
 
+  if concat:
+    output = jnp.concatenate(output, axis=1)
 
-def potential_nonlocal_psi_reciprocal(
+  return output
+
+
+def _potential_nonlocal_psi_reciprocal(
   position: Float[Array, "atom 3"],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Float[Array, "kpt 3"],
@@ -174,8 +224,8 @@ def potential_nonlocal_psi_reciprocal(
     the magnetic momentum.
   """
   assert len(nonlocal_beta_grid) == len(nonlocal_angular_momentum)
-  assert fourier_transform_method in ['fft', 'sbt']
-  # TODO: and the fourier transform method.
+  assert fourier_transform_method == 'sbt'
+  # TODO: support other fourier transform method.
 
   gk_vector_grid = jnp.expand_dims(
     kpts, axis=(1, 2, 3)
@@ -201,7 +251,13 @@ def potential_nonlocal_psi_reciprocal(
     d_matrix = nonlocal_d_matrix[i]
     # assert jnp.allclose(d_matrix, d_matrix.T)
     eigval, eigvec = jnp.linalg.eigh(d_matrix)  # shape: [beta beta]
-    d_matrix_sqrt = eigvec * jnp.sqrt(eigval + 0.j)  # shape: [beta beta]
+    d_matrix_sqrt = einsum(jnp.sqrt(eigval + 0.j), eigvec, "d1, d2 d1 -> d2 d1")
+    d_matrix_sqrt = d_matrix_sqrt.T.conj()
+    # TODO: check if this is correct for ultrasoft pseudopotential. For NC, it
+    # is true in most cases, as the d_matrix is diagonal and the eigvec is a
+    # diagonal matrix. Therefore whether there is a transpose or not does not
+    # matter - both can generate the same band structure. But for ultrasoft,
+    # the d_matrix is not diagonal.
     structure_factor = jnp.exp(
       -1.j * jnp.matmul(gk_vector_grid, position[i])
     )  # shape: [nk x y z]
@@ -217,7 +273,12 @@ def potential_nonlocal_psi_reciprocal(
       kappa,
       structure_factor,
       "b1 b2, b2 k x y z m, k x y z -> k b1 m x y z"
-    ) / jnp.sqrt(2)  # factor of 1/2 is due to the conversion of unit.
+    )
+
+    imag_factor = (1.j) ** angmom
+    kappa = einsum(
+      kappa, imag_factor, "k b m x y z, b -> k b m x y z"
+    )
 
     kappa = einsum(kappa, beta_gk[i], "k b m x y z, k b x y z -> k b m x y z")
     output.append(kappa)
@@ -228,20 +289,20 @@ def potential_nonlocal_psi_reciprocal(
 
 def hamiltonian_nonlocal(
   pw_coefficients: Complex[Array, "spin kpt band x y z"],
-  potential_nl_psi_reciprocal: Complex[Array, "kpt beta x y z phi"],
+  potential_nl_psi_reciprocal: Complex[Array, "kpt beta m x y z"],
   vol: Float,
 ) -> Complex[Array, "spin kpt band band"]:
   _f_matrix = einsum(
     pw_coefficients,
     potential_nl_psi_reciprocal,
-    "s k band x y z, k beta phi x y z -> s k band beta phi"
-  )
+    "s k band x y z, k beta m x y z -> s k band beta m"
+  )  # the factor 1/\sqrt{\omega} is omitted and handled in the next line.
 
-  return 4 * jnp.pi / vol * einsum(
+  return einsum(
     jnp.conj(_f_matrix),
     _f_matrix,
-    "s k b1 beta phi, s k b2 beta phi -> s k b1 b2"
-  )
+    "s k b1 beta m, s k b2 beta m -> s k b1 b2"
+  ) / vol  # the factor 1/vol is due to the normalization of the wavefunction.
 
 
 def hamiltonian_matrix(

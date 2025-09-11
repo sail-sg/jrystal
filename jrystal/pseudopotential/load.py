@@ -67,8 +67,7 @@ def parse_pp_info(pp_info_string: str) -> dict:
       extract_value(lines[9]),
     'Valence configuration':
       parse_valence_configuration(
-        lines[valence_configuration_index + 2:valence_configuration_end_index +
-              1]
+        lines[valence_configuration_index + 2:valence_configuration_end_index]
       ),
     'Generation configuration':
       lines[-1].strip()
@@ -83,7 +82,8 @@ def parse_valence_configuration(valence_lines: list) -> list:
   for line in valence_lines:
     if line.strip() and not line.startswith('Generation configuration'):
       valence_data = line.split()
-      if valence_data:
+      # Skip header line that contains column names
+      if valence_data and valence_data[0] != 'nl':
         valence_entry = {
           'nl': valence_data[0],
           'pn': int(valence_data[1]),
@@ -93,7 +93,7 @@ def parse_valence_configuration(valence_lines: list) -> list:
           'Rcut_US': float(valence_data[5]),
           'E_pseu': float(valence_data[6])
         }
-      valence_config.append(valence_entry)
+        valence_config.append(valence_entry)
   return valence_config
 
 
@@ -141,7 +141,9 @@ def parse_pp_nonlocal(pp_nonlocal) -> dict:
   augmentation_element = pp_nonlocal.find('PP_AUGMENTATION')
   if augmentation_element is not None:
     augmentation_data = {
-      'q_with_l': augmentation_element.get('q_with_l') == 'true',
+      'q_with_l': augmentation_element.get('q_with_l') in [
+        'true', 'True', 'T', 't', '1', 'TRUE'
+      ],
       'nqf': int(augmentation_element.get('nqf')),
       'nqlc': int(augmentation_element.get('nqlc')),
     }
@@ -164,6 +166,7 @@ def parse_pp_nonlocal(pp_nonlocal) -> dict:
             'first_index': qij.get('first_index'),
             'second_index': qij.get('second_index'),
             'composite_index': qij.get('composite_index'),
+            'angular_momentum': qij.get('angular_momentum'),
             'values': list(map(float, qij.text.split()))
           }
         )
