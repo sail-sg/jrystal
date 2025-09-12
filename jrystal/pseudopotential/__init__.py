@@ -32,7 +32,6 @@ from . import load
 from . import utils
 from . import normcons
 from . import nloc
-from . import interpolate
 from . import spherical
 from . import beta
 from . import ultrasoft
