@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Occupation module."""
+from functools import partial
 from typing import Optional, Union
 
 import einops
 import jax
 import jax.numpy as jnp
+import numpy as np
+from jax.experimental import jet
 from jax.lax import stop_gradient
 from jaxtyping import Array, Float
 
@@ -76,7 +79,7 @@ def idempotent_param_init(
     key, [num_bands * num_kpts, num_elec_up * num_kpts], complex=False
   )
   if spin_restricted:
-    return  {"param_up": param_up, "param_down": param_up}
+    return {"param_up": param_up, "param_down": param_up}
 
   else:
     param_down = unitary_matrix_param_init(
@@ -254,6 +257,14 @@ def param_init(
     return gamma(num_kpts, num_electrons, spin, num_bands, spin_restricted)
   elif method == "simplex-projector":
     return simplex_projector_init(num_bands, num_kpts)
+  elif method == "capped-simplex":
+    return simplex_projector_init(num_bands, num_kpts)
+  elif method == "capped-simplex-proj":
+    occ_uni = uniform(num_kpts, num_electrons, spin, num_bands, False)
+    params = {"param_up": occ_uni[0], "param_down": occ_uni[1]}
+    return params
+  elif method == "fermi-dirac":
+    return simplex_projector_init(num_bands, num_kpts)
   else:
     raise ValueError(f"Invalid method: {method}")
 
@@ -264,7 +275,8 @@ def occupation(
   num_electrons: Optional[int] = None,
   spin: int = 0,
   method: str = "simplex-projector",
-  spin_restricted: bool = True
+  spin_restricted: bool = True,
+  temp: Optional[float] = None,
 ) -> Float[Array, 'spin kpt band']:
   if method == "idempotent":
     return idempotent(params, num_kpts, spin_restricted)
@@ -274,6 +286,18 @@ def occupation(
     return stop_gradient(params)
   elif method == "simplex-projector":
     return simplex_projector(params, num_electrons, spin, spin_restricted)
+  elif method == "capped-simplex":
+    return capped_simplex(
+      params, num_electrons, spin, spin_restricted, temp=temp
+    )
+  elif method == "capped-simplex-proj":
+    occ_up = params["param_up"]
+    occ_dn = params["param_down"]
+    occ = jnp.stack([occ_up, occ_dn], axis=0)
+    if spin_restricted:
+      return jnp.sum(occ, axis=0, keepdims=True)
+    else:
+      return occ
   else:
     raise ValueError(f"Invalid method: {method}")
 
@@ -283,10 +307,10 @@ def simplex_projector_init(
   num_kpts: int,
 ) -> dict:
   n = num_bands * num_kpts
-  params_up = (jnp.arange(n) - n//2)*0.1
+  params_up = (jnp.arange(n) - n // 2) * 0.1
   params_up = params_up.reshape([num_kpts, num_bands])
 
-  params_down =(jnp.arange(n) - n//2)*0.1
+  params_down = (jnp.arange(n) - n // 2) * 0.1
   params_down = params_down.reshape([num_kpts, num_bands])
 
   return {"param_up": params_up, "param_down": params_down}
@@ -314,9 +338,8 @@ def proj(x: jnp.array, sum: jnp.array):
     _rho = (x_sum - sum - x_cumsum) / (n - jnp.arange(n) - 1)
     k = jnp.argmax(x_sorted > _rho)
     _lambda = jax.lax.select(
-      k == 0,
-      (x_sum - sum) / n,
-      (x_sum - sum - x_cumsum.at[k-1].get()) / (n - k)
+      k == 0, (x_sum - sum) / n,
+      (x_sum - sum - x_cumsum.at[k - 1].get()) / (n - k)
     )
     return jnp.maximum(x - _lambda, 0.)
 
@@ -325,12 +348,13 @@ def proj(x: jnp.array, sum: jnp.array):
     x_sum = jnp.sum(x)
     x_sorted = x_sorted.at[::-1].get()
     x_cumsum = jnp.cumsum(x_sorted)
-    _rho = (x_sum - sum + (jnp.arange(n) + 1 - x_cumsum)) / (n-jnp.arange(n)-1)
+    _rho = (x_sum - sum + (jnp.arange(n) + 1 - x_cumsum)) / (
+      n - jnp.arange(n) - 1
+    )
     k = jnp.argmax(x_sorted - _rho < 1.)
     _lambda = jax.lax.select(
-      k == 0,
-      (sum-x_sum) / n,
-      (sum-x_sum-(k- x_cumsum.at[k-1].get())) / (n - k)
+      k == 0, (sum - x_sum) / n,
+      (sum - x_sum - (k - x_cumsum.at[k - 1].get())) / (n - k)
     )
     return jnp.minimum(x + _lambda, 1.)
 
@@ -364,3 +388,205 @@ def simplex_projector(
     return jnp.sum(occ, axis=0, keepdims=True)
   else:
     return occ
+
+
+@partial(jax.jit, static_argnames=["n_steps"])
+def proj_capped_simplex(y, n: int, n_steps: int = 5):
+  """Jitted version of proj_capped_simplex with static arguments for n and n_steps.
+
+  This version should be used when calling from jitted contexts.
+  """
+  v_fn = lambda gamma: y - gamma
+  x_opt_fn = lambda gamma: jnp.clip(v_fn(gamma), 0, 1)
+
+  def lagrangian(gamma):
+    x = x_opt_fn(gamma)
+    return -0.5 * ((x - y)**2).sum() - gamma * (x.sum() - n)
+
+  w_g_fn = jax.grad(lagrangian)
+  w_gg_fn = jax.grad(jax.grad(lagrangian))
+
+  # Initial value for gamma
+  # g_init = 0.0
+  g_init = jnp.mean(y) - n / y.shape[0]
+
+  # Define a single Newton step function for scan
+  def newton_step(g, _):
+    g_next = g - w_g_fn(g) / w_gg_fn(g)
+    return g_next, None
+
+  # Use scan to perform n_steps of Newton's method
+  if n_steps == 1:
+    g_final = g_init - w_g_fn(g_init) / w_gg_fn(g_init)
+  else:
+    g_final, _ = jax.lax.scan(newton_step, g_init, None, length=n_steps)
+
+  return x_opt_fn(g_final)
+
+
+@partial(jax.jit, static_argnames=["n_steps"])
+def proj_capped_simplex_analytic(y, n: int, n_steps: int = 5):
+  g_init = jnp.mean(y) - n / y.shape[0]
+
+  def grad_hess(gamma):
+    x_opt = jnp.clip(y - gamma, 0, 1)
+    not_clipped = (y - gamma > 0) & (y - gamma < 1)
+    not_clipped_size = jnp.sum(not_clipped)
+    grad = ((x_opt - y) *
+            not_clipped).sum() + gamma * not_clipped_size - jnp.sum(x_opt) + n
+    hess = not_clipped_size
+    return grad, hess
+
+  def newton_step(g, _):
+    grad, hess = grad_hess(g)
+    g_next = g - grad / hess
+    return g_next, None
+
+  if n_steps == 1:
+    g_final, _ = newton_step(g_init, None)
+  else:
+    g_final, _ = jax.lax.scan(newton_step, g_init, None, length=n_steps)
+
+  return jnp.clip(y - g_final, 0, 1)
+
+
+def capped_simplex(
+  params: dict,
+  num_electrons: int,
+  spin: int = 0,
+  spin_restricted: bool = True,
+  n_steps: int = 5,
+  temp: float = 1.,
+) -> Float[Array, 'spin kpt band']:
+  num_kpts = params["param_up"].shape[0]
+  num_bands = params["param_up"].shape[1]
+
+  m_up = (num_electrons + spin) // 2 * num_kpts
+  m_dn = (num_electrons - spin) // 2 * num_kpts
+
+  occ_up_flat = params["param_up"].reshape(-1)
+  # occ_up_flat = jax.nn.sigmoid(occ_up_flat)
+  # proj_up = proj_capped_simplex(occ_up_flat, m_up, n_steps=n_steps)
+  # proj_up = proj_capped_simplex_analytic(
+  #   occ_up_flat, m_up, n_steps=n_steps
+  # )
+  proj_up = householder_bisection(occ_up_flat, 1 / temp, m_up, n_steps=n_steps)
+  occ_up = proj_up.reshape([num_kpts, num_bands]) / num_kpts
+
+  occ_dn_flat = params["param_down"].reshape(-1)
+  # occ_dn_flat = jax.nn.sigmoid(occ_dn_flat)
+  # proj_dn = proj_capped_simplex(occ_dn_flat, m_dn, n_steps=n_steps)
+  # proj_dn = proj_capped_simplex_analytic(
+  #   occ_dn_flat, m_dn, n_steps=n_steps
+  # )
+  proj_dn = householder_bisection(occ_dn_flat, 1 / temp, m_dn, n_steps=n_steps)
+  occ_dn = proj_dn.reshape([num_kpts, num_bands]) / num_kpts
+
+  occ = jnp.stack([occ_up, occ_dn], axis=0)
+
+  if spin_restricted:
+    return jnp.sum(occ, axis=0, keepdims=True)
+
+  return occ
+
+
+def householder_bisection(
+  o, beta, nk, n_steps: int = 3, order: int = 2, bisect: bool = True
+):
+  mu_lo = jnp.min(o) - 10 / beta
+  mu_hi = jnp.max(o) + 10 / beta
+  F_fn = lambda mu: jax.nn.sigmoid(beta * (mu - o)).sum() - nk
+  mu = 0.5 * (mu_lo + mu_hi)  # initial guess
+  B_fn = lambda mu, mu_lo, mu_hi: (
+    jax.lax.select(F_fn(mu) < 0, mu, mu_lo), jax.lax.
+    select(F_fn(mu) < 0, mu_hi, mu)
+  )
+
+  def householder_step(mu, d):
+    _, dF = jet.jet(lambda mu: 1 / F_fn(mu), primals=(mu,), series=((1., 0.),))
+    return mu + d * dF[-2] / dF[-1]
+
+  if bisect:
+    for _ in range(n_steps):
+      mu_lo, mu_hi = B_fn(mu, mu_lo, mu_hi)
+      mu_B = 0.5 * (mu_lo + mu_hi)
+      mu_H = householder_step(mu_B, order)
+      mu = jax.lax.select(
+        jnp.logical_and(mu_H > mu_lo, mu_H < mu_hi), mu_H, mu_B
+      )
+
+  else:
+    for _ in range(n_steps):
+      mu = householder_step(mu, order)
+
+  f = jax.nn.sigmoid(beta * (mu - o))
+  return f
+
+
+avg_f = 0.7
+B = 10000
+
+
+@jax.custom_vjp
+def elliott(x):  # smooth, (0,1)–bounded
+  return 0.5 * (x / (1.0 + jnp.abs(x)) + 1.0)
+
+
+def elliott_fwd(x):
+  # Forward pass: compute the function and save values needed for backward pass
+  y = elliott(x)
+  return y, x  # Return both output and saved values for backward
+
+
+def elliott_bwd(x, grad_y):
+  # Backward pass: compute gradient with respect to inputs
+  # grad_y is the gradient with respect to the output
+  denom = 1.0 + jnp.abs(x)
+  grad_x = 0.5 / denom**2 * grad_y  # multiply by upstream gradient
+  return (
+    grad_x,
+  )  # Return as tuple, one element per argument of original function
+
+
+# Register the custom gradient
+elliott.defvjp(elliott_fwd, elliott_bwd)
+
+
+def elliott_grad(x):
+  denom = 1.0 + jnp.abs(x)
+  return 0.5 / denom**2  # derivative you need for custom-JVP
+
+
+# speed test
+import time
+
+
+@jax.jit
+def proj_fn(o):
+  # o = jax.nn.sigmoid(o)
+  o = elliott(o)
+  # f = proj_capped_simplex(o, int(avg_f * B), n_steps=1)
+  f = proj(o, int(avg_f * B))
+  return f
+
+
+# proj_grad_jit = jax.jit(jax.grad(lambda _o: (proj_fn(_o).sum())))
+
+# start = time.time()
+# for _ in range(1000):
+#   o = np.random.randn(B)
+#   # f = proj_fn(o)
+#   df_do = proj_grad_jit(o)
+
+# jax.block_until_ready(f)
+# end = time.time()
+# print(f"Time taken for 1000 iterations: {end - start:.4f} seconds")
+
+# for order in range(1, 3):
+#   errors = []
+#   for _ in range(500):
+#     o = np.random.randn(100)
+#     f = householder_bisection(o, 1000, nk=70, n_steps=3, order=order, bisect=True)
+#     errors.append(jnp.abs(f.sum() - 70))
+
+#   print(order, np.mean(errors), np.std(errors))
