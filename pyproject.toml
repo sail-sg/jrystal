@@ -1,0 +1,83 @@
+[project]
+name = "jrystal"
+version = "0.0.1"
+description = "A JAX-based Differentiable DFT Framework for Materials"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "jax>=0.4.27,<0.5.0",
+    "jaxlib>=0.4.27,<0.5.0",
+    "optax>=0.1.4",
+    "jaxtyping",
+    "tqdm",
+    "ase",
+    "absl-py",
+    "einops",
+    "ml-collections",
+    "cloudpickle",
+]
+
+[dependency-groups]
+x86_64 = [
+    "jax-xc==0.0.8",  # Only available for x86_64 platforms
+]
+dev = [
+    "ruff>=0.8.0",
+    "mypy>=1.0.0",
+    "pytest>=8.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel>=0.37.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["jrystal", "geometry", "pseudopotential", "tests"]
+include-package-data = true
+
+[project.scripts]
+jrystal = "main:main"
+
+[tool.ruff]
+line-length = 100
+indent-width = 2
+target-version = "py311"
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "*.egg-info",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "PIE", # flake8-pie
+    "SIM", # flake8-simplify
+]
+
+ignore = [
+    "E731",  # lambda assignments
+    "E402",  # module level import not at top
+    "E741",  # ambiguous variable names
+    "F722",  # forward annotation (for jaxtyping)
+    "N802",  # function name should be lowercase
+    "N803",  # argument name should be lowercase
+    "N806",  # variable in function should be lowercase
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["jrystal", "geometry", "pseudopotential"]
+lines-between-types = 1
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = false

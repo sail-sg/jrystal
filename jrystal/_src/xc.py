@@ -4,10 +4,20 @@ from typing import Callable, Optional
 import jax
 import jax.numpy as jnp
 from jax.lax import stop_gradient
-from jax_xc.utils import get_p
 from jaxtyping import Array, Float
 
 from .utils import absolute_square, safe_real
+
+# Try to import jax_xc, make it optional
+try:
+    from jax_xc.utils import get_p
+    JAX_XC_AVAILABLE = True
+except ImportError:
+    JAX_XC_AVAILABLE = False
+    # Define a stub get_p function if jax_xc is not available
+    def get_p(rho, threshold=1e-15):
+        """Stub function when jax_xc is not available."""
+        raise NotImplementedError("jax_xc is not installed. Install it for XC functional support.")
 
 
 def get_xc_functional(xc: str = 'gga_x_pbe', polarized: bool = False):
@@ -20,6 +30,9 @@ def get_xc_functional(xc: str = 'gga_x_pbe', polarized: bool = False):
     Returns:
         The requested functional implementation
     """
+  if not JAX_XC_AVAILABLE:
+    raise ImportError("jax_xc is not installed. Install it for XC functional support.")
+  
   polarization = 'pol' if polarized else 'unpol'
   try:
     module_path = f"jax_xc.impl.{xc}"
