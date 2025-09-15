@@ -27,9 +27,7 @@ from typing import Any, Tuple
 import jax
 import jax.interpreters
 import jax.numpy as jnp
-from jax import core
 from jax._src.interpreters import batching
-from jax.interpreters import mlir
 
 from .custom_sharding import custom_sharding_by_mesh
 
@@ -75,14 +73,17 @@ def _fftn_impl(x: jnp.ndarray) -> jnp.ndarray:
   return jnp.fft.fftn(x, axes=range(-3, 0))
 
 
-# Primitive definitions
-_ifftn_p = core.Primitive("ifftn_sharding")
-_ifftn_p.def_impl(_ifftn_impl)
-mlir.register_lowering(_ifftn_p, mlir.lower_fun(_ifftn_impl, False))
+# Primitive definitions - updated for JAX 0.7.x
+from jax._src.interpreters import mlir as mlir_internal
+from jax._src import core as core_internal
 
-_fftn_p = core.Primitive("fftn_sharding")
+_ifftn_p = core_internal.Primitive("ifftn_sharding")
+_ifftn_p.def_impl(_ifftn_impl)
+mlir_internal.register_lowering(_ifftn_p, mlir_internal.lower_fun(_ifftn_impl, False))
+
+_fftn_p = core_internal.Primitive("fftn_sharding")
 _fftn_p.def_impl(_fftn_impl)
-mlir.register_lowering(_fftn_p, mlir.lower_fun(_fftn_impl, False))
+mlir_internal.register_lowering(_fftn_p, mlir_internal.lower_fun(_fftn_impl, False))
 
 
 def _ifftn_jvp(primals, tangents):
