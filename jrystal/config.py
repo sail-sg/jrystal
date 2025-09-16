@@ -25,7 +25,6 @@ class JrystalConfigDict(ConfigDict):
   save_dir: Optional[str]
   xc: str
   use_pseudopotential: bool
-  pseudopotential_type: str
   pseudopotential_file_dir: Optional[str]
   freq_mask_method: str
   cutoff_energy: float
@@ -66,7 +65,6 @@ default_config = {
   "spin": 0,
   "xc": "lda_x",
   "use_pseudopotential": False,
-  "pseudopotential_type": "normconserving",
   "pseudopotential_file_dir": None,
   "freq_mask_method": "spherical",
   "cutoff_energy": 100,

@@ -16,8 +16,10 @@ save_dir: null
 ################################################
 # xc functional
 # xc: "lda_x+lda_c_pw"
-# xc: "gga_x_pbe+gga_c_pbe"
-xc: "lda_x"
+xc: "gga_x_pbe+gga_c_pbe"
+# xc: "gga_c_pbe" # TODO: this gives nan when polarized
+# xc: "lda_x"
+# xc: "gga_x_pbe"
 
 
 ################################################
@@ -26,8 +28,6 @@ xc: "lda_x"
 
 # if false, the code will use the all-electron calculation
 use_pseudopotential: true
-pseudopotential_type: "nc"
-# pseudopotential_type can be either "normconserving" or "ultrasoft".
 pseudopotential_file_dir: null
 # The pseudopotential file directory. If None, the code will use the default
 # pseudopotential file directory.
@@ -44,8 +44,9 @@ freq_mask_method: "spherical"
 # cutoff energy in Hartree
 cutoff_energy: 40
 # grid sizes for the FFT grid
-grid_sizes: 32
+grid_sizes: 16
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
+# k_grid_sizes: [2, 2, 2]
 k_grid_sizes: [1, 1, 1]
 # Occupation method
 occupation: "simplex-projector"
