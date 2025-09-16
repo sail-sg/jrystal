@@ -40,7 +40,7 @@ from .opt_utils import (
   set_env_params,
   get_ewald_coulomb_repulsion,
 )
-from .pre_calc import pre_calc_beta_sbt
+from .pre_calc_beta_sbt import pre_calc_beta_sbt
 
 
 @dataclass

@@ -25,7 +25,6 @@ from jax.scipy.special import sph_harm, sph_harm_y
 from jaxtyping import Float, Array
 from typing import Callable
 from .._src.utils import vmapstack
-from einops import einsum
 
 
 def cartesian_to_spherical(x: Float[Array, "*n 3"],
@@ -62,29 +61,7 @@ def cartesian_to_spherical(x: Float[Array, "*n 3"],
   return jnp.stack((r, theta, phi), axis=-1)
 
 
-def batch_sph_harm_real(
-  l: int,
-  theta: Float[Array, "*batch"],
-  phi: Float[Array, "*batch"]
-) -> Float[Array, "*batch m"]:
-  """
-  Compute the real form of spherical harmonics for a batch of points.
-  """
-  _sph_harm1 = batch_sph_harm(l, theta, phi)  # [*batch m]
-  m = jnp.arange(-l, l + 1)
-  _sph_harm2 = einsum(_sph_harm1.conj(), (-1) ** m, "... m, m -> ... m")
-
-  output = jnp.where(
-    m >= 0,
-    _sph_harm1.real * jnp.sqrt(2) * (-1) ** m,
-    _sph_harm2.imag * jnp.sqrt(2) * (-1) ** m,
-  )  # [m, *batch]
-
-  output = output.at[..., l].set(_sph_harm1[..., l].real)
-  return output
-
-
-def batch_sph_harm(
+def batched_sph_harm(
   l: int,
   theta: Float[Array, "*batch"],
   phi: Float[Array, "*batch"],
@@ -104,8 +81,7 @@ def batch_sph_harm(
     phi (Float[Array, "*batch"]): The polar angle.
 
   Returns:
-    Float[Array, "*batch m"]: The spherical harmonics, where the last dimension
-    is the magnetic quantum number.
+    Float[Array, "*batch m"]: The spherical harmonics, where the last dimension is the magnetic quantum number.
 
   """
   dim = theta.ndim
@@ -165,7 +141,7 @@ def legendre_to_sph_harm(
 
       y_lm = jnp.pad(y_lm, (0, (l_max - l) * 2), constant_values=0)
       # pad the y_lm to length l_max with zeros
-      return y_lm * 4 * jnp.pi  # [m]
+      return y_lm * 2 * jnp.sqrt(jnp.pi)  # [m]
 
     return _f(x)
 

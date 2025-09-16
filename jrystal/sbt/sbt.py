@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Spherical Bessel Transform. """
-# import jax.numpy as jnp
-from typing import List, Tuple, Union
-
+import jax.numpy as jnp
+from typing import Tuple, List, Union
+from jaxtyping import Array, Float
 import numpy as np
 import scipy
-from jaxtyping import Array, Float
 
 from .pysbt import pyNumSBT
 
@@ -49,30 +48,30 @@ def sbt(
       transformed_f_grid). k_grid is a 1d-array, and transformed_f_grid is the
       transformed function values.
   """
-  r_grid = r_grid.astype(np.result_type(float, r_grid.dtype))
-  f_grid = f_grid.astype(np.result_type(float, f_grid.dtype))
+  r_grid = r_grid.astype(jnp.result_type(float, r_grid.dtype))
+  f_grid = f_grid.astype(jnp.result_type(float, f_grid.dtype))
 
   def _sbt(r_grid, f_grid, l=l, kmax=kmax, norm=norm):  # noqa
     ss = pyNumSBT(r_grid, kmax=kmax)
     return (
-      np.asarray(ss.kk, dtype=np.result_type(float, r_grid.dtype)),
-      np.asarray(
+      jnp.asarray(ss.kk, dtype=jnp.result_type(float, r_grid.dtype)),
+      jnp.asarray(
         ss.run(f_grid, l=l, direction=1, norm=norm),
-        dtype=np.result_type(float, r_grid.dtype)
+        dtype=jnp.result_type(float, r_grid.dtype)
       )
     )
 
   return _sbt(r_grid, f_grid, l=l, kmax=kmax, norm=norm)
 
 
-def batch_sbt(
+def batched_sbt(
   r_grid: Float[Array, "ngrid"],
   f_grid: Float[Array, "nbatch ngrid"],
   l: Union[int, List[int]],
   kmax: float = 100,
   norm: bool = False
 ) -> Tuple:
-  """batch spherical bessel transform for multiple functions.
+  """batched spherical bessel transform for multiple functions.
 
     sbt: g(k) = int_0^\infty f(r) j_l(r) r^2 dr
 
@@ -85,8 +84,8 @@ def batch_sbt(
     norm (bool, optional): Whether to normalize the output. Defaults to False.
 
   Returns:
-    Tuple: A tuple of (k_grid, batch_transformed_f_grid). k_grid is a
-    1d-array, and batch_transformed_f_grid is BxN shaped, where B is the
+    Tuple: A tuple of (k_grid, batched_transformed_f_grid). k_grid is a
+    1d-array, and batched_transformed_f_grid is BxN shaped, where B is the
     number of batches and N is the number of grid point.
   """
   output = []
@@ -100,7 +99,7 @@ def batch_sbt(
       output.append(g)
   else:
     raise ValueError("\'l\' must be a integer or a list of int")
-  return k, np.vstack(output)
+  return k, jnp.vstack(output)
 
 
 def _sbt_hankel(r_grid, f_grid, l: int = 0, kmax: int = 100):  # noqa

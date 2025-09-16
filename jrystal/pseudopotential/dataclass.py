@@ -148,8 +148,7 @@ class NormConservingPseudopotential(Pseudopotential):
         nonlocal_beta_cutoff_radius.append(beta_i['cutoff_radius'])
         d_mat = np.array(pp["PP_NONLOCAL"]["PP_DIJ"])
         d_mat = np.reshape(d_mat, [num_beta, num_beta])
-        nonlocal_d_matrix.append(d_mat / 2)
-        # 1/2 is due to the conversion from rydberg to hartree.
+        nonlocal_d_matrix.append(d_mat)
 
       else:
         nonlocal_num_beta.append(1)
@@ -161,6 +160,7 @@ class NormConservingPseudopotential(Pseudopotential):
         d_mat = np.zeros([1, 1])
         nonlocal_d_matrix.append(d_mat)
 
+      # 1/2 is due to the conversion from rydberg to hartree.
       nonlocal_angular_momentum.append(np.array(beta_angular_momentum))
       nonlocal_valence_configuration.append(
         pp["PP_INFO"]["Valence configuration"]
@@ -254,11 +254,7 @@ class UltrasoftPseudopotential(NormConservingPseudopotential):
         # q_matrix *= 2 * np.sqrt(np.pi)
         num_q = len(pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_Q"])
         num_q = np.sqrt(num_q).astype(int)
-        q_matrix = q_matrix.reshape(num_q, num_q)
-        assert np.linalg.eigvalsh(q_matrix).max() >= -1, (
-          "The q_matrix is not negative semi-definite."
-        )
-        nonlocal_augmentation_q_matrix.append(q_matrix)
+        nonlocal_augmentation_q_matrix.append(q_matrix.reshape(num_q, num_q))
 
         num_r_grid = len(pp["PP_MESH"]["PP_R"])
         r_grid = np.array(pp["PP_MESH"]["PP_R"])

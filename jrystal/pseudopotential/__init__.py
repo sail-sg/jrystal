@@ -21,28 +21,13 @@ norm-conserving pseudopotentials. Please note that many functions in this module
 are not yet fully differentiable.
 
 """
-from . import dataclass
-from .dataclass import (
-  Pseudopotential,
-  NormConservingPseudopotential,
-  UltrasoftPseudopotential,
-)
-from . import local
-from . import load
-from . import utils
-from . import normcons
-from . import nloc
-from . import interpolate
-from . import spherical
-from . import beta
-from . import ultrasoft
-from . import clebsch_gordan
+from . import beta, dataclass, load, local, nloc, normcons, spherical, utils
+from .dataclass import NormConservingPseudopotential, Pseudopotential
 
 __all__ = [
   "dataclass",
   "Pseudopotential",
   "NormConservingPseudopotential",
-  "UltrasoftPseudopotential",
   'local',
   'load',
   'spherical',
@@ -50,6 +35,4 @@ __all__ = [
   'utils',
   'normcons',
   'nloc',
-  'ultrasoft',
-  'clebsch_gordan',
 ]
