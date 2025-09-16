@@ -1,5 +1,24 @@
 """Nonlocal Pseudopotential. """
 
+<<<<<<< HEAD
+import numpy as np
+import jax
+import jax.numpy as jnp
+from typing import List, Optional
+from jaxtyping import Float, Array, Complex
+from einops import einsum
+
+from .._src import braket, kinetic
+from .._src import potential
+from .._src.utils import wave_to_density
+from .utils import map_over_atoms
+from .._src import pw
+from .spherical import (
+  legendre_to_sph_harm, batched_sph_harm, cartesian_to_spherical
+)
+from .local import hamiltonian_local, energy_local
+from .beta import _beta_sbt_single_atom, beta_sbt_grid
+=======
 from typing import List, Optional
 
 import jax
@@ -17,6 +36,7 @@ from .spherical import (
   batch_sph_harm_real,
 )
 from .utils import map_over_atoms
+>>>>>>> refactor_pp
 
 
 def _compute_spherical_harmonics(
@@ -35,6 +55,17 @@ def _compute_spherical_harmonics(
     r_sph = cartesian_to_spherical(r_vector_grid)
     _, r_theta, r_phi = r_sph[..., 0], r_sph[..., 1], r_sph[..., 2]
 
+<<<<<<< HEAD
+    y_lm = jnp.zeros((l_max + 1, *ndims, 2 * l_max + 1)) + 0.j
+    for i in range(l_max + 1):
+      y_lm = y_lm.at[i, ..., :(2 * i + 1)].set(
+        batched_sph_harm(i, r_theta, r_phi)
+      )
+    return y_lm
+
+
+def _potential_nonlocal_psi_reciprocal(
+=======
     y_lm = jnp.zeros((l_max + 1, *ndims, 2 * l_max + 1)) + 0.j  # [l x y z m]
     for i in range(l_max + 1):
       m_start = l_max - (2 * i + 1) // 2
@@ -47,6 +78,7 @@ def _compute_spherical_harmonics(
 
 
 def potential_nonlocal_psi_reciprocal(
+>>>>>>> refactor_pp
   position: Float[Array, "atom 3"],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Float[Array, "kpt 3"],
@@ -236,7 +268,6 @@ def _potential_nonlocal_psi_reciprocal(
     for k in kappa_list:
       kappa.append(k(gk_vector_grid))
     kappa = jnp.stack(kappa)  # shape: [beta nk x y z m]
-
     kappa = einsum(
       d_matrix_sqrt,
       kappa,
