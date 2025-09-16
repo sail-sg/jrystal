@@ -14,13 +14,12 @@ from .._src import pw
 from .._src.utils import expand_coefficient
 from ..grid import r2g_vector_grid
 from .beta import beta_sbt_grid
-from .clebsch_gordan import batch_gaunt, batch_wigner_3j, batch_clebsch_gordan
 from .local import potential_local_reciprocal
 from .nloc import energy_local
 from .nloc import energy_nonlocal as _energy_nonlocal
 from .nloc import potential_nonlocal_psi_reciprocal
 from .spherical import (
-  batch_sph_harm, cartesian_to_spherical, batch_sph_harm_real,
+  cartesian_to_spherical, batch_sph_harm_real,
 )
 from .utils import map_over_atoms
 
@@ -122,106 +121,6 @@ def get_ultrasoft_coeff_fun(
     y = U @ y
     y = y + x
     return y
-
-  def f(
-    coeff: Complex[Array, "s k band x y z"],
-  ) -> Complex[Array, "s k band x y z"]:
-    coeff = coeff.at[..., freq_mask].get()
-    # coeff = jnp.reshape(coeff, (coeff.shape[:3], -1))  # [s k b G]
-    coeff = einsum(coeff, "s k b g -> s b k g")  # [s band k g]
-
-    # _get_s_sqrt requires the input to be [g, atom_m] and [g], but what we have
-    # is psi_G as B [k g atom_m] and coeff as x [s b k g]
-    _s_sqrt = jax.vmap(_get_s_sqrt, in_axes=(0, 0))  # map over kpt
-    _s_sqrt = jax.vmap(
-      jax.vmap(_s_sqrt, in_axes=(None, 0)), in_axes=(None, 0)
-    )  # map over s and band
-    output = _s_sqrt(psi_G, coeff.conj())  # shape = [s b k g]
-
-    output = einsum(output, "s b k g -> s k g b")
-    output = expand_coefficient(output, freq_mask)
-    return output
-
-  return f
-
-
-def _get_ultrasoft_coeff_fun(
-  position: Float[Array, "atom 3"],
-  kpts: Float[Array, "kpt 3"],
-  g_vector_grid: Float[Array, "x y z 3"],
-  freq_mask: Float[Array, "x y z"],
-  vol: float,
-  r_grid: List[Float[Array, "r"]],
-  nonlocal_beta_grid: List[Float[Array, "beta r"]],
-  nonlocal_angular_momentum: List[List[int]],
-  nonlocal_q_matrix: List[Float[Array, "beta beta"]],
-  beta_gk: Float[Array, "kpt beta x y z"],
-) -> Callable[[Float[Array, "band x y z"]], Float[Array, "kpt beta x y z"]]:
-  """
-
-    S^{-1/2} | G + k > · C = S^{-1/2} psi(C)
-
-  return a callable function that can transform the coefficients of the wave
-  functions into the overlap sqrt.
-
-    f: C -> S^{-1/2} psi(C)
-
-  The reason why we need this functional is because it is usually intractable
-  to calculate the sqrt of the overlap operator on plane wave basis, but we can
-  calcualte the product of that with the coefficients of the wave functions.
-
-  This output f function transform the orthogonal coefficients into the
-  ultrasoft coefficient such that the new coefficients C' satisfy
-
-    < C' | S | C' > = 1
-
-  where S is the overlap operator in ultrasoft pseudopotential.
-  """
-  # transform the q_ij matrix (1D radial) to the real space. The difference is
-  # sizes = g_vector_grid.shape[:3]
-  const = jnp.sqrt(4*jnp.pi)
-  nonlocal_q_matrix = [-q * const for q in nonlocal_q_matrix]
-  # The minus sign is because the q_ij matrix is negative semi-definite.
-  # Need to make it positive semi-definite.
-
-  psi_G = potential_nonlocal_psi_reciprocal(
-    position,
-    g_vector_grid,
-    kpts,
-    r_grid,
-    nonlocal_beta_grid,
-    nonlocal_angular_momentum,
-    nonlocal_q_matrix,
-    beta_gk,
-    concat=False
-  )
-  # [kpt beta m x y z]  <G | beta>, the integral is analytically done,
-  # therefore no factor is needed.
-
-  # grid_sizes = g_vector_grid.shape[:3]
-  # psi_G = [p * jnp.sqrt(vol / np.prod(grid_sizes)) for p in psi_G]
-
-  def _process_psi_G(_pg):
-    _pg = _pg.at[..., freq_mask].get()  # [k beta m g]
-    _pg = jnp.reshape(_pg, (_pg.shape[0], -1, _pg.shape[-1]))  # [kpt i g]
-    _pg = einsum(_pg, "k i g -> k g i")
-    return _pg
-
-  psi_G = jnp.concatenate([_process_psi_G(_pg) for _pg in psi_G], axis=-1)
-  # [kpt g atom_i]
-
-  def _get_s_sqrt(B, x):   # (B: [G atom_m], x: [G]) -> [G]
-    # this function returns S^{-1/2} x, where S = I - B B^H
-    # B is a matrix of shape [G, atom_m], and x is a vec of size G
-    assert B.shape[0] == x.shape[0]
-    # get the sqrt of the S matrix. S is written as S = I - B B^T
-    U, L, _ = jnp.linalg.svd(B, full_matrices=False)  # U shape: [G atom_m]
-    y = (U.conj().T@x.conj())  # [atom_m]
-    # diag = (1. - L**2/(1+L**2))**0.5-1.
-    # output = x + einsum(U.conj(), diag, y, "g b, b, b -> g")
-    diag = (1. + L**2/(1+0.j-L**2))**0.5 - 1.
-    output = x.conj() + einsum(U, diag.conj(), y, "g b, b, b -> g")
-    return output   # output is a vec of size g
 
   def f(
     coeff: Complex[Array, "s k band x y z"],
@@ -362,61 +261,6 @@ def _augmentation_density(
   return jnp.sum(jnp.stack(output), axis=0)
 
 
-def __augmentation_density(
-  q_ij: List[Float[Array, "i j l m x y z"]],
-  rho_ij: List[Float[Array, "beta1 beta2"]],
-  nonlocal_angular_momentum: List[List[int]],
-  nonlocal_augmentation_q_with_l: List[bool],
-) -> Float[Array, "s x y z"]:
-  """
-  Calculate the augmentation density:
-
-    n_aug(r) = \sum_ij CG_coeff Q_ij(r) * \rho_ij(r)
-
-  q_ij is the real space Q_ij(r), which can be calculated by `_Q_ij_real_grid`.
-  rho_ij is the real space density matrix, which can be calculated by _rho_ij.
-  nonlocal_augmentation_q_with_l is the flag to indicate whether the Q_ij(r)
-  is with angular momentum.
-
-  """
-  @map_over_atoms
-  def _fun(q, rho, q_with_l, proj_l):
-    l_q_max = q.shape[2] - 1
-    l_proj_max = np.max(proj_l)
-
-    m_proj = np.arange(-l_proj_max, l_proj_max+1)
-    m_q = np.arange(-l_q_max, l_q_max + 1)
-
-    if q_with_l:
-      _cg = batch_gaunt(
-        proj_l, proj_l, np.arange(l_q_max + 1), m_proj, m_proj, m_q
-      )  # [beta, beta, q_l, m, m, q_m]
-      _cg = einsum(
-        _cg, (-1)**proj_l,  "b1 b2 l m1 m2 m, b2-> b1 b2 l m"
-      )
-
-      _cg *= jnp.sqrt(4*jnp.pi)
-
-      output = einsum(
-        _cg, q,
-        "beta1 beta2 l m, beta1 beta2 l m x y z -> beta1 beta2 x y z"
-      )
-      # output = einsum(q, "beta1 beta2 l m x y z -> beta1 beta2 x y z")
-      output = einsum(
-        output, rho, "beta1 beta2 x y z, beta1 beta2 -> x y z"
-      )  # the minus sign is because the q_ij matrix is negative semi-definite.
-      return output
-
-    else:
-      raise NotImplementedError("q_with_l is not supported.")
-      # return einsum(q, rho, "beta1 beta2 l m x y z, beta1 beta2 -> x y z")
-
-  output = _fun(
-    q_ij, rho_ij, nonlocal_augmentation_q_with_l, nonlocal_angular_momentum
-  )
-  return jnp.sum(jnp.stack(output), axis=0)
-
-
 def density_grid(
   ultrasoft_coeff: Complex[Array, "s kpt band x y z"],
   freq_mask: Float[Array, "x y z"],
@@ -435,6 +279,7 @@ def density_grid(
 ) -> Float[Array, "s x y z"]:
   """
     n(r) = n_pw(r) + \sum_ij Q_ij(r) * \rho_ij(r)
+
   """
   # g_vector_grid = g2r_vector_grid(g_vector_grid)
   g_vector_grid = r2g_vector_grid(r_vector_grid)

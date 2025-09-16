@@ -12,12 +12,16 @@ from jax._src import mesh as mesh_lib
 from jax._src import sharding_impls
 from jax._src import xla_bridge as xb
 from jax._src.custom_partitioning import (
-    _check_for_tracers, _custom_partitioning_abstract_eval,
+    _check_for_tracers,
+    _custom_partitioning_abstract_eval,
     _custom_partitioning_impl,
     _custom_partitioning_infer_sharding_from_operands,
     _custom_partitioning_partition,
-    _custom_partitioning_propagate_user_sharding, _resolve_kwargs,
-    _sharding_callbacks, _ShardingCallbackInfo)
+    _custom_partitioning_propagate_user_sharding,
+    _resolve_kwargs,
+    _sharding_callbacks,
+    _ShardingCallbackInfo,
+)
 from jax._src.interpreters import batching, mlir
 from jax._src.interpreters import partial_eval as pe
 from jax._src.lib import xla_client as xc

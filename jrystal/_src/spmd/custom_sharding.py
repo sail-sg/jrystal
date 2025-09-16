@@ -8,10 +8,11 @@ https://jax.readthedocs.io/en/latest/jax.experimental.custom_partitioning.html
 from typing import Callable
 
 import jax
+
+# from .custom_partitioning import jrystal_custom_partitioning
+from jax.experimental.custom_partitioning import custom_partitioning
 from jax.sharding import NamedSharding
 from jax.sharding import PartitionSpec as P
-
-from .custom_partitioning import jrystal_custom_partitioning
 
 
 def _supported_sharding(sharding, shape):
@@ -29,12 +30,12 @@ def _infer_sharding_from_operands(mesh, arg_shapes, result_shape):
 
 def custom_sharding_by_mesh(fun: Callable[..., jax.Array]) -> Callable:
   """Inserts a CustomCallOp into the XLA graph with custom SPMD lowering rules
-  such that the transformed function can be sharded over the first batched
+  such that the transformed function can be sharded over the first batch
   dimensions.
 
   Args:
       fun (Callable[..., jax.Array]): a function that takes arguments have
-        batched dimensions.
+        batch dimensions.
 
   Returns:
       Callable:
@@ -48,7 +49,7 @@ def custom_sharding_by_mesh(fun: Callable[..., jax.Array]) -> Callable:
     sharding = _supported_sharding(arg_shardings[0], arg_shapes[0])
     return mesh, fun, sharding, (sharding,)
 
-  sharded_fun = jrystal_custom_partitioning(fun)
+  sharded_fun = custom_partitioning(fun)
   sharded_fun.def_partition(
     infer_sharding_from_operands=_infer_sharding_from_operands,
     partition=_partition,

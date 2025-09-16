@@ -110,7 +110,8 @@ def calc(
     pseudopot.r_grid,
     pseudopot.local_potential_grid,
     pseudopot.local_potential_charge,
-    crystal.vol
+    crystal.vol,
+    fourier_transform_method="sbt",
   )
   logging.info("Initializing pseudopotential (Spherical Bessel Transform)...")
   start = time.time()
@@ -118,7 +119,9 @@ def calc(
     pseudopot,
     np.array(g_vec),
     np.array(k_path),
+    sbt_method="sbt",
   )  # shape: [kpt beta x y z]
+
   end = time.time()
   logging.info(
     f"Spherical Bessel Transform done. Times: {end - start:.2f} seconds"

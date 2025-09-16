@@ -20,9 +20,12 @@ PySBT can be found: https://github.com/QijingZheng/pySBT.git
 """
 from .pysbt import pyNumSBT
 from .sbt import batch_sbt, sbt
+from .sbt_numerical import sbt as sbt_numerical
+
 
 __all__ = [
   "pyNumSBT",
   "sbt",
   "batch_sbt",
+  "sbt_numerical",
 ]

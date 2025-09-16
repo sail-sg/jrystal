@@ -24,7 +24,7 @@ from interpax import CubicSpline
 from jaxtyping import Array, Complex, Float
 
 from .._src import braket
-from ..sbt import sbt
+from ..sbt import sbt, sbt_numerical
 from ..grid import g2r_vector_grid
 from .utils import map_over_atoms
 
@@ -40,9 +40,9 @@ def potential_local_reciprocal(
 ) -> Float[Array, "x y z"]:
   """Calculate the local potential in reciprocal space.
 
-  This function computes the local pseudopotential contribution in
-  reciprocal space by transforming the real-space local potentials
-  and applying structure factors.
+    This function computes the local pseudopotential contribution in
+    reciprocal space by transforming the real-space local potentials
+    and applying structure factors.
 
   .. math::
 
@@ -58,8 +58,8 @@ def potential_local_reciprocal(
     radial grids.
     local_potential_charge (List[int]): Nuclear charges for each atom type.
     vol (float): Unit cell volume.
-    fourier_transform (str): Fourier transform method. Can be either "sbt" or
-    "fft".
+    fourier_transform (str): Fourier transform method. Can be any of "sbt",
+    "numerical" or "fft".
 
   Returns:
     Float[Array, "x y z"]: Local potential in reciprocal space grid.
@@ -85,6 +85,18 @@ def potential_local_reciprocal(
       #  factor of 4 * pi is due to the fourier transform of Yukawa potential
       return f_k
 
+  elif fourier_transform_method == "numerical":
+    @map_over_atoms
+    def g(r, v_r, z):
+      v_r_prime = v_r + z / r
+      kk, f_k = sbt_numerical(
+        r_grid=r, f_grid=v_r_prime, l=0, kmax=np.max(g_radius)
+      )
+      f_k = CubicSpline(kk, f_k, axis=1)(g_radius)
+      f_k *= 4 * jnp.pi
+      #  factor of 4 * pi is due to the fourier transform of Yukawa potential
+      return f_k
+
   elif fourier_transform_method == "fft":
     @map_over_atoms
     def g(r, v_r, z):
@@ -97,7 +109,7 @@ def potential_local_reciprocal(
   else:
     raise ValueError(
       f"Invalid fourier transform method: {fourier_transform_method}."
-      f"Can only be 'sbt' or 'fft'."
+      f"Can only be any of 'sbt', 'numerical' or 'fft'."
     )
 
   v1_g = g(r_grid, local_potential_grid, local_potential_charge)

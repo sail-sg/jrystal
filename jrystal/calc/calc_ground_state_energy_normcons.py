@@ -102,10 +102,11 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Number of k-vectors: {proper_grid_size(config.k_grid_sizes)}")
   num_bands = ceil(valence_charges / 2) + config.empty_bands
   logging.info(f"num_bands: {num_bands}")
+  valence_charges = np.sum(pseudopot.valence_charges)
+  logging.info(f"Valence charges: {valence_charges}")
   logging.info(f"XC functional: {config.xc}")
   freq_mask = create_freq_mask(config)
   ew = get_ewald_coulomb_repulsion(config)
-  valence_charges = np.sum(pseudopot.valence_charges)
 
   convergence_checker = create_convergence_checker(config)
   converged = False
@@ -118,7 +119,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     pseudopot.r_grid,
     pseudopot.local_potential_grid,
     pseudopot.local_potential_charge,
-    crystal.vol
+    crystal.vol,
+    fourier_transform_method="sbt",
   )
 
   k_vec = jax.device_put(k_vec, NamedSharding(mesh, P('k')))
@@ -130,7 +132,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   beta_gk = pre_calc_beta_sbt(
     pseudopot,
     np.array(g_vec),
-    np.array(k_vec)
+    np.array(k_vec),
+    sbt_method="sbt",
   )
   beta_gk = jax.device_put(beta_gk, NamedSharding(mesh, P('k')))
   end = time.time()

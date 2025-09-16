@@ -21,13 +21,9 @@ Example:
   >>> # Apply inverse 3D FFT
   >>> z = ifftn3d(y)
 """
-
-from typing import Any, Tuple
-
 import jax
-import jax.interpreters
 import jax.numpy as jnp
-from jax import core
+from jax._src import core
 from jax._src.interpreters import batching
 from jax.interpreters import mlir
 
@@ -101,15 +97,15 @@ def _fftn_tranpose_rule(cotangent, x):
   return fftn3d(cotangent),
 
 
-def _ifftn_batching_rule(batched_args, batch_dims):
-  x, = batched_args
+def _ifftn_batching_rule(batch_args, batch_dims):
+  x, = batch_args
   bd, = batch_dims
   x = batching.moveaxis(x, bd, 0)
   return ifftn3d(x), 0
 
 
-def _fftn_batching_rule(batched_args, batch_dims):
-  x, = batched_args
+def _fftn_batching_rule(batch_args, batch_dims):
+  x, = batch_args
   bd, = batch_dims
   x = batching.moveaxis(x, bd, 0)
   return fftn3d(x), 0

@@ -44,7 +44,6 @@ class Crystal:
 
   See :doc:`Create A Crystal Structure <../examples/crystal>` for more details.
 
-
   Examples:
 
   .. code:: python

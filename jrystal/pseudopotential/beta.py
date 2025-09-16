@@ -17,10 +17,8 @@ from typing import List, Optional
 import numpy as np
 from jaxtyping import Array, Float, Int
 
-# from interpax import CubicSpline
 from scipy.interpolate import CubicSpline
-
-from ..sbt import batch_sbt
+from ..sbt import batch_sbt, sbt_numerical
 
 
 def _beta_sbt_single_atom(
@@ -28,7 +26,9 @@ def _beta_sbt_single_atom(
   nonlocal_beta_grid: Float[Array, "beta r"],
   nonlocal_angular_momentum: Int[Array, "beta"],
   g_vector_grid: Float[Array, "x y z 3"],
-  kpts: Optional[Float[Array, "kpt 3"]] = None
+  kpts: Optional[Float[Array, "kpt 3"]] = None,
+  r_ab: Optional[Float[Array, "r"]] = None,
+  method: str = "sbt"
 ) -> Float[Array, "kpt beta x y z"]:
   """
   Calculate the spherical bessel transform of the beta functions for a single
@@ -50,12 +50,16 @@ def _beta_sbt_single_atom(
       g_vector_grid (Float[Array, "x y z 3"]): reciprocal vectors to
       interpolate.
       kpts (Optional[Float[Array, "kpt 3"]]): k-points. Default is None.
+      sbt_method (str): the method to use for the spherical bessel transform.
+      Options include "sbt" and "numerical". Defaults to "sbt".
 
   Returns:
       Float[Array, "kpt beta x y z"]: the beta functions in reciprocal space.
   """
   assert len(nonlocal_angular_momentum) == nonlocal_beta_grid.shape[0]
   assert r_grid.shape[0] == nonlocal_beta_grid.shape[1]
+  assert method in ["sbt", "numerical"]
+
   if r_grid[0] == 0:
     r_grid = r_grid[1:]
     nonlocal_beta_grid = nonlocal_beta_grid[:, 1:]
@@ -69,13 +73,25 @@ def _beta_sbt_single_atom(
   else:
     gk_vector_grid = np.expand_dims(g_vector_grid, 0)  # [1 x y z 3]
 
-  radius = np.sqrt(np.sum(gk_vector_grid**2, axis=-1))
-  k, beta_k = batch_sbt(
-    r_grid, nonlocal_beta_grid, l=nonlocal_angular_momentum,
-    kmax=np.max(radius)
-  )
+  radius = np.sqrt(np.sum(gk_vector_grid**2, axis=-1))  # [nk x y z]
 
-  beta_sbt = CubicSpline(k, beta_k, axis=1)(radius)
+  if method == "sbt":
+    k, beta_k = batch_sbt(
+      r_grid, nonlocal_beta_grid, l=nonlocal_angular_momentum,
+      kmax=np.max(radius)
+    )
+    beta_sbt = CubicSpline(k, beta_k, axis=1)(radius)
+
+  elif method == "numerical":
+    assert r_ab is not None, "r_ab is required for numerical method"
+    k, beta_k = sbt_numerical(
+      r_grid, nonlocal_beta_grid,
+      l=nonlocal_angular_momentum,
+      kmax=np.max(radius),
+      delta_r=r_ab
+    )  # [beta nk x y z]
+    beta_sbt = CubicSpline(k, beta_k, axis=1)(radius)
+
   beta_sbt = np.swapaxes(beta_sbt, 0, 1)
   return beta_sbt
 
@@ -85,7 +101,9 @@ def beta_sbt_grid(
   nonlocal_beta_grid: List[Float[Array, "beta r"]],
   nonlocal_angular_momentum: List[List[int]],
   g_vector_grid: Float[Array, "x y z 3"],
-  kpts: Optional[Float[Array, "kpt 3"]] = None
+  kpts: Optional[Float[Array, "kpt 3"]] = None,
+  r_ab: Optional[List[Float[Array, "r"]]] = None,
+  method: str = "sbt"
 ) -> List[Float[Array, "kpt beta x y z"]]:
   """
   Calculate the spherical bessel transform of the beta functions for multiple
@@ -100,7 +118,7 @@ def beta_sbt_grid(
 
   Args:
     r_grid (List[Float[Array, "r"]]): the r grid corresponding to the beta
-      functions.
+    functions.
     nonlocal_beta_grid (List[Float[Array, "beta r"]]): beta values.
     nonlocal_angular_momentum (List[List[int]]): angular momentum corresponding
     to the beta functions.
@@ -114,7 +132,11 @@ def beta_sbt_grid(
   """
   # TODO: parallelize the calculation.
   output = []
-  for r, b, l in zip(r_grid, nonlocal_beta_grid, nonlocal_angular_momentum):
-    output.append(_beta_sbt_single_atom(r, b, l, g_vector_grid, kpts))
-  # output = np.concatenate(output, axis=1)
+  for r, b, l, rab in zip(
+    r_grid, nonlocal_beta_grid, nonlocal_angular_momentum, r_ab
+  ):
+    output.append(
+      _beta_sbt_single_atom(r, b, l, g_vector_grid, kpts, rab, method)
+    )
+
   return output

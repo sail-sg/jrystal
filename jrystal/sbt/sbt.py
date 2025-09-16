@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Spherical Bessel Transform. """
-# import jax.numpy as jnp
-from typing import List, Tuple, Union
+from typing import Tuple, Union, Sequence
 
 import numpy as np
 import scipy
@@ -23,12 +22,12 @@ from .pysbt import pyNumSBT
 
 
 def sbt(
-  r_grid: Float[Array, "num_r"],
-  f_grid: Float[Array, "num_r"],
+  r_grid: Float[Array, "r"],
+  f_grid: Float[Array, "r"],
   l: int = 0,
   kmax: float = 100,
   norm: bool = False
-) -> Tuple[Float[Array, "num_r"], Float[Array, "num_r"]]:
+) -> Tuple[Float[Array, "r"], Float[Array, "r"]]:
   """Spherical Bessel Transform.
 
   ..math::
@@ -66,12 +65,12 @@ def sbt(
 
 
 def batch_sbt(
-  r_grid: Float[Array, "ngrid"],
-  f_grid: Float[Array, "nbatch ngrid"],
-  l: Union[int, List[int]],
+  r_grid: Float[Array, "r"],
+  f_grid: Float[Array, "l r"],
+  l: Union[int, Sequence[int]],
   kmax: float = 100,
   norm: bool = False
-) -> Tuple:
+) -> Tuple[Float[Array, "g"], Float[Array, "l g"]]:
   """batch spherical bessel transform for multiple functions.
 
     sbt: g(k) = int_0^\infty f(r) j_l(r) r^2 dr
@@ -85,21 +84,26 @@ def batch_sbt(
     norm (bool, optional): Whether to normalize the output. Defaults to False.
 
   Returns:
-    Tuple: A tuple of (k_grid, batch_transformed_f_grid). k_grid is a
+    Tuple: A tuple of (g_grid, transformed_f_grid). g_grid is a
     1d-array, and batch_transformed_f_grid is BxN shaped, where B is the
     number of batches and N is the number of grid point.
   """
   output = []
-  if isinstance(l, list):
+  if hasattr(l, "__len__") and hasattr(l, "__getitem__"):
+    assert f_grid.ndim == 2 and f_grid.shape[0] == len(l), \
+      "The length of l must be the same as the batch dimension of f_grid"
     for f, li in zip(f_grid, l):
       k, g = sbt(r_grid, f, l=li, kmax=kmax, norm=norm)
       output.append(g)
+
   elif isinstance(l, int):
+    if f_grid.ndim == 1:
+      f_grid = np.expand_dims(f_grid, axis=0)
     for f in f_grid:
       k, g = sbt(r_grid, f, l=l, kmax=kmax, norm=norm)
       output.append(g)
   else:
-    raise ValueError("\'l\' must be a integer or a list of int")
+    raise ValueError("\'l\' must be a integer or a Sequence of int")
   return k, np.vstack(output)
 
 
@@ -107,6 +111,7 @@ def _sbt_hankel(r_grid, f_grid, l: int = 0, kmax: int = 100):  # noqa
   """spherical bessel transform via Hankel transform.
 
   NOTE: this function is less stable than pysbt. Use `sbt` instead.
+
   """
   dln = np.mean(np.diff(np.log(r_grid)))
   initial = np.log(kmax) - (np.log(r_grid[-1]) - np.log(r_grid[0]))
