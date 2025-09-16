@@ -119,16 +119,10 @@ def create_pseudopotential(config: JrystalConfigDict):
   crystal = create_crystal(config)
   _pkg_path = jr.get_pkg_path()
   if config.pseudopotential_type in ["normcons", "normconserving", "nc"]:
-    if config.pseudopotential_file_dir is None:
-      path = _pkg_path + '/pseudopotential/normconserving/'
-    else:
-      path = config.pseudopotential_file_dir
+    path = _pkg_path + '/pseudopotential/normconserving/'
     pp = jr.pseudopotential.NormConservingPseudopotential.create(crystal, path)
   elif config.pseudopotential_type in ["ultrasoft", "us"]:
-    if config.pseudopotential_file_dir is None:
-      path = _pkg_path + '/pseudopotential/ultrasoft/'
-    else:
-      path = config.pseudopotential_file_dir
+    path = _pkg_path + '/pseudopotential/ultrasoft/'
     pp = jr.pseudopotential.UltrasoftPseudopotential.create(crystal, path)
   else:
     raise ValueError(
