@@ -118,9 +118,25 @@ def create_pseudopotential(config: JrystalConfigDict):
   assert config.use_pseudopotential
   crystal = create_crystal(config)
   _pkg_path = jr.get_pkg_path()
-  path = _pkg_path + '/pseudopotential/normconserving/'
+  if config.pseudopotential_type in ["normcons", "normconserving", "nc"]:
+    if config.pseudopotential_file_dir is None:
+      path = _pkg_path + '/pseudopotential/normconserving/'
+    else:
+      path = config.pseudopotential_file_dir
+    pp = jr.pseudopotential.NormConservingPseudopotential.create(crystal, path)
+  elif config.pseudopotential_type in ["ultrasoft", "us"]:
+    if config.pseudopotential_file_dir is None:
+      path = _pkg_path + '/pseudopotential/ultrasoft/'
+    else:
+      path = config.pseudopotential_file_dir
+    pp = jr.pseudopotential.UltrasoftPseudopotential.create(crystal, path)
+  else:
+    raise ValueError(
+      f"Pseudopotential type {config.pseudopotential_type} is not supported."
+    )
+
   logging.info(f"Pseudopotential path: {path}")
-  pp = jr.pseudopotential.NormConservingPseudopotential.create(crystal, path)
+
   return pp
 
 

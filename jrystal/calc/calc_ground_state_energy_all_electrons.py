@@ -76,7 +76,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
   crystal = create_crystal(config)
   num_electrons = crystal.num_electron
-  logging.info(f"Crystal: {crystal.symbol}")
+  logging.info(f"Crystal: {crystal.symbols}")
   EPS = config.eps
 
   # Initialize the mesh and sharding for the parallelization.

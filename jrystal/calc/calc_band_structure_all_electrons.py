@@ -13,20 +13,16 @@
 # limitations under the License.
 """Band Structure Calculator. """
 import time
-from dataclasses import dataclass
 from functools import partial
 from math import ceil
-from typing import Optional
 
 import jax
 import jax.numpy as jnp
-import numpy as np
 import optax
 from absl import logging
 
-from .._src import pw, hamiltonian, energy, potential
+from .._src import pw, hamiltonian
 from .._src.band import get_k_path
-from .._src.crystal import Crystal
 from ..config import JrystalConfigDict
 from .calc_ground_state_energy_all_electrons import calc as energy_calc
 from .opt_utils import (
@@ -36,25 +32,6 @@ from .opt_utils import (
   create_optimizer,
   set_env_params,
 )
-
-# @dataclass
-# class BandStructureOutput:
-#   """Output of the band structure calculation.
-
-#   Args:
-#     config (JrystalConfigDict): The configuration for the calculation.
-#     crystal (Crystal): The crystal object.
-#     params_pw (dict): Parameters for the plane wave basis.
-#     ground_state_energy_output (GroundStateEnergyOutput): The output of the ground state energy calculation.
-#     k_path (jax.Array): The K-path.
-#     band_structure (jax.Array): The band structure.
-#   """
-#   config: JrystalConfigDict
-#   crystal: Crystal
-#   params_pw: dict
-#   ground_state_energy_output: GroundStateEnergyOutput
-#   k_path: jax.Array
-#   band_structure: jax.Array
 
 
 def calc(config: JrystalConfigDict):
@@ -227,6 +204,6 @@ def calc(config: JrystalConfigDict):
   eigen_values = jnp.transpose(eigen_values, (1, 0, 2))
 
   logging.info("===> Eigen decomposition done.")
-  save_file = ''.join(crystal.symbol) + "_band_structure.npy"
+  save_file = ''.join(crystal.symbols) + "_band_structure.npy"
   logging.info(f"Results saved in {save_file}")
   jnp.save(save_file, eigen_values)

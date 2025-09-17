@@ -1,23 +1,19 @@
 """Nonlocal Pseudopotential. """
 
-import numpy as np
+from typing import List, Optional
+
 import jax
 import jax.numpy as jnp
-from typing import List, Optional
-from jaxtyping import Float, Array, Complex
+import numpy as np
 from einops import einsum
+from jaxtyping import Array, Complex, Float
 
-from .._src import braket, kinetic
-from .._src import potential
+from .._src import braket, kinetic, potential, pw
 from .._src.utils import wave_to_density
-from .utils import map_over_atoms
-from .._src import pw
-from .spherical import (
-  legendre_to_sph_harm, batch_sph_harm_real,
-  batch_sph_harm, cartesian_to_spherical
-)
-from .local import hamiltonian_local, energy_local
 from .beta import beta_sbt_grid
+from .local import energy_local, hamiltonian_local
+from .spherical import batch_sph_harm_real, cartesian_to_spherical
+from .utils import map_over_atoms
 
 
 def _compute_spherical_harmonics(
@@ -128,10 +124,10 @@ def potential_nonlocal_psi_reciprocal(
       "kpt beta m x y z, kpt x y z -> kpt beta m x y z"
     )
 
-    # imag_factor = (1.j) ** nonlocal_angular_momentum
-    # output = einsum(
-    #   output, imag_factor, "kpt beta m x y z, beta -> kpt beta m x y z"
-    # )
+    imag_factor = (1.j) ** nonlocal_angular_momentum
+    output = einsum(
+      output, imag_factor, "kpt beta m x y z, beta -> kpt beta m x y z"
+    )
     return output * 4 * jnp.pi  # [kpt beta m x y z]
 
   output = _get_psi(
@@ -141,97 +137,6 @@ def potential_nonlocal_psi_reciprocal(
   if concat:
     output = jnp.concatenate(output, axis=1)
 
-  return output
-
-
-def _potential_nonlocal_psi_reciprocal(
-  position: Float[Array, "atom 3"],
-  g_vector_grid: Float[Array, "x y z 3"],
-  kpts: Float[Array, "kpt 3"],
-  r_grid: List[Float[Array, "r"]],
-  nonlocal_beta_grid: List[Float[Array, "beta r"]],
-  nonlocal_angular_momentum: List[List[int]],
-  nonlocal_d_matrix: List[Float[Array, "beta beta"]],
-  beta_gk: Optional[List[Float[Array, "kpt beta x y z"]]] = None,
-  fourier_transform_method: str = 'sbt'
-) -> Complex[Array, "kpt beta m x y z"]:
-  """
-  Compute the square root of the nonlocal pseudopotential.
-
-  This function returns:
-
-  .. math::
-
-    < \beta_i | (G+k) >
-
-  Args:
-    position (Float[Array, "atom 3"]): The position of the atoms.
-    g_vector_grid (Float[Array, "x y z 3"]): The grid of the reciprocal vectors.
-    kpts (Float[Array, "kpt 3"]): The grid of the k-points.
-    r_grid (List[Float[Array, "r"]]): The grid of the radial coordinates.
-    nonlocal_beta_grid (List[Float[Array, "beta r"]]): The grid of the beta
-    functions.
-    nonlocal_angular_momentum (List[List[int]]): The angular momentum of the
-    beta functions.
-    nonlocal_d_matrix (List[Float[Array, "beta beta"]]): The matrix of the beta
-    functions.
-    beta_gk (Float[Array, "kpt beta x y z"]): The grid of the beta functions.
-
-  Return:
-    Complex[Array, "kpt beta m x y z"]: The Psi function in reciprocal space.
-    The shape of the output is [kpt, beta, m, x, y, z], where m is the index of
-    the magnetic momentum.
-  """
-  assert len(nonlocal_beta_grid) == len(nonlocal_angular_momentum)
-  assert fourier_transform_method in ['fft', 'sbt']
-  # TODO: and the fourier transform method.
-
-  gk_vector_grid = jnp.expand_dims(
-    kpts, axis=(1, 2, 3)
-  ) + jnp.expand_dims(g_vector_grid, 0)  # [nk x y z 3]
-
-  # sbt for beta function and intepolate
-  if beta_gk is None:
-    beta_gk = beta_sbt_grid(
-      r_grid,
-      nonlocal_beta_grid,
-      nonlocal_angular_momentum,
-      g_vector_grid,
-      kpts
-    )    # a list of [kpt beta x y z]
-
-  assert beta_gk[0].shape[0] == kpts.shape[0]
-
-  output = []
-  l_max = np.max(np.hstack(nonlocal_angular_momentum))
-
-  for i in range(position.shape[0]):
-    angmom = nonlocal_angular_momentum[i]
-    d_matrix = nonlocal_d_matrix[i]
-    # assert jnp.allclose(d_matrix, d_matrix.T)
-    eigval, eigvec = jnp.linalg.eigh(d_matrix)  # shape: [beta beta]
-    d_matrix_sqrt = eigvec * jnp.sqrt(eigval + 0.j)  # shape: [beta beta]
-    structure_factor = jnp.exp(
-      -1.j * jnp.matmul(gk_vector_grid, position[i])
-    )  # shape: [nk x y z]
-    kappa_list = []
-    for ln in angmom:
-      kappa_list.append(legendre_to_sph_harm(int(ln), int(l_max)))
-    kappa = []
-    for k in kappa_list:
-      kappa.append(k(gk_vector_grid))
-    kappa = jnp.stack(kappa)  # shape: [beta nk x y z m]
-    kappa = einsum(
-      d_matrix_sqrt,
-      kappa,
-      structure_factor,
-      "b1 b2, b2 k x y z m, k x y z -> k b1 m x y z"
-    )
-
-    kappa = einsum(kappa, beta_gk[i], "k b m x y z, k b x y z -> k b m x y z")
-    output.append(kappa)
-
-  output = jnp.concatenate(output, axis=1)
   return output
 
 

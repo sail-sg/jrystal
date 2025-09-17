@@ -17,8 +17,8 @@ from dataclasses import dataclass
 from math import ceil
 from typing import List, Union
 
-import numpy as np
 import jax
+import numpy as np
 import optax
 from absl import logging
 from jax.sharding import Mesh, NamedSharding
@@ -37,10 +37,10 @@ from .opt_utils import (
   create_grids,
   create_optimizer,
   create_pseudopotential,
-  set_env_params,
   get_ewald_coulomb_repulsion,
+  set_env_params,
 )
-from .pre_calc_beta_sbt import pre_calc_beta_sbt
+from .pre_calc import pre_calc_beta_sbt
 
 
 @dataclass
@@ -82,7 +82,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   crystal = create_crystal(config)
   pseudopot = create_pseudopotential(config)
   valence_charges = np.sum(pseudopot.valence_charges)
-  logging.info(f"Crystal: {crystal.symbol}")
+  logging.info(f"Crystal: {crystal.symbols}")
   EPS = config.eps
 
   # Initialize the mesh and sharding for the parallelization.
