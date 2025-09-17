@@ -94,11 +94,11 @@ class NormConservingPseudopotential(Pseudopotential):
   ):
     positions = crystal.positions
     charges = crystal.charges
-    atomic_symbols = crystal.symbol
+    atomic_symbols = crystal.symbols
     num_atom = len(charges)
 
     pp_dict_list = []
-    for symbol in crystal.symbol:
+    for symbol in crystal.symbols:
       pp_path = find_upf(dir, symbol)
       pp_dict = parse_upf(pp_path)
       pp_dict_list.append(pp_dict)
@@ -120,16 +120,20 @@ class NormConservingPseudopotential(Pseudopotential):
 
     for pp in pp_dict_list:
       valence_charges.append(int(float(pp["PP_HEADER"]["z_valence"])))
-      r_grid.append(np.array(pp["PP_MESH"]["PP_R"]))
-      r_ab.append(np.array(pp["PP_MESH"]["PP_RAB"]))
+      _r_grid = np.array(pp["PP_MESH"]["PP_R"])
+      r_grid.append(_r_grid[_r_grid > 0])
+      r_ab.append(np.array(pp["PP_MESH"]["PP_RAB"])[_r_grid > 0])
       # r_cutoff.append(float(pp["PP_NONLOCAL"]["PP_BETA"]["cutoff_radius"][0]))
       r_cutoff.append(None)
       l_max.append(int(pp["PP_HEADER"]["l_max"]))
-      l_max_rho.append(int(pp["PP_HEADER"]["l_max_rho"]))
+      if "l_max_rho" in pp["PP_HEADER"]:
+        l_max_rho.append(int(pp["PP_HEADER"]["l_max_rho"]))
+      else:
+        l_max_rho.append(None)
       # norm conserving pseudopotential use the same cutoff_radius for local
       # and nonlocal potentials.
 
-      local_potential_grid.append(np.array(pp["PP_LOCAL"])/2)
+      local_potential_grid.append(np.array(pp["PP_LOCAL"])[_r_grid > 0]/2)
       # 1/2 is due to the conversion from rydberg to hartree.
       local_potential_charge.append(valence_charges[-1])
 
@@ -141,15 +145,15 @@ class NormConservingPseudopotential(Pseudopotential):
         beta_angular_momentum = []
         for beta_i in pp["PP_NONLOCAL"]["PP_BETA"]:
           beta.append(
-            np.divide(beta_i['values'], r_grid[-1], where=(r_grid[-1] > 0))
+            np.divide(beta_i['values'], _r_grid, where=(_r_grid > 0))
           )  # the beta function is multiplied by r in upf file
           beta_angular_momentum.append(int(beta_i["angular_momentum"]))
-        nonlocal_beta_grid.append(np.stack(beta))
+        nonlocal_beta_grid.append(np.stack(beta)[:, _r_grid > 0])
         nonlocal_beta_cutoff_radius.append(beta_i['cutoff_radius'])
-        d_mat = np.array(pp["PP_NONLOCAL"]["PP_DIJ"]) / 2.
-        # 1/2 is due to the conversion from rydberg to hartree.
+        d_mat = np.array(pp["PP_NONLOCAL"]["PP_DIJ"])
         d_mat = np.reshape(d_mat, [num_beta, num_beta])
-        nonlocal_d_matrix.append(d_mat)
+        nonlocal_d_matrix.append(d_mat / 2)
+        # 1/2 is due to the conversion from rydberg to hartree.
 
       else:
         nonlocal_num_beta.append(1)
@@ -161,7 +165,6 @@ class NormConservingPseudopotential(Pseudopotential):
         d_mat = np.zeros([1, 1])
         nonlocal_d_matrix.append(d_mat)
 
-      # 1/2 is due to the conversion from rydberg to hartree.
       nonlocal_angular_momentum.append(np.array(beta_angular_momentum))
       nonlocal_valence_configuration.append(
         pp["PP_INFO"]["Valence configuration"]
@@ -240,7 +243,7 @@ class UltrasoftPseudopotential(NormConservingPseudopotential):
     ncpp = NormConservingPseudopotential.create(crystal, dir)
 
     pp_dict_list = []
-    for symbol in crystal.symbol:
+    for symbol in crystal.symbols:
       pp_path = find_upf(dir, symbol)
       pp_dict = parse_upf(pp_path)
       pp_dict_list.append(pp_dict)
@@ -255,7 +258,11 @@ class UltrasoftPseudopotential(NormConservingPseudopotential):
         # q_matrix *= 2 * np.sqrt(np.pi)
         num_q = len(pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_Q"])
         num_q = np.sqrt(num_q).astype(int)
-        nonlocal_augmentation_q_matrix.append(q_matrix.reshape(num_q, num_q))
+        q_matrix = q_matrix.reshape(num_q, num_q)
+        assert np.linalg.eigvalsh(q_matrix).max() >= -1, (
+          "The q_matrix is not negative semi-definite."
+        )
+        nonlocal_augmentation_q_matrix.append(q_matrix)
 
         num_r_grid = len(pp["PP_MESH"]["PP_R"])
         r_grid = np.array(pp["PP_MESH"]["PP_R"])

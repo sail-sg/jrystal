@@ -39,7 +39,7 @@ from .opt_utils import (
     create_pseudopotential,
     set_env_params,
 )
-from .pre_calc_beta_sbt import pre_calc_beta_sbt
+from .pre_calc import pre_calc_beta_sbt
 
 
 @dataclass
@@ -294,6 +294,6 @@ def calc(
   )
 
   logging.info("===> Eigen decomposition done.")
-  save_file = ''.join(crystal.symbol) + "_band_structure.npy"
+  save_file = ''.join(crystal.symbols) + "_band_structure.npy"
   logging.info(f"Results saved in {save_file}")
   jnp.save(save_file, eigen_values)

@@ -33,18 +33,20 @@ from .const import ANGSTROM2BOHR
 @dataclass
 class Crystal:
   r"""Crystal Structure Dataclass.
-  
+
   This class encapsulates the essential attributes of a crystal, including
   atomic charges, positions, cell vectors, etc.
-  
+
   A Crystal object can be created via two methods:
-  
-  1. create from specifying the four core attributes: atomic numbers (charges), absolute coordinates of each atom in Bohr unit (positions), cell vectors (in Bohr unit), and the number of unpaired electrons (spin).
-  2. create from a geometry file. 
+
+  1. create from specifying the four core attributes: atomic numbers (charges),
+  absolute coordinates of each atom in Bohr unit (positions), cell vectors (in
+  Bohr unit), and the number of unpaired electrons (spin).
+  2. create from a geometry file.
 
   See :doc:`Create A Crystal Structure <../examples/crystal>` for more details.
 
-  
+
   Examples:
 
   .. code:: python
@@ -63,20 +65,21 @@ class Crystal:
     )
 
   Args:
-    charges (Optional[Float[Array, "atom"]]): The atomic charges. Defaults to None.
-    positions (Optional[Float[Array, "atom 3"]]): The absolute coordinates of each atom in Bohr unit. Defaults to None.
-    cell_vectors (Optional[Float[Array, '3 3']]): The cell vectors in Bohr unit. Defaults to None.
+    charges (Optional[Float[Array, "atom"]]): The atomic charges. Defaults to
+    None.
+    positions (Optional[Float[Array, "atom 3"]]): The absolute coordinates of
+    each atom in Bohr unit. Defaults to None.
+    cell_vectors (Optional[Float[Array, '3 3']]): The cell vectors in Bohr
+    unit. Defaults to None.
     spin (Optional[int]): The number of unpaired electrons. Defaults to None.
     symbol (Optional[str], optional): The atomic symbols. Defaults to None.
 
-  Returns:
-      _type_: _description_
   """
   charges: Optional[Float[Array, "atom"]]
   positions: Optional[Float[Array, "atom 3"]]
   cell_vectors: Optional[Float[Array, '3 3']]
   spin: Optional[int] = None
-  symbol: Optional[str] = None
+  symbols: Optional[str] = None
 
   @property
   def scaled_positions(self):
@@ -146,7 +149,7 @@ class Crystal:
       positions=positions,
       cell_vectors=cell_vectors,
       spin=spin,
-      symbol=_ase_cell.get_chemical_symbols()
+      symbols=_ase_cell.get_chemical_symbols()
     )
 
   @staticmethod
@@ -154,6 +157,7 @@ class Crystal:
     symbols: str,
     positions: Union[List[List], Float[Array, "num_atom 3"]],
     cell_vectors: Float[Array, "3 3"],
+    spin: Optional[int] = None,
   ):
     r"""
     Create a crystal object from symbols, positions, and cell vectors.
