@@ -18,12 +18,15 @@ This module provides functions for working with spherical coordinates and
 spherical harmonics, particularly useful for quantum mechanical calculations
 and pseudopotential transformations.
 """
-import numpy as np
+from typing import Callable
+
 import jax
 import jax.numpy as jnp
+import numpy as np
+from einops import einsum
 from jax.scipy.special import sph_harm, sph_harm_y
-from jaxtyping import Float, Array
-from typing import Callable
+from jaxtyping import Array, Float
+
 from .._src.utils import vmapstack
 
 
@@ -61,7 +64,29 @@ def cartesian_to_spherical(x: Float[Array, "*n 3"],
   return jnp.stack((r, theta, phi), axis=-1)
 
 
-def batched_sph_harm(
+def batch_sph_harm_real(
+  l: int,
+  theta: Float[Array, "*batch"],
+  phi: Float[Array, "*batch"]
+) -> Float[Array, "*batch m"]:
+  """
+  Compute the real form of spherical harmonics for a batch of points.
+  """
+  _sph_harm1 = batch_sph_harm(l, theta, phi)  # [*batch m]
+  m = jnp.arange(-l, l + 1)
+  _sph_harm2 = einsum(_sph_harm1.conj(), (-1) ** m, "... m, m -> ... m")
+
+  output = jnp.where(
+    m >= 0,
+    _sph_harm1.real * jnp.sqrt(2) * (-1) ** m,
+    _sph_harm2.imag * jnp.sqrt(2) * (-1) ** m,
+  )  # [m, *batch]
+
+  output = output.at[..., l].set(_sph_harm1[..., l].real)
+  return output
+
+
+def batch_sph_harm(
   l: int,
   theta: Float[Array, "*batch"],
   phi: Float[Array, "*batch"],
@@ -91,6 +116,7 @@ def batched_sph_harm(
   @vmapstack(dim)
   def _sph_harm_fun(theta, phi):
     return sph_harm_y(n, m, phi, theta)
+    # note that the definitions of theta and phi are swapped in sph_harm_y.
 
   return _sph_harm_fun(theta, phi)
 

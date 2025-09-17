@@ -146,7 +146,8 @@ class NormConservingPseudopotential(Pseudopotential):
           beta_angular_momentum.append(int(beta_i["angular_momentum"]))
         nonlocal_beta_grid.append(np.stack(beta))
         nonlocal_beta_cutoff_radius.append(beta_i['cutoff_radius'])
-        d_mat = np.array(pp["PP_NONLOCAL"]["PP_DIJ"])
+        d_mat = np.array(pp["PP_NONLOCAL"]["PP_DIJ"]) / 2.
+        # 1/2 is due to the conversion from rydberg to hartree.
         d_mat = np.reshape(d_mat, [num_beta, num_beta])
         nonlocal_d_matrix.append(d_mat)
 
