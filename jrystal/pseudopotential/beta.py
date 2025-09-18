@@ -19,7 +19,7 @@ import numpy as np
 from scipy.interpolate import CubicSpline
 from jaxtyping import Array, Float, Int
 
-from ..sbt import batched_sbt
+from ..sbt import batch_sbt, sbt_numerical
 
 
 def _beta_sbt_single_atom(
@@ -69,7 +69,7 @@ def _beta_sbt_single_atom(
     gk_vector_grid = np.expand_dims(g_vector_grid, 0)  # [1 x y z 3]
 
   radius = np.sqrt(np.sum(gk_vector_grid**2, axis=-1))
-  k, beta_k = batched_sbt(
+  k, beta_k = sbt_numerical(
     r_grid, nonlocal_beta_grid, l=nonlocal_angular_momentum,
     kmax=np.max(radius)
   )

@@ -64,7 +64,7 @@ def sbt(
   return _sbt(r_grid, f_grid, l=l, kmax=kmax, norm=norm)
 
 
-def batched_sbt(
+def batch_sbt(
   r_grid: Float[Array, "ngrid"],
   f_grid: Float[Array, "nbatch ngrid"],
   l: Union[int, List[int]],
