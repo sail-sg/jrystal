@@ -4,6 +4,9 @@ import jrystal as jr
 
 
 def main():
+  logo = open('jrystal_logo_ascii.txt', 'r').read()
+  print(logo)
+
   parser = argparse.ArgumentParser(
     prog='Jrystal', description='Command for Jrystal package.'
   )
