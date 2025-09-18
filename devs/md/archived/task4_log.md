@@ -48,6 +48,31 @@ All PAW quantities successfully aligned between jrystal and GPAW implementations
 - All quantities match to machine precision
 - Cross-checked with QE implementation to ensure no regression
 
+## Archive Summary
+
+### Files for Archival:
+1. **Core Implementation**: 
+   - `calc_paw.py` (setup_gpaw function added)
+   - `align.py` (already had GPAW support)
+
+2. **Tests**: 
+   - `test_gpaw_pp_file.py` (7 passing tests)
+
+3. **Documentation**:
+   - `task4_align_gpaw.md` (task description)
+   - `task4_log.md` (this file)
+   - `paw_pp_file_documentation.md` (Section 3.3 added)
+   - `overlap.md` (comprehensive PAW overlap documentation created during exploration)
+
+4. **Exploratory Work**:
+   - `test_diamond.py` (overlap matrix verification)
+   - `test_conjugation.py` (complex conjugation investigation)
+
+### Final Achievement:
+- **Result**: Machine precision alignment (~1e-14 to 1e-16)
+- **All components aligned**: Delta0, M matrix, Delta_lq, final energy
+- **Key insight**: GPAW stores functions as φ*√(4π) without r factor
+
 ## Next Steps
 
-Task 4 is now complete with perfect alignment achieved between jrystal and GPAW for processing GPAW PP files.
+Task 4 is now complete with perfect alignment achieved between jrystal and GPAW for processing GPAW PP files. Ready for Task 5: Integration with jrystal package.

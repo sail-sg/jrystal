@@ -6,8 +6,7 @@ import jax.numpy as jnp
 
 from gpaw.gaunt import gaunt
 from gpaw.new import zips
-from jrystal.pseudopotential.load import parse_upf
-from jrystal._src.energy import kinetic, hartree, exc_functional
+# from jrystal.pseudopotential.load import parse_upf
 
 def setup_qe():
   """Load and parse QE UPF pseudopotential file.
@@ -553,6 +552,17 @@ def calc(
     'g_lg': g_lg,
     'vbar_g': vbar_g
   }
+  # n = 13
+  # idx = jnp.triu_indices(n)
+  # Qij = jnp.zeros((n, n))
+  # Qij = Qij.at[idx[0], idx[1]].set(Delta_pL[:, 0] * jnp.sqrt(4 * jnp.pi))
+  # Qij += jnp.triu(Qij, k=1).T
+  # return {
+  #   # no need to multiply 4\pi here since integrate_radial_function already includes it
+  #   'Qij': Qij,
+  #   # radial part with additional r factor, the same as QE convention
+  #   'proj': pt_jg
+  # }
 
 # # TODO: the xc correction seems to be very messy here
 # xc_correction = get_xc_correction(rgd2, xc, gcut2, lcut)

@@ -59,6 +59,9 @@ for key in calc.setups.setups.keys():
 pd = wfs.pd
 N_total = pd.gd.N_c.prod()
 alpha = 1.0 / N_total
+d = wfs.pd
+volume = pd.gd.volume
+alpha = 1 / volume
 
 print(f"\n=== Overlap Matrix Construction ===")
 S_GG_block = np.eye(n_G, dtype=complex)
@@ -103,6 +106,7 @@ else:
     print(f"  k-point (fractional): {kd.ibzk_qc[q]}")
     eikR = np.exp(2j * np.pi * np.dot(kd.ibzk_qc[q], spos_ac.T))[0]
 
+breakpoint()
 if wfs.dtype == complex:
     # integrate method: uses cc=True in expand for complex dtype
     # which means f_GI is already conjugated, so we need to conjugate it back
