@@ -7,7 +7,9 @@
 # specified by "crystal_file_path_path".
 crystal: "diamond"
 crystal_file_path_path: null
+spin: 0   # number of unpaired electrons
 
+# The directory to save the results. If None, the code will not save the results under the current directory.
 ################################################
 #         Exchange-Correlation Setting         #
 ################################################
@@ -18,8 +20,11 @@ xc: "lda_x"
 #           Pseudopotential Setting            #
 ################################################
 
-use_pseudopotential: True
-pseudopotential_file_dir: null
+# if false, the code will use the all-electron calculation
+use_pseudopotential: true
+pseudopotential_type: "nc"
+pseudopotential_file_dir: "/home/aiops/litb/projects/jrystal/pseudopotential/normconserving/"
+
 # The pseudopotential file directory. If None, the code will use the default
 # pseudopotential file directory.
 
@@ -39,8 +44,8 @@ grid_sizes: 48
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
 k_grid_sizes: 2
 # Occupation method
-occupation: "fermi-dirac"
-# occupation support {"fermi-dirac", "gamma", "uniform"}
+occupation: "uniform"
+# occupation support {"gamma", "uniform", "simplex-projector", "idempotent"}
 
 # smearing factor for the Fermi-Dirac distribution
 smearing: 0.001
@@ -63,6 +68,8 @@ epoch: 10000
 optimizer: "adam"
 optimizer_args:
   learning_rate: 0.001
+  b1: 0.9
+  b2: 0.99
 
 # arguments for the optimizer. Please refer to optax documentation.
 # https://optax.readthedocs.io/en/latest/api/optimizers.html
@@ -74,7 +81,8 @@ optimizer_args:
 scheduler: null
 # optax scheduler. No scheduler is used if set to None.
 
-convergence_condition: 1.e-8
+convergence_window_size: 20
+convergence_condition: 1.e-6
 # Convergence criterion for optimization.
 # The code monitors the variance of the objective values (e.g., energy)
 # over the last 50 steps (if available). If the computed variance meets
@@ -117,8 +125,23 @@ k_path_fine_tuning_epoch: 400
 # Random seed
 seed: 123
 
-# Environment setting
+# Whether to distribute the calculation across multiple devices
+# Total Energy Minimization
+parallel_over_k_mesh: True
+# Band Structure Calculation
+# If True, the code will parallelize the calculation over the k-path.
+parallel_over_k_path: True
+
+# Jax Environment setting
 xla_preallocate: True
+# whether to use 64-bit precision for JAX operations
 jax_enable_x64: True
+
+# Enable the jax_debug_nans flag to automatically detect when NaNs are produced in jax.jit-compiled code
+jax_debug_nans: False
+
+# whether to print verbose output
 verbose: True
+
+# machine epsilon
 eps: 1.e-08

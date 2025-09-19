@@ -4,6 +4,10 @@ import jrystal as jr
 
 
 def main():
+  path = jr.get_pkg_path()
+  logo = open(path + '/jrystal_utf8.txt', 'r').read()
+  print(logo)
+
   parser = argparse.ArgumentParser(
     prog='Jrystal', description='Command for Jrystal package.'
   )
@@ -27,7 +31,10 @@ def main():
   parser.add_argument(
     "-l",
     "--load",
-    help="Load pickled output from energy calculation for band structure calculation."
+    help=(
+      "Load pickled output from energy calculation for band structure "
+      "calculation."
+    )
   )
 
   args = parser.parse_args()
