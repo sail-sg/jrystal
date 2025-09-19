@@ -79,9 +79,10 @@ def potential_local_reciprocal(
     @map_over_atoms
     def g(r, v_r, z):
       v_r_prime = v_r + z / r
+      v_r_prime = jnp.expand_dims(v_r_prime, axis=0)
       # kk, f_k = sbt(r, v_r_prime, l=0, kmax=np.max(g_radius), norm=False)
       kk, f_k = sbt_numerical(r, v_r_prime, l=0, kmax=np.max(g_radius))
-      f_k = CubicSpline(kk, f_k, axis=1)(g_radius)
+      f_k = CubicSpline(kk, f_k[0], axis=1)(g_radius)
       f_k *= 4 * jnp.pi
       #  factor of 4 * pi is due to the fourier transform of Yukawa potential
       return f_k

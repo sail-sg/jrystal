@@ -13,7 +13,7 @@
 # limitations under the License.
 """Spherical Bessel Transform. """
 import jax.numpy as jnp
-from typing import Tuple, List, Union
+from typing import Tuple, Sequence, Union
 from jaxtyping import Array, Float
 import numpy as np
 import scipy
@@ -67,7 +67,7 @@ def sbt(
 def batch_sbt(
   r_grid: Float[Array, "ngrid"],
   f_grid: Float[Array, "nbatch ngrid"],
-  l: Union[int, List[int]],
+  l: Union[int, Sequence[int]],
   kmax: float = 100,
   norm: bool = False
 ) -> Tuple:
@@ -89,7 +89,7 @@ def batch_sbt(
     number of batches and N is the number of grid point.
   """
   output = []
-  if isinstance(l, list):
+  if hasattr(l, "__len__") and hasattr(l, "__getitem__"):
     for f, li in zip(f_grid, l):
       k, g = sbt(r_grid, f, l=li, kmax=kmax, norm=norm)
       output.append(g)

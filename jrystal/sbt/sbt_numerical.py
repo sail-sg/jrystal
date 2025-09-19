@@ -78,7 +78,4 @@ def sbt(
   else:
     raise ValueError("\'l\' must be a integer or a list of int")
 
-  if output.shape[0] == 1:
-    output = output[0]
-
   return g_grid, output

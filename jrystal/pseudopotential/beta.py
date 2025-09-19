@@ -15,9 +15,10 @@
 from typing import List, Optional
 
 import numpy as np
+from jaxtyping import Array, Float, Int
+
 # from interpax import CubicSpline
 from scipy.interpolate import CubicSpline
-from jaxtyping import Array, Float, Int
 
 from ..sbt import batch_sbt, sbt_numerical
 
