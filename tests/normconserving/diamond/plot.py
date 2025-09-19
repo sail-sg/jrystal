@@ -6,17 +6,18 @@ jr_eigen = np.load("CC_band_structure.npy")*27.2114
 qe_eigen = np.load("qe.npy").T
 
 
-### comparing jr and qe
-
+# comparing jr and qe
 plt.figure(figsize=(4, 3.6))
 
 fermi = jr_eigen[18, 3]
-plt.plot(jr_eigen - fermi, color="blue", alpha = 0.3, lw=2)
+plt.plot(jr_eigen - fermi, color="blue", alpha=0.3, lw=2)
 
 # fermi = qe_eigen[18, 3]
 fermi = 0
 for i in range(qe_eigen.shape[1]):
-    plt.scatter(range(60), qe_eigen[:, i]-fermi, color="brown", marker="v", alpha=1, s=3)
+  plt.scatter(
+    range(60), qe_eigen[:, i]-fermi, color="brown", marker="v", alpha=1, s=3
+  )
 
 plt.vlines(18, 100, -100, linestyles="dotted", color="grey")
 plt.vlines(40, 100, -100, linestyles="dotted", color="grey")
@@ -28,16 +29,20 @@ plt.xlabel("K point")
 plt.title("Carbon (Diamond)")
 
 custom_handles = [
-    Line2D([0], [0], color='blue', label="Our method"),
-    Line2D([0], [0], marker='v', color='w', markerfacecolor='brown', alpha=1, markersize=6, label="Quantum Espresso")
+  Line2D([0], [0], color='blue', label="Our method"),
+  Line2D(
+    [0], [0], marker='v', color='w', markerfacecolor='brown', alpha=1,
+    markersize=6, label="Quantum Espresso"
+  )
 ]
 
 # Custom legend
 plt.legend(handles=custom_handles, loc='lower right')
 
 
-plt.ylim(-25, 25)
+plt.ylim(-30, 30)
 plt.xlim(0, 60)
 plt.tight_layout()
 plt.savefig("overlay.pdf")
+print("overlay.pdf saved.")
 plt.show()
