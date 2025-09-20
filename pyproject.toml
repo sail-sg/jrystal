@@ -2,10 +2,9 @@
 name = "jrystal"
 version = "0.0.1"
 description = "A JAX-based Differentiable DFT Framework for Materials"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.12"
 dependencies = [
-    "jax==0.6.2",
-    "jaxlib==0.6.2",
+    "jax[cuda12]==0.6.2",
     "optax>=0.1.4",
     "jaxtyping",
     "tqdm",
@@ -14,6 +13,8 @@ dependencies = [
     "einops",
     "ml-collections",
     "cloudpickle",
+    "interpax>=0.3.10",
+    "jax-xc==0.0.8",
 ]
 
 [dependency-groups]

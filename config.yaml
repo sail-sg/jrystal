@@ -16,9 +16,9 @@ save_dir: null
 ################################################
 # xc functional
 # xc: "lda_x+lda_c_pw"
-xc: "gga_x_pbe+gga_c_pbe"
+# xc: "gga_x_pbe+gga_c_pbe"
 # xc: "gga_c_pbe" # TODO: this gives nan when polarized
-# xc: "lda_x"
+xc: "lda_x"
 # xc: "gga_x_pbe"
 
 
@@ -27,7 +27,7 @@ xc: "gga_x_pbe+gga_c_pbe"
 ################################################
 
 # if false, the code will use the all-electron calculation
-use_pseudopotential: true
+use_pseudopotential: false
 pseudopotential_file_dir: null
 # The pseudopotential file directory. If None, the code will use the default
 # pseudopotential file directory.
@@ -36,7 +36,8 @@ pseudopotential_file_dir: null
 #       Planewave Hyper-parameters             #
 ################################################
 
-freq_mask_method: "spherical"
+# freq_mask_method: "spherical"
+freq_mask_method: "cubic"
 # freq_mask_method can be either "cubic" or "spherical".
 # For "cubic", the cutoff cannot be assigned, but will be estimated.
 # Only for "spherical" method, the cutoff_energy argument is valid.
