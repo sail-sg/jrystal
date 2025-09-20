@@ -118,12 +118,12 @@ def _fftn_batching_rule(batched_args, batch_dims):
 
 @_ifftn_p.def_abstract_eval
 def _ifftn_abstract_eval(x):
-  return core.ShapedArray(x.shape, dtype=x.dtype)
+  return core_internal.ShapedArray(x.shape, dtype=x.dtype)
 
 
 @_fftn_p.def_abstract_eval
 def _fftn_abstract_eval(x):
-  return core.ShapedArray(x.shape, dtype=x.dtype)
+  return core_internal.ShapedArray(x.shape, dtype=x.dtype)
 
 
 jax._src.interpreters.ad.primitive_jvps[_ifftn_p] = _ifftn_jvp
