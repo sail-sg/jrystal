@@ -131,9 +131,12 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       crystal.vol
     )
 
-    xc = energy.xc_energy(
-      density, g_vec, crystal.vol, config.xc, kohn_sham=False
-    )
+    if getattr(config, 'xc', None) in (None, '', 'none'):
+      xc = 0.0
+    else:
+      xc = energy.xc_energy(
+        density, g_vec, crystal.vol, config.xc, kohn_sham=False
+      )
     return kinetic + hartree + external + xc
 
   def get_entropy(params_occ):
@@ -235,7 +238,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     density_reciprocal, crystal.positions, crystal.charges, g_vec, crystal.vol
   )
 
-  xc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)
+  if getattr(config, 'xc', None) in (None, '', 'none'):
+    xc = 0.0
+  else:
+    xc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)
 
   logging.info(f"Hartree Energy: {hartree:.4f} Ha")
   logging.info(f"External Energy: {external:.4f} Ha")
@@ -244,4 +250,18 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
   logging.info(f"Total Energy: {etot+ew:.4f} Ha")
 
-  return density
+  # Return additional quantities for downstream validation
+  return {
+    "density": density,
+    "energies": {
+      "E_kin": kinetic,
+      "E_H": hartree,
+      "E_ext": external,
+      "E_xc": xc,
+      "E_nn": ew,
+      "E_tot": etot + ew,
+      "E_free": etot,
+    },
+    "converged": converged,
+    "params": params,
+  }
