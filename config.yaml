@@ -49,7 +49,7 @@ grid_sizes: 16
 # k_grid_sizes: [2, 2, 2]
 k_grid_sizes: [1, 1, 1]
 # Occupation method
-occupation: "simplex-projector"
+occupation: "gamma"
 # occupation support {"gamma", "uniform", "simplex-projector", "idempotent"}
 
 # smearing factor for the Fermi-Dirac distribution
