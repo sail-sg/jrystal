@@ -15,6 +15,7 @@ dependencies = [
     "cloudpickle",
     "interpax>=0.3.10",
     "jax-xc==0.0.8",
+    "numpy>=2.3.3",
 ]
 
 [dependency-groups]

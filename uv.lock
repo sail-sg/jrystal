@@ -321,6 +321,7 @@ dependencies = [
     { name = "jax-xc" },
     { name = "jaxtyping" },
     { name = "ml-collections" },
+    { name = "numpy" },
     { name = "optax" },
     { name = "tqdm" },
 ]
@@ -346,6 +347,7 @@ requires-dist = [
     { name = "jax-xc", specifier = "==0.0.8" },
     { name = "jaxtyping" },
     { name = "ml-collections" },
+    { name = "numpy", specifier = ">=2.3.3" },
     { name = "optax", specifier = ">=0.1.4" },
     { name = "tqdm" },
 ]

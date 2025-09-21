@@ -45,7 +45,7 @@ freq_mask_method: "cubic"
 # cutoff energy in Hartree
 cutoff_energy: 40
 # grid sizes for the FFT grid
-grid_sizes: 16
+grid_sizes: 35
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
 # k_grid_sizes: [2, 2, 2]
 k_grid_sizes: [1, 1, 1]
@@ -57,7 +57,7 @@ occupation: "gamma"
 smearing: 0.001
 # the total number of unoccupapied bands. The Total number of
 # potentially-occupied bands is ceil(num_electron / 2) + empty_bands
-empty_bands: 10
+empty_bands: 2
 spin_restricted: true
 # whether the calculation is spin_restricted or not, ie., spin-up and spin-down
 # electrons share the same spatial orbitals.
