@@ -121,14 +121,23 @@ def sigma_r_fn(
     return absolute_square(grad_rho_r).sum(-1)
 
 
-def vxc_lda(exc: Callable, rho_r: Float[Array, "s x y z"]):
+def vxc_lda(
+  exc: Callable,
+  rho_r: Float[Array, "s x y z"],
+  xc_type: Optional[str] = None,
+):
   polarized = rho_r.shape[0] == 2
   grid_sizes = rho_r.shape[1:]
 
   rho_r_flat = rho_r.reshape(rho_r.shape[0], -1)
   if polarized:
     dexc_drho_flat = jax.vmap(jax.jacfwd(exc), 1, 1)(rho_r_flat)
-    t1 = dexc_drho_flat.reshape(2, *grid_sizes) * rho_r
+    # Use total density for correlation (spin-coupled) local term, per-spin for exchange
+    if xc_type is not None and ("_x" in xc_type):
+      rho_factor = rho_r
+    else:
+      rho_factor = rho_r.sum(0, keepdims=True)
+    t1 = dexc_drho_flat.reshape(2, *grid_sizes) * rho_factor
   else:
     dexc_drho_flat = jax.vmap(jax.grad(exc))(rho_r_flat[0])
     t1 = dexc_drho_flat.reshape(1, *grid_sizes) * rho_r
@@ -144,6 +153,7 @@ def vxc_gga_recp(
   rho_r: Float[Array, "s x y z"],
   sigma_r: Float[Array, "s x y z"],
   gs: Float[Array, "x y z 3"],
+  xc_type: Optional[str] = None,
 ):
   """Calculate the function derivative of the XC functional in the
   reciprocal space.
@@ -161,7 +171,12 @@ def vxc_gga_recp(
   sigma_r_flat = sigma_r.reshape(sigma_r.shape[0], -1)
   if polarized:
     dexc_drho_flat = jax.vmap(jax.jacfwd(exc), (1, 1), 1)(rho_r_flat, sigma_r_flat)
-    t1 = dexc_drho_flat.reshape(2, *grid_sizes) * rho_r
+    # For correlation (spin-coupled), use total density in the local term
+    if xc_type is not None and ("_x" in xc_type):
+      rho_factor_local = rho_r
+    else:
+      rho_factor_local = rho_r.sum(0, keepdims=True)
+    t1 = dexc_drho_flat.reshape(2, *grid_sizes) * rho_factor_local
   else:
     dexc_drho_flat = jax.vmap(jax.grad(exc))(rho_r_flat[0], sigma_r_flat[0])
     t1 = dexc_drho_flat.reshape(1, *grid_sizes) * rho_r
@@ -176,29 +191,44 @@ def vxc_gga_recp(
   lapl_rho_G = -1 * (gs**2).sum(-1) * rho_G
   lapl_rho_r: Float[Array, "s x y z"] = jnp.fft.ifftn(lapl_rho_G, axes=axes)
 
-  grad_fft = lambda x: jnp.fft.ifftn(1j * gs * jnp.fft.fftn(x)[..., None], axes=axes)
+  # Take FFT over the spatial axes (3D), not 1D
+  grad_fft = lambda x: jnp.fft.ifftn(
+    1j * gs * jnp.fft.fftn(x, axes=axes)[..., None], axes=axes
+  )
 
   if polarized:
     dexc_dsigma_flat: Float[Array, "3 num_g"]
     dexc_dsigma_flat = jax.vmap(jax.jacfwd(exc, argnums=1), (1, 1), 1)(rho_r_flat, sigma_r_flat)
+    # Use total density for correlation (spin-coupled) gradient terms as well
+    if xc_type is not None and ("_x" in xc_type):
+      rho_tot_for_grad_up = rho_r[0]
+      rho_tot_for_grad_dn = rho_r[1]
+      rho_tot_for_grad_cross_up = rho_r[1]
+      rho_tot_for_grad_cross_dn = rho_r[0]
+    else:
+      rho_tot = rho_r.sum(0, keepdims=False)
+      rho_tot_for_grad_up = rho_tot
+      rho_tot_for_grad_dn = rho_tot
+      rho_tot_for_grad_cross_up = rho_tot
+      rho_tot_for_grad_cross_dn = rho_tot
 
-    t_up = dexc_dsigma_flat[0].reshape(grid_sizes) * rho_r[0]
+    t_up = dexc_dsigma_flat[0].reshape(grid_sizes) * rho_tot_for_grad_up
     t_up = jnp.where(sigma_r[0] > 0, t_up, 0)
     t3_up = (grad_fft(t_up) * grad_rho_r[0]).sum(-1)
     t4_up = t_up * lapl_rho_r[0]
 
-    t_cross_up = dexc_dsigma_flat[1].reshape(grid_sizes) * rho_r[1]
+    t_cross_up = dexc_dsigma_flat[1].reshape(grid_sizes) * rho_tot_for_grad_cross_up
     t5_up = (grad_fft(t_cross_up) * grad_rho_r[1]).sum(-1)
     t6_up = t_cross_up * lapl_rho_r[1]
 
     grad_correction_up = 2 * (t3_up + t4_up) + t5_up + t6_up
 
-    t_dn = dexc_dsigma_flat[2].reshape(grid_sizes) * rho_r[1]
+    t_dn = dexc_dsigma_flat[2].reshape(grid_sizes) * rho_tot_for_grad_dn
     t_dn = jnp.where(sigma_r[2] > 0, t_dn, 0)
     t3_dn = (grad_fft(t_dn) * grad_rho_r[1]).sum(-1)
     t4_dn = t_dn * lapl_rho_r[1]
 
-    t_cross_dn = dexc_dsigma_flat[1].reshape(grid_sizes) * rho_r[0]
+    t_cross_dn = dexc_dsigma_flat[1].reshape(grid_sizes) * rho_tot_for_grad_cross_dn
     t5_dn = (grad_fft(t_cross_dn) * grad_rho_r[0]).sum(-1)
     t6_dn = t_cross_dn * lapl_rho_r[0]
 
@@ -212,7 +242,7 @@ def vxc_gga_recp(
     t = dexc_dsigma_flat.reshape(grid_sizes) * rho_r[0]
     t = jnp.where(sigma_r[0] > 0, t, 0)
     t3 = (grad_fft(t) * grad_rho_r[0]).sum(-1)
-    t4 = t * lapl_rho_r
+    t4 = t * lapl_rho_r[0]
     grad_correction = 2 * (t3 + t4)
 
   integrand = local_term - grad_correction
@@ -227,8 +257,12 @@ def vxc_gga(
   rho_r: Float[Array, "x y z"],
   sigma_r: Float[Array, "x y z"],
   gs: Float[Array, "x y z 3"],
+  xc_type: Optional[str] = None,
 ):
-  return jnp.fft.ifftn(vxc_gga_recp(exc, rho_r, sigma_r, gs), axes=list(range(-3, 0)))
+  return jnp.fft.ifftn(
+    vxc_gga_recp(exc, rho_r, sigma_r, gs, xc_type=xc_type),
+    axes=list(range(-3, 0))
+  )
 
 
 def xc_density(
@@ -245,7 +279,11 @@ def xc_density(
 
     if kohn_sham:
       density_grid = stop_gradient(density_grid)
-      vxc_r = vxc_gga(exc_fn, density_grid, grad, g_vector_grid)
+      # Sum contributions per functional to allow exchange/correlation-specific handling
+      vxc_r = 0
+      for xc_type_ in xc_type.split("+"):
+        single_exc = lambda density, s: _gga(xc_type_, density, s)
+        vxc_r = vxc_r + vxc_gga(single_exc, density_grid, grad, g_vector_grid, xc_type=xc_type_)
       return vxc_r
 
     else:
@@ -256,7 +294,11 @@ def xc_density(
 
     if kohn_sham:
       density_grid = stop_gradient(density_grid)
-      vxc_r = vxc_lda(exc_fn, density_grid)
+      # Sum contributions per functional to allow exchange/correlation-specific handling
+      vxc_r = 0
+      for xc_type_ in xc_type.split("+"):
+        single_exc = lambda density: _lda(xc_type_, density)
+        vxc_r = vxc_r + vxc_lda(single_exc, density_grid, xc_type=xc_type_)
       return vxc_r
 
     else:
