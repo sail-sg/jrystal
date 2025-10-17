@@ -13,8 +13,8 @@
 # limitations under the License.
 """Hessian for Complex-Valued Functions. """
 from typing import Callable
-import operator
 import numpy as np
+from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -57,7 +57,16 @@ def complex_hessian(
   )
 
 
-def hvp(f, x, v):
+def get_hvp_fn(f: Callable, x: Any) -> Callable:
+
+  def hvp(v):
+    _, vjp_fn = jax.vjp(jax.grad(f), x)
+    return vjp_fn(v)[0]
+
+  return hvp
+
+
+def hvp_vector(f, x, v):
   """compute the the Hessian-vector product.
 
   Args:

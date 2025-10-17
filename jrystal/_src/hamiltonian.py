@@ -13,7 +13,10 @@
 # limitations under the License.
 """Hamiltonian matrix operations for quantum mechanical calculations.
 
-This module provides functions to compute Hamiltonian matrix elements and related quantities in a plane wave basis. The Hamiltonian includes both kinetic and effective potential terms, supporting both standard and Kohn-Sham DFT calculations.
+This module provides functions to compute Hamiltonian matrix elements and
+related quantities in a plane wave basis. The Hamiltonian includes both kinetic
+and effective potential terms, supporting both standard and Kohn-Sham DFT
+calculations.
 """
 
 from typing import Union
@@ -47,13 +50,16 @@ def _hamiltonian_matrix(
 
     H_{ij} = \langle \psi_i | \hat{H} | \psi_j \rangle
 
-  where :math:`\hat{H}` is the Hamiltonian operator composed of kinetic and effective potential terms:
+  where :math:`\hat{H}` is the Hamiltonian operator composed of kinetic and
+  effective potential terms:
 
   .. math::
 
     \hat{H} = \hat{T} + \hat{V}_{eff}
 
-  The kinetic term :math:`\hat{T}` is computed in reciprocal space, while the effective potential term :math:`\hat{V}_{eff}` includes both the external potential from ions and the electron-electron interaction terms.
+  The kinetic term :math:`\hat{T}` is computed in reciprocal space, while the
+  effective potential term :math:`\hat{V}_{eff}` includes both the external
+  potential from ions and the electron-electron interaction terms.
 
   Args:
     coefficient (Complex[Array, "spin kpt band x y z"]): Plane wave
@@ -76,7 +82,9 @@ def _hamiltonian_matrix(
     kohn_sham: Whether to use Kohn-Sham potential. Defaults to False.
 
   Returns:
-    Float[Array, "kpt band band"]: Float array of shape [kpt, band, band] containing the Hamiltonian matrix elements between all pairs of bands at each k-point.
+    Float[Array, "kpt band band"]: Float array of shape [kpt, band, band]
+    containing the Hamiltonian matrix elements between all pairs of bands at
+    each k-point.
   """
   if effictive_density_grid.ndim == 4:
     effictive_density_grid = jnp.sum(effictive_density_grid, axis=0)
@@ -88,7 +96,7 @@ def _hamiltonian_matrix(
     g_vector_grid,
     vol,
     split=False,
-    xc=xc,
+    xc_type=xc,
     kohn_sham=kohn_sham
   )  # [x y z]
   wave_grid = pw.wave_grid(coefficient, vol)  # [spin kpt band x y z]
@@ -121,13 +129,17 @@ def hamiltonian_matrix_trace(
 
   .. math::
 
-    \text{Tr}(\hat{H}) = \sum_i H_{ii} = \sum_i \langle \psi_i | \hat{H} | \psi_i \rangle
+    \text{Tr}(\hat{H}) = \sum_i H_{ii} = \sum_i \langle \psi_i | \hat{H} |
+    \psi_i \rangle
 
-  This quantity represents the sum of the diagonal elements of the Hamiltonian matrix,
-  which is useful for various physical quantities like total energy calculations.
+  This quantity represents the sum of the diagonal elements of the Hamiltonian
+  matrix,
+  which is useful for various physical quantities like total energy
+  calculations.
 
   Args:
-    band_coefficient (Complex[Array, "spin kpt band x y z"]): Plane wave coefficients with shape [spin, kpt, band, x, y, z]. The last three dimensions represent the spatial grid.
+    band_coefficient (Complex[Array, "spin kpt band x y z"]): Plane wave
+    coefficients with shape [spin, kpt, band, x, y, z]. The last three dimensions represent the spatial grid.
     positions (Float[Array, "atom 3"]): Atomic positions in Bohr units with shape [atom, 3].
     charges (Int[Array, "atom"]): Atomic numbers for each atom with shape [atom].
     effictive_density_grid (Float[Array, "x y z"]): Electron density for effective potential evaluated  on real space grid with shape [x, y, z].
@@ -189,7 +201,8 @@ def hamiltonian_matrix(
 
     H_{ij} = \langle \psi_i | \hat{H} | \psi_j \rangle
 
-  where :math:`\hat{H} = \hat{T} + \hat{V}_{eff}` is the total Hamiltonian operator.
+  where :math:`\hat{H} = \hat{T} + \hat{V}_{eff}` is the total Hamiltonian
+  operator.
 
   Args:
     band_coefficient (Complex[Array, "spin kpt band x y z"]): Plane wave coefficients with shape [spin, kpt, band, x, y, z]. The last three dimensions represent the spatial grid.

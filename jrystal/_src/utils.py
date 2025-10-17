@@ -304,7 +304,7 @@ def squeeze_coefficient(
         Complex[Array, "spin kpt gpt band"]: Compact coefficient array with dimensions (spin, kpt, gpt, band), where gpt represents the number of True values in the mask.
 
     """
-  coeff_compact = coeff[..., mask].get()
+  coeff_compact = coeff.at[..., mask].get()
   return jnp.swapaxes(coeff_compact, -1, -2)
 
 
