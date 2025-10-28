@@ -27,7 +27,7 @@ from typing import Any, Tuple
 import jax
 import jax.interpreters
 import jax.numpy as jnp
-from jax import core
+from jax.extend import core
 from jax._src.interpreters import batching
 from jax.interpreters import mlir
 
