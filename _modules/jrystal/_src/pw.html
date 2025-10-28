@@ -194,7 +194,6 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -341,9 +340,11 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax.sharding</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sharding</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Bool</span><span class="p">,</span> <span class="n">Complex</span><span class="p">,</span> <span class="n">Float</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">g_vectors</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.spmd.fft</span><span class="w"> </span><span class="kn">import</span> <span class="n">ifftn3d</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.unitary_module</span><span class="w"> </span><span class="kn">import</span> <span class="n">unitary_matrix</span><span class="p">,</span> <span class="n">unitary_matrix_param_init</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute_square</span><span class="p">,</span> <span class="n">expand_coefficient</span><span class="p">,</span> <span class="n">volume</span>
 
@@ -356,6 +357,7 @@ document.write(`
   <span class="n">num_kpts</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
   <span class="n">freq_mask</span><span class="p">:</span> <span class="n">Bool</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
   <span class="n">spin_restricted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+  <span class="n">sharding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sharding</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Initialize the raw parameters.</span>
 
@@ -411,14 +413,16 @@ document.write(`
   <span class="n">num_spin</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">spin_restricted</span> <span class="k">else</span> <span class="mi">2</span>
   <span class="n">num_g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">freq_mask</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
   <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_spin</span><span class="p">,</span> <span class="n">num_kpts</span><span class="p">,</span> <span class="n">num_g</span><span class="p">,</span> <span class="n">num_bands</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">unitary_matrix_param_init</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="nb">complex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+  <span class="k">return</span> <span class="n">unitary_matrix_param_init</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="nb">complex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sharding</span><span class="o">=</span><span class="n">sharding</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="coeff">
 <a class="viewcode-back" href="../../../api/pw.html#jrystal.pw.coeff">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">coeff</span><span class="p">(</span>
-  <span class="n">pw_param</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">],</span> <span class="n">freq_mask</span><span class="p">:</span> <span class="n">Bool</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">]</span>
+  <span class="n">pw_param</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">],</span>
+  <span class="n">freq_mask</span><span class="p">:</span> <span class="n">Bool</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
+  <span class="n">sharding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sharding</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">]:</span>
 <span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Create the linear coefficients to combine the frequency components.</span>
 
@@ -457,7 +461,7 @@ document.write(`
 <span class="sd">    constraint that for any :code:`i,j`, :code:`einsum(&#39;kabc,labc-&gt;kl&#39;, ret[i, j], ret[i, j])`</span>
 <span class="sd">    is an identity matrix.</span>
 <span class="sd">  &#39;&#39;&#39;</span>
-  <span class="n">coeff</span> <span class="o">=</span> <span class="n">unitary_matrix</span><span class="p">(</span><span class="n">pw_param</span><span class="p">,</span> <span class="nb">complex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="n">coeff</span> <span class="o">=</span> <span class="n">unitary_matrix</span><span class="p">(</span><span class="n">pw_param</span><span class="p">,</span> <span class="nb">complex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sharding</span><span class="o">=</span><span class="n">sharding</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">expand_coefficient</span><span class="p">(</span><span class="n">coeff</span><span class="p">,</span> <span class="n">freq_mask</span><span class="p">)</span></div>
 
 
@@ -533,7 +537,7 @@ document.write(`
 <span class="sd">    Complex[Array, &#39;spin kpt band x y z&#39;]: Wave function evaluated at the spatial grid.</span>
 <span class="sd">  &#39;&#39;&#39;</span>
   <span class="n">grid_sizes</span> <span class="o">=</span> <span class="n">coeff</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span>
-  <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">coeff</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+  <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">ifftn3d</span><span class="p">(</span><span class="n">coeff</span><span class="p">)</span>
   <span class="n">wave_grid</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">vol</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">wave_grid</span></div>
 
@@ -544,8 +548,11 @@ document.write(`
 <span class="k">def</span><span class="w"> </span><span class="nf">density_grid</span><span class="p">(</span>
   <span class="n">coeff</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
-  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]:</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span>
+  <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
+  <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin x y z&#39;</span><span class="p">],</span>
+<span class="p">]:</span>
 <span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Compute the density at the spatial grid.</span>
 
 <span class="sd">  In a system with electrons, the density of the electron is the result of</span>
@@ -579,21 +586,30 @@ document.write(`
 <span class="sd">    e^{i\vb{(G - G&#39;)}^\top \vb{r}}</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch dimension which will be summed to get the overall density. Therefore the shape is :code:`(spin, kpt, band, x, y, z)`.</span>
+<span class="sd">    coeff: :math:`c_{kG}` part of the parameter. It can have a leading batch</span>
+<span class="sd">      dimension which will be summed to get the overall density. Therefore the</span>
+<span class="sd">      shape is :code:`(spin, kpt, band, x, y, z)`.</span>
 <span class="sd">    vol: Volume of the unit cell, a real scalar.</span>
-<span class="sd">    occupation: The occupation over different k frequencies. The shape is :code:`(spin, kpt, band)`, it should have the same leading dimension as :code:`coeff`. This is an optional argument. When :code:`occupation=None`, we compute the density contribution from each :math:`k` without summing them. If :code:`occupation` is provided, we sum up all the density from each :math:`k` weighted by the occupation.</span>
+<span class="sd">    occupation: The occupation over different k frequencies. The shape is</span>
+<span class="sd">      :code:`(spin, kpt, band)`, it should have the same leading dimension as</span>
+<span class="sd">      :code:`coeff`. This is an optional argument. When</span>
+<span class="sd">      :code:`occupation=None`, we compute the density contribution from each</span>
+<span class="sd">      :math:`k` without summing them. If :code:`occupation` is provided, we sum</span>
+<span class="sd">      up all the density from each :math:`k` weighted by the occupation.</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    Union[Float[Array, &quot;spin kpt band x y z&quot;], Float[Array, &quot;spin kpt band&quot;]]: A real-valued tensor that represents the density at the spatial grid computed from :py:func:`jrystal.grid.r_vectors`. The shape is :code:`(x, y, z)` if :code:`occupation` is provided, else the shape is :code:`(spin, kpt, band, x, y, z)`.</span>
+<span class="sd">    Union[Float[Array, &quot;spin kpt band x y z&quot;], Float[Array, &quot;spin x y z&quot;], Float</span>
+<span class="sd">      [Array, &quot;x y z&quot;]]: A real-valued tensor that represents the density at</span>
+<span class="sd">      the spatial grid computed from :py:func:`jrystal.grid.r_vectors`. The</span>
+<span class="sd">      shape is :code:`(spin, x, y, z)` if :code:`occupation` is provided, else</span>
+<span class="sd">      the shape is :code:`(spin, kpt, band, x, y, z)`.</span>
 <span class="sd">  &#39;&#39;&#39;</span>
   <span class="n">wave_grid_arr</span> <span class="o">=</span> <span class="n">wave_grid</span><span class="p">(</span><span class="n">coeff</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
   <span class="n">dens</span> <span class="o">=</span> <span class="n">absolute_square</span><span class="p">(</span><span class="n">wave_grid_arr</span><span class="p">)</span>
 
   <span class="k">if</span> <span class="n">occupation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">occ</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">occupation</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
     <span class="k">try</span><span class="p">:</span>
-      <span class="n">occ</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">occ</span><span class="p">,</span> <span class="n">dens</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-      <span class="n">dens</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dens</span> <span class="o">*</span> <span class="n">occ</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="n">occupation</span><span class="o">.</span><span class="n">ndim</span><span class="p">))</span>
+      <span class="n">dens</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;skb...,skb-&gt;s...&#39;</span><span class="p">,</span> <span class="n">dens</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
         <span class="s1">&#39;Occupation should have a leading dimension that is the same as coeff. &#39;</span>
@@ -608,9 +624,8 @@ document.write(`
 <span class="k">def</span><span class="w"> </span><span class="nf">density_grid_reciprocal</span><span class="p">(</span>
   <span class="n">coeff</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Array</span><span class="p">],</span>
-  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span>
-           <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]:</span>
+  <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin kpt band x y z&#39;</span><span class="p">],</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin x y z&#39;</span><span class="p">]]:</span>
 <span class="w">  </span><span class="sa">r</span><span class="sd">&#39;&#39;&#39;Fourier transform of the density grid.</span>
 
 <span class="sd">  In a system with electrons, the density of the electron is the result of</span>
@@ -649,8 +664,8 @@ document.write(`
 <span class="sd">      :py:func:`density_grid`.</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    A complex valued tensor representing :math:`\tilde{\rho}(G)` evaluated at :math:`G`</span>
-<span class="sd">    generated from :py:func:`jrystal.grid.g_vectors`.</span>
+<span class="sd">    A complex valued tensor representing :math:`\tilde{\rho}(G)` evaluated at</span>
+<span class="sd">    :math:`G` generated from :py:func:`jrystal.grid.g_vectors`.</span>
 <span class="sd">  &#39;&#39;&#39;</span>
   <span class="n">dens</span> <span class="o">=</span> <span class="n">density_grid</span><span class="p">(</span><span class="n">coeff</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">dens</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span></div>

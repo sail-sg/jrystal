@@ -194,7 +194,6 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -353,7 +352,7 @@ document.write(`
 <div class="viewcode-block" id="hartree">
 <a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.hartree">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">hartree</span><span class="p">(</span>
-  <span class="n">density_grid_reciprocal</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
+  <span class="n">density_grid_reciprocal</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin x y z&#39;</span><span class="p">],</span>
   <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
   <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
@@ -380,24 +379,27 @@ document.write(`
 <span class="sd">  for more details.</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    density_grid_reciprocal (Complex[Array, &#39;x y z&#39;]): Electron density in</span>
-<span class="sd">      reciprocal space.</span>
-<span class="sd">    g_vector_grid (Float[Array, &#39;x y z 3&#39;]): Grid of G-vectors in reciprocal space.</span>
+<span class="sd">    density_grid_reciprocal (Complex[Array, &#39;spin x y z&#39;]): Electron density in</span>
+<span class="sd">      reciprocal space. The input density must contains spin axis.</span>
+<span class="sd">    g_vector_grid (Float[Array, &#39;x y z 3&#39;]): Grid of G-vectors in reciprocal</span>
+<span class="sd">      space.</span>
 <span class="sd">    vol (Float): Unit cell volume.</span>
-<span class="sd">    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.</span>
+<span class="sd">    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to</span>
+<span class="sd">      False.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    Float: Hartree energy.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">dim</span> <span class="o">=</span> <span class="n">g_vector_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 
-  <span class="k">if</span> <span class="n">density_grid_reciprocal</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="n">dim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
-    <span class="n">density_grid_reciprocal</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">density_grid_reciprocal</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">density_grid_reciprocal</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="n">dim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span>
+    <span class="s1">&#39;density_grid_reciprocal must contains spin axis&#39;</span>
+  <span class="p">)</span>
 
   <span class="n">v_hartree_reciprocal</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">hartree_reciprocal</span><span class="p">(</span>
     <span class="n">density_grid_reciprocal</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kohn_sham</span>
   <span class="p">)</span>
-
+  <span class="n">v_hartree_reciprocal</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">v_hartree_reciprocal</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
   <span class="n">hartree_energy</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">reciprocal_braket</span><span class="p">(</span>
     <span class="n">v_hartree_reciprocal</span><span class="p">,</span> <span class="n">density_grid_reciprocal</span><span class="p">,</span> <span class="n">vol</span>
   <span class="p">)</span>
@@ -409,7 +411,7 @@ document.write(`
 <div class="viewcode-block" id="external">
 <a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.external">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">external</span><span class="p">(</span>
-  <span class="n">density_grid_reciprocal</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
+  <span class="n">density_grid_reciprocal</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin x y z&#39;</span><span class="p">],</span>
   <span class="n">position</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;atom 3&#39;</span><span class="p">],</span>
   <span class="n">charge</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;atom&#39;</span><span class="p">],</span>
   <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">],</span>
@@ -434,8 +436,8 @@ document.write(`
 <span class="sd">  - :math:`v(\mathbf{G})` is the Fourier transform of the Coulomb potential</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    density_grid_reciprocal (Complex[Array, &#39;x y z&#39;]): Electron density in</span>
-<span class="sd">      reciprocal space.</span>
+<span class="sd">    density_grid_reciprocal (Complex[Array, &#39;spin x y z&#39;]): Electron density in</span>
+<span class="sd">      reciprocal space. The input density must contains spin axis.</span>
 <span class="sd">    position (Float[Array, &#39;atom 3&#39;]): Atomic positions in the unit cell.</span>
 <span class="sd">    charge (Float[Array, &#39;atom&#39;]): Nuclear charges.</span>
 <span class="sd">    g_vector_grid (Float[Array, &#39;x y z 3&#39;]): Grid of G-vectors in reciprocal space.</span>
@@ -445,12 +447,15 @@ document.write(`
 <span class="sd">    Float: External potential energy.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">dim</span> <span class="o">=</span> <span class="n">g_vector_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-  <span class="k">if</span> <span class="n">density_grid_reciprocal</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="n">dim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
-    <span class="n">density_grid_reciprocal</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">density_grid_reciprocal</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">density_grid_reciprocal</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="n">dim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span>
+    <span class="s1">&#39;density_grid_reciprocal must contains spin axis&#39;</span>
+  <span class="p">)</span>
 
   <span class="n">v_external_reciprocal</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">external_reciprocal</span><span class="p">(</span>
     <span class="n">position</span><span class="p">,</span> <span class="n">charge</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">vol</span>
   <span class="p">)</span>
+  <span class="n">v_external_reciprocal</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">v_external_reciprocal</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
   <span class="n">external_energy</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">reciprocal_braket</span><span class="p">(</span>
     <span class="n">v_external_reciprocal</span><span class="p">,</span> <span class="n">density_grid_reciprocal</span><span class="p">,</span> <span class="n">vol</span>
   <span class="p">)</span>
@@ -509,19 +514,20 @@ document.write(`
 
 
 
-<div class="viewcode-block" id="exc_functional">
-<a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.exc_functional">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">exc_functional</span><span class="p">(</span>
-  <span class="n">density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z&#39;</span><span class="p">],</span>
+<div class="viewcode-block" id="xc_energy">
+<a class="viewcode-back" href="../../../api/energy.html#jrystal.energy.xc_energy">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">xc_energy</span><span class="p">(</span>
+  <span class="n">density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;spin x y z&#39;</span><span class="p">],</span>
   <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;x y z 3&#39;</span><span class="p">],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
   <span class="n">xc_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
   <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">:</span>
-<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the exchange-correlation energy.</span>
+<span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the exchange-correlation energy of the input density.</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    density_grid (Float[Array, &#39;x y z&#39;]): Real-space electron density.</span>
+<span class="sd">    density_grid (Float[Array, &#39;spin x y z&#39;]): Real-space electron density.</span>
+<span class="sd">      The input density must contains spin axis.</span>
 <span class="sd">    vol (Float): Unit cell volume.</span>
 <span class="sd">    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.</span>
 
@@ -529,12 +535,9 @@ document.write(`
 <span class="sd">    Float: exchange-correlation energy.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
-  <span class="k">assert</span> <span class="n">density_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+  <span class="k">assert</span> <span class="n">density_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">4</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;density_grid must contains spin axis&#39;</span><span class="p">)</span>
 
-  <span class="k">if</span> <span class="n">density_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>  <span class="c1"># have spin channel</span>
-    <span class="n">density_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-
-  <span class="n">num_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">density_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+  <span class="n">num_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">density_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]))</span>
   <span class="n">exc_density</span> <span class="o">=</span> <span class="n">xc</span><span class="o">.</span><span class="n">xc_density</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">,</span> <span class="n">xc_type</span><span class="p">)</span>
   <span class="n">e_xc</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">exc_density</span> <span class="o">*</span> <span class="n">density_grid</span><span class="p">)</span>
   <span class="n">e_xc</span> <span class="o">=</span> <span class="n">safe_real</span><span class="p">(</span><span class="n">e_xc</span><span class="p">)</span>
@@ -590,7 +593,6 @@ document.write(`
   <span class="n">occupation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
   <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
   <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda_x&#39;</span><span class="p">,</span>
-  <span class="n">spin_restricted</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
   <span class="n">split</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Float</span><span class="p">,</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Float</span><span class="p">]]:</span>
 <span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the total electronic energy of the system.</span>
@@ -637,17 +639,7 @@ document.write(`
   <span class="n">e_kin</span> <span class="o">=</span> <span class="n">kinetic</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kpts</span><span class="p">,</span> <span class="n">coefficient</span><span class="p">,</span> <span class="n">occupation</span><span class="p">)</span>
   <span class="n">e_ext</span> <span class="o">=</span> <span class="n">external</span><span class="p">(</span><span class="n">density_grid_rec</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">charge</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
   <span class="n">e_har</span> <span class="o">=</span> <span class="n">hartree</span><span class="p">(</span><span class="n">density_grid_rec</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">)</span>
-
-  <span class="k">if</span> <span class="n">spin_restricted</span><span class="p">:</span>
-    <span class="n">e_xc</span> <span class="o">=</span> <span class="n">exc_functional</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">xc</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">)</span>
-  <span class="k">else</span><span class="p">:</span>
-    <span class="n">o_alpha</span><span class="p">,</span> <span class="n">o_beta</span> <span class="o">=</span> <span class="n">occupation</span>
-    <span class="n">den_alpha_grid</span> <span class="o">=</span> <span class="n">wave_to_density</span><span class="p">(</span><span class="n">wave_grid_arr</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">o_alpha</span><span class="p">)</span>
-    <span class="n">den_beta_grid</span> <span class="o">=</span> <span class="n">wave_to_density</span><span class="p">(</span><span class="n">wave_grid_arr</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">o_beta</span><span class="p">)</span>
-    <span class="n">e_xc</span> <span class="o">=</span> <span class="p">(</span>
-      <span class="n">exc_functional</span><span class="p">(</span><span class="n">den_alpha_grid</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">xc</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
-      <span class="o">+</span> <span class="n">exc_functional</span><span class="p">(</span><span class="n">den_beta_grid</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">xc</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
-    <span class="p">)</span>
+  <span class="n">e_xc</span> <span class="o">=</span> <span class="n">xc_energy</span><span class="p">(</span><span class="n">density_grid</span><span class="p">,</span> <span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">xc</span><span class="p">,</span> <span class="n">kohn_sham</span><span class="p">)</span>
 
   <span class="k">if</span> <span class="n">split</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">e_kin</span><span class="p">,</span> <span class="n">e_ext</span><span class="p">,</span> <span class="n">e_har</span><span class="p">,</span> <span class="n">e_xc</span>

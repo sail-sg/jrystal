@@ -195,7 +195,6 @@
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -345,7 +344,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
 </div></div>
       
     </div>
@@ -361,6 +362,28 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal"><code class="docutils literal notranslate"><span class="pre">Crystal</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.A"><code class="docutils literal notranslate"><span class="pre">Crystal.A</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.B"><code class="docutils literal notranslate"><span class="pre">Crystal.B</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.create_from_file"><code class="docutils literal notranslate"><span class="pre">Crystal.create_from_file()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.create_from_symbols"><code class="docutils literal notranslate"><span class="pre">Crystal.create_from_symbols()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.items"><code class="docutils literal notranslate"><span class="pre">Crystal.items()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.keys"><code class="docutils literal notranslate"><span class="pre">Crystal.keys()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.num_atom"><code class="docutils literal notranslate"><span class="pre">Crystal.num_atom</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.num_electron"><code class="docutils literal notranslate"><span class="pre">Crystal.num_electron</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.reciprocal_vectors"><code class="docutils literal notranslate"><span class="pre">Crystal.reciprocal_vectors</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.scaled_positions"><code class="docutils literal notranslate"><span class="pre">Crystal.scaled_positions</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.values"><code class="docutils literal notranslate"><span class="pre">Crystal.values()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.vol"><code class="docutils literal notranslate"><span class="pre">Crystal.vol</span></code></a></li>
+</ul>
+</li>
+</ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -370,8 +393,151 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="crystal">
-<h1>crystal<a class="headerlink" href="#crystal" title="Link to this heading">#</a></h1>
+  <section id="module-jrystal.crystal">
+<span id="crystal"></span><h1>crystal<a class="headerlink" href="#module-jrystal.crystal" title="Link to this heading">#</a></h1>
+<p>The Crystal class.</p>
+<p>This module establishes the interface for the crystal structure. It’s important
+to note that all values are presented in ATOMIC UNITS inside, specifically
+hartree for energy and Bohr for length. The input positions of atoms should be
+in angstrom.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jrystal.crystal.</span></span><span class="sig-name descname"><span class="pre">Crystal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">spin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/jrystal/_src/crystal.html#Crystal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.crystal.Crystal" title="Link to this definition">#</a></dt>
+<dd><p>Crystal Structure Dataclass.</p>
+<p>This class encapsulates the essential attributes of a crystal, including
+atomic charges, positions, cell vectors, etc.</p>
+<p>A Crystal object can be created via two methods:</p>
+<p>1. create from specifying the four core attributes: atomic numbers (charges),
+absolute coordinates of each atom in Bohr unit (positions), cell vectors (in
+Bohr unit), and the number of unpaired electrons (spin).
+2. create from a geometry file.</p>
+<p>See <a class="reference internal" href="../examples/crystal.html"><span class="doc">Create A Crystal Structure</span></a> for more details.</p>
+<p>Examples:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">jrystal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Crystal</span>
+
+<span class="c1"># Create a crystal object from a xyz file.</span>
+<span class="n">crystal</span> <span class="o">=</span> <span class="n">Crystal</span><span class="o">.</span><span class="n">create_from_file</span><span class="p">(</span><span class="s2">&quot;diamond.xyz&quot;</span><span class="p">)</span>
+
+<span class="c1"># Create a crystal object from crystal attributes.</span>
+<span class="n">crystal</span> <span class="o">=</span> <span class="n">Crystal</span><span class="p">(</span>
+  <span class="n">charges</span><span class="o">=</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+  <span class="n">positions</span><span class="o">=</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">]],</span>
+  <span class="n">cell_vectors</span><span class="o">=</span><span class="p">[[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+  <span class="n">spin</span><span class="o">=</span><span class="mi">0</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>charges</strong> (<em>Optional</em><em>[</em><em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;atom&quot;</em><em>]</em><em>]</em>) – The atomic charges. Defaults to</p></li>
+<li><p><strong>None.</strong> (<em>unit. Defaults to</em>)</p></li>
+<li><p><strong>positions</strong> (<em>Optional</em><em>[</em><em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;atom 3&quot;</em><em>]</em><em>]</em>) – The absolute coordinates of</p></li>
+<li><p><strong>None.</strong></p></li>
+<li><p><strong>cell_vectors</strong> (<em>Optional</em><em>[</em><em>Float</em><em>[</em><em>Array</em><em>, </em><em>'3 3'</em><em>]</em><em>]</em>) – The cell vectors in Bohr</p></li>
+<li><p><strong>None.</strong></p></li>
+<li><p><strong>spin</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>) – The number of unpaired electrons. Defaults to None.</p></li>
+<li><p><strong>symbol</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – The atomic symbols. Defaults to None.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.A">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">A</span></span><a class="headerlink" href="#jrystal.crystal.Crystal.A" title="Link to this definition">#</a></dt>
+<dd><p>Alias for cell_vectors.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.B">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">B</span></span><a class="headerlink" href="#jrystal.crystal.Crystal.B" title="Link to this definition">#</a></dt>
+<dd><p>Alias for reciprocal vectors.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.create_from_file">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">spin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/jrystal/_src/crystal.html#Crystal.create_from_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.crystal.Crystal.create_from_file" title="Link to this definition">#</a></dt>
+<dd><p>Create a crystal object from a xyz file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The path of the xyz file.</p></li>
+<li><p><strong>spin</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>, </em><em>optional</em>) – The number of unpaired electron.
+Defaults to None. If not provided, spin is set to 1 if the total
+number of electrons is odd, otherwise 0.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Crystal onbject.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.create_from_symbols">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_from_symbols</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'num_atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/jrystal/_src/crystal.html#Crystal.create_from_symbols"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.crystal.Crystal.create_from_symbols" title="Link to this definition">#</a></dt>
+<dd><p>Create a crystal object from symbols, positions, and cell vectors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>symbols</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The atomic symbols.</p></li>
+<li><p><strong>positions</strong> (<em>Union</em><em>[</em><em>List</em><em>[</em><em>List</em><em>]</em><em>, </em><em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;num_atom 3&quot;</em><em>]</em>) – The absolute
+coordinates of each atom in Bohr unit.</p></li>
+<li><p><strong>cell_vectors</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;3 3&quot;</em><em>]</em>) – The cell vectors in Bohr unit.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Crystal object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.items">
+<span class="sig-name descname"><span class="pre">items</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">a</span> <span class="pre">set-like</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D's</span> <span class="pre">items</span></span></span><a class="headerlink" href="#jrystal.crystal.Crystal.items" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.keys">
+<span class="sig-name descname"><span class="pre">keys</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">a</span> <span class="pre">set-like</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D's</span> <span class="pre">keys</span></span></span><a class="headerlink" href="#jrystal.crystal.Crystal.keys" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.num_atom">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_atom</span></span><a class="headerlink" href="#jrystal.crystal.Crystal.num_atom" title="Link to this definition">#</a></dt>
+<dd><p>Total number of atoms.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.num_electron">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_electron</span></span><a class="headerlink" href="#jrystal.crystal.Crystal.num_electron" title="Link to this definition">#</a></dt>
+<dd><p>Total number of electrons.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.reciprocal_vectors">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">reciprocal_vectors</span></span><a class="headerlink" href="#jrystal.crystal.Crystal.reciprocal_vectors" title="Link to this definition">#</a></dt>
+<dd><p>The reciprocal cell vectors.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.scaled_positions">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">scaled_positions</span></span><a class="headerlink" href="#jrystal.crystal.Crystal.scaled_positions" title="Link to this definition">#</a></dt>
+<dd><p>The scaled coordinate of the atoms.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.values">
+<span class="sig-name descname"><span class="pre">values</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">an</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D's</span> <span class="pre">values</span></span></span><a class="headerlink" href="#jrystal.crystal.Crystal.values" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="jrystal.crystal.Crystal.vol">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">vol</span></span><a class="headerlink" href="#jrystal.crystal.Crystal.vol" title="Link to this definition">#</a></dt>
+<dd><p>The volume of the unit cell in Bohr^3.</p>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 
 
@@ -409,6 +575,35 @@ document.write(`
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal"><code class="docutils literal notranslate"><span class="pre">Crystal</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.A"><code class="docutils literal notranslate"><span class="pre">Crystal.A</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.B"><code class="docutils literal notranslate"><span class="pre">Crystal.B</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.create_from_file"><code class="docutils literal notranslate"><span class="pre">Crystal.create_from_file()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.create_from_symbols"><code class="docutils literal notranslate"><span class="pre">Crystal.create_from_symbols()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.items"><code class="docutils literal notranslate"><span class="pre">Crystal.items()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.keys"><code class="docutils literal notranslate"><span class="pre">Crystal.keys()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.num_atom"><code class="docutils literal notranslate"><span class="pre">Crystal.num_atom</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.num_electron"><code class="docutils literal notranslate"><span class="pre">Crystal.num_electron</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.reciprocal_vectors"><code class="docutils literal notranslate"><span class="pre">Crystal.reciprocal_vectors</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.scaled_positions"><code class="docutils literal notranslate"><span class="pre">Crystal.scaled_positions</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.values"><code class="docutils literal notranslate"><span class="pre">Crystal.values()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.crystal.Crystal.vol"><code class="docutils literal notranslate"><span class="pre">Crystal.vol</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
               
             
           </div>

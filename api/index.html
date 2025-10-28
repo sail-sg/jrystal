@@ -195,7 +195,6 @@
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -374,27 +373,93 @@ document.write(`
 <h1>API Documentation<a class="headerlink" href="#api-documentation" title="Link to this heading">#</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="calc.html">calculator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="crystal.html">crystal</a></li>
-<li class="toctree-l1"><a class="reference internal" href="energy.html">energy</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entropy.html">entropy</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ewald.html">ewald</a></li>
-<li class="toctree-l1"><a class="reference internal" href="grid.html">grid</a></li>
-<li class="toctree-l1"><a class="reference internal" href="hamiltonian.html">hamiltonian</a></li>
-<li class="toctree-l1"><a class="reference internal" href="kinetic.html">kinetic</a></li>
-<li class="toctree-l1"><a class="reference internal" href="occupation.html">occupation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="potential.html">potential</a></li>
+<li class="toctree-l1"><a class="reference internal" href="calc.html">calculator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="calc.html#jrystal.calc.band_all_electrons"><code class="docutils literal notranslate"><span class="pre">band_all_electrons()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="calc.html#jrystal.calc.band_normcons"><code class="docutils literal notranslate"><span class="pre">band_normcons()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="calc.html#jrystal.calc.energy_all_electrons"><code class="docutils literal notranslate"><span class="pre">energy_all_electrons()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="calc.html#jrystal.calc.energy_normcons"><code class="docutils literal notranslate"><span class="pre">energy_normcons()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="crystal.html">crystal</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="crystal.html#jrystal.crystal.Crystal"><code class="docutils literal notranslate"><span class="pre">Crystal</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="energy.html">energy</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="energy.html#jrystal.energy.band_energy"><code class="docutils literal notranslate"><span class="pre">band_energy()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="energy.html#jrystal.energy.external"><code class="docutils literal notranslate"><span class="pre">external()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="energy.html#jrystal.energy.hartree"><code class="docutils literal notranslate"><span class="pre">hartree()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="energy.html#jrystal.energy.kinetic"><code class="docutils literal notranslate"><span class="pre">kinetic()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="energy.html#jrystal.energy.nuclear_repulsion"><code class="docutils literal notranslate"><span class="pre">nuclear_repulsion()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="energy.html#jrystal.energy.total_energy"><code class="docutils literal notranslate"><span class="pre">total_energy()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="energy.html#jrystal.energy.xc_energy"><code class="docutils literal notranslate"><span class="pre">xc_energy()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="entropy.html">entropy</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="entropy.html#jrystal.entropy.fermi_dirac"><code class="docutils literal notranslate"><span class="pre">fermi_dirac()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ewald.html">ewald</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ewald.html#jrystal.ewald.ewald_coulomb_repulsion"><code class="docutils literal notranslate"><span class="pre">ewald_coulomb_repulsion()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="grid.html">grid</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.cubic_mask"><code class="docutils literal notranslate"><span class="pre">cubic_mask()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.estimate_max_cutoff_energy"><code class="docutils literal notranslate"><span class="pre">estimate_max_cutoff_energy()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.g2cell_vectors"><code class="docutils literal notranslate"><span class="pre">g2cell_vectors()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.g2r_vector_grid"><code class="docutils literal notranslate"><span class="pre">g2r_vector_grid()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.g_vectors"><code class="docutils literal notranslate"><span class="pre">g_vectors()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.grid_vector_radius"><code class="docutils literal notranslate"><span class="pre">grid_vector_radius()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.k_vectors"><code class="docutils literal notranslate"><span class="pre">k_vectors()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.proper_grid_size"><code class="docutils literal notranslate"><span class="pre">proper_grid_size()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.r2cell_vectors"><code class="docutils literal notranslate"><span class="pre">r2cell_vectors()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.r2g_vector_grid"><code class="docutils literal notranslate"><span class="pre">r2g_vector_grid()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.r_vectors"><code class="docutils literal notranslate"><span class="pre">r_vectors()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.spherical_mask"><code class="docutils literal notranslate"><span class="pre">spherical_mask()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grid.html#jrystal.grid.translation_vectors"><code class="docutils literal notranslate"><span class="pre">translation_vectors()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="hamiltonian.html">hamiltonian</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="hamiltonian.html#jrystal.hamiltonian.hamiltonian_matrix"><code class="docutils literal notranslate"><span class="pre">hamiltonian_matrix()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="hamiltonian.html#jrystal.hamiltonian.hamiltonian_matrix_trace"><code class="docutils literal notranslate"><span class="pre">hamiltonian_matrix_trace()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="kinetic.html">kinetic</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="kinetic.html#jrystal.kinetic.kinetic_operator"><code class="docutils literal notranslate"><span class="pre">kinetic_operator()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="occupation.html">occupation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="occupation.html#jrystal.occupation.gamma"><code class="docutils literal notranslate"><span class="pre">gamma()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="occupation.html#jrystal.occupation.idempotent"><code class="docutils literal notranslate"><span class="pre">idempotent()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="occupation.html#jrystal.occupation.idempotent_param_init"><code class="docutils literal notranslate"><span class="pre">idempotent_param_init()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="occupation.html#jrystal.occupation.uniform"><code class="docutils literal notranslate"><span class="pre">uniform()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="potential.html">potential</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="potential.html#jrystal.potential.effective"><code class="docutils literal notranslate"><span class="pre">effective()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="potential.html#jrystal.potential.external"><code class="docutils literal notranslate"><span class="pre">external()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="potential.html#jrystal.potential.external_reciprocal"><code class="docutils literal notranslate"><span class="pre">external_reciprocal()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="potential.html#jrystal.potential.hartree"><code class="docutils literal notranslate"><span class="pre">hartree()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="potential.html#jrystal.potential.hartree_reciprocal"><code class="docutils literal notranslate"><span class="pre">hartree_reciprocal()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="pseudopotential.html">pseudopotential</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="pseudopotential/normcons.html">normcons</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pseudopotential/local.html">local</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="pw.html">planewave</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pw.html">planewave</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pw.html#jrystal.pw.coeff"><code class="docutils literal notranslate"><span class="pre">coeff()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="pw.html#jrystal.pw.density_grid"><code class="docutils literal notranslate"><span class="pre">density_grid()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="pw.html#jrystal.pw.density_grid_reciprocal"><code class="docutils literal notranslate"><span class="pre">density_grid_reciprocal()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="pw.html#jrystal.pw.param_init"><code class="docutils literal notranslate"><span class="pre">param_init()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="pw.html#jrystal.pw.wave_grid"><code class="docutils literal notranslate"><span class="pre">wave_grid()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="pw.html#jrystal.pw.wave_r"><code class="docutils literal notranslate"><span class="pre">wave_r()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </div>
 </section>

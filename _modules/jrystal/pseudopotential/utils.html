@@ -194,7 +194,6 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -338,6 +337,9 @@ document.write(`
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">wraps</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
 
 
 <div class="viewcode-block" id="map_over_atoms">
@@ -369,6 +371,39 @@ document.write(`
 
   <span class="k">return</span> <span class="n">map_fun</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">stack_with_padding</span><span class="p">(</span><span class="n">array_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]):</span>
+  <span class="c1"># Input validation</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">array_list</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input list is empty!&quot;</span><span class="p">)</span>
+
+  <span class="c1"># Verify all arrays have same number of dimensions</span>
+  <span class="n">ndim</span> <span class="o">=</span> <span class="n">array_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span>
+  <span class="k">for</span> <span class="n">arr</span> <span class="ow">in</span> <span class="n">array_list</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="n">ndim</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All arrays must have the same number of dimensions!&quot;</span><span class="p">)</span>
+
+  <span class="c1"># Compute maximum length for each dimension</span>
+  <span class="n">max_shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">arr</span><span class="o">.</span><span class="n">shape</span> <span class="k">for</span> <span class="n">arr</span> <span class="ow">in</span> <span class="n">array_list</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+  <span class="c1"># Pad each array only where dimensions don&#39;t match</span>
+  <span class="n">padded_arrays</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">arr</span> <span class="ow">in</span> <span class="n">array_list</span><span class="p">:</span>
+    <span class="c1"># Determine padding for each axis:</span>
+    <span class="c1"># - (0, pad_size) for mismatched axes</span>
+    <span class="c1"># - (0, 0) for already matching axes</span>
+    <span class="n">pad_width</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">!=</span> <span class="n">max_shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]:</span>
+        <span class="n">pad_width</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">-</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]))</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">pad_width</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="n">padded_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">pad_width</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;constant&#39;</span><span class="p">,</span> <span class="n">constant_values</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">padded_arrays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">padded_arr</span><span class="p">)</span>
+
+  <span class="c1"># Stack all arrays</span>
+  <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">padded_arrays</span><span class="p">)</span>
 </pre></div>
 
                 </article>

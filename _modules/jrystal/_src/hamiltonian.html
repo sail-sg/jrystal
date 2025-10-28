@@ -194,7 +194,6 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -340,27 +339,29 @@ document.write(`
 <span class="sd">This module provides functions to compute Hamiltonian matrix elements and related quantities in a plane wave basis. The Hamiltonian includes both kinetic and effective potential terms, supporting both standard and Kohn-Sham DFT calculations.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Int</span><span class="p">,</span> <span class="n">Complex</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.kinetic</span><span class="w"> </span><span class="kn">import</span> <span class="n">kinetic_operator</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">pw</span><span class="p">,</span> <span class="n">braket</span><span class="p">,</span> <span class="n">potential</span><span class="p">,</span> <span class="n">utils</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Complex</span><span class="p">,</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Int</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">braket</span><span class="p">,</span> <span class="n">potential</span><span class="p">,</span> <span class="n">pw</span><span class="p">,</span> <span class="n">utils</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.hessian</span><span class="w"> </span><span class="kn">import</span> <span class="n">complex_hessian</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.kinetic</span><span class="w"> </span><span class="kn">import</span> <span class="n">kinetic_operator</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_hamiltonian_matrix</span><span class="p">(</span>
   <span class="n">coefficient</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
   <span class="n">positions</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom 3&quot;</span><span class="p">],</span>
   <span class="n">charges</span><span class="p">:</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom&quot;</span><span class="p">],</span>
-  <span class="n">effictive_density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z&quot;</span><span class="p">],</span>
+  <span class="n">effictive_density_grid</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z&quot;</span><span class="p">],</span>
+                                <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin x y z&quot;</span><span class="p">]],</span>
   <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
   <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
-  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
+  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda_x&#39;</span><span class="p">,</span>
   <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt band band&quot;</span><span class="p">]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band band&quot;</span><span class="p">]:</span>
 <span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute the Hamiltonian matrix elements between orbitals.</span>
 
 <span class="sd">  The Hamiltonian matrix (hamiltonian-orbital matrix) is defined as:</span>
@@ -370,7 +371,7 @@ document.write(`
 <span class="sd">    H_{ij} = \langle \psi_i | \hat{H} | \psi_j \rangle</span>
 
 <span class="sd">  where :math:`\hat{H}` is the Hamiltonian operator composed of kinetic and effective potential terms:</span>
-<span class="sd">  </span>
+
 <span class="sd">  .. math::</span>
 
 <span class="sd">    \hat{H} = \hat{T} + \hat{V}_{eff}</span>
@@ -378,12 +379,21 @@ document.write(`
 <span class="sd">  The kinetic term :math:`\hat{T}` is computed in reciprocal space, while the effective potential term :math:`\hat{V}_{eff}` includes both the external potential from ions and the electron-electron interaction terms.</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    coefficient (Complex[Array, &quot;spin kpt band x y z&quot;]): Plane wave coefficients with shape [spin, kpt, band, x, y, z]. The last three dimensions represent the spatial grid.</span>
-<span class="sd">    positions (Float[Array, &quot;atom 3&quot;]): Atomic positions in Bohr units with shape [atom, 3].</span>
-<span class="sd">    charges (Int[Array, &quot;atom&quot;]): Atomic numbers for each atom with shape [atom].</span>
-<span class="sd">    effictive_density_grid (Float[Array, &quot;x y z&quot;]): Electron density for effective potential evaluated  on real space grid with shape [x, y, z].</span>
-<span class="sd">    g_vector_grid (Float[Array, &quot;x y z 3&quot;]): G-vector grid in reciprocal space with shape [x, y, z, 3].</span>
-<span class="sd">    kpts (Float[Array, &quot;kpt 3&quot;]): K-points in reciprocal space with shape [kpt, 3].</span>
+<span class="sd">    coefficient (Complex[Array, &quot;spin kpt band x y z&quot;]): Plane wave</span>
+<span class="sd">      coefficients with shape [spin, kpt, band, x, y, z]. The last three</span>
+<span class="sd">      dimensions represent the spatial grid.</span>
+<span class="sd">    positions (Float[Array, &quot;atom 3&quot;]): Atomic positions in Bohr units with</span>
+<span class="sd">      shape [atom, 3].</span>
+<span class="sd">    charges (Int[Array, &quot;atom&quot;]): Atomic numbers for each atom with shape</span>
+<span class="sd">      [atom].</span>
+<span class="sd">    effictive_density_grid (Union[Float[Array, &quot;x y z&quot;],</span>
+<span class="sd">      Float[Array, &quot;spin x y z&quot;]]): Electron density for effective potential</span>
+<span class="sd">      evaluated on real space grid with shape [x, y, z]. It can contains spin</span>
+<span class="sd">      axis or not.</span>
+<span class="sd">    g_vector_grid (Float[Array, &quot;x y z 3&quot;]): G-vector grid in reciprocal space</span>
+<span class="sd">      with shape [x, y, z, 3].</span>
+<span class="sd">    kpts (Float[Array, &quot;kpt 3&quot;]): K-points in reciprocal space with shape</span>
+<span class="sd">      [kpt, 3].</span>
 <span class="sd">    vol (Float): Volume of the unit cell.</span>
 <span class="sd">    xc (str): Exchange-correlation functional name. Defaults to &#39;lda&#39;.</span>
 <span class="sd">    kohn_sham: Whether to use Kohn-Sham potential. Defaults to False.</span>
@@ -391,6 +401,8 @@ document.write(`
 <span class="sd">  Returns:</span>
 <span class="sd">    Float[Array, &quot;kpt band band&quot;]: Float array of shape [kpt, band, band] containing the Hamiltonian matrix elements between all pairs of bands at each k-point.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">effictive_density_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+    <span class="n">effictive_density_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">effictive_density_grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
   <span class="n">v_eff</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">effective</span><span class="p">(</span>
     <span class="n">effictive_density_grid</span><span class="p">,</span>
@@ -401,8 +413,8 @@ document.write(`
     <span class="n">split</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">xc</span><span class="o">=</span><span class="n">xc</span><span class="p">,</span>
     <span class="n">kohn_sham</span><span class="o">=</span><span class="n">kohn_sham</span>
-  <span class="p">)</span>
-  <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">wave_grid</span><span class="p">(</span><span class="n">coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
+  <span class="p">)</span>  <span class="c1"># [x y z]</span>
+  <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">wave_grid</span><span class="p">(</span><span class="n">coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>  <span class="c1"># [spin kpt band x y z]</span>
   <span class="n">f_eff</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_eff</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
 
   <span class="n">t_kin</span> <span class="o">=</span> <span class="n">kinetic_operator</span><span class="p">(</span><span class="n">g_vector_grid</span><span class="p">,</span> <span class="n">kpts</span><span class="p">)</span>
@@ -410,7 +422,7 @@ document.write(`
     <span class="n">coefficient</span><span class="p">,</span> <span class="n">t_kin</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;kinetic&#39;</span>
   <span class="p">)</span>
 
-  <span class="k">return</span> <span class="p">(</span><span class="n">f_eff</span> <span class="o">+</span> <span class="n">f_kin</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="k">return</span> <span class="p">(</span><span class="n">f_eff</span> <span class="o">+</span> <span class="n">f_kin</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="hamiltonian_matrix_trace">
@@ -419,16 +431,15 @@ document.write(`
   <span class="n">band_coefficient</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
   <span class="n">positions</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom 3&quot;</span><span class="p">],</span>
   <span class="n">charges</span><span class="p">:</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom&quot;</span><span class="p">],</span>
-  <span class="n">effictive_density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z&quot;</span><span class="p">],</span>
+  <span class="n">effictive_density_grid</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z&quot;</span><span class="p">],</span>
+                                <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin x y z&quot;</span><span class="p">]],</span>
   <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
   <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
-  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
-  <span class="n">spin_restricted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda_x&#39;</span><span class="p">,</span>
   <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
   <span class="n">keep_kpts_axis</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-  <span class="n">keep_spin_axis</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">,</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin&quot;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt&quot;</span><span class="p">]]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin&quot;</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt&quot;</span><span class="p">]]:</span>
 <span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the trace of the Hamiltonian matrix.</span>
 
 <span class="sd">  The trace is computed as:</span>
@@ -451,15 +462,11 @@ document.write(`
 <span class="sd">    xc (str): Exchange-correlation functional name. Defaults to &#39;lda&#39;.</span>
 <span class="sd">    kohn_sham (bool): Whether to use Kohn-Sham potential. Defaults to True.</span>
 <span class="sd">    keep_kpts_axis (bool): If True, retains the k-points axis in output. Defaults to False.</span>
-<span class="sd">    keep_spin_axis (bool): If True, retains the spin axis in output. Defaults to False.</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    Union[Float, Float[Array, &quot;spin&quot;],  Float[Array, &quot;spin kpt&quot;]]: The trace of the Hamiltonian matrix. The shape depends on keep_kpts_axis and keep_spin_axis:</span>
-<span class="sd">  </span>
-<span class="sd">    - If both False: returns a scalar Float</span>
-<span class="sd">    - If keep_spin_axis True: returns Float[Array, &quot;spin&quot;]</span>
-<span class="sd">    - If keep_kpts_axis True: returns Float[Array, &quot;kpt&quot;]</span>
-<span class="sd">    - If both True: returns Float[Array, &quot;spin kpt&quot;]</span>
+<span class="sd">    Union[Float[Array, &quot;spin&quot;],  Float[Array, &quot;spin kpt&quot;]]: The trace of the</span>
+<span class="sd">    Hamiltonian matrix. The output has shape [spin, kpt] if keep_kpts_axis is</span>
+<span class="sd">    :code:`True`, otherwise [spin].</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
   <span class="n">v_eff</span> <span class="o">=</span> <span class="n">potential</span><span class="o">.</span><span class="n">effective</span><span class="p">(</span>
@@ -471,7 +478,6 @@ document.write(`
     <span class="kc">False</span><span class="p">,</span>
     <span class="n">xc</span><span class="p">,</span>
     <span class="n">kohn_sham</span><span class="p">,</span>
-    <span class="n">spin_restricted</span><span class="p">,</span>
   <span class="p">)</span>
   <span class="n">wave_grid</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">wave_grid</span><span class="p">(</span><span class="n">band_coefficient</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span>
   <span class="n">f_eff</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span><span class="n">wave_grid</span><span class="p">,</span> <span class="n">v_eff</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;real&quot;</span><span class="p">)</span>
@@ -480,17 +486,11 @@ document.write(`
   <span class="n">f_kin</span> <span class="o">=</span> <span class="n">braket</span><span class="o">.</span><span class="n">expectation</span><span class="p">(</span>
     <span class="n">band_coefficient</span><span class="p">,</span> <span class="n">t_kin</span><span class="p">,</span> <span class="n">vol</span><span class="p">,</span> <span class="n">diagonal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;kinetic&#39;</span>
   <span class="p">)</span>  <span class="c1"># [spin, kpt, band]</span>
-
-  <span class="k">if</span> <span class="n">spin_restricted</span><span class="p">:</span>
-    <span class="n">hamil_trace</span> <span class="o">=</span> <span class="p">(</span><span class="n">f_eff</span> <span class="o">+</span> <span class="n">f_kin</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+  <span class="n">hamil_trace</span> <span class="o">=</span> <span class="p">(</span><span class="n">f_eff</span> <span class="o">+</span> <span class="n">f_kin</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+  <span class="k">if</span> <span class="n">keep_kpts_axis</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">hamil_trace</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
   <span class="k">else</span><span class="p">:</span>
-    <span class="n">hamil_trace</span> <span class="o">=</span> <span class="n">f_kin</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">f_eff</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-    <span class="n">hamil_trace</span> <span class="o">=</span> <span class="n">hamil_trace</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">f_eff</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">keep_kpts_axis</span><span class="p">:</span>
-    <span class="n">hamil_trace</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">hamil_trace</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">keep_spin_axis</span><span class="p">:</span>
-    <span class="n">hamil_trace</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">hamil_trace</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">hamil_trace</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">hamil_trace</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span></div>
 
 
 
@@ -500,16 +500,16 @@ document.write(`
   <span class="n">band_coefficient</span><span class="p">:</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band x y z&quot;</span><span class="p">],</span>
   <span class="n">positions</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom 3&quot;</span><span class="p">],</span>
   <span class="n">charges</span><span class="p">:</span> <span class="n">Int</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;atom&quot;</span><span class="p">],</span>
-  <span class="n">effictive_density_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z&quot;</span><span class="p">],</span>
+  <span class="n">effictive_density_grid</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z&quot;</span><span class="p">],</span>
+                                <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin x y z&quot;</span><span class="p">]],</span>
   <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
   <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
-  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
-  <span class="n">spin_restricted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda_x&#39;</span><span class="p">,</span>
   <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt band band&quot;</span><span class="p">]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;spin kpt band band&quot;</span><span class="p">]:</span>
 <span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute the full Hamiltonian matrix in the orbital basis.</span>
-<span class="sd">  </span>
+
 <span class="sd">  This function computes the complete Hamiltonian matrix including both diagonal</span>
 <span class="sd">  and off-diagonal elements. The matrix elements are defined as:</span>
 
@@ -523,7 +523,7 @@ document.write(`
 <span class="sd">    band_coefficient (Complex[Array, &quot;spin kpt band x y z&quot;]): Plane wave coefficients with shape [spin, kpt, band, x, y, z]. The last three dimensions represent the spatial grid.</span>
 <span class="sd">    positions (Float[Array, &quot;atom 3&quot;]): Atomic positions in Bohr units with shape [atom, 3].</span>
 <span class="sd">    charges (Int[Array, &quot;atom&quot;]): Atomic numbers for each atom with shape [atom].</span>
-<span class="sd">    effictive_density_grid (Float[Array, &quot;x y z&quot;]): Electron density for effective potential evaluated on real space grid with shape [x, y, z].</span>
+<span class="sd">    effictive_density_grid (Union[Float[Array, &quot;x y z&quot;], Float[Array, &quot;spin x y z&quot;]]): Electron density for effective potential evaluated on real space grid with shape [x, y, z]. It can contains spin axis or not.</span>
 <span class="sd">    g_vector_grid (Float[Array, &quot;x y z 3&quot;]): G-vector grid in reciprocal space with shape [x, y, z, 3].</span>
 <span class="sd">    kpts (Float[Array, &quot;kpt 3&quot;]): K-points in reciprocal space with shape [kpt, 3]. Currently, only spin-restricted</span>
 <span class="sd">    calculation enable parallel calculation for multiple K-points.</span>
@@ -532,7 +532,7 @@ document.write(`
 <span class="sd">    kohn_sham (bool): Whether to use Kohn-Sham potential. Defaults to True.</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    Complex[Array, &quot;kpt band band&quot;]: Complex array of shape [kpt, band, band] containing the complete Hamiltonian matrix elements between all pairs of bands at each k-point.</span>
+<span class="sd">    Complex[Array, &quot;spin kpt band band&quot;]: Complex array of shape [spin, kpt, band, band] containing the complete Hamiltonian matrix elements between all pairs of bands at each k-point.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">num_bands</span> <span class="o">=</span> <span class="n">band_coefficient</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span>
 
@@ -540,10 +540,8 @@ document.write(`
     <span class="n">k</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">efun</span><span class="p">(</span><span class="n">u</span><span class="p">):</span>
-      <span class="n">_coeff</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
-        <span class="s2">&quot;si, sixyz -&gt; sxyz&quot;</span><span class="p">,</span> <span class="n">u</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_bands</span><span class="p">),</span> <span class="n">coeff_k</span>
-      <span class="p">)</span>
-      <span class="n">_coeff</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">_coeff</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">))</span>
+      <span class="n">_coeff</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;i,ixyz-&gt;xyz&quot;</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">coeff_k</span><span class="p">)</span>
+      <span class="n">_coeff</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">_coeff</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
 
       <span class="n">band_energies</span> <span class="o">=</span> <span class="n">hamiltonian_matrix_trace</span><span class="p">(</span>
         <span class="n">_coeff</span><span class="p">,</span>
@@ -554,29 +552,20 @@ document.write(`
         <span class="n">k</span><span class="p">,</span>
         <span class="n">vol</span><span class="p">,</span>
         <span class="n">xc</span><span class="p">,</span>
-        <span class="n">spin_restricted</span><span class="p">,</span>
         <span class="n">kohn_sham</span><span class="p">,</span>
       <span class="p">)</span>
-
       <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">band_energies</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">band_coefficient</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">spin_restricted</span><span class="p">:</span>
-      <span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_bands</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">band_coefficient</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-      <span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">num_bands</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">band_coefficient</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_bands</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">band_coefficient</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">complex_hessian</span><span class="p">(</span><span class="n">efun</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
 
-  <span class="k">if</span> <span class="n">spin_restricted</span><span class="p">:</span>
-    <span class="n">h1</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">hamil_k</span><span class="p">,</span> <span class="n">in_axes</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">out_axes</span><span class="o">=</span><span class="mi">0</span><span class="p">)(</span><span class="n">kpts</span><span class="p">,</span> <span class="n">band_coefficient</span><span class="p">)</span>
-    <span class="n">h1</span> <span class="o">=</span> <span class="n">h1</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
-    <span class="c1"># shape: [1, k, band, band]</span>
-  <span class="k">else</span><span class="p">:</span>
-    <span class="n">h1_</span> <span class="o">=</span> <span class="n">hamil_k</span><span class="p">(</span><span class="n">kpts</span><span class="p">,</span> <span class="n">band_coefficient</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
-    <span class="n">h1</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num_bands</span><span class="p">,</span> <span class="n">num_bands</span><span class="p">))</span>
-    <span class="n">h1</span> <span class="o">=</span> <span class="n">h1</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">h1_</span><span class="p">[:</span><span class="n">num_bands</span><span class="p">,</span> <span class="p">:</span><span class="n">num_bands</span><span class="p">])</span>
-    <span class="n">h1</span> <span class="o">=</span> <span class="n">h1</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">h1_</span><span class="p">[</span><span class="n">num_bands</span><span class="p">:,</span> <span class="n">num_bands</span><span class="p">:])</span>
-    <span class="c1"># shape: [2, 1, band, band]</span>
-  <span class="k">return</span> <span class="n">h1</span> </div>
+  <span class="n">h</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span>
+    <span class="k">lambda</span> <span class="n">coeff</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">hamil_k</span><span class="p">,</span> <span class="n">in_axes</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">out_axes</span><span class="o">=</span><span class="mi">0</span><span class="p">)(</span><span class="n">kpts</span><span class="p">,</span> <span class="n">coeff</span><span class="p">)</span>
+  <span class="p">)(</span>
+    <span class="n">band_coefficient</span>
+  <span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">h</span></div>
 
 
 
@@ -588,11 +577,11 @@ document.write(`
   <span class="n">g_vector_grid</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;x y z 3&quot;</span><span class="p">],</span>
   <span class="n">kpts</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt 3&quot;</span><span class="p">],</span>
   <span class="n">vol</span><span class="p">:</span> <span class="n">Float</span><span class="p">,</span>
-  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
+  <span class="n">xc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lda_x&#39;</span><span class="p">,</span>
   <span class="n">kohn_sham</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Complex</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;kpt band band&quot;</span><span class="p">]:</span>
 <span class="w">  </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute the Hamiltonian matrix in the plane wave basis.</span>
-<span class="sd">  </span>
+
 <span class="sd">  This internal function computes the Hamiltonian matrix elements in the plane wave basis set defined by the frequency mask. It uses complex hessian calculations to efficiently compute the matrix elements.</span>
 
 <span class="sd">  Args:</span>

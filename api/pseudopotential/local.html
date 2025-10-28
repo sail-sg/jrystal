@@ -43,6 +43,8 @@
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/graph.js?v=6245dd16"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/pseudopotential/local';</script>
     <link rel="icon" href="../../_static/jrystal_logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -195,7 +197,6 @@
 <li class="toctree-l3"><a class="reference internal" href="dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -345,7 +346,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
 </div></div>
       
     </div>
@@ -361,6 +364,16 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.local.energy_local"><code class="docutils literal notranslate"><span class="pre">energy_local()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.local.hamiltonian_local"><code class="docutils literal notranslate"><span class="pre">hamiltonian_local()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.local.potential_local_reciprocal"><code class="docutils literal notranslate"><span class="pre">potential_local_reciprocal()</span></code></a></li>
+</ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -370,8 +383,94 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="local">
-<h1>local<a class="headerlink" href="#local" title="Link to this heading">#</a></h1>
+  <section id="module-jrystal.pseudopotential.local">
+<span id="local"></span><h1>local<a class="headerlink" href="#module-jrystal.pseudopotential.local" title="Link to this heading">#</a></h1>
+<p>Local potential functions for plane waves.</p>
+<p>This module provides functions for calculating local pseudopotential
+contributions in plane wave basis sets, including reciprocal space
+transformations and Hamiltonian matrix elements.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.pseudopotential.local.energy_local">
+<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.local.</span></span><span class="sig-name descname"><span class="pre">energy_local</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reciprocal_density_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">potential_local_grid_reciprocal</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/local.html#energy_local"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.local.energy_local" title="Link to this definition">#</a></dt>
+<dd><p>Compute the local potential energy in reciprocal space.</p>
+<p>This function calculates the energy contribution from the local potential
+by computing the inner product between the potential and density in
+reciprocal space.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reciprocal_density_grid</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>&quot;spin kpt band x y z&quot;</em><em>]</em>) – Electron</p></li>
+<li><p><strong>space.</strong> (<em>density in reciprocal</em>)</p></li>
+<li><p><strong>potential_local_grid_reciprocal</strong> (<em>Complex</em><em>[</em><em>Array</em><em>, </em><em>&quot;x y z&quot;</em><em>]</em>) – Local potential</p></li>
+<li><p><strong>potential_local_reciprocal.</strong> (<em>in reciprocal space. Can be obtained from</em>)</p></li>
+<li><p><strong>vol</strong> (<em>Float</em>) – Unit cell volume.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Local potential energy contribution.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.pseudopotential.local.hamiltonian_local">
+<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.local.</span></span><span class="sig-name descname"><span class="pre">hamiltonian_local</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wave_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">potential_local_grid_reciprocal</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Complex</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'spin</span> <span class="pre">kpt</span> <span class="pre">band</span> <span class="pre">band'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/local.html#hamiltonian_local"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.local.hamiltonian_local" title="Link to this definition">#</a></dt>
+<dd><p>Compute the local potential Hamiltonian matrix elements.</p>
+<p>This function calculates the matrix elements of the local potential
+operator in the basis of wave functions. The potential is transformed
+from reciprocal to real space before computing the matrix elements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>wave_grid</strong> – Wave functions in real space grid.</p></li>
+<li><p><strong>potential_local_grid_reciprocal</strong> – Local potential in reciprocal space.
+Can be obtained from <a class="reference internal" href="#jrystal.pseudopotential.local.potential_local_reciprocal" title="jrystal.pseudopotential.local.potential_local_reciprocal"><code class="xref py py-func docutils literal notranslate"><span class="pre">potential_local_reciprocal()</span></code></a>.</p></li>
+<li><p><strong>vol</strong> – Unit cell volume.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Local potential Hamiltonian matrix elements.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.pseudopotential.local.potential_local_reciprocal">
+<span class="sig-prename descclassname"><span class="pre">jrystal.pseudopotential.local.</span></span><span class="sig-name descname"><span class="pre">potential_local_reciprocal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'atom</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'r'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_potential_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'r'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_potential_charge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fourier_transform_method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'sbt'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/jrystal/pseudopotential/local.html#potential_local_reciprocal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.pseudopotential.local.potential_local_reciprocal" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the local potential in reciprocal space.</p>
+<p>This function computes the local pseudopotential contribution in
+reciprocal space by transforming the real-space local potentials
+and applying structure factors.</p>
+<div class="math notranslate nohighlight">
+\[&lt; v_loc | G &gt;\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>positions</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;atom 3&quot;</em><em>]</em>) – Atomic positions in Cartesian</p></li>
+<li><p><strong>coordinates.</strong></p></li>
+<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;x y z 3&quot;</em><em>]</em>) – Reciprocal space grid vectors.</p></li>
+<li><p><strong>r_grid</strong> (<em>List</em><em>[</em><em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;r&quot;</em><em>]</em><em>]</em>) – Real-space radial grids for each atom</p></li>
+<li><p><strong>type.</strong></p></li>
+<li><p><strong>local_potential_grid</strong> (<em>List</em><em>[</em><em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;r&quot;</em><em>]</em><em>]</em>) – Local potential values on</p></li>
+<li><p><strong>grids.</strong> (<em>radial</em>)</p></li>
+<li><p><strong>local_potential_charge</strong> (<em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>) – Nuclear charges for each atom type.</p></li>
+<li><p><strong>vol</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Unit cell volume.</p></li>
+<li><p><strong>fourier_transform</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Fourier transform method. Can be either “sbt” or</p></li>
+<li><p><strong>&quot;fft&quot;.</strong></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Local potential in reciprocal space grid.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, “x y z”]</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -409,6 +508,23 @@ document.write(`
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.local.energy_local"><code class="docutils literal notranslate"><span class="pre">energy_local()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.local.hamiltonian_local"><code class="docutils literal notranslate"><span class="pre">hamiltonian_local()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.pseudopotential.local.potential_local_reciprocal"><code class="docutils literal notranslate"><span class="pre">potential_local_reciprocal()</span></code></a></li>
+</ul>
+  </nav></div>
+
+</div></div>
               
             
           </div>

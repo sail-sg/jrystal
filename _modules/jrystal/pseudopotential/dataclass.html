@@ -194,7 +194,6 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -403,7 +402,10 @@ document.write(`
 <span class="sd">  &quot;&quot;&quot;</span>
 
   <span class="n">r_grid</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;num_r&quot;</span><span class="p">]]</span>
+  <span class="n">r_ab</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;num_r&quot;</span><span class="p">]]</span>
   <span class="n">r_cutoff</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+  <span class="n">l_max</span><span class="p">:</span> <span class="nb">int</span>
+  <span class="n">l_max_rho</span><span class="p">:</span> <span class="nb">int</span>
   <span class="n">local_potential_grid</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;num_r&quot;</span><span class="p">]]</span>
   <span class="n">local_potential_charge</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
   <span class="n">num_beta</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
@@ -420,18 +422,21 @@ document.write(`
   <span class="p">):</span>
     <span class="n">positions</span> <span class="o">=</span> <span class="n">crystal</span><span class="o">.</span><span class="n">positions</span>
     <span class="n">charges</span> <span class="o">=</span> <span class="n">crystal</span><span class="o">.</span><span class="n">charges</span>
-    <span class="n">atomic_symbols</span> <span class="o">=</span> <span class="n">crystal</span><span class="o">.</span><span class="n">symbol</span>
+    <span class="n">atomic_symbols</span> <span class="o">=</span> <span class="n">crystal</span><span class="o">.</span><span class="n">symbols</span>
     <span class="n">num_atom</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">charges</span><span class="p">)</span>
 
     <span class="n">pp_dict_list</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="n">crystal</span><span class="o">.</span><span class="n">symbol</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="n">crystal</span><span class="o">.</span><span class="n">symbols</span><span class="p">:</span>
       <span class="n">pp_path</span> <span class="o">=</span> <span class="n">find_upf</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">symbol</span><span class="p">)</span>
       <span class="n">pp_dict</span> <span class="o">=</span> <span class="n">parse_upf</span><span class="p">(</span><span class="n">pp_path</span><span class="p">)</span>
       <span class="n">pp_dict_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pp_dict</span><span class="p">)</span>
 
     <span class="n">valence_charges</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">r_grid</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">r_ab</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">r_cutoff</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">l_max</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">l_max_rho</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">local_potential_grid</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">local_potential_charge</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">nonlocal_num_beta</span> <span class="o">=</span> <span class="p">[]</span>
@@ -443,36 +448,52 @@ document.write(`
 
     <span class="k">for</span> <span class="n">pp</span> <span class="ow">in</span> <span class="n">pp_dict_list</span><span class="p">:</span>
       <span class="n">valence_charges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_HEADER&quot;</span><span class="p">][</span><span class="s2">&quot;z_valence&quot;</span><span class="p">])))</span>
-      <span class="n">r_grid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_MESH&quot;</span><span class="p">][</span><span class="s2">&quot;PP_R&quot;</span><span class="p">]))</span>
+      <span class="n">_r_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_MESH&quot;</span><span class="p">][</span><span class="s2">&quot;PP_R&quot;</span><span class="p">])</span>
+      <span class="n">r_grid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_r_grid</span><span class="p">[</span><span class="n">_r_grid</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>
+      <span class="n">r_ab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_MESH&quot;</span><span class="p">][</span><span class="s2">&quot;PP_RAB&quot;</span><span class="p">])[</span><span class="n">_r_grid</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>
       <span class="c1"># r_cutoff.append(float(pp[&quot;PP_NONLOCAL&quot;][&quot;PP_BETA&quot;][&quot;cutoff_radius&quot;][0]))</span>
       <span class="n">r_cutoff</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+      <span class="n">l_max</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_HEADER&quot;</span><span class="p">][</span><span class="s2">&quot;l_max&quot;</span><span class="p">]))</span>
+      <span class="k">if</span> <span class="s2">&quot;l_max_rho&quot;</span> <span class="ow">in</span> <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_HEADER&quot;</span><span class="p">]:</span>
+        <span class="n">l_max_rho</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_HEADER&quot;</span><span class="p">][</span><span class="s2">&quot;l_max_rho&quot;</span><span class="p">]))</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">l_max_rho</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
       <span class="c1"># norm conserving pseudopotential use the same cutoff_radius for local</span>
       <span class="c1"># and nonlocal potentials.</span>
 
-      <span class="n">local_potential_grid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_LOCAL&quot;</span><span class="p">]))</span>
-      <span class="n">local_potential_charge</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">valence_charges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
-      <span class="c1"># The factor of 2 is due to the conversion from rydberg to hartree,</span>
-      <span class="c1"># which is to make it consistent with QE.</span>
+      <span class="n">local_potential_grid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_LOCAL&quot;</span><span class="p">])[</span><span class="n">_r_grid</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+      <span class="c1"># 1/2 is due to the conversion from rydberg to hartree.</span>
+      <span class="n">local_potential_charge</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">valence_charges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
 
       <span class="n">beta</span> <span class="o">=</span> <span class="p">[]</span>
-      <span class="n">num_beta</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_BETA&quot;</span><span class="p">])</span>
-      <span class="n">nonlocal_num_beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">num_beta</span><span class="p">)</span>
-      <span class="n">beta_angular_momentum</span> <span class="o">=</span> <span class="p">[]</span>
-      <span class="k">for</span> <span class="n">beta_i</span> <span class="ow">in</span> <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_BETA&quot;</span><span class="p">]:</span>
-        <span class="n">beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">beta_i</span><span class="p">[</span><span class="s1">&#39;values&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">r_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-        <span class="n">beta_angular_momentum</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">beta_i</span><span class="p">[</span><span class="s2">&quot;angular_momentum&quot;</span><span class="p">]))</span>
 
-      <span class="n">nonlocal_beta_grid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">beta</span><span class="p">))</span>
-      <span class="n">nonlocal_beta_cutoff_radius</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">beta_i</span><span class="p">[</span><span class="s1">&#39;cutoff_radius&#39;</span><span class="p">])</span>
-      <span class="n">d_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_DIJ&quot;</span><span class="p">])</span>
-      <span class="n">d_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">d_mat</span><span class="p">,</span> <span class="p">[</span><span class="n">num_beta</span><span class="p">,</span> <span class="n">num_beta</span><span class="p">])</span>
-      <span class="n">nonlocal_d_matrix</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d_mat</span><span class="p">)</span>
+      <span class="k">if</span> <span class="s2">&quot;PP_BETA&quot;</span> <span class="ow">in</span> <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">]:</span>
+        <span class="n">num_beta</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_BETA&quot;</span><span class="p">])</span>
+        <span class="n">nonlocal_num_beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">num_beta</span><span class="p">)</span>
+        <span class="n">beta_angular_momentum</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">beta_i</span> <span class="ow">in</span> <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_BETA&quot;</span><span class="p">]:</span>
+          <span class="n">beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">beta_i</span><span class="p">[</span><span class="s1">&#39;values&#39;</span><span class="p">],</span> <span class="n">_r_grid</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="p">(</span><span class="n">_r_grid</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">))</span>
+          <span class="p">)</span>  <span class="c1"># the beta function is multiplied by r in upf file</span>
+          <span class="n">beta_angular_momentum</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">beta_i</span><span class="p">[</span><span class="s2">&quot;angular_momentum&quot;</span><span class="p">]))</span>
+        <span class="n">nonlocal_beta_grid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">beta</span><span class="p">)[:,</span> <span class="n">_r_grid</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">nonlocal_beta_cutoff_radius</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">beta_i</span><span class="p">[</span><span class="s1">&#39;cutoff_radius&#39;</span><span class="p">])</span>
+        <span class="n">d_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_DIJ&quot;</span><span class="p">])</span>
+        <span class="n">d_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">d_mat</span><span class="p">,</span> <span class="p">[</span><span class="n">num_beta</span><span class="p">,</span> <span class="n">num_beta</span><span class="p">])</span>
+        <span class="n">nonlocal_d_matrix</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d_mat</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># 1/2 is due to the conversion from rydberg to hartree.</span>
 
-      <span class="c1"># 1/2 is due to the conversion from rydberg to hartree.</span>
-      <span class="n">nonlocal_angular_momentum</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-        <span class="c1"># [int(am) for am in beta_i[&quot;angular_momentum&quot;]]</span>
-        <span class="n">beta_angular_momentum</span>
-      <span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">nonlocal_num_beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">beta_angular_momentum</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">r_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="n">nonlocal_beta_grid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">beta</span><span class="p">))</span>
+        <span class="n">nonlocal_beta_cutoff_radius</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">d_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">nonlocal_d_matrix</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d_mat</span><span class="p">)</span>
+
+      <span class="n">nonlocal_angular_momentum</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">beta_angular_momentum</span><span class="p">))</span>
       <span class="n">nonlocal_valence_configuration</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
         <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_INFO&quot;</span><span class="p">][</span><span class="s2">&quot;Valence configuration&quot;</span><span class="p">]</span>
       <span class="p">)</span>
@@ -484,7 +505,10 @@ document.write(`
       <span class="n">atomic_symbols</span><span class="p">,</span>
       <span class="n">valence_charges</span><span class="p">,</span>
       <span class="n">r_grid</span><span class="p">,</span>
+      <span class="n">r_ab</span><span class="p">,</span>
       <span class="n">r_cutoff</span><span class="p">,</span>
+      <span class="n">l_max</span><span class="p">,</span>
+      <span class="n">l_max_rho</span><span class="p">,</span>
       <span class="n">local_potential_grid</span><span class="p">,</span>
       <span class="n">local_potential_charge</span><span class="p">,</span>
       <span class="n">nonlocal_num_beta</span><span class="p">,</span>
@@ -493,6 +517,142 @@ document.write(`
       <span class="n">nonlocal_d_matrix</span><span class="p">,</span>
       <span class="n">nonlocal_angular_momentum</span><span class="p">,</span>
       <span class="n">nonlocal_valence_configuration</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="UltrasoftPseudopotential">
+<a class="viewcode-back" href="../../../api/pseudopotential/dataclass.html#jrystal.pseudopotential.dataclass.UltrasoftPseudopotential">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">UltrasoftPseudopotential</span><span class="p">(</span><span class="n">NormConservingPseudopotential</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Ultrasoft Pseudopotential Container.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      num_atom (int): Number of atoms.</span>
+<span class="sd">      positions (np.ndarray): Atom positions.</span>
+<span class="sd">      charges (np.ndarray): Atom charges.</span>
+<span class="sd">      atomic_symbols (List[str]): Atomic symbols.</span>
+<span class="sd">      valence_charges (List[int]): Valence charges.</span>
+<span class="sd">      r_grid (List[np.ndarray]): r grid.</span>
+<span class="sd">      r_cutoff (List[float]): r cutoff.</span>
+<span class="sd">      local_potential_grid (List[np.ndarray]): Local potential grid.</span>
+<span class="sd">      local_potential_charge (List[int]): Local potential charge.</span>
+<span class="sd">      num_beta (List[int]): Number of beta functions.</span>
+<span class="sd">      nonlocal_beta_grid (List[np.ndarray]): Nonlocal beta grid.</span>
+<span class="sd">      nonlocal_beta_cutoff_radius (List[List[float]]): Nonlocal beta cutoff</span>
+<span class="sd">        radius.</span>
+<span class="sd">      nonlocal_d_matrix (List[np.ndarray]): Nonlocal d matrix.</span>
+<span class="sd">      nonlocal_angular_momentum (List[List[int]]): Nonlocal angular momentum.</span>
+<span class="sd">      nonlocal_valence_configuration (List[List[dict]]): Nonlocal valence</span>
+<span class="sd">        configuration.</span>
+
+<span class="sd">      nonlocal_q_matrix (List[np.ndarray]): Nonlocal q matrix.</span>
+<span class="sd">      nonlocal_augmentation_qij (List[np.ndarray]): Nonlocal augmentation</span>
+<span class="sd">        charge.</span>
+
+<span class="sd">      Warning: the shape of nonlocal_augmentation_qij depends on the value of</span>
+<span class="sd">      `q_with_l` in the UPF file.</span>
+
+<span class="sd">      If `q_with_l` is .True., `nonlocal_augmentation_qij` is an array of</span>
+<span class="sd">      shape (num_q, num_q, l_max) where `num_q` is the number of augmentation</span>
+<span class="sd">      functions and `l_max` is the maximum angular momentum.</span>
+
+<span class="sd">      If `q_with_l` is .False., the `nonlocal_augmentation_qij` is an array of</span>
+<span class="sd">      shape (num_q, num_q, 1) where `num_q` is the number of augmentation</span>
+<span class="sd">      functions.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">nonlocal_augmentation_q_matrix</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
+  <span class="n">nonlocal_augmentation_qij</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
+  <span class="n">nonlocal_augmentation_q_with_l</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span>
+
+  <span class="nd">@staticmethod</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span>
+    <span class="n">crystal</span><span class="p">:</span> <span class="n">Crystal</span><span class="p">,</span>
+    <span class="nb">dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+  <span class="p">):</span>
+
+    <span class="n">ncpp</span> <span class="o">=</span> <span class="n">NormConservingPseudopotential</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">crystal</span><span class="p">,</span> <span class="nb">dir</span><span class="p">)</span>
+
+    <span class="n">pp_dict_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="n">crystal</span><span class="o">.</span><span class="n">symbols</span><span class="p">:</span>
+      <span class="n">pp_path</span> <span class="o">=</span> <span class="n">find_upf</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">symbol</span><span class="p">)</span>
+      <span class="n">pp_dict</span> <span class="o">=</span> <span class="n">parse_upf</span><span class="p">(</span><span class="n">pp_path</span><span class="p">)</span>
+      <span class="n">pp_dict_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pp_dict</span><span class="p">)</span>
+
+    <span class="n">nonlocal_augmentation_q_matrix</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">nonlocal_augmentation_qij</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">nonlocal_augmentation_q_with_l</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">pp</span> <span class="ow">in</span> <span class="n">pp_dict_list</span><span class="p">:</span>
+      <span class="k">if</span> <span class="s2">&quot;PP_AUGMENTATION&quot;</span> <span class="ow">in</span> <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">]:</span>
+        <span class="n">q_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;PP_Q&quot;</span><span class="p">])</span>
+        <span class="c1"># q_matrix *= 2 * np.sqrt(np.pi)</span>
+        <span class="n">num_q</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;PP_Q&quot;</span><span class="p">])</span>
+        <span class="n">num_q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">num_q</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">q_matrix</span> <span class="o">=</span> <span class="n">q_matrix</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">num_q</span><span class="p">,</span> <span class="n">num_q</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">q_matrix</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">(</span>
+          <span class="s2">&quot;The q_matrix is not negative semi-definite.&quot;</span>
+        <span class="p">)</span>
+        <span class="n">nonlocal_augmentation_q_matrix</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">q_matrix</span><span class="p">)</span>
+
+        <span class="n">num_r_grid</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_MESH&quot;</span><span class="p">][</span><span class="s2">&quot;PP_R&quot;</span><span class="p">])</span>
+        <span class="n">r_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_MESH&quot;</span><span class="p">][</span><span class="s2">&quot;PP_R&quot;</span><span class="p">])</span>
+        <span class="n">nonlocal_augmentation_q_with_l</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+          <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;q_with_l&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">nonlocal_augmentation_q_with_l</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+
+          <span class="n">q_ij_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">num_q</span><span class="p">,</span> <span class="n">num_q</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_HEADER&quot;</span><span class="p">][</span><span class="s2">&quot;l_max_rho&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num_r_grid</span><span class="p">]</span>
+          <span class="p">)</span>
+          <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;PP_QIJ&quot;</span><span class="p">])):</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+              <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;PP_QIJ&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;first_index&quot;</span><span class="p">]</span>
+            <span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+              <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;PP_QIJ&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;second_index&quot;</span><span class="p">]</span>
+            <span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="n">angular_momentum</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+              <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;PP_QIJ&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+              <span class="p">[</span><span class="s2">&quot;angular_momentum&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">_q_ij</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+              <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;PP_QIJ&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;values&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">q_ij_a</span><span class="p">[</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">angular_momentum</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+              <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">_q_ij</span><span class="p">,</span> <span class="n">r_grid</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="p">(</span><span class="n">r_grid</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">m</span> <span class="o">!=</span> <span class="n">n</span><span class="p">:</span>
+              <span class="n">q_ij_a</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">angular_momentum</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_ij_a</span><span class="p">[</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">angular_momentum</span><span class="p">]</span>
+
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">q_ij_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">num_q</span><span class="p">,</span> <span class="n">num_q</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num_r_grid</span><span class="p">])</span>
+          <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;PP_QIJ&quot;</span><span class="p">])):</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+              <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;PP_QIJ&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;first_index&quot;</span><span class="p">]</span>
+            <span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+              <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;PP_QIJ&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;second_index&quot;</span><span class="p">]</span>
+            <span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="n">_q_ij</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+              <span class="n">pp</span><span class="p">[</span><span class="s2">&quot;PP_NONLOCAL&quot;</span><span class="p">][</span><span class="s2">&quot;PP_AUGMENTATION&quot;</span><span class="p">][</span><span class="s2">&quot;PP_QIJ&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;values&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">q_ij_a</span><span class="p">[</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+              <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">_q_ij</span><span class="p">,</span> <span class="n">r_grid</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="p">(</span><span class="n">r_grid</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">m</span> <span class="o">!=</span> <span class="n">n</span><span class="p">:</span>
+              <span class="n">q_ij_a</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_ij_a</span><span class="p">[</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">nonlocal_augmentation_qij</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">q_ij_a</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">UltrasoftPseudopotential</span><span class="p">(</span>
+      <span class="o">**</span><span class="n">ncpp</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">,</span>
+      <span class="n">nonlocal_augmentation_q_matrix</span><span class="o">=</span><span class="n">nonlocal_augmentation_q_matrix</span><span class="p">,</span>
+      <span class="n">nonlocal_augmentation_qij</span><span class="o">=</span><span class="n">nonlocal_augmentation_qij</span><span class="p">,</span>
+      <span class="n">nonlocal_augmentation_q_with_l</span><span class="o">=</span><span class="n">nonlocal_augmentation_q_with_l</span>
     <span class="p">)</span></div>
 
 </pre></div>

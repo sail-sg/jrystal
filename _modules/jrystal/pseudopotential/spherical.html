@@ -194,7 +194,6 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -335,15 +334,22 @@ document.write(`
 <span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
 <span class="c1"># See the License for the specific language governing permissions and</span>
 <span class="c1"># limitations under the License.</span>
-<span class="sd">&quot;&quot;&quot;Spherical coordinate system utilities and spherical harmonics transformations.</span>
+<span class="sd">&quot;&quot;&quot;Spherical coordinate system utilities and spherical harmonics</span>
+<span class="sd">transformations.</span>
 
-<span class="sd">This module provides functions for working with spherical coordinates and spherical harmonics, particularly useful for quantum mechanical calculations and pseudopotential transformations.</span>
+<span class="sd">This module provides functions for working with spherical coordinates and</span>
+<span class="sd">spherical harmonics, particularly useful for quantum mechanical calculations</span>
+<span class="sd">and pseudopotential transformations.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">jax.scipy.special</span><span class="w"> </span><span class="kn">import</span> <span class="n">sph_harm</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Array</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">einops</span><span class="w"> </span><span class="kn">import</span> <span class="n">einsum</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax.scipy.special</span><span class="w"> </span><span class="kn">import</span> <span class="n">sph_harm</span><span class="p">,</span> <span class="n">sph_harm_y</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Array</span><span class="p">,</span> <span class="n">Float</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">.._src.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">vmapstack</span>
 
 
@@ -354,7 +360,7 @@ document.write(`
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Convert Cartesian coordinates to spherical coordinates.</span>
 
 <span class="sd">  Transforms 3D Cartesian coordinates (x, y, z) to spherical coordinates (r, θ, φ), where:</span>
-<span class="sd">  </span>
+
 <span class="sd">  - r is the radial distance from the origin</span>
 <span class="sd">  - θ (theta) is the azimuthal angle in the x-y plane from the x-axis (0 ≤ θ &lt; 2π)</span>
 <span class="sd">  - φ (phi) is the polar angle from the z-axis (0 ≤ φ ≤ π)</span>
@@ -364,6 +370,9 @@ document.write(`
 <span class="sd">  Args:</span>
 <span class="sd">    x: Float[Array, &quot;*n 3&quot;]: Cartesian coordinates with shape (..., 3) where ... represents arbitrary batch dimensions</span>
 
+<span class="sd">  Warning:</span>
+<span class="sd">    The definition of theta and phi is different from the jax convention.</span>
+
 <span class="sd">  Returns:</span>
 <span class="sd">    Float[Array, &quot;*n 3&quot;]: Spherical coordinates (r, θ, φ) with same batch shape</span>
 <span class="sd">  &quot;&quot;&quot;</span>
@@ -371,13 +380,76 @@ document.write(`
   <span class="n">r</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">r</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
 
   <span class="c1"># Polar angle (phi)</span>
-  <span class="n">phi</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">r</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+  <span class="n">phi</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">r</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
 
   <span class="c1"># Azimuthal angle (theta) and shift to range [0, 2*pi)</span>
-  <span class="n">theta</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+  <span class="n">theta</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
   <span class="n">theta</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">theta</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
 
   <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="batch_sph_harm_real">
+<a class="viewcode-back" href="../../../api/pseudopotential/spherical.html#jrystal.pseudopotential.spherical.batch_sph_harm_real">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">batch_sph_harm_real</span><span class="p">(</span>
+  <span class="n">l</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+  <span class="n">theta</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;*batch&quot;</span><span class="p">],</span>
+  <span class="n">phi</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;*batch&quot;</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;*batch m&quot;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Compute the real form of spherical harmonics for a batch of points.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">_sph_harm1</span> <span class="o">=</span> <span class="n">batch_sph_harm</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">)</span>  <span class="c1"># [*batch m]</span>
+  <span class="n">m</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="n">l</span><span class="p">,</span> <span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="n">_sph_harm2</span> <span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="n">_sph_harm1</span><span class="o">.</span><span class="n">conj</span><span class="p">(),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="n">m</span><span class="p">,</span> <span class="s2">&quot;... m, m -&gt; ... m&quot;</span><span class="p">)</span>
+
+  <span class="n">output</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+    <span class="n">m</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">_sph_harm1</span><span class="o">.</span><span class="n">real</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="n">m</span><span class="p">,</span>
+    <span class="n">_sph_harm2</span><span class="o">.</span><span class="n">imag</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="n">m</span><span class="p">,</span>
+  <span class="p">)</span>  <span class="c1"># [m, *batch]</span>
+
+  <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">l</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">_sph_harm1</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">l</span><span class="p">]</span><span class="o">.</span><span class="n">real</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">output</span></div>
+
+
+
+<div class="viewcode-block" id="batch_sph_harm">
+<a class="viewcode-back" href="../../../api/pseudopotential/spherical.html#jrystal.pseudopotential.spherical.batch_sph_harm">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">batch_sph_harm</span><span class="p">(</span>
+  <span class="n">l</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+  <span class="n">theta</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;*batch&quot;</span><span class="p">],</span>
+  <span class="n">phi</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;*batch&quot;</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;*batch m&quot;</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the spherical harmonics for a batch of points.</span>
+
+<span class="sd">    this function is used to compute the sum of spherical harmonics:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">      Y_{l, m}(theta, phi)</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    l (int): The angular momentum quantum number.</span>
+<span class="sd">    theta (Float[Array, &quot;*batch&quot;]): The azimuthal angle.</span>
+<span class="sd">    phi (Float[Array, &quot;*batch&quot;]): The polar angle.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Float[Array, &quot;*batch m&quot;]: The spherical harmonics, where the last dimension is the magnetic quantum number.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">dim</span> <span class="o">=</span> <span class="n">theta</span><span class="o">.</span><span class="n">ndim</span>
+  <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="nb">int</span><span class="p">(</span><span class="n">l</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">l</span><span class="p">])</span>
+
+  <span class="nd">@vmapstack</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_sph_harm_fun</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">sph_harm_y</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">theta</span><span class="p">)</span>
+    <span class="c1"># note that the definitions of theta and phi are swapped in sph_harm_y.</span>
+
+  <span class="k">return</span> <span class="n">_sph_harm_fun</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">)</span></div>
 
 
 
@@ -385,16 +457,18 @@ document.write(`
 <a class="viewcode-back" href="../../../api/pseudopotential/spherical.html#jrystal.pseudopotential.spherical.legendre_to_sph_harm">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">legendre_to_sph_harm</span><span class="p">(</span>
   <span class="n">l</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="n">l_max</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;*batch 3&quot;</span><span class="p">]],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s2">&quot;*batch m&quot;</span><span class="p">]]:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Convert Legendre polynomials to spherical harmonics decomposition.</span>
 
-<span class="sd">  Implements the decomposition of Legendre polynomials into spherical harmonics according to the formula:</span>
+<span class="sd">  Implements the decomposition of Legendre polynomials into spherical harmonics</span>
+<span class="sd">  according to the formula:</span>
 
 <span class="sd">  .. math::</span>
 <span class="sd">    (2l+1) P_l(x^Ty) = 4\pi \sum_m Y_{l, m}(x) Y^*_{l, m}(y)</span>
 
 <span class="sd">  where:</span>
-<span class="sd">  </span>
+
 <span class="sd">  - l is the angular momentum quantum number</span>
 <span class="sd">  - P_l is the Legendre polynomial of order l</span>
 <span class="sd">  - Y_{l,m} are the spherical harmonics</span>
@@ -406,11 +480,12 @@ document.write(`
 <span class="sd">    l (int): Angular momentum quantum number (default: 0)</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">      Callable that takes Cartesian coordinates of shape (*batch, 3) and returns spherical harmonics coefficients of shape (*batch, m), where m = 2l+1</span>
+<span class="sd">      Callable that takes Cartesian coordinates of shape (*batch, 3) and</span>
+<span class="sd">      returns spherical harmonics coefficients of shape (*batch, m), where m =</span>
+<span class="sd">      2l+1</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">m</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="n">l</span><span class="p">,</span> <span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-  <span class="n">n</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">l</span><span class="p">])</span>
-  <span class="n">L_MAX</span> <span class="o">=</span> <span class="mi">4</span>
+  <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="n">l</span><span class="p">,</span> <span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">l</span><span class="p">])</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">fun</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
 
@@ -424,13 +499,51 @@ document.write(`
         <span class="n">sph_harm</span><span class="p">,</span> <span class="n">in_axes</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
       <span class="p">)(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># [m]</span>
 
-      <span class="n">y_lm</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">y_lm</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="n">L_MAX</span> <span class="o">-</span> <span class="n">l</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">),</span> <span class="n">constant_values</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+      <span class="n">y_lm</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">y_lm</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="n">l_max</span> <span class="o">-</span> <span class="n">l</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">),</span> <span class="n">constant_values</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
       <span class="c1"># pad the y_lm to length l_max with zeros</span>
       <span class="k">return</span> <span class="n">y_lm</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>  <span class="c1"># [m]</span>
 
     <span class="k">return</span> <span class="n">_f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 
   <span class="k">return</span> <span class="n">fun</span></div>
+
+
+
+<div class="viewcode-block" id="legendre_kernel_trick">
+<a class="viewcode-back" href="../../../api/pseudopotential/spherical.html#jrystal.pseudopotential.spherical.legendre_kernel_trick">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">legendre_kernel_trick</span><span class="p">(</span><span class="n">l</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>  <span class="c1"># noqa</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Decompose legendre polynomials via kernel trick:</span>
+
+<span class="sd">      (2l+1) P_l (x^Ty) = \phi(x)^T \phi(y)</span>
+
+<span class="sd">  Return \phi</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">      l (int, optional): The degree of the legendre polynomial. Defaults to 0.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">      callable: return a function that map from shape [n1 n2 n3 3] to</span>
+<span class="sd">      [n1 n2 n3 new_dim] where new_dim is decided using kernel trick.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">phi</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+      <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">phi</span>
+  <span class="k">elif</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">phi</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+      <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+      <span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span>
+
+    <span class="c1"># sqrt(3) is due to the (2l+1) factor</span>
+    <span class="k">return</span> <span class="n">phi</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+      <span class="s2">&quot;The decomposition of legendre has not been implemented for l &gt; 1.&quot;</span>
+    <span class="p">)</span></div>
 
 </pre></div>
 

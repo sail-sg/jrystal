@@ -43,6 +43,8 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/graph.js?v=6245dd16"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/grid';</script>
     <link rel="icon" href="../_static/jrystal_logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -195,7 +197,6 @@
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -345,7 +346,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
 </div></div>
       
     </div>
@@ -361,6 +364,26 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.cubic_mask"><code class="docutils literal notranslate"><span class="pre">cubic_mask()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.estimate_max_cutoff_energy"><code class="docutils literal notranslate"><span class="pre">estimate_max_cutoff_energy()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.g2cell_vectors"><code class="docutils literal notranslate"><span class="pre">g2cell_vectors()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.g2r_vector_grid"><code class="docutils literal notranslate"><span class="pre">g2r_vector_grid()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.g_vectors"><code class="docutils literal notranslate"><span class="pre">g_vectors()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.grid_vector_radius"><code class="docutils literal notranslate"><span class="pre">grid_vector_radius()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.k_vectors"><code class="docutils literal notranslate"><span class="pre">k_vectors()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.proper_grid_size"><code class="docutils literal notranslate"><span class="pre">proper_grid_size()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r2cell_vectors"><code class="docutils literal notranslate"><span class="pre">r2cell_vectors()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r2g_vector_grid"><code class="docutils literal notranslate"><span class="pre">r2g_vector_grid()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r_vectors"><code class="docutils literal notranslate"><span class="pre">r_vectors()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.spherical_mask"><code class="docutils literal notranslate"><span class="pre">spherical_mask()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.translation_vectors"><code class="docutils literal notranslate"><span class="pre">translation_vectors()</span></code></a></li>
+</ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -370,8 +393,343 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="grid">
-<h1>grid<a class="headerlink" href="#grid" title="Link to this heading">#</a></h1>
+  <section id="module-jrystal.grid">
+<span id="grid"></span><h1>grid<a class="headerlink" href="#module-jrystal.grid" title="Link to this heading">#</a></h1>
+<p>Grid operations for crystalline systems.</p>
+<p>This module provides functions for working with real and reciprocal space grids in crystalline systems.
+It includes utilities for:</p>
+<ul class="simple">
+<li><p>Generating G-vectors and R-vectors</p></li>
+<li><p><span class="math notranslate nohighlight">\(k\)</span>-point sampling for Brillouin zone integration</p></li>
+<li><p>Frequency space operations and masks</p></li>
+<li><p>Grid transformations between real and reciprocal space</p></li>
+</ul>
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.cubic_mask">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">cubic_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grid_sizes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Array</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Bool</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#cubic_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.cubic_mask" title="Link to this definition">#</a></dt>
+<dd><p>Create a cubic mask for frequency components in reciprocal space.</p>
+<p>Generates a mask that enables only certain frequency components in a
+cubic region of reciprocal space. This is particularly useful when
+dealing with electron density (<span class="math notranslate nohighlight">\(\rho\)</span>), which contains more
+frequency components than the wavefunction (<span class="math notranslate nohighlight">\(\psi\)</span>) since
+<span class="math notranslate nohighlight">\(\rho = |\psi|^2\)</span>.</p>
+<p>The mask is constructed by considering the frequency mixing that occurs
+when squaring the wavefunction, ensuring all relevant frequency
+components are included.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>grid_sizes</strong> (<em>Union</em><em>[</em><em>List</em><em>, </em><em>jax.Array</em><em>]</em>) – Grid dimensions in reciprocal space.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A boolean array of shape (<a href="#id1"><span class="problematic" id="id2">*</span></a>grid_sizes) where True indicates allowed frequency components in the cubic mask.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Bool[Array, ‘x y z’]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.estimate_max_cutoff_energy">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">estimate_max_cutoff_energy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bool</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#estimate_max_cutoff_energy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.estimate_max_cutoff_energy" title="Link to this definition">#</a></dt>
+<dd><p>Estimate the maximum cutoff energy corresponding to a frequency mask.</p>
+<p>Given a boolean mask in reciprocal space, calculates the maximum kinetic
+energy of the G-vectors that are included in the mask. This is useful
+for determining the effective energy cutoff of a given frequency mask,
+particularly when using non-spherical masks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cell_vectors</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'3 3'</em><em>]</em>) – Real space lattice vectors of the unit cell. A (3,3) matrix where each row is a lattice vector.</p></li>
+<li><p><strong>mask</strong> (<em>Bool</em><em>[</em><em>Array</em><em>, </em><em>'x y z'</em><em>]</em>) – Boolean mask indicating which G-vectors are included.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The maximum kinetic energy (in the same units as the reciprocal lattice vectors) of any G-vector included in the mask.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.g2cell_vectors">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">g2cell_vectors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#g2cell_vectors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.g2cell_vectors" title="Link to this definition">#</a></dt>
+<dd><p>Compute real space cell vectors from a G-vector grid.</p>
+<p>Determines the real space lattice vectors by solving a linear system
+that relates the G-vector grid to the standard reciprocal space basis.
+This is useful when only the G-vectors are known and the corresponding
+real space cell vectors are needed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Real space lattice vectors as a (3,3) matrix where each row is a lattice vector.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, ‘3 3’]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.g2r_vector_grid">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">g2r_vector_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">g_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#g2r_vector_grid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.g2r_vector_grid" title="Link to this definition">#</a></dt>
+<dd><p>Transform a G-vector grid to the corresponding R-vector grid.</p>
+<p>Converts a grid of vectors in reciprocal space (G-vectors) to the
+corresponding grid in real space (R-vectors). If cell vectors are
+not provided, they are computed from the G-vector grid.</p>
+<p>This transformation is useful when switching between reciprocal and
+real space representations of crystal quantities.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>g_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of G-vectors in reciprocal space.</p></li>
+<li><p><strong>cell_vectors</strong> (<em>Optional</em><em>[</em><em>Float</em><em>[</em><em>Array</em><em>, </em><em>'3 3'</em><em>]</em><em>]</em><em>, </em><em>optional</em>) – Real space lattice vectors. If None, they will be computed from the G-vector grid. Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Grid of R-vectors in real space with the same  shape as the input.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, ‘x y z 3’]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.g_vectors">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">g_vectors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_sizes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Int</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'d'</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#g_vectors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.g_vectors" title="Link to this definition">#</a></dt>
+<dd><p>Generate G-vectors (reciprocal space vectors) for a given crystal cell.</p>
+<p>Given the real space lattice vectors of a unit cell, computes the G-vectors
+in reciprocal space on a discrete grid. The G-vectors are fundamental for
+plane-wave calculations and Fourier transforms in periodic systems.</p>
+<p>The G-vectors are defined as:</p>
+<div class="math notranslate nohighlight">
+\[G_{ijk} = i\mathbf{b}_1 + j\mathbf{b}_2 + k\mathbf{b}_3\]</div>
+<p>where <span class="math notranslate nohighlight">\(\mathbf{b}_i\)</span> are the reciprocal lattice vectors and
+<span class="math notranslate nohighlight">\(i,j,k \in [0, n_i-1]\)</span> for grid sizes <span class="math notranslate nohighlight">\(n_i\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cell_vectors</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'3 3'</em><em>]</em>) – Real space lattice vectors of the unit cell.
+A (3,3) matrix where each row is a lattice vector.</p></li>
+<li><p><strong>grid_sizes</strong> (<em>Union</em><em>[</em><em>Tuple</em><em>, </em><em>List</em><em>, </em><em>Int</em><em>[</em><em>Array</em><em>, </em><em>'d'</em><em>]</em><em>]</em>) – Number of grid points along each axis.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A tensor with shape (*grid_sizes, 3) containing the G-vectors.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, ‘x y z 3’]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.grid_vector_radius">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">grid_vector_radius</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grid_vector</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#grid_vector_radius"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.grid_vector_radius" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the magnitude (radius) of vectors at each grid point.</p>
+<p>Computes the Euclidean norm of vectors at each point in a grid.
+The function is vectorized to efficiently handle arbitrary grid shapes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>grid_vector</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Array of vectors where the last
+dimension contains the vector components, and earlier dimensions are
+grid dimensions or batch dimensions.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Array of vector magnitudes with shape matching all but the last dimension of the input.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, ‘x y z’]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.k_vectors">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">k_vectors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_sizes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Int</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3'</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'kpt</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#k_vectors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.k_vectors" title="Link to this definition">#</a></dt>
+<dd><p>Generate k-vectors for Brillouin zone sampling.</p>
+<p>Creates a uniform grid of <span class="math notranslate nohighlight">\(k\)</span>-points in reciprocal space using the
+Monkhorst-Pack scheme. This sampling is essential for integrating
+periodic functions over the Brillouin zone in electronic structure
+calculations.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This function is not differentiable as it uses <code class="code docutils literal notranslate"><span class="pre">monkhorst_pack</span></code> from <code class="code docutils literal notranslate"><span class="pre">ase</span></code>. In future, we will implement a custom differentiable version.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cell_vectors</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'3 3'</em><em>]</em>) – Real space lattice vectors of the unit cell. A (3,3) matrix where each row is a lattice vector.</p></li>
+<li><p><strong>grid_sizes</strong> (<em>Union</em><em>[</em><em>Tuple</em><em>, </em><em>List</em><em>, </em><em>Int</em><em>[</em><em>Array</em><em>, </em><em>'3'</em><em>]</em><em>]</em>) – Number of <span class="math notranslate nohighlight">\(k\)</span>-points along each reciprocal lattice vector direction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An array of shape (<span class="math notranslate nohighlight">\(n\)</span>, 3) containing k-vectors, where <span class="math notranslate nohighlight">\(n\)</span> is the total number of <span class="math notranslate nohighlight">\(k\)</span>-points (product of <code class="code docutils literal notranslate"><span class="pre">grid_sizes</span></code>).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, ‘kpt 3’]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.proper_grid_size">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">proper_grid_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grid_sizes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Int</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'d'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Array</span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#proper_grid_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.proper_grid_size" title="Link to this definition">#</a></dt>
+<dd><p>Optimize grid sizes for efficient FFT operations.</p>
+<p>Converts input grid dimensions to values that are well-suited for FFT
+computations by factoring them into products of small primes (2, 3, 5, 7).
+This optimization can significantly improve FFT performance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>grid_sizes</strong> (<em>Union</em><em>[</em><em>Int</em><em>, </em><em>Int</em><em>[</em><em>Array</em><em>, </em><em>'d'</em><em>]</em><em>, </em><em>Tuple</em><em>, </em><em>List</em><em>]</em>) – Input grid dimensions. Can be:
+- A single integer (same size for all dimensions)
+- A sequence of integers (size for each dimension)
+- A numpy array of integers</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A numpy array containing the optimized grid sizes.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Array</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – If grid_sizes is not a valid numeric type.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.r2cell_vectors">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">r2cell_vectors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#r2cell_vectors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.r2cell_vectors" title="Link to this definition">#</a></dt>
+<dd><p>Compute real space cell vectors from an R-vector grid.</p>
+<p>Determines the real space lattice vectors by solving a linear system
+that relates the R-vector grid to the standard real space basis.
+This is useful when only the R-vectors are known and the corresponding
+cell vectors are needed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>r_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of R-vectors in real space.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Real space lattice vectors as a (3,3) matrix where each row is a lattice vector.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, ‘3 3’]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.r2g_vector_grid">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">r2g_vector_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r_vector_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#r2g_vector_grid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.r2g_vector_grid" title="Link to this definition">#</a></dt>
+<dd><p>Transform an R-vector grid to the corresponding G-vector grid.</p>
+<p>Converts a grid of vectors in real space (R-vectors) to the
+corresponding grid in reciprocal space (G-vectors). This is the
+inverse operation of g2r_vector_grid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>r_vector_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'x y z 3'</em><em>]</em>) – Grid of R-vectors in real space.</p></li>
+<li><p><strong>cell_vectors</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'3 3'</em><em>]</em>) – Real space lattice vectors.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Grid of G-vectors in reciprocal space with the same shape as the input.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, ‘x y z 3’]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.r_vectors">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">r_vectors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_sizes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Int</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3'</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#r_vectors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.r_vectors" title="Link to this definition">#</a></dt>
+<dd><p>Generate R-vectors (real space position vectors) for a given crystal cell.</p>
+<p>Given the real space lattice vectors of a unit cell, computes the position
+vectors R on a discrete grid within the unit cell. These vectors define the
+sampling points where real-space quantities (like electron density) are evaluated.</p>
+<p>The R-vectors are defined as:</p>
+<div class="math notranslate nohighlight">
+\[R_{ijk} = \frac{i}{n_x}\mathbf{a}_1 + \frac{j}{n_y}\mathbf{a}_2
+          + \frac{k}{n_z}\mathbf{a}_3\]</div>
+<p>where <span class="math notranslate nohighlight">\(\mathbf{a}_i\)</span> are the real space lattice vectors and
+<span class="math notranslate nohighlight">\(i,j,k \in [0, n_i-1]\)</span> for grid sizes <span class="math notranslate nohighlight">\(n_i\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cell_vectors</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'3 3'</em><em>]</em>) – Real space lattice vectors of the unit cell. A (3,3) matrix where each row is a lattice vector.</p></li>
+<li><p><strong>grid_sizes</strong> (<em>Union</em><em>[</em><em>Tuple</em><em>, </em><em>List</em><em>, </em><em>Int</em><em>[</em><em>Array</em><em>, </em><em>'3'</em><em>]</em><em>]</em>) – Number of grid points along each axis.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A tensor with shape (<a href="#id3"><span class="problematic" id="id4">*</span></a>grid_sizes, 3) containing the R-vectors.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, ‘x y z 3’]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.spherical_mask">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">spherical_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_sizes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff_energy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Bool</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'x</span> <span class="pre">y</span> <span class="pre">z'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#spherical_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.spherical_mask" title="Link to this definition">#</a></dt>
+<dd><p>Create a spherical mask for frequency cutoff in reciprocal space.</p>
+<p>Generates a boolean mask that selects G-vectors satisfying the energy
+cutoff condition:</p>
+<div class="math notranslate nohighlight">
+\[\frac{\|G\|^2}{2} \leq E_\text{cutoff}\]</div>
+<p>This mask is commonly used in plane-wave calculations to limit the basis
+set size while maintaining accuracy. G-vectors with kinetic energy above
+the cutoff are excluded.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cell_vectors</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'3 3'</em><em>]</em>) – Real space lattice vectors of the unit cell. A (3,3) matrix where each row is a lattice vector.</p></li>
+<li><p><strong>grid_sizes</strong> (<em>Union</em><em>[</em><em>List</em><em>, </em><em>jax.Array</em><em>]</em>) – Grid dimensions in reciprocal space.</p></li>
+<li><p><strong>cutoff_energy</strong> – Energy cutoff for the G-vectors.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A boolean array of shape (<a href="#id5"><span class="problematic" id="id6">*</span></a>grid_sizes) where True indicates G-vectors within the energy cutoff sphere.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Bool[Array, ‘x y z’]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.grid.translation_vectors">
+<span class="sig-prename descclassname"><span class="pre">jrystal.grid.</span></span><span class="sig-name descname"><span class="pre">translation_vectors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cell_vectors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'3'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10000.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'num</span> <span class="pre">3'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/_src/grid.html#translation_vectors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.grid.translation_vectors" title="Link to this definition">#</a></dt>
+<dd><p>Generate translation vectors for Ewald summation.</p>
+<p>Creates a grid of translation vectors used in Ewald summation methods for
+computing long-range interactions in periodic systems. The grid extends
+to a distance determined by the cutoff parameter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cell_vectors</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>'3 3'</em><em>]</em>) – Real space lattice vectors of the unit cell.
+A (3,3) matrix where each row is a lattice vector.</p></li>
+<li><p><strong>cutoff</strong> (<em>Union</em><em>[</em><em>Float</em><em>[</em><em>Array</em><em>, </em><em>'3'</em><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>]</em>) – Real space cutoff distance. Larger values give more precise
+Ewald summation results but increase computational cost.
+Default is 1e4.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An array of shape (<span class="math notranslate nohighlight">\(n\)</span>, 3) containing translation vectors, where <span class="math notranslate nohighlight">\(n\)</span> is determined by the cutoff distance.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Float[Array, ‘num 3’]</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -409,6 +767,33 @@ document.write(`
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.cubic_mask"><code class="docutils literal notranslate"><span class="pre">cubic_mask()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.estimate_max_cutoff_energy"><code class="docutils literal notranslate"><span class="pre">estimate_max_cutoff_energy()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.g2cell_vectors"><code class="docutils literal notranslate"><span class="pre">g2cell_vectors()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.g2r_vector_grid"><code class="docutils literal notranslate"><span class="pre">g2r_vector_grid()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.g_vectors"><code class="docutils literal notranslate"><span class="pre">g_vectors()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.grid_vector_radius"><code class="docutils literal notranslate"><span class="pre">grid_vector_radius()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.k_vectors"><code class="docutils literal notranslate"><span class="pre">k_vectors()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.proper_grid_size"><code class="docutils literal notranslate"><span class="pre">proper_grid_size()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r2cell_vectors"><code class="docutils literal notranslate"><span class="pre">r2cell_vectors()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r2g_vector_grid"><code class="docutils literal notranslate"><span class="pre">r2g_vector_grid()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.r_vectors"><code class="docutils literal notranslate"><span class="pre">r_vectors()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.spherical_mask"><code class="docutils literal notranslate"><span class="pre">spherical_mask()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.grid.translation_vectors"><code class="docutils literal notranslate"><span class="pre">translation_vectors()</span></code></a></li>
+</ul>
+  </nav></div>
+
+</div></div>
               
             
           </div>

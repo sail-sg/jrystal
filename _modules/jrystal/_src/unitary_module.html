@@ -194,7 +194,6 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -342,23 +341,30 @@ document.write(`
 <span class="sd">A unitary matrix is a complex square matrix whose conjugate transpose is equal to its inverse.</span>
 <span class="sd">For real matrices, this reduces to an orthogonal matrix where the transpose equals the inverse.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax.sharding</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sharding</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">jaxtyping</span><span class="w"> </span><span class="kn">import</span> <span class="n">Array</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.spmd.uniform</span><span class="w"> </span><span class="kn">import</span> <span class="n">uniform</span>
 
 
 <div class="viewcode-block" id="unitary_matrix">
 <a class="viewcode-back" href="../../../api/_src/unitary.html#jrystal._src.unitary_module.unitary_matrix">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">unitary_matrix</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Array</span><span class="p">],</span> <span class="nb">complex</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">unitary_matrix</span><span class="p">(</span>
+  <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Array</span><span class="p">],</span>
+  <span class="nb">complex</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+  <span class="n">sharding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sharding</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Generate a unitary (or orthogonal) matrix from its parameters.</span>
 
 <span class="sd">  This function constructs a unitary matrix (or orthogonal matrix in the real case) using the QR decomposition method. The resulting matrix will have orthogonal columns and determinant ±1.</span>
-<span class="sd">  </span>
+
 <span class="sd">  Example:</span>
-<span class="sd">  </span>
+
 <span class="sd">  .. code-block:: python</span>
-<span class="sd">  </span>
+
 <span class="sd">      key = jax.random.PRNGKey(0)</span>
 
 <span class="sd">      # Generate a 3x3 complex unitary matrix</span>
@@ -370,10 +376,10 @@ document.write(`
 
 <span class="sd">  Args:</span>
 <span class="sd">    params(Dict[str, Array]): Dictionary containing the matrix parameters with keys:</span>
-<span class="sd">    </span>
+
 <span class="sd">      - &#39;w_re&#39;: Real part of the weight matrix</span>
 <span class="sd">      - &#39;w_im&#39;: Imaginary part of the weight matrix (used if complex=True)</span>
-<span class="sd">  </span>
+
 <span class="sd">      params can be generated by :func:`unitary_matrix_param_init`.</span>
 <span class="sd">    complex(bool): If True, generates a complex unitary matrix. If False, generates a real orthogonal matrix. Defaults to False.</span>
 
@@ -389,7 +395,14 @@ document.write(`
     <span class="n">weight_imaginary</span> <span class="o">=</span> <span class="mf">0.</span>
 
   <span class="n">weight</span> <span class="o">=</span> <span class="n">weight_real</span> <span class="o">+</span> <span class="n">weight_imaginary</span>
-  <span class="n">orthogonal_columns</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">weight</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;reduced&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">_qr</span><span class="p">(</span><span class="n">weight</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">weight</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;reduced&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+  <span class="k">if</span> <span class="n">sharding</span><span class="p">:</span>
+    <span class="n">_qr</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">_qr</span><span class="p">,</span> <span class="n">in_shardings</span><span class="o">=</span><span class="n">sharding</span><span class="p">)</span>
+
+  <span class="n">orthogonal_columns</span> <span class="o">=</span> <span class="n">_qr</span><span class="p">(</span><span class="n">weight</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">orthogonal_columns</span></div>
 
 
@@ -399,7 +412,8 @@ document.write(`
 <span class="k">def</span><span class="w"> </span><span class="nf">unitary_matrix_param_init</span><span class="p">(</span>
   <span class="n">key</span><span class="p">:</span> <span class="n">Array</span><span class="p">,</span>
   <span class="n">shape</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
-  <span class="nb">complex</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+  <span class="nb">complex</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+  <span class="n">sharding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sharding</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Array</span><span class="p">]:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Initialize parameters for generating a unitary matrix.</span>
 
@@ -408,14 +422,14 @@ document.write(`
 <span class="sd">  using uniform random distributions.</span>
 
 <span class="sd">  Example:</span>
-<span class="sd">  </span>
+
 <span class="sd">  .. code-block:: python</span>
-<span class="sd">  </span>
+
 <span class="sd">      key = jax.random.PRNGKey(42)</span>
 <span class="sd">      params = unitary_matrix_param_init(key, (2, 2))</span>
 <span class="sd">      sorted(params.keys())</span>
 <span class="sd">      &gt;&gt;&gt; [&#39;w_im&#39;, &#39;w_re&#39;]</span>
-<span class="sd">      </span>
+
 <span class="sd">  Args:</span>
 <span class="sd">      key (Array): JAX PRNG key for random number generation.</span>
 <span class="sd">      shape (tuple or List[int]): Tuple of ints specifying the dimensions of the matrix.</span>
@@ -423,18 +437,20 @@ document.write(`
 
 <span class="sd">  Returns:</span>
 <span class="sd">      dict: Dictionary containing:</span>
-<span class="sd">  </span>
+
 <span class="sd">          - &#39;w_re&#39;: Real weights of shape `shape`</span>
 <span class="sd">          - &#39;w_im&#39;: Imaginary weights of shape `shape` (if complex=True)</span>
 
 
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">key_re</span><span class="p">,</span> <span class="n">key_im</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-  <span class="n">weight_real</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">key_re</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+  <span class="n">weight_real</span> <span class="o">=</span> <span class="n">uniform</span><span class="p">(</span><span class="n">key_re</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">out_sharding</span><span class="o">=</span><span class="n">sharding</span><span class="p">)</span>
+
   <span class="k">if</span> <span class="nb">complex</span><span class="p">:</span>
-    <span class="n">weight_imaginary</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">key_im</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+    <span class="n">weight_imaginary</span> <span class="o">=</span> <span class="n">uniform</span><span class="p">(</span><span class="n">key_im</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">out_sharding</span><span class="o">=</span><span class="n">sharding</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="n">weight_imaginary</span> <span class="o">=</span> <span class="mf">0.</span>
+
   <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;w_re&#39;</span><span class="p">:</span> <span class="n">weight_real</span><span class="p">,</span> <span class="s1">&#39;w_im&#39;</span><span class="p">:</span> <span class="n">weight_imaginary</span><span class="p">}</span></div>
 
 </pre></div>

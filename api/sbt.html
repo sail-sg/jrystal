@@ -43,6 +43,8 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/graph.js?v=6245dd16"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>window.MathJax = {"loader": {"load": ["[tex]/physics"]}, "tex": {"packages": {"[+]": ["physics"]}}, "options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/sbt';</script>
     <link rel="icon" href="../_static/jrystal_logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -195,7 +197,6 @@
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/dataclass.html">dataclass</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/utils.html">utils</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/beta.html">beta</a></li>
-<li class="toctree-l3"><a class="reference internal" href="pseudopotential/interpolate.html">interpolate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pseudopotential/spherical.html">spherical</a></li>
 </ul>
 </details></li>
@@ -345,7 +346,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
 </div></div>
       
     </div>
@@ -361,6 +364,23 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.batch_sbt"><code class="docutils literal notranslate"><span class="pre">batch_sbt()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.pyNumSBT"><code class="docutils literal notranslate"><span class="pre">pyNumSBT</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.pyNumSBT.run"><code class="docutils literal notranslate"><span class="pre">pyNumSBT.run()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.pyNumSBT.run_int"><code class="docutils literal notranslate"><span class="pre">pyNumSBT.run_int()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.pyNumSBT.sbt_init"><code class="docutils literal notranslate"><span class="pre">pyNumSBT.sbt_init()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.pyNumSBT.sbt_mltb"><code class="docutils literal notranslate"><span class="pre">pyNumSBT.sbt_mltb()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.sbt"><code class="docutils literal notranslate"><span class="pre">sbt()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.sbt_numerical"><code class="docutils literal notranslate"><span class="pre">sbt_numerical()</span></code></a></li>
+</ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -370,8 +390,193 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="sbt">
-<h1>sbt<a class="headerlink" href="#sbt" title="Link to this heading">#</a></h1>
+  <section id="module-jrystal.sbt">
+<span id="sbt"></span><h1>sbt<a class="headerlink" href="#module-jrystal.sbt" title="Link to this heading">#</a></h1>
+<p>Spherical Bessel Transform.</p>
+<p>The code is adapted from PySBT. It is not differentiable.</p>
+<p>PySBT can be found: <a class="github reference external" href="https://github.com/QijingZheng/pySBT.git">QijingZheng/pySBT.git</a></p>
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.sbt.batch_sbt">
+<span class="sig-prename descclassname"><span class="pre">jrystal.sbt.</span></span><span class="sig-name descname"><span class="pre">batch_sbt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ngrid'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'nbatch</span> <span class="pre">ngrid'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a></span></span><a class="reference internal" href="../_modules/jrystal/sbt/sbt.html#batch_sbt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.sbt.batch_sbt" title="Link to this definition">#</a></dt>
+<dd><p>batched spherical bessel transform for multiple functions.</p>
+<blockquote>
+<div><p>sbt: g(k) = int_0^infty f(r) j_l(r) r^2 dr</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>r_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;ngrid&quot;</em><em>]</em>) – the r grid corresponding to the function.</p></li>
+<li><p><strong>f_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;nbatch ngrid&quot;</em><em>]</em>) – a batch of the function values.</p></li>
+<li><p><strong>l</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>, </em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em><em>]</em>) – Angular momentum. If l is a list, the length
+must be the same as the number of batches.</p></li>
+<li><p><strong>kmax</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>, </em><em>optional</em>) – Maximum k value. Defaults to 100.</p></li>
+<li><p><strong>norm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to normalize the output. Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A tuple of (k_grid, batched_transformed_f_grid). k_grid is a
+1d-array, and batched_transformed_f_grid is BxN shaped, where B is the
+number of batches and N is the number of grid point.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jrystal.sbt.pyNumSBT">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jrystal.sbt.</span></span><span class="sig-name descname"><span class="pre">pyNumSBT</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lmax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/jrystal/sbt/pysbt.html#pyNumSBT"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.sbt.pyNumSBT" title="Link to this definition">#</a></dt>
+<dd><p>Numerically perform spherical Bessel transform (SBT) in <span class="math notranslate nohighlight">\(O(Nln(N))\)</span> time based
+on the algorithm proposed by J. Talman.</p>
+<blockquote>
+<div><p>Talman, J. Computer Physics Communications 2009, 180, 332-338.</p>
+</div></blockquote>
+<p>For a function “f(r)” defined numerically on a LOGARITHMIC radial grid “r”,
+the SBT for the function gives</p>
+<div class="math notranslate nohighlight">
+\[g(k) = \sqrt{2\over\pi} \int_0^\infty j_l(kr) f(r) r^2 dr           (c1)\]</div>
+<p>and the inverse SBT (iSBT) gives</p>
+<div class="math notranslate nohighlight">
+\[f(r) = \sqrt{2\over\pi} \int_0^\infty j_l(kr) g(k) k^2 dk           (c2)\]</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="jrystal.sbt.pyNumSBT.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">np_in</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_rr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_zero</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/jrystal/sbt/pysbt.html#pyNumSBT.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.sbt.pyNumSBT.run" title="Link to this definition">#</a></dt>
+<dd><p>Perform SBT or inverse-SBT.</p>
+<dl>
+<dt>Input parapeters:</dt><dd><p>ff: the function defined on the logarithmic radial grid
+l: the “l” as in the underscript of “j_l(kr)” of Eq. (c1) and (c2)
+direction: 1 for forward SBT and -1 for inverse SBT
+norm: whether to multiply the prefactor sqrt{2overpi} in Eq. (c1) and</p>
+<blockquote>
+<div><p>(c2). If False, then subsequent applicaton of SBT and iSBT will yield
+the original data scaled by a factor of 2/pi.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>np_in: the asymptotic bahavior of ff when  r -&gt; 0</dt><dd><p>ff(r  o 0) pprox r^{np_in + l}</p>
+</dd>
+<dt>include_zero: the SBT does not include the k = 0, i.e.</dt><dd><p>self.kk.min() != 0, term by default.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jrystal.sbt.pyNumSBT.run_int">
+<span class="sig-name descname"><span class="pre">run_int</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_rr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_zero</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/jrystal/sbt/pysbt.html#pyNumSBT.run_int"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.sbt.pyNumSBT.run_int" title="Link to this definition">#</a></dt>
+<dd><p>Perform SBT or inverse-SBT by numerically integrating Eq. (c1) and (c2).
+Input parapeters:
+ff: the function defined on the logarithmic radial grid
+l: the “l” as in the underscript of “j_l(kr)” of Eq. (c1) and (c2)
+direction: 1 for forward SBT and -1 for inverse SBT
+norm: whether to multiply the prefactor sqrt{2overpi} in Eq. (c1)
+and (c2). If False, then subsequent applicaton of SBT and iSBT will
+yield the original data scaled by a factor of 2/pi.
+include_zero: the SBT does not include the k = 0, i.e. self.kk.min() !=
+0, term by default.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jrystal.sbt.pyNumSBT.sbt_init">
+<span class="sig-name descname"><span class="pre">sbt_init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/jrystal/sbt/pysbt.html#pyNumSBT.sbt_init"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.sbt.pyNumSBT.sbt_init" title="Link to this definition">#</a></dt>
+<dd><p>Initialize the real-space grid (rr) and momentum-space grid (kk).</p>
+<div class="math notranslate nohighlight">
+\[\rho   = \ln(rr)
+\kappa = \ln(kk)\]</div>
+<p>The algorithm by Talman requries</p>
+<div class="math notranslate nohighlight">
+\[\Delta\kappa = \Delta\rho\]</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jrystal.sbt.pyNumSBT.sbt_mltb">
+<span class="sig-name descname"><span class="pre">sbt_mltb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lmax_in</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/jrystal/sbt/pysbt.html#pyNumSBT.sbt_mltb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.sbt.pyNumSBT.sbt_mltb" title="Link to this definition">#</a></dt>
+<dd><p>construct the M_l(t) table according to Eq. (15), (16) and (24) of
+Talman paper.</p>
+<p>Note that Talman paper use Stirling’s approximaton to evaluate the Gamma
+function, whereas I just call scipy.special.gamma here.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.sbt.sbt">
+<span class="sig-prename descclassname"><span class="pre">jrystal.sbt.</span></span><span class="sig-name descname"><span class="pre">sbt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'num_r'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'num_r'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'num_r'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'num_r'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/jrystal/sbt/sbt.html#sbt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jrystal.sbt.sbt" title="Link to this definition">#</a></dt>
+<dd><p>Spherical Bessel Transform.</p>
+<dl class="simple">
+<dt>..math::</dt><dd><p>g(k) = int_0^infty f(r) j_l(r) r^2 dr</p>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This function is a wrapper of pysbt. It is not differentiable.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>r_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;num_r&quot;</em><em>]</em>) – the r grid corresponding to the function.</p></li>
+<li><p><strong>f_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;num_r&quot;</em><em>]</em>) – the function values.</p></li>
+<li><p><strong>l</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>, </em><em>optional</em>) – Angular momentum. Defaults to 0.</p></li>
+<li><p><strong>kmax</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>, </em><em>optional</em>) – Maximum k value. Defaults to 100.</p></li>
+<li><p><strong>norm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to normalize the output. Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A tuple of (k_grid,</dt><dd><p>transformed_f_grid). k_grid is a 1d-array, and transformed_f_grid is the
+transformed function values.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple[Float[Array, “num_r”], Float[Array, “num_r”]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jrystal.sbt.sbt_numerical">
+<span class="sig-prename descclassname"><span class="pre">jrystal.sbt.</span></span><span class="sig-name descname"><span class="pre">sbt_numerical</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'r'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'f</span> <span class="pre">r'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta_r</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'r'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'g'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'f</span> <span class="pre">g'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jrystal.sbt.sbt_numerical" title="Link to this definition">#</a></dt>
+<dd><p>Numerical Sherical Bessel Transform.</p>
+<p>This function is used to compute the numerical sherical bessel transform of
+the function f(r) on the grid r_grid.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Currently this function is not differentiable, as the spherical bessel
+function is not implemented in JAX.</p>
+<p>S(f) = int_0^infty f(r) j_l(r) r^2 dr</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>r_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;r&quot;</em><em>]</em>) – The grid of the radial coordinate.</p></li>
+<li><p><strong>g_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;g&quot;</em><em>]</em>) – The grid of the momentum coordinate.</p></li>
+<li><p><strong>f_grid</strong> (<em>Float</em><em>[</em><em>Array</em><em>, </em><em>&quot;r&quot;</em><em>]</em>) – The function values on the grid r_grid.</p></li>
+<li><p><strong>l</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The angular momentum. l can be a list of ints, only if the length</p></li>
+<li><p><strong>example</strong> (<em>of batch dimension</em><em> of </em><em>f_grid is the same as the length</em><em> of </em><em>l. For</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<p>:param :
+:param if f_grid.shape[0] == 2:
+:param l can be [0:
+:param 1] or 0.:
+:param delta_r: The grid spacing of the radial
+:type delta_r: Optional[Float[Array, “r”]]
+:param coordinate. If None:
+:param the grid spacing is calculated from the grid r_grid.:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The sherical bessel transform of the function f.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Float[Array, “g”]</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -391,6 +596,30 @@ document.write(`
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.batch_sbt"><code class="docutils literal notranslate"><span class="pre">batch_sbt()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.pyNumSBT"><code class="docutils literal notranslate"><span class="pre">pyNumSBT</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.pyNumSBT.run"><code class="docutils literal notranslate"><span class="pre">pyNumSBT.run()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.pyNumSBT.run_int"><code class="docutils literal notranslate"><span class="pre">pyNumSBT.run_int()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.pyNumSBT.sbt_init"><code class="docutils literal notranslate"><span class="pre">pyNumSBT.sbt_init()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.pyNumSBT.sbt_mltb"><code class="docutils literal notranslate"><span class="pre">pyNumSBT.sbt_mltb()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.sbt"><code class="docutils literal notranslate"><span class="pre">sbt()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jrystal.sbt.sbt_numerical"><code class="docutils literal notranslate"><span class="pre">sbt_numerical()</span></code></a></li>
+</ul>
+  </nav></div>
+
+</div></div>
               
             
           </div>
