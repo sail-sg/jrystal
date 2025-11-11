@@ -29,7 +29,7 @@ xc: "gga_x_pbe+gga_c_pbe"
 # if false, the code will use the all-electron calculation
 use_pseudopotential: true
 pseudopotential_type: "nc"
-pseudopotential_file_dir: "/home/aiops/litb/projects/jrystal/pseudopotential/normconserving/"
+pseudopotential_file_dir: "/home/aiops/zhaojx/jrystal/pseudopotential/normconserving/"
 # The pseudopotential file directory. If None, the code will use the default
 # pseudopotential file directory.
 

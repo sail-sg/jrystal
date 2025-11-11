@@ -243,6 +243,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   
   def total_energy(params_pw, params_occ, g_vec):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
+    breakpoint()
     occ = get_occupation(params_occ)
     density = pw.density_grid(coeff, crystal.vol, occ)
     density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
