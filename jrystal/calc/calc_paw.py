@@ -180,25 +180,28 @@ def setup_gpaw(atom_type: str):
       g_lg = g_lg.at[0].set(4 / rc**3 / jnp.sqrt(jnp.pi) * jnp.exp(-(r_g / rc)**2))
       for l in range(1, lmax + 1):
           g_lg = g_lg.at[l].set(2.0 / (2 * l + 1) / rc**2 * r_g * g_lg[l - 1])
-  
-  return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, l_j, pt_jg, Z, lmax, lcut, gcut2, g_lg
+  return {
+    'r_g': r_g,
+    'dr_g': dr_g,
+    'phi_jg': phi_jg,
+    'phit_jg': phit_jg,
+    'nc_g': nc_g,
+    'nct_g': nct_g,
+    'vbar_g': vbar_g,
+    'l_j': l_j,
+    'pt_jg': pt_jg,
+    'Z': Z,
+    'lmax': lmax,
+    'lcut': lcut,
+    'gcut2': gcut2,
+    'g_lg': g_lg,
+    'K_p': pp_data['kinetic_energy_differences'],
+    'K_c': pp_data['core_energy']['kinetic']
+  }
 
 
-def calc(
-  r_g: jnp.ndarray,
-  dr_g: jnp.ndarray,
-  phi_jg: jnp.ndarray,
-  phit_jg: jnp.ndarray,
-  nc_g: jnp.ndarray,
-  nct_g: jnp.ndarray,
-  vbar_g: jnp.ndarray,
-  l_j: jnp.ndarray,
-  pt_jg: jnp.ndarray,
-  Z: int,
-  lmax: int,
-  lcut: int,
-  gcut: int,
-  g_lg: jnp.ndarray = None):
+def  calc_paw(
+  setup_data: dict):
   """Calculate PAW correction terms using QE UPF data in native convention.
   
   Input Convention (QE UPF as loaded by setup_qe):
@@ -262,6 +265,21 @@ def calc(
   """
   
   # Calculate derived quantities first
+  r_g = setup_data['r_g']
+  dr_g = setup_data['dr_g']
+  phi_jg = setup_data['phi_jg']
+  phit_jg = setup_data['phit_jg']
+  nc_g = setup_data['nc_g']
+  nct_g = setup_data['nct_g'] 
+  vbar_g = setup_data['vbar_g']
+  l_j = setup_data['l_j']
+  pt_jg = setup_data['pt_jg']
+  Z = setup_data['Z']
+  lmax = setup_data['lmax']
+  lcut = setup_data['lcut']
+  gcut = setup_data['gcut2']
+  g_lg = setup_data['g_lg']
+  
   n_rgd = r_g.shape[0]  # number of grid points
   nj = phi_jg.shape[0]  # number of projectors radial functions
   
