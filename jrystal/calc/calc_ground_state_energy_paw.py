@@ -102,7 +102,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
               expanded_data = expanded_data.at[i1, i2].set(data[j1, j2])
             i2 += 1
         i1 += 1
-      return expanded_data
+    return expanded_data
 
   # preprocessing for PAW pp file
   atoms_list = ["C1", "C2"]
@@ -134,8 +134,13 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     pseudopot.r_grid.append(setup_data['r_g'])
     pseudopot.nonlocal_beta_grid.append(setup_data['pt_jg'])
     pseudopot.nonlocal_angular_momentum.append(setup_data['l_j'])
-    pseudopot.nonlocal_d_matrix.append(np.eye(setup_data['pt_jg'].shape[0]))
     results = calc_paw(setup_data)
+    # pseudopot.nonlocal_d_matrix.append(np.eye(setup_data['pt_jg'].shape[0]))
+    n_proj = setup_data['pt_jg'].shape[0]
+    tmp_mat = np.zeros((n_proj, n_proj))
+    tmp_mat[np.triu_indices(n_proj)] = results['Delta_lq'][0]
+    tmp_mat = tmp_mat + tmp_mat.T - np.diag(np.diag(tmp_mat))
+    pseudopot.nonlocal_d_matrix.append(tmp_mat)
     K_p[a] = expand(setup_data['K_p'], 13, setup_data['l_j'])
     K_c[a] = setup_data['K_c']
     M[a] = results["M"]
@@ -218,7 +223,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     pseudopot.nonlocal_d_matrix,
     beta_gk
   )
-  del beta_gk
   end = time.time()
   logging.info(f"Nonlocal potential done. Times: {end - start:.2f} seconds")
   logging.info("Deploying pseudopotential (nonlocal)...")
@@ -229,6 +233,21 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     f"Deploying pseudopotential (nonlocal) done. "
     f"Times: {end - start:.2f} seconds"
   )
+
+  from ..pseudopotential.ulatrsoft import get_ultrasoft_coeff_fun
+  get_ultrasoft_coeff = get_ultrasoft_coeff_fun(
+    crystal.positions,
+    k_vec,
+    g_vec,
+    freq_mask,
+    crystal.vol,
+    pseudopot.r_grid,
+    pseudopot.nonlocal_beta_grid,
+    pseudopot.nonlocal_angular_momentum,
+    pseudopot.nonlocal_d_matrix,
+    beta_gk
+  )
+  del beta_gk
 
   # Define functions for energy calculation.
   def get_occupation(params):
@@ -241,9 +260,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       spin_restricted=config.spin_restricted
     )
   
-  def total_energy(params_pw, params_occ, g_vec):
+  def total_energy(params_pw, params_occ, g_vec, pseudopot=pseudopot):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
-    breakpoint()
+    coeff = get_ultrasoft_coeff(coeff)
     occ = get_occupation(params_occ)
     density = pw.density_grid(coeff, crystal.vol, occ)
     density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
@@ -262,10 +281,34 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
     _f_matrix = einsum(
       coeff,
-      proj_pw_overlap,
-      "s k band x y z, k beta phi x y z -> s k band beta phi"
+      proj_pw_overlap.conj(),
+      "s k band x y z, k  beta phi x y z -> s k band beta phi"
     )
-    _f_matrix /= config.grid_sizes**3 #* jnp.sqrt(crystal.vol)
+    _f_matrix /= config.grid_sizes**3 * jnp.sqrt(crystal.vol)
+    def expand(data: list, n_proj, l_j) -> jnp.ndarray:
+      """Expand the matrix from the size of radial component to the size of the projectors."""
+      data = jnp.array(data).reshape((len(l_j), len(l_j)))
+      expanded_data = jnp.zeros((n_proj, n_proj))
+      i1 = 0
+      for j1, l1 in enumerate(l_j):
+        for m1 in range(2 * l1 + 1):
+          i2 = 0
+          for j2, l2 in enumerate(l_j):
+            for m2 in range(2 * l2 + 1):
+              if l1 == l2 and m1 == m2:
+                expanded_data = expanded_data.at[i1, i2].set(data[j1, j2])
+              i2 += 1
+          i1 += 1
+      return expanded_data
+
+    # NOTE: check the othorgonality of the wavefunctions here
+    dO = expand(pseudopot.nonlocal_d_matrix[0], 13, setup_data['l_j'])
+    overlap1 = einsum(coeff, coeff.conj(), "s k band1 x y z, s k band2 x y z -> s k band1 band2") / crystal.vol
+    correction1 = einsum(_f_matrix[..., index1[0], index1[1]], dO, _f_matrix[..., index1[0], index1[1]], "s k band1 proj1, proj1 proj2, s k band2 proj2 -> s k band1 band2")
+    dO = expand(pseudopot.nonlocal_d_matrix[1], 13, setup_data['l_j'])
+    correction2 = einsum(_f_matrix[..., index2[0], index2[1]], dO, _f_matrix[..., index2[0], index2[1]], "s k band1 proj1, proj1 proj2, s k band2 proj2 -> s k band1 band2")
+    overlap = overlap1 + correction1 + correction2
+    breakpoint()
 
     # for a, D_sii in wfs.D_asii.items():
     #   Q_L = jnp.einsum('ij, ijL -> L',
@@ -344,7 +387,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   # Define update function.
   with mesh:
 
-    @jax.jit
+    # @jax.jit
     def update(params, opt_state, temp, g_vec):
       loss = lambda x: free_energy(
         x["pw"], x["occ"], temp, g_vec
