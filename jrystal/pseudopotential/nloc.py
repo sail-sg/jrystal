@@ -107,12 +107,11 @@ def potential_nonlocal_psi_reciprocal(
     beta_gk_single_atom
   ) -> Complex[Array, "kpt beta x y z m"]:
     y_lm_atom = y_lm[nonlocal_angular_momentum]  # [beta kpt x y z m]
-    eigval, eigvec = jnp.linalg.eigh(nonlocal_d_matrix)
-    d_matrix_sqrt = eigvec * jnp.sqrt(eigval + 0.j)
-    # d_matrix_sqrt = jnp.linalg.cholesky(nonlocal_d_matrix).T.conj()
-    # shape: [beta beta]
+    # Apply D-matrix directly instead of using sqrt decomposition
+    # The nonlocal pseudopotential is: V_nl = Σ_ij |β_i> D_ij <β_j|
+    # So we compute D_ij * Y_lm * beta for the projectors
     output = einsum(
-      d_matrix_sqrt, y_lm_atom, beta_gk_single_atom,
+      nonlocal_d_matrix, y_lm_atom, beta_gk_single_atom,
       "b1 b2, b2 kpt x y z m, kpt b2 x y z -> kpt b1 m x y z"
     )
 
@@ -124,7 +123,7 @@ def potential_nonlocal_psi_reciprocal(
       "kpt beta m x y z, kpt x y z -> kpt beta m x y z"
     )
 
-    imag_factor = (1.j) ** nonlocal_angular_momentum
+    imag_factor = (-1.j) ** nonlocal_angular_momentum
     output = einsum(
       output, imag_factor, "kpt beta m x y z, beta -> kpt beta m x y z"
     )

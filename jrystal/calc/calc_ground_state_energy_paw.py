@@ -262,6 +262,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   
   def total_energy(params_pw, params_occ, g_vec, pseudopot=pseudopot):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
+    # this is the original overlap without PAW correction
+    # overlap1 = einsum(coeff, coeff.conj(), "s k band1 x y z, s k band2 x y z -> s k band1 band2")
     coeff = get_ultrasoft_coeff(coeff)
     occ = get_occupation(params_occ)
     density = pw.density_grid(coeff, crystal.vol, occ)
@@ -284,7 +286,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       proj_pw_overlap.conj(),
       "s k band x y z, k  beta phi x y z -> s k band beta phi"
     )
-    _f_matrix /= config.grid_sizes**3 * jnp.sqrt(crystal.vol)
+    # Normalize to match the convention in get_ultrasoft_coeff (ulatrsoft.py:103)
+    # _f_matrix /= jnp.sqrt(crystal.vol)
     def expand(data: list, n_proj, l_j) -> jnp.ndarray:
       """Expand the matrix from the size of radial component to the size of the projectors."""
       data = jnp.array(data).reshape((len(l_j), len(l_j)))
@@ -303,7 +306,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
     # NOTE: check the othorgonality of the wavefunctions here
     dO = expand(pseudopot.nonlocal_d_matrix[0], 13, setup_data['l_j'])
-    overlap1 = einsum(coeff, coeff.conj(), "s k band1 x y z, s k band2 x y z -> s k band1 band2") / crystal.vol
+    overlap1 = einsum(coeff, coeff.conj(), "s k band1 x y z, s k band2 x y z -> s k band1 band2")
     correction1 = einsum(_f_matrix[..., index1[0], index1[1]], dO, _f_matrix[..., index1[0], index1[1]], "s k band1 proj1, proj1 proj2, s k band2 proj2 -> s k band1 band2")
     dO = expand(pseudopot.nonlocal_d_matrix[1], 13, setup_data['l_j'])
     correction2 = einsum(_f_matrix[..., index2[0], index2[1]], dO, _f_matrix[..., index2[0], index2[1]], "s k band1 proj1, proj1 proj2, s k band2 proj2 -> s k band1 band2")

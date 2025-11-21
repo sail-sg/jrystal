@@ -7,7 +7,8 @@ import jax
 import numpy as np
 from jax import tree_util
 from jax._src import api_util, config, custom_api_util, dispatch
-from jax.extend import core
+# from jax.extend import core
+from jax import core
 from jax._src import linear_util as lu
 from jax._src import mesh as mesh_lib
 from jax._src import sharding_impls

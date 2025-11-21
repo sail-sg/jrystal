@@ -564,6 +564,7 @@ def  calc_paw(
     'MB_p': MB_p,
     'n_qg': n_qg * 4 * jnp.pi,
     'nt_qg': nt_qg * 4 * jnp.pi,
+    'Delta_lq': Delta_lq,
     'Delta_pL': Delta_pL,
     'Delta0': Delta0,
     'gcut': gcut,
