@@ -260,6 +260,21 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       spin_restricted=config.spin_restricted
     )
   
+  # def calc_xc_correction(D_p: jnp.ndarray, setup_data: dict) -> float:
+  #   """Calculate the PAW XC energy correction.
+
+  #   Args:
+  #       D_p (jnp.ndarray): The density matrix in the projector basis.
+  #       setup_data (dict): The setup data for the element.
+
+  #   Returns:
+  #       float: The XC energy correction.
+  #   """
+
+  #   for atom in atoms_list:
+      
+  #   return 
+  
   def total_energy(params_pw, params_occ, g_vec, pseudopot=pseudopot):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
     # this is the original overlap without PAW correction
@@ -283,7 +298,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
     _f_matrix = einsum(
       coeff,
-      proj_pw_overlap.conj(),
+      proj_pw_overlap,
       "s k band x y z, k  beta phi x y z -> s k band beta phi"
     )
     # Normalize to match the convention in get_ultrasoft_coeff (ulatrsoft.py:103)

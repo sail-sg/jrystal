@@ -6,7 +6,10 @@ import jax.numpy as jnp
 
 from gpaw.gaunt import gaunt
 from gpaw.new import zips
+from gpaw.setup_data import SetupData
 # from jrystal.pseudopotential.load import parse_upf
+
+from .gpaw_load import parse_paw_setup
 
 def setup_qe():
   """Load and parse QE UPF pseudopotential file.
@@ -85,11 +88,6 @@ def setup_gpaw(atom_type: str):
   Returns:
     Tuple with all PAW quantities including g_lg for compensation charges
   """
-  import sys
-  sys.path.insert(0, '/home/aiops/zhaojx/M_p-align-claude/devs')
-  sys.path.insert(0, '/home/aiops/zhaojx/jrystal/gpaw')
-  from gpaw_load import parse_paw_setup
-  from gpaw.setup_data import SetupData
   
   # Load GPAW setup file
   pp_data = parse_paw_setup(f'/home/aiops/zhaojx/paw-minimal/pseudopotential/{atom_type}.PBE')
