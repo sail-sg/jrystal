@@ -3,6 +3,7 @@ from functools import partial
 import jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
+import numpy as np
 
 from gpaw.gaunt import gaunt
 from gpaw.new import zips
@@ -564,103 +565,72 @@ def calc(
   #   'proj': pt_jg
   # }
 
-# # TODO: the xc correction seems to be very messy here
-# xc_correction = get_xc_correction(rgd2, xc, gcut2, lcut)
+def calc_paw_xc_correction(
+  D_asp: list,
+  setups: list,
+  xc_kernel: callable,
+  nspins: int = 1,
+  ):
 
+    from gpaw.sphere.lebedev import R_nv, weight_n, Y_nL
+    def _calculate_xc_energy(D_sLq, n_qg, nc0_sg):
+        n_sLg = np.dot(D_sLq, n_qg)  # shape: [n_spin, Lmax, n_g]
+        n_sLg[:, 0, :] += nc0_sg
+        E_xc = 0.0
+        Y_nL_local = Y_nL[:, :Lmax]  # Only use L up to Lmax
+        for n in range(50):  # 50 Lebedev points
+            w = weight_n[n]
+            Y_L = Y_nL_local[n]  # shape: [Lmax]
+            n_sg = np.dot(Y_L, n_sLg)  # shape: [n_spin, n_g]
+            e_g = rgd.empty()
+            dedn_sg = rgd.zeros(nspins)
+            xc_kernel.calculate(e_g, n_sg, dedn_sg)
+            # LDA exchange only: e_x = -3/4 * (3/pi)^(1/3) * sum_s n_s^(4/3)
+            # e_g = -3/4 * (3 / np.pi)**(1/3) * np.sum(n_sg**(4/3), axis=0)
+            # Step 6: Radial integration with angular weight
+            E_xc += w * rgd.integrate(e_g)
 
-# """Density matrix related quantities"""
-# for i in range(n_projectors[atom]):
-#   for j in range(n_projectors[atom]):
-#     for l in range((lmax + 1)**2):
-#       delta_aiiL[atom][i, j, l] = PP_MULTIPOLES[i, j, l]
-# delta0_a[atom] = jnp.zeros(1)
+        return E_xc
 
-# wave_grid_arr = pw.wave_grid(coefficient, vol)
+    delta_e_xc_total = 0.0
 
-# occupation = jnp.ones(
-#   shape=coefficient.shape[:3]
-# ) if occupation is None else occupation
+    for a, D_sp in D_asp.items():
+        setup = setups[a]
+        xcc = setup.xc_correction
 
-# density_grid = wave_to_density(wave_grid_arr, occupation)
-# density_grid_rec = wave_to_density_reciprocal(wave_grid_arr, occupation)
+        if xcc is None:
+            continue
 
-# def calculate_pseudo_density(wfs):
-#   """similar to the wave to density func"""
-#   return None
+        # Get data from xc_correction object
+        rgd = setup.rgd
+        n_qg = setup.local_corr.n_qg      # AE radial products: phi_j1 * phi_j2
+        nt_qg = setup.local_corr.nt_qg    # PS radial products: phit_j1 * phit_j2
+        nc_g = setup.local_corr.nc_g      # Core density
+        nct_g = setup.local_corr.nct_g    # Smooth core density
+        rgd = xcc.rgd   # use the truncated grid!!!
+        # n_qg = xcc.n_qg      # AE radial products: phi_j1 * phi_j2
+        # nt_qg = xcc.nt_qg    # PS radial products: phit_j1 * phit_j2
+        # nc_g = xcc.nc_g      # Core density
+        # nct_g = xcc.nct_g    # Smooth core density
+        # B_pqL = xcc.B_pqL    # Gaunt transformation matrix
+        T_Lqp = setup.local_corr.T_Lqp
+        e_xc0 = setup.data.e_xc    # Reference atom XC energy
+        Lmax = (2 * setup.lmax + 1)**2
 
-# def calculate_total_density(wfs):
-#   return None
+        # Step 1: Transform density matrix to angular basis
+        # D_sLq = sum_p D_sp * B_pqL
+        # np.inner contracts over the last axis of both arrays
+        # D_sp: [n_spin, n_ii], B_pqL.T: [Lmax, n_jj, n_ii]
+        # Result: [n_spin, Lmax, n_jj]
+        D_sLq = np.inner(D_sp, T_Lqp)
+        breakpoint()
 
-# def calculate_atomic_density_matrices(D_asp):
-#   """need to calculate the inner product between the pseudo-wave
-#   with the projectors"""
-#   return None
+        nc0_sg = nc_g / nspins
+        nct0_sg = nct_g / nspins
+        e_ae = _calculate_xc_energy(D_sLq, n_qg, nc0_sg)
+        e_ps = _calculate_xc_energy(D_sLq, nt_qg, nct0_sg)
+        delta_e_xc = e_ae - e_ps - e_xc0
+        delta_e_xc_total += delta_e_xc
+        print(f"Atom {a}: E_AE={e_ae:.6f}, E_PS={e_ps:.6f}, E_xc0={e_xc0:.6f}, Delta={delta_e_xc:.6f} Ha")
 
-# def calculate_multipole_moments():
-
-#   return comp_charge, _Q_aL
-
-# def correction():
-#   correction = 0
-#   for atom in atoms_list:
-#     correction += jnp.einsum("ijkl, ij, kl ->", 
-#       M_pp, D_aii[atom], D_aii[atom]
-#     )
-    
-#   return correction
-
-# # delta_aiiL = []
-# # delta0_a = []
-# # D_aii = []
-# # D_aii.append(jnp.zeros((nj, nj)))
-# # delta_aiiL.append(jnp.zeros((nj, nj, (lmax + 1)**2)))
-# # delta0_a.append(jnp.zeros(1))
-
-# def total_energy():
-
-#   # for D_sii, P_ni in zip(D_asii.values(), P_ani.values()):
-#   #   D_sii[self.spin] += jnp.einsum('ni, n, nj -> ij',
-#   #     P_ni.conj(), occ_n, P_ni).real
-#   for D_sii, P_ni in zip(D_asii.values(), P_ani.values()):
-#     D_sii[self.spin] += jnp.einsum('ni, n, nj -> ij',
-#       P_ni.conj(), occ_n, P_ni).real
-    
-#   for a, D_sii in wfs.D_asii.items():
-#     Q_L = jnp.einsum('ij, ijL -> L',
-#       D_sii[:wfs.ndensities].real, wfs.delta_aiiL[a])
-#     Q_L[0] += wfs.delta0_a[a]
-
-#   # calculate the kinetic energy
-#   # valence kinetic energy
-#   e_kinetic = kinetic(
-#     g_vector_grid,
-#     kpts,
-#     coeff_grid,
-#     occupation
-#   )
-#   # core kinetic energy
-#   # TODO: implement core kinetic energy to match the AE total energy
-#   ekin_c = 0
-
-#   # calculate the exchange-correlation energy
-#   exc_cv = exc_functional(
-#     density_grid,
-#     g_vector_grid,
-#     vol,
-#     xc,
-#     kohn_sham
-#   )
-  
-#   # core-valence Hartree energy
-#   e_coulomb = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
-
-#   for atom in atoms_list:
-#     e_kinetic += jnp.dot(K_p[atom], D_ij[atom]) + Kc[atom]
-#     e_zero += MB[atom] + jnp.dot(MB_p[atom], D_p[atom])
-#     e_coulomb += M[atom] + jnp.dot(
-#       D_p[atom], (M_p[atom] + jnp.dot(M_pp[atom], D_p[atom]))
-#     )
-#     e_xc += calculate_paw_correction(self.setups[a], D_sp,
-#                                                      dH_asp[a], a=a)
-
-#   return e_kinetic + e_coulomb + e_zero + e_xc
+    return delta_e_xc_total
