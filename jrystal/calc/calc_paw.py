@@ -178,6 +178,7 @@ def setup_gpaw(atom_type: str):
       g_lg = g_lg.at[0].set(4 / rc**3 / jnp.sqrt(jnp.pi) * jnp.exp(-(r_g / rc)**2))
       for l in range(1, lmax + 1):
           g_lg = g_lg.at[l].set(2.0 / (2 * l + 1) / rc**2 * r_g * g_lg[l - 1])
+
   return {
     'r_g': r_g,
     'dr_g': dr_g,
@@ -194,7 +195,9 @@ def setup_gpaw(atom_type: str):
     'gcut2': gcut2,
     'g_lg': g_lg,
     'K_p': pp_data['kinetic_energy_differences'],
-    'K_c': pp_data['core_energy']['kinetic']
+    'K_c': pp_data['core_energy']['kinetic'] - pp_data['ae_energy']['kinetic'],
+    # 'K_c': pp_data['core_energy']['kinetic'],
+    'e_xc': pp_data['ae_energy']["xc"]
   }
 
 
@@ -567,117 +570,111 @@ def  calc_paw(
     'Delta0': Delta0,
     'gcut': gcut,
     'g_lg': g_lg,
-    'vbar_g': vbar_g
+    'vbar_g': vbar_g,
+    'T_Lqp': T_Lqp
   }
-  # n = 13
-  # idx = jnp.triu_indices(n)
-  # Qij = jnp.zeros((n, n))
-  # Qij = Qij.at[idx[0], idx[1]].set(Delta_pL[:, 0] * jnp.sqrt(4 * jnp.pi))
-  # Qij += jnp.triu(Qij, k=1).T
-  # return {
-  #   # no need to multiply 4\pi here since integrate_radial_function already includes it
-  #   'Qij': Qij,
-  #   # radial part with additional r factor, the same as QE convention
-  #   'proj': pt_jg
-  # }
-
-# # TODO: the xc correction seems to be very messy here
-# xc_correction = get_xc_correction(rgd2, xc, gcut2, lcut)
 
 
-# """Density matrix related quantities"""
-# for i in range(n_projectors[atom]):
-#   for j in range(n_projectors[atom]):
-#     for l in range((lmax + 1)**2):
-#       delta_aiiL[atom][i, j, l] = PP_MULTIPOLES[i, j, l]
-# delta0_a[atom] = jnp.zeros(1)
+def compute_proj_pw_overlap(G_grid: jnp.ndarray):
+    """
+    This is the customized function to compute the projector-plane wave overlap matrix:
+    We perform the radial integration in real space and compare the results with f_GI
+    """
 
-# wave_grid_arr = pw.wave_grid(coefficient, vol)
+    pp_data = parse_paw_setup(f'/home/aiops/zhaojx/M_p-align-claude/pseudopotential/C.PBE')
+    from scipy.special import spherical_jn
 
-# occupation = jnp.ones(
-#   shape=coefficient.shape[:3]
-# ) if occupation is None else occupation
+    gcut2 = 258
+    grid_info = pp_data['radial_grid']
+    a = grid_info['a']
+    n = grid_info['n']
+    i = jnp.arange(n)
+    r_g = a * i / (n - i)  # Keep original grid for g_lg calculation
+    dr_g = a * n / (n - i)**2
+    r_g = r_g[:gcut2]
+    dr_g = dr_g[:gcut2]
+    pt_jg = jnp.array([proj['values'][:gcut2] for proj in pp_data['projector_functions']])
+    n_g = G_grid.shape[0]
+    overlap = jnp.zeros((n_g, 13), dtype=jnp.complex128)
 
-# density_grid = wave_to_density(wave_grid_arr, occupation)
-# density_grid_rec = wave_to_density_reciprocal(wave_grid_arr, occupation)
+    proj_list = [0, 1, 1, 1, 2, 3, 3, 3, 4, 4, 4, 4, 4]
+    m_list = [0, -1, 0, 1, 0, -1, 0, 1, -2, -1, 0, 1, 2]
+    l_list = [0, 1, 1, 1, 0, 1, 1, 1, 2, 2, 2, 2, 2]
 
-# def calculate_pseudo_density(wfs):
-#   """similar to the wave to density func"""
-#   return None
+    from scipy.special import sph_harm_y
+    theta_grid = jnp.arccos(G_grid[:, 2] / jnp.linalg.norm(G_grid, axis=1))
+    theta_grid = theta_grid.at[0].set(0.0)
+    phi_grid = jnp.arctan2(G_grid[:, 1], G_grid[:, 0])
+    phi_grid = phi_grid.at[0].set(0.0)   # handle the G = 0 singular case
+    for k in range(n_g):
+        for j in range(13):
+            bessel_grid = spherical_jn(l_list[j], r_g * jnp.linalg.norm(G_grid[k]))
+            overlap = overlap.at[k, j].set(jnp.sum(bessel_grid * pt_jg[proj_list[j]] * r_g * r_g * dr_g) * 4 * jnp.pi * (-1j) ** l_list[j] *\
+                sph_harm_y(l_list[j], m_list[j], theta_grid[k], phi_grid[k]))
 
-# def calculate_total_density(wfs):
-#   return None
+    # transform the result from spherical harmonics to real spherical harmonics
+    tmp_list = [0, 3, 2, 1, 4, 7, 6, 5, 12, 11, 10, 9, 8] # relate the m to -m indices
+    overlap_ = overlap.copy()
+    for j in range(13):
+        if m_list[j] > 0:
+            overlap_ = overlap.at[:, j].set((overlap[:, tmp_list[j]] + (-1)**m_list[j] * overlap[:, j]) / jnp.sqrt(2))
+        elif m_list[j] < 0:
+            overlap_ = overlap.at[:, j].set((overlap[:, j] - (-1)**m_list[j] * overlap[:, tmp_list[j]]) / (-1j * jnp.sqrt(2)))
+        
+    return overlap_
 
-# def calculate_atomic_density_matrices(D_asp):
-#   """need to calculate the inner product between the pseudo-wave
-#   with the projectors"""
-#   return None
 
-# def calculate_multipole_moments():
+def calc_paw_xc_correction(
+  D_asp: list,
+  setups: list,
+  xc_kernel: callable,
+  nspins: int = 1,
+  ):
 
-#   return comp_charge, _Q_aL
+  from gpaw.sphere.lebedev import R_nv, weight_n, Y_nL
+  def _calculate_xc_energy(D_sLq, n_qg, nc0_sg):
+    n_sLg = jnp.dot(D_sLq, n_qg)  # shape: [n_spin, Lmax, n_g]
+    n_sLg[:, 0, :] += nc0_sg
+    E_xc = 0.0
+    Y_nL_local = Y_nL[:, :Lmax]  # Only use L up to Lmax
+    for n in range(50):  # 50 Lebedev points
+      w = weight_n[n]
+      Y_L = Y_nL_local[n]  # shape: [Lmax]
+      n_sg = jnp.dot(Y_L, n_sLg)  # shape: [n_spin, n_g]
+      e_g = rgd.empty()
+      dedn_sg = rgd.zeros(nspins)
+      xc_kernel.calculate(e_g, n_sg, dedn_sg)
+      E_xc += w * rgd.integrate(e_g)
 
-# def correction():
-#   correction = 0
-#   for atom in atoms_list:
-#     correction += jnp.einsum("ijkl, ij, kl ->", 
-#       M_pp, D_aii[atom], D_aii[atom]
-#     )
-    
-#   return correction
+    return E_xc
 
-# # delta_aiiL = []
-# # delta0_a = []
-# # D_aii = []
-# # D_aii.append(jnp.zeros((nj, nj)))
-# # delta_aiiL.append(jnp.zeros((nj, nj, (lmax + 1)**2)))
-# # delta0_a.append(jnp.zeros(1))
+  delta_e_xc_total = 0.0
 
-# def total_energy():
+  for a, D_sp in D_asp.items():
+    setup = setups[a]
+    xcc = setup.xc_correction
 
-#   # for D_sii, P_ni in zip(D_asii.values(), P_ani.values()):
-#   #   D_sii[self.spin] += jnp.einsum('ni, n, nj -> ij',
-#   #     P_ni.conj(), occ_n, P_ni).real
-#   for D_sii, P_ni in zip(D_asii.values(), P_ani.values()):
-#     D_sii[self.spin] += jnp.einsum('ni, n, nj -> ij',
-#       P_ni.conj(), occ_n, P_ni).real
-    
-#   for a, D_sii in wfs.D_asii.items():
-#     Q_L = jnp.einsum('ij, ijL -> L',
-#       D_sii[:wfs.ndensities].real, wfs.delta_aiiL[a])
-#     Q_L[0] += wfs.delta0_a[a]
+    if xcc is None:
+        continue
 
-#   # calculate the kinetic energy
-#   # valence kinetic energy
-#   e_kinetic = kinetic(
-#     g_vector_grid,
-#     kpts,
-#     coeff_grid,
-#     occupation
-#   )
-#   # core kinetic energy
-#   # TODO: implement core kinetic energy to match the AE total energy
-#   ekin_c = 0
+    # Get data from xc_correction object
+    rgd = setup.rgd
+    n_qg = setup.local_corr.n_qg      # AE radial products: phi_j1 * phi_j2
+    nt_qg = setup.local_corr.nt_qg    # PS radial products: phit_j1 * phit_j2
+    nc_g = setup.local_corr.nc_g      # Core density
+    nct_g = setup.local_corr.nct_g    # Smooth core density
+    rgd = xcc.rgd   # use the truncated grid!!!
+    T_Lqp = setup.local_corr.T_Lqp
+    e_xc0 = setup.data.e_xc    # Reference atom XC energy
+    Lmax = (2 * setup.lmax + 1)**2
+    D_sLq = jnp.inner(D_sp, T_Lqp)
 
-#   # calculate the exchange-correlation energy
-#   exc_cv = exc_functional(
-#     density_grid,
-#     g_vector_grid,
-#     vol,
-#     xc,
-#     kohn_sham
-#   )
-  
-#   # core-valence Hartree energy
-#   e_coulomb = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
+    nc0_sg = nc_g / nspins
+    nct0_sg = nct_g / nspins
+    e_ae = _calculate_xc_energy(D_sLq, n_qg, nc0_sg)
+    e_ps = _calculate_xc_energy(D_sLq, nt_qg, nct0_sg)
+    delta_e_xc = e_ae - e_ps - e_xc0
+    delta_e_xc_total += delta_e_xc
+    print(f"Atom {a}: E_AE={e_ae:.6f}, E_PS={e_ps:.6f}, E_xc0={e_xc0:.6f}, Delta={delta_e_xc:.6f} Ha")
 
-#   for atom in atoms_list:
-#     e_kinetic += jnp.dot(K_p[atom], D_ij[atom]) + Kc[atom]
-#     e_zero += MB[atom] + jnp.dot(MB_p[atom], D_p[atom])
-#     e_coulomb += M[atom] + jnp.dot(
-#       D_p[atom], (M_p[atom] + jnp.dot(M_pp[atom], D_p[atom]))
-#     )
-#     e_xc += calculate_paw_correction(self.setups[a], D_sp,
-#                                                      dH_asp[a], a=a)
-
-#   return e_kinetic + e_coulomb + e_zero + e_xc
+  return delta_e_xc_total
