@@ -602,7 +602,7 @@ def compute_proj_pw_overlap(G_grid: jnp.ndarray):
     l_list = [0, 1, 1, 1, 0, 1, 1, 1, 2, 2, 2, 2, 2]
 
     from scipy.special import sph_harm_y
-    theta_grid = jnp.arccos(G_grid[:, 2] / jnp.linalg.norm(G_grid, axis=1))
+    theta_grid = jnp.arccos(G_grid[:, 2] / jnp.where(jnp.linalg.norm(G_grid, axis=1) > 0, jnp.linalg.norm(G_grid, axis=1), 1))
     theta_grid = theta_grid.at[0].set(0.0)
     phi_grid = jnp.arctan2(G_grid[:, 1], G_grid[:, 0])
     phi_grid = phi_grid.at[0].set(0.0)   # handle the G = 0 singular case
