@@ -126,9 +126,9 @@ def setup_gpaw(atom_type: str):
   r_g = r_g[:gcut2]
   dr_g = dr_g[:gcut2]
 
-  phi_jg = jnp.array([wave['values'][:gcut2] for wave in pp_data['ae_partial_waves']]) * r_g
-  phit_jg = jnp.array([wave['values'][:gcut2] for wave in pp_data['pseudo_partial_waves']]) * r_g
-  pt_jg = jnp.array([proj['values'][:gcut2] for proj in pp_data['projector_functions']]) * r_g
+  phi_jg = jnp.array([wave['values'][:gcut2] for wave in pp_data['ae_partial_waves']])
+  phit_jg = jnp.array([wave['values'][:gcut2] for wave in pp_data['pseudo_partial_waves']])
+  pt_jg = jnp.array([proj['values'][:gcut2] for proj in pp_data['projector_functions']])
   nc_g = jnp.array(pp_data['ae_core_density'][:gcut2]) / jnp.sqrt(4 * jnp.pi)
   nct_g = jnp.array(pp_data['pseudo_core_density'][:gcut2]) / jnp.sqrt(4 * jnp.pi)
   
@@ -268,13 +268,13 @@ def  calc_paw(
   # Calculate derived quantities first
   r_g = setup_data['r_g']
   dr_g = setup_data['dr_g']
-  phi_jg = setup_data['phi_jg']
-  phit_jg = setup_data['phit_jg']
+  phi_jg = setup_data['phi_jg'] * r_g
+  phit_jg = setup_data['phit_jg'] * r_g
   nc_g = setup_data['nc_g']
   nct_g = setup_data['nct_g'] 
   vbar_g = setup_data['vbar_g']
   l_j = setup_data['l_j']
-  pt_jg = setup_data['pt_jg']
+  pt_jg = setup_data['pt_jg'] * r_g
   Z = setup_data['Z']
   lmax = setup_data['lmax']
   lcut = setup_data['lcut']
@@ -575,7 +575,10 @@ def  calc_paw(
   }
 
 
-def compute_proj_pw_overlap(G_grid: jnp.ndarray):
+def compute_proj_pw_overlap(
+  G_grid: jnp.ndarray,
+  pos: jnp.ndarray,
+):
     """
     This is the customized function to compute the projector-plane wave overlap matrix:
     We perform the radial integration in real space and compare the results with f_GI
@@ -617,11 +620,32 @@ def compute_proj_pw_overlap(G_grid: jnp.ndarray):
     overlap_ = overlap.copy()
     for j in range(13):
         if m_list[j] > 0:
-            overlap_ = overlap.at[:, j].set((overlap[:, tmp_list[j]] + (-1)**m_list[j] * overlap[:, j]) / jnp.sqrt(2))
+            overlap_ = overlap_.at[:, j].set((overlap[:, tmp_list[j]] + (-1)**m_list[j] * overlap[:, j]) / jnp.sqrt(2))
         elif m_list[j] < 0:
-            overlap_ = overlap.at[:, j].set((overlap[:, j] - (-1)**m_list[j] * overlap[:, tmp_list[j]]) / (-1j * jnp.sqrt(2)))
+            overlap_ = overlap_.at[:, j].set((overlap[:, j] - (-1)**m_list[j] * overlap[:, tmp_list[j]]) / (-1j * jnp.sqrt(2)))
         
-    return overlap_
+    # overlap_tmp = jnp.zeros((n_g, 13), dtype=jnp.complex128)
+    # y_lm = jnp.zeros((n_g, 13), dtype=jnp.complex128)
+    # for k in range(n_g):
+    #     for j in range(13):
+    #         bessel_grid = spherical_jn(l_list[j], r_g * jnp.linalg.norm(G_grid[k]))
+    #         overlap_tmp = overlap_tmp.at[k, j].set(jnp.sum(bessel_grid * pt_jg[proj_list[j]] * r_g * r_g * dr_g))
+    #         if m_list[j] > 0:
+    #           y_lm = y_lm.at[k, j].set(
+    #             sph_harm_y(l_list[j], m_list[j], theta_grid[k], phi_grid[k]).real * (-1)**m_list[j] * jnp.sqrt(2)
+    #             * (-1.j)**l_list[j]
+    #           )
+    #         elif m_list[j] < 0:
+    #           y_lm = y_lm.at[k, j].set(
+    #             sph_harm_y(l_list[j], -m_list[j], theta_grid[k], phi_grid[k]).imag * (-1)**m_list[j] * jnp.sqrt(2)
+    #             * (-1.j)**l_list[j]
+    #           )    
+    #         else:
+    #           y_lm = y_lm.at[k, j].set(sph_harm_y(l_list[j], m_list[j], theta_grid[k], phi_grid[k]) * (-1.j)**l_list[j])
+    # overlap_tmp *= y_lm * 4 * jnp.pi
+
+    structure_factor = jnp.exp(-1.j * G_grid @ pos).reshape(-1, 1)
+    return overlap_ * structure_factor
 
 
 def calc_paw_xc_correction(

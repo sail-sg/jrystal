@@ -228,16 +228,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   )
   logging.info("Initializing pseudopotential (nonlocal)...")
   start = time.time()
-  # potential_nl = normcons.potential_nonlocal_psi_reciprocal(
-  #   crystal.positions,
-  #   g_vec,
-  #   k_vec,
-  #   pseudopot.r_grid,
-  #   pseudopot.nonlocal_beta_grid,
-  #   pseudopot.nonlocal_angular_momentum,
-  #   pseudopot.nonlocal_d_matrix,
-  #   beta_gk
-  # )  # shape "kpt beta phi x y z"
   proj_pw_overlap = normcons.potential_nonlocal_psi_reciprocal(
     crystal.positions,
     g_vec,
@@ -247,43 +237,43 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     pseudopot.nonlocal_angular_momentum,
     [jnp.eye(q.shape[0]) for q in pseudopot.nonlocal_d_matrix],
     beta_gk
-  ) #* config.grid_sizes**(3/2)
-  # breakpoint()
-  overlap2 = compute_proj_pw_overlap(g_vec.reshape(-1, 3))
-  overlap1 = proj_pw_overlap[0, index1[0], index1[1], ...].reshape(13, config.grid_sizes**3).T
-  breakpoint()
+  )
+  # NOTE: we have checked that the overlap matrix we obtained is correct
+  # tmp = beta_gk[0].reshape(5, 64).T
+  # overlap2 = compute_proj_pw_overlap(g_vec.reshape(-1, 3), crystal.positions[0])
+  # overlap1 = proj_pw_overlap[0, index1[0], index1[1], ...].reshape(13, config.grid_sizes**3).T
 
   # NOTE: check the othorgonality of the wavefunctions here
-  def expand(data: list, n_proj, l_j) -> jnp.ndarray:
-    """Expand the matrix from the size of radial component to the size of the projectors."""
-    data = jnp.array(data).reshape((len(l_j), len(l_j)))
-    expanded_data = jnp.zeros((n_proj, n_proj))
-    i1 = 0
-    for j1, l1 in enumerate(l_j):
-      for m1 in range(2 * l1 + 1):
-        i2 = 0
-        for j2, l2 in enumerate(l_j):
-          for m2 in range(2 * l2 + 1):
-            if l1 == l2 and m1 == m2:
-              expanded_data = expanded_data.at[i1, i2].set(data[j1, j2])
-            i2 += 1
-        i1 += 1
-    return expanded_data
-  dO = expand(pseudopot.nonlocal_d_matrix[0], 13, setup_data['l_j'])
-  overlap1 = einsum(
-    proj_pw_overlap[0, index1[0], index1[1], ...].reshape(13, config.grid_sizes**3),
-    proj_pw_overlap[0, index1[0], index1[1], ...].conj().reshape(13, config.grid_sizes**3),
-    dO, "proj1 g1, proj2 g2, proj1 proj2 -> g1 g2"
-  ) * config.grid_sizes**6
-  dO = expand(pseudopot.nonlocal_d_matrix[1], 13, setup_data['l_j'])
-  overlap2 = einsum(
-    proj_pw_overlap[0, index2[0], index2[1], ...].reshape(13, config.grid_sizes**3),
-    proj_pw_overlap[0, index2[0], index2[1], ...].conj().reshape(13, config.grid_sizes**3),
-    dO, "proj1 g1, proj2 g2, proj1 proj2 -> g1 g2"
-  ) * config.grid_sizes**6
-  S = jnp.eye(config.grid_sizes**3) + (overlap1 + overlap2) / config.grid_sizes**3
-  print(jnp.abs(S - S.T.conj()).max())
-  print(jnp.linalg.eigvals(S).min())
+  # def expand(data: list, n_proj, l_j) -> jnp.ndarray:
+  #   """Expand the matrix from the size of radial component to the size of the projectors."""
+  #   data = jnp.array(data).reshape((len(l_j), len(l_j)))
+  #   expanded_data = jnp.zeros((n_proj, n_proj))
+  #   i1 = 0
+  #   for j1, l1 in enumerate(l_j):
+  #     for m1 in range(2 * l1 + 1):
+  #       i2 = 0
+  #       for j2, l2 in enumerate(l_j):
+  #         for m2 in range(2 * l2 + 1):
+  #           if l1 == l2 and m1 == m2:
+  #             expanded_data = expanded_data.at[i1, i2].set(data[j1, j2])
+  #           i2 += 1
+  #       i1 += 1
+  #   return expanded_data
+  # dO = expand(pseudopot.nonlocal_d_matrix[0], 13, setup_data['l_j'])
+  # overlap1 = einsum(
+  #   proj_pw_overlap[0, index1[0], index1[1], ...].reshape(13, config.grid_sizes**3),
+  #   proj_pw_overlap[0, index1[0], index1[1], ...].conj().reshape(13, config.grid_sizes**3),
+  #   dO, "proj1 g1, proj2 g2, proj1 proj2 -> g1 g2"
+  # )
+  # dO = expand(pseudopot.nonlocal_d_matrix[1], 13, setup_data['l_j'])
+  # overlap2 = einsum(
+  #   proj_pw_overlap[0, index2[0], index2[1], ...].reshape(13, config.grid_sizes**3),
+  #   proj_pw_overlap[0, index2[0], index2[1], ...].conj().reshape(13, config.grid_sizes**3),
+  #   dO, "proj1 g1, proj2 g2, proj1 proj2 -> g1 g2"
+  # )
+  # S = jnp.eye(config.grid_sizes**3) + overlap1 + overlap2
+  # print(jnp.abs(S - S.T.conj()).max())
+  # print(jnp.linalg.eigvals(S).min())
 
   end = time.time()
   logging.info(f"Nonlocal potential done. Times: {end - start:.2f} seconds")
@@ -330,7 +320,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
     # this is the original overlap without PAW correction
     # overlap1 = einsum(coeff, coeff.conj(), "s k band1 x y z, s k band2 x y z -> s k band1 band2")
-    # breakpoint()
     coeff = get_ultrasoft_coeff(coeff)
     occ = get_occupation(params_occ)
     density = pw.density_grid(coeff, crystal.vol, occ)
@@ -500,7 +489,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   # Define update function.
   with mesh:
 
-    # @jax.jit
+    @jax.jit
     def update(params, opt_state, temp, g_vec):
       loss = lambda x: free_energy(
         x["pw"], x["occ"], temp, g_vec
@@ -547,7 +536,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
         break
 
       iters.set_description(
-        f"Loss: {loss_val:.4f}|Energy: {etot+ew:.4f}|"
+        f"Loss: {loss_val:.4f}|Energy: {etot:.4f}|"
         f"Entropy: {entro:.4f}|T: {temp:.2E}"
       )
 
