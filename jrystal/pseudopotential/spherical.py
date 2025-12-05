@@ -37,29 +37,26 @@ def cartesian_to_spherical(x: Float[Array, "*n 3"],
   Transforms 3D Cartesian coordinates (x, y, z) to spherical coordinates (r, θ, φ), where:
 
   - r is the radial distance from the origin
-  - θ (theta) is the azimuthal angle in the x-y plane from the x-axis (0 ≤ θ < 2π)
-  - φ (phi) is the polar angle from the z-axis (0 ≤ φ ≤ π)
+  - θ (theta) is the polar angle from the z-axis (0 ≤ φ ≤ π)
+  - φ (phi) is the azimuthal angle in the x-y plane from the x-axis (0 ≤ θ < 2π)
 
   For the special case of the origin (0, 0, 0), returns (0, NaN, π/2).
 
   Args:
     x: Float[Array, "*n 3"]: Cartesian coordinates with shape (..., 3) where ... represents arbitrary batch dimensions
 
-  Warning:
-    The definition of theta and phi is different from the jax convention.
-
   Returns:
     Float[Array, "*n 3"]: Spherical coordinates (r, θ, φ) with same batch shape
   """
   r = jnp.linalg.norm(x, axis=-1)  # Radial distance
-  r = jnp.where(r == 0., eps, r)
+  r_ = jnp.where(r == 0., eps, r)
 
-  # Polar angle (phi)
-  phi = jnp.arccos(jnp.clip(x[..., 2] / r, -1.0, 1.0))
+  # Polar angle (theta)
+  theta = jnp.arccos(jnp.clip(x[..., 2] / r_, -1.0, 1.0))
 
-  # Azimuthal angle (theta) and shift to range [0, 2*pi)
-  theta = jnp.arctan2(x[..., 1], x[..., 0])
-  theta = jnp.mod(theta + 2 * jnp.pi, 2 * jnp.pi)
+  # Azimuthal angle (phi) and shift to range [0, 2*pi)
+  phi = jnp.arctan2(x[..., 1], x[..., 0])
+  phi = jnp.mod(phi + 2 * jnp.pi, 2 * jnp.pi)
 
   return jnp.stack((r, theta, phi), axis=-1)
 
@@ -102,8 +99,8 @@ def batch_sph_harm(
 
   Args:
     l (int): The angular momentum quantum number.
-    theta (Float[Array, "*batch"]): The azimuthal angle.
-    phi (Float[Array, "*batch"]): The polar angle.
+    theta (Float[Array, "*batch"]): The polar angle.
+    phi (Float[Array, "*batch"]): The azimuthal angle.
 
   Returns:
     Float[Array, "*batch m"]: The spherical harmonics, where the last dimension is the magnetic quantum number.
@@ -115,8 +112,7 @@ def batch_sph_harm(
 
   @vmapstack(dim)
   def _sph_harm_fun(theta, phi):
-    return sph_harm_y(n, m, phi, theta)
-    # note that the definitions of theta and phi are swapped in sph_harm_y.
+    return sph_harm_y(n, m, theta, phi)
 
   return _sph_harm_fun(theta, phi)
 
