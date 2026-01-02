@@ -11,7 +11,7 @@ import jax
 from jax.sharding import NamedSharding
 from jax.sharding import PartitionSpec as P
 
-from .custom_partitioning import jrystal_custom_partitioning
+from jax._src.custom_partitioning import custom_partitioning
 
 
 def _supported_sharding(sharding, shape):
@@ -48,7 +48,7 @@ def custom_sharding_by_mesh(fun: Callable[..., jax.Array]) -> Callable:
     sharding = _supported_sharding(arg_shardings[0], arg_shapes[0])
     return mesh, fun, sharding, (sharding,)
 
-  sharded_fun = jrystal_custom_partitioning(fun)
+  sharded_fun = custom_partitioning(fun)
   sharded_fun.def_partition(
     infer_sharding_from_operands=_infer_sharding_from_operands,
     partition=_partition,

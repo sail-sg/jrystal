@@ -29,7 +29,8 @@ from . import (
   spmd,
   unitary_module,
   utils,
-  xc
+  xc,
+  hartree_fock,
 )
 
 __all__ = [
@@ -50,4 +51,5 @@ __all__ = [
   "braket",
   "spmd",
   "xc",
+  "hartree_fock",
 ]

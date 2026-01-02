@@ -7,7 +7,8 @@ import jax
 import numpy as np
 from jax import tree_util
 from jax._src import api_util, config, custom_api_util, dispatch
-from jax.extend import core
+from jax import core
+import jax.extend
 from jax._src import linear_util as lu
 from jax._src import mesh as mesh_lib
 from jax._src import sharding_impls
@@ -26,7 +27,7 @@ from jax._src.lib.mlir import ir
 from jax._src.lib.mlir.dialects import hlo
 
 _CUSTOM_PARTITIONING_CALL_NAME = "CustomSPMDPartitioningJrystal"
-custom_partitioning_p = core.Primitive("jrystal_custom_partitioning")
+custom_partitioning_p = jax.extend.core.Primitive("jrystal_custom_partitioning")
 custom_partitioning_p.multiple_results = True
 dispatch.prim_requires_devices_during_lowering.add(custom_partitioning_p)
 custom_partitioning_p.def_abstract_eval(_custom_partitioning_abstract_eval)
@@ -86,10 +87,10 @@ class jrystal_custom_partitioning:
     flat_fun, out_tree = api_util.flatten_fun_nokwargs(f_, in_tree)
     in_avals = [core.get_aval(x) for x in args_flat]
     mesh = mesh_lib.thread_resources.env.physical_mesh
-    with core.extend_axis_env_nd(mesh.shape.items()):
+    with jax._src.core.extend_axis_env_nd(mesh.shape.items()):
       jaxpr, _, consts, () = pe.trace_to_jaxpr_dynamic(flat_fun, in_avals)
     assert not len(consts)
-    closed_call = core.ClosedJaxpr(pe.convert_constvars_jaxpr(jaxpr), ())
+    closed_call = jax._src.core.ClosedJaxpr(pe.convert_constvars_jaxpr(jaxpr), ())
 
     propagate_user_sharding = None
     infer_sharding_from_operands = None
