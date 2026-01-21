@@ -534,17 +534,33 @@ def  calc_paw(
     A_lqq = []
     for l in range(2 * lcut + 1):
       poisson_rdl_ = jax.vmap(partial(poisson_rdl, l=l))
-      # 1st term in (47)
+      # 1st term in (47): 0.5 * n_qg @ poisson(n_qg)
       A_qq = 0.5 * integrate_radial_function(n_qg[None] * poisson_rdl_(n_qg)[:, None]) * 4 * jnp.pi
-      # 2nd term in (47)
-      A_qq -= 0.5 * integrate_radial_function(nt_qg[None] * poisson_rdl_(nt_qg)[:, None]) * 4 * jnp.pi  
-      # if l <= lmax:
-      # #   A_qq -= 0.5 * integrate_radial_function(poisson_rdl_(nt_qg)[None] * n_lqg[l][:, None])
-      # #   A_qq -= 0.5 * integrate_radial_function(nt_qg[None] * poisson_rdl_(n_lqg[l])[:, None])
-      # #   A_qq -= 0.5 * integrate_radial_function(n_lqg[l][None] * poisson_rdl_(n_lqg[l])[:, None])
-      #   A_qq -= 0.5 * integrate_radial_function(poisson_rdl_(nt_qg)[None] * n_lqg[l][:, None])
-      #   A_qq -= 0.5 * integrate_radial_function(nt_qg[None] * poisson_rdl_(n_lqg[l])[:, None])
-      #   A_qq -= 0.5 * integrate_radial_function(n_lqg[l][None] * poisson_rdl_(n_lqg[l])[:, None])
+      # 2nd term in (47): -0.5 * nt_qg @ poisson(nt_qg)
+      A_qq -= 0.5 * integrate_radial_function(nt_qg[None] * poisson_rdl_(nt_qg)[:, None]) * 4 * jnp.pi
+
+      # Compensation charge terms (3rd-5th terms)
+      # These terms involve the shape function g_lg and multipole moments Delta_lq
+      if l <= lmax:
+        # Poisson solution of g_lg[l] - a single radial function
+        w_g_lg = poisson_rdl(g_lg[l], l)  # shape: (gcut,)
+
+        # Following GPAW's convention: the integrals are computed using rgd.integrate
+        # which is sum(f * r^2 * dr) * 4π. But the Poisson solver already includes
+        # the 4π/(2l+1) factor, so we need to be careful about double-counting.
+
+        # 3rd term: -0.5 * outer(Delta_lq[l], integrate(poisson(nt_qg) * g_lg[l]))
+        term3_q = integrate_radial_function(poisson_rdl_(nt_qg) * g_lg[l])
+        A_qq -= 0.5 * jnp.outer(Delta_lq[l], term3_q)
+
+        # 4th term: -0.5 * outer(integrate(nt_qg * poisson(g_lg[l])), Delta_lq[l])
+        term4_q = integrate_radial_function(nt_qg * w_g_lg)
+        A_qq -= 0.5 * jnp.outer(term4_q, Delta_lq[l])
+
+        # 5th term: -0.5 * integrate(g_lg[l] * poisson(g_lg[l])) * outer(Delta_lq, Delta_lq)
+        term5_scalar = integrate_radial_function(g_lg[l] * w_g_lg)
+        A_qq -= 0.5 * term5_scalar * jnp.outer(Delta_lq[l], Delta_lq[l]) / 4 / jnp.pi
+
       A_lqq.append(A_qq)
 
     M_pp = jnp.zeros((_np, _np))
@@ -561,6 +577,7 @@ def  calc_paw(
     'B_ii': B_ii,
     'M': M,
     'M_p': M_p,
+    'M_pp': M_pp,
     'MB': MB,
     'MB_p': MB_p,
     'n_qg': n_qg * 4 * jnp.pi,
