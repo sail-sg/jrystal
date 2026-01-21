@@ -156,7 +156,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     K_c[a] = setup_data['K_c']
     M[a] = results["M"]
     M_p[a] = results["M_p"]
-    # M_pp[a] = results["M_pp"]
+    M_pp[a] = results["M_pp"]
     MB[a] = results["MB"]
     MB_p[a] = results["MB_p"]
     n_qg[a] = results["n_qg"]
@@ -242,6 +242,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   # tmp = beta_gk[0].reshape(5, 64).T
   # overlap2 = compute_proj_pw_overlap(g_vec.reshape(-1, 3), crystal.positions[0])
   # overlap1 = proj_pw_overlap[0, index1[0], index1[1], ...].reshape(13, config.grid_sizes**3).T
+  # print(jnp.abs(overlap1 - overlap2).max())
 
   # NOTE: check the othorgonality of the wavefunctions here
   # def expand(data: list, n_proj, l_j) -> jnp.ndarray:
@@ -342,9 +343,17 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       proj_pw_overlap,
       "s k band x y z, k  beta phi x y z -> s k band beta phi"
     )
-    # breakpoint()
-    # Normalize to match the convention in get_ultrasoft_coeff (ulatrsoft.py:103)
-    # _f_matrix /= jnp.sqrt(crystal.vol)
+    """
+    NOTE: 
+    `proj_pw_overlap` evaluates $<G|p_i>$ without normalization factor
+    $\sqrt{\Omega}$ of the plane wave basis. The orbital is defined as:
+
+    $$  \phi_n = \sum_G c_{nG} \frac{1}{\sqrt{\Omega}} e^{i(G+k)r} $$
+
+    Therefore, when we evaluate the overlap between the orbital and the projector,
+    we should include the normalization factor as below.
+    """
+    _f_matrix /= jnp.sqrt(crystal.vol)
 
     # NOTE: check the othorgonality of the wavefunctions here
     # def expand(data: list, n_proj, l_j) -> jnp.ndarray:
@@ -398,7 +407,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
       n = D_p.shape[-1]
       D_p = D_p.at[..., jnp.diag_indices(n)].set(D_p[..., jnp.diag_indices(n)] / 2)
-      return D_p[0,0][jnp.triu_indices(n)].real
+      return D_p[0,0][jnp.triu_indices(n)].real * 2
     
     def unpack(D_p: jnp.ndarray, n_proj: int) -> jnp.ndarray:
       tmp_mat = np.zeros((n_proj, n_proj))
@@ -445,15 +454,13 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     for atom in atoms_list:
       D_p_packed = pack(D_p[atom])
       kinetic += jnp.sum(K_p[atom] * D_p[atom][0,0]).real + K_c[atom]
-      e_zero += MB[atom] + jnp.sum(MB_p[atom] * D_p_packed) * 2
-      # TODO: second order correction for Hartree energy
-      # hartree += M[atom] + jnp.dot(
-      #   D_p_packed, (M_p[atom] + jnp.dot(M_pp[atom], D_p_packed))
-      # ) * 4
-      hartree += M[atom] + jnp.sum(D_p_packed * M_p[atom]) * 2
+      e_zero += MB[atom] + jnp.sum(MB_p[atom] * D_p_packed)
+      hartree += M[atom] + jnp.dot(
+        D_p_packed, (M_p[atom] + jnp.dot(M_pp[atom], D_p_packed))
+      )
       xc += calc_paw_xc_correction(atom)
 
-    return kinetic + hartree + e_zero + xc
+    return kinetic + hartree + e_zero + xc, kinetic, hartree, xc
 
   def get_entropy(params_occ):
     occ = get_occupation(params_occ)
@@ -462,12 +469,12 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   def free_energy(
     params_pw, params_occ, temp, g_vec
   ):
-    total = total_energy(
+    total, kinetic, hartree, xc = total_energy(
       params_pw, params_occ, g_vec
     )
     etro = get_entropy(params_occ)
     free = total - temp * etro
-    return free, (total, etro)
+    return free, (total, etro, kinetic, hartree, xc)
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
@@ -527,7 +534,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       params, opt_state, loss_val, es = update(
         params, opt_state, temp, g_vec
       )
-      etot, entro = es
+      etot, entro, kinetic, hartree, xc = es
       etot = jax.block_until_ready(etot)
       train_time += time.time() - start
       converged = convergence_checker.check(etot)
@@ -535,9 +542,13 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
         logging.info("Converged.")
         break
 
+      # iters.set_description(
+      #   f"Loss: {loss_val:.4f}|Energy: {etot:.4f}|"
+      #   f"Entropy: {entro:.4f}|T: {temp:.2E}"
+      # )
       iters.set_description(
         f"Loss: {loss_val:.4f}|Energy: {etot:.4f}|"
-        f"Entropy: {entro:.4f}|T: {temp:.2E}"
+        f"Kinetic: {kinetic:.4f}|Hartree: {hartree:.4f}|XC: {xc:.4f}"
       )
 
   if not converged:
