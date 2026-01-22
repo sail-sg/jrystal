@@ -44,6 +44,8 @@ from .opt_utils import (
   set_env_params,
 )
 from .pre_calc import pre_calc_beta_sbt
+from gpaw.spherical_harmonics import Yarr
+from scipy.special import spherical_jn
 
 
 @dataclass
@@ -105,7 +107,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     return expanded_data
 
   # preprocessing for PAW pp file
-  atoms_list = ["C1", "C2"]
+  atom_symbols = list(crystal.symbols)
+  atoms_list = [f"{sym}{i + 1}" for i, sym in enumerate(atom_symbols)]
+  atom_symbol_map = {label: sym for label, sym in zip(atoms_list, atom_symbols)}
+  atom_index_map = {label: i for i, label in enumerate(atoms_list)}
   K_p = {}
   K_c = {}
   M = {}
@@ -118,6 +123,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   nt_qg = {}
   nc_g = {}
   nct_g = {}
+  g_lg = {}
+  Delta_pL = {}
+  Delta0 = {}
   lmax = {}
   e_xc0 = {}
   r_g = {}
@@ -137,10 +145,11 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     [2, 1, 2, 3, 2, 1, 2, 3, 0, 1, 2, 3, 4]
   ])
 
+  xc_name = "LDA" if "lda" in config.xc.lower() else "PBE"
   for a in atoms_list:
     # NOTE: current only support the element with one character, e.g. C is okay while He is not
     # TODO: modify the pseudopot object to dict structure
-    setup_data = setup_gpaw(a[0])
+    setup_data = setup_gpaw(atom_symbol_map[a], xc_name)
     pseudopot.r_grid.append(setup_data['r_g'])
     pseudopot.nonlocal_beta_grid.append(setup_data['pt_jg'])
     pseudopot.nonlocal_angular_momentum.append(setup_data['l_j'])
@@ -152,7 +161,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     tmp_mat = tmp_mat + tmp_mat.T - np.diag(np.diag(tmp_mat))
     # NOTE: the jnp.sqrt(4 * jnp.pi) factor here is questionable
     pseudopot.nonlocal_d_matrix.append(tmp_mat / jnp.sqrt(4 * jnp.pi))
-    K_p[a] = expand(setup_data['K_p'], 13, setup_data['l_j'])
+    n_proj_m = int(jnp.sum(2 * setup_data['l_j'] + 1))
+    K_p[a] = expand(setup_data['K_p'], n_proj_m, setup_data['l_j'])
     K_c[a] = setup_data['K_c']
     M[a] = results["M"]
     M_p[a] = results["M_p"]
@@ -162,17 +172,33 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     n_qg[a] = results["n_qg"]
     nt_qg[a] = results["nt_qg"]
     T_Lqp[a] = results["T_Lqp"]
+    g_lg[a] = results["g_lg"]
+    Delta_pL[a] = results["Delta_pL"]
+    Delta0[a] = results["Delta0"]
 
     nc_g[a] = setup_data["nc_g"]
     nct_g[a] = setup_data["nct_g"]
     lmax[a] = int(setup_data["lmax"])
     e_xc0[a] = setup_data["e_xc"]
-    gcut = 258
-    a_ = 0.400000
-    n = 300
-    i = np.arange(gcut)
-    r_g[a] = a_ * i / (n - i)
-    dr_g[a] = a_ * n / (n - i)**2
+    r_g[a] = setup_data["r_g"]
+    dr_g[a] = setup_data["dr_g"]
+
+  # TODO: refactor below codes
+  # Build projector indices per atom for D_p construction
+  l_max_global = int(np.max(np.hstack(pseudopot.nonlocal_angular_momentum)))
+  beta_counts = [len(l_list) for l_list in pseudopot.nonlocal_angular_momentum]
+  beta_offsets = np.cumsum([0] + beta_counts[:-1])
+  index_map = {}
+  for a, offset, l_list in zip(atoms_list, beta_offsets,
+                               pseudopot.nonlocal_angular_momentum):
+    beta_idx = []
+    phi_idx = []
+    for b, l in enumerate(l_list):
+      l = int(l)
+      for m in range(-l, l + 1):
+        beta_idx.append(offset + b)
+        phi_idx.append(l_max_global + m)
+    index_map[a] = (jnp.array(beta_idx), jnp.array(phi_idx))
 
   # Initialize the mesh and sharding for the parallelization.
   num_devices = len(jax.devices())
@@ -195,6 +221,61 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   freq_mask = create_freq_mask(config)
   ew = get_ewald_coulomb_repulsion(config)
   valence_charges = np.sum(pseudopot.valence_charges)
+
+  # TODO: refactor below codes
+  # Precompute compensation charge Fourier components on the PW grid.
+  def precompute_ghat_LG(g_vec_grid, g_lg_radial, r_radial, dr_radial, lmax_val):
+    g_vec_np = np.array(g_vec_grid)
+    g_lg_radial = np.array(g_lg_radial)
+    r_radial = np.array(r_radial)
+    dr_radial = np.array(dr_radial)
+    g_norm = np.linalg.norm(g_vec_np, axis=-1)
+    g_hat = np.zeros_like(g_vec_np)
+    mask = g_norm > 0
+    g_hat[mask] = g_vec_np[mask] / g_norm[mask][..., None]
+    Lmax_val = (lmax_val + 1) ** 2
+    Y_LG = Yarr(list(range(Lmax_val)), g_hat)
+
+    g_flat = g_norm.reshape(-1)
+    weights = r_radial**2 * dr_radial
+    radial_int_lG = []
+    for l in range(lmax_val + 1):
+      jl = spherical_jn(l, np.outer(g_flat, r_radial))
+      radial_int = jl @ (g_lg_radial[l] * weights)
+      radial_int_lG.append(radial_int.reshape(g_norm.shape))
+
+    ghat_LG = np.zeros((Lmax_val, *g_norm.shape), dtype=np.complex128)
+    for L in range(Lmax_val):
+      l = int(np.floor(np.sqrt(L)))
+      ghat_LG[L] = 4 * np.pi * (-1j) ** l * radial_int_lG[l] * Y_LG[L]
+    return jnp.array(ghat_LG)
+
+  def precompute_nct_G(g_vec_grid, nct_radial, r_radial, dr_radial):
+    g_vec_np = np.array(g_vec_grid)
+    nct_radial = np.array(nct_radial)
+    r_radial = np.array(r_radial)
+    dr_radial = np.array(dr_radial)
+    g_norm = np.linalg.norm(g_vec_np, axis=-1)
+    g_flat = g_norm.reshape(-1)
+    weights = r_radial**2 * dr_radial
+    jl0 = spherical_jn(0, np.outer(g_flat, r_radial))
+    radial_int = jl0 @ (nct_radial * weights)
+    nct_G = 4 * np.pi * radial_int.reshape(g_norm.shape)
+    return jnp.array(nct_G)
+
+  ghat_LG = {}
+  phase_G = {}
+  nct_G = {}
+  for atom in atoms_list:
+    ghat_LG[atom] = precompute_ghat_LG(
+      g_vec, g_lg[atom], r_g[atom], dr_g[atom], lmax[atom]
+    )
+    phase_G[atom] = jnp.exp(
+      -1j * jnp.einsum("xyzc,c->xyz", g_vec, crystal.positions[atom_index_map[atom]])
+    )
+    nct_G[atom] = precompute_nct_G(
+      g_vec, nct_g[atom], r_g[atom], dr_g[atom]
+    )
 
   convergence_checker = create_convergence_checker(config)
   converged = False
@@ -324,15 +405,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     coeff = get_ultrasoft_coeff(coeff)
     occ = get_occupation(params_occ)
     density = pw.density_grid(coeff, crystal.vol, occ)
-    density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
     kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
-    hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
-    # external_local = normcons.energy_local(
-    #   density_reciprocal, potential_loc, vol=crystal.vol
-    # )
-    # external_nonlocal = normcons.energy_nonlocal(
-    #   coeff, potential_nl, vol=crystal.vol, occupation=occ
-    # )
 
     xc = energy.xc_energy(
       density, g_vec, crystal.vol, config.xc, kohn_sham=False
@@ -386,18 +459,14 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     #     D_sii[:wfs.ndensities].real, wfs.delta_aiiL[a])
     #   Q_L[0] += wfs.delta0_a[a]
     D_p = {}
-    D_p["C1"] = einsum(
-      _f_matrix[..., index1[0], index1[1]].conj(),
-      occ,
-      _f_matrix[..., index1[0], index1[1]],
-      "s k band proj1, s k band, s k band proj2 -> s k proj1 proj2"
-    ).real
-    D_p["C2"] = einsum(
-      _f_matrix[..., index2[0], index2[1]].conj(),
-      occ,
-      _f_matrix[..., index2[0], index2[1]],
-      "s k band proj1, s k band, s k band proj2 -> s k proj1 proj2"
-    ).real
+    for atom in atoms_list:
+      idx = index_map[atom]
+      D_p[atom] = einsum(
+        _f_matrix[..., idx[0], idx[1]].conj(),
+        occ,
+        _f_matrix[..., idx[0], idx[1]],
+        "s k band proj1, s k band, s k band proj2 -> s k proj1 proj2"
+      ).real
 
     def pack(D_p: jnp.ndarray) -> jnp.ndarray:
       """Pack a Hermitian matrix for better efficiency
@@ -408,12 +477,23 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       n = D_p.shape[-1]
       D_p = D_p.at[..., jnp.diag_indices(n)].set(D_p[..., jnp.diag_indices(n)] / 2)
       return D_p[0,0][jnp.triu_indices(n)].real * 2
-    
-    def unpack(D_p: jnp.ndarray, n_proj: int) -> jnp.ndarray:
-      tmp_mat = np.zeros((n_proj, n_proj))
-      tmp_mat[np.triu_indices(n_proj)] = D_p
-      tmp_mat = tmp_mat + tmp_mat.T - np.diag(np.diag(tmp_mat))
-      return tmp_mat
+
+    # TODO: refactor below codes
+    density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
+    # Add compensation charge to smooth density for Coulomb energy
+    rho_comp_G = 0.0
+    rho_core_G = 0.0
+    for atom in atoms_list:
+      D_p_packed = pack(D_p[atom])
+      Q_L = jnp.dot(D_p_packed, Delta_pL[atom])
+      Q_L = Q_L.at[0].add(Delta0[atom])
+      rho_comp_G += phase_G[atom] * jnp.tensordot(
+        Q_L, ghat_LG[atom], axes=[0, 0]
+      )
+      rho_core_G += phase_G[atom] * nct_G[atom]
+    density_reciprocal = density_reciprocal.at[0].add(rho_core_G)
+    density_reciprocal = density_reciprocal.at[0].add(rho_comp_G)
+    hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
 
     def calc_paw_xc_correction(atom: str):
       def _calculate_xc_energy(D_sLq, n_qg, nc0_sg):
@@ -548,7 +628,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       # )
       iters.set_description(
         f"Loss: {loss_val:.4f}|Energy: {etot:.4f}|"
-        f"Kinetic: {kinetic:.4f}|Hartree: {hartree:.4f}|XC: {xc:.4f}"
+        f"Kinetic: {kinetic:.4f}|Hartree: {hartree:.4f}|XC: {xc:.4f}|E_zero: {etot - kinetic - hartree - xc:.4f}|"
       )
 
   if not converged:

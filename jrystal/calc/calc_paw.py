@@ -77,7 +77,7 @@ def setup_qe():
   return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, l_j, pt_jg, Z, lmax, lcut, gcut
 
 
-def setup_gpaw(atom_type: str):
+def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   """Load and parse GPAW PAW setup file.
   
   Grid Properties:
@@ -90,10 +90,12 @@ def setup_gpaw(atom_type: str):
   """
   
   # Load GPAW setup file
-  pp_data = parse_paw_setup(f'/home/aiops/zhaojx/paw-minimal/pseudopotential/{atom_type}.PBE')
+  pp_data = parse_paw_setup(
+    f'/home/aiops/zhaojx/paw-minimal/pseudopotential/{atom_type}.{xc_name}'
+  )
   
   # Also load using GPAW's native loader to get shape_function parameters
-  data = SetupData('C', 'PBE', readxml=True)
+  data = SetupData(atom_type, xc_name, readxml=True)
   
   # Extract basic properties
   Z = int(pp_data['atom']['Z'])  # Total atomic number
@@ -118,7 +120,9 @@ def setup_gpaw(atom_type: str):
   # Angular momentum information from valence states
   l_j = jnp.array([state['l'] for state in pp_data['valence_states']])
   lcut = max(l_j)
-  gcut2 = 258
+  vals = jnp.array(pp_data['projector_functions'][0]['values'])
+  idx = jnp.where(vals != 0, jnp.arange(vals.size), -1)
+  gcut2 = int(jnp.max(idx)) + 1
   if gcut2 > len(r_g):
     gcut2 = len(r_g)
   
@@ -141,9 +145,8 @@ def setup_gpaw(atom_type: str):
   # We need to implement this properly for GPAW files
   # Using the same Gaussian shape function approach as GPAW
   
-  # Get shape function parameters from SetupData
-  shape_params = getattr(data, 'shape_function', {'type': 'gauss', 'rc': 3.794733192202e-01})
-  rc = shape_params.get('rc', 3.794733192202e-01)
+  shape_params = pp_data.get('shape_function')
+  rc = shape_params.get('rc', None)
   sf_type = shape_params.get('type', 'gauss')
   
   # Initialize g_lg for all l values up to lmax
