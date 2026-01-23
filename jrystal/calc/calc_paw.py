@@ -204,8 +204,7 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   }
 
 
-def  calc_paw(
-  setup_data: dict):
+def  calc_paw(setup_data: dict):
   """Calculate PAW correction terms using QE UPF data in native convention.
   
   Input Convention (QE UPF as loaded by setup_qe):
@@ -240,9 +239,9 @@ def  calc_paw(
   Args:
     r_g (np.ndarray): Radial grid points, shape (gcut,)
     dr_g (np.ndarray): Radial grid integration weights (dr), shape (gcut,)
-    phi_jg (np.ndarray): All-electron partial waves φ(r)*r, shape (nj, gcut)
+    phi_jg (np.ndarray): All-electron partial waves φ(r), shape (nj, gcut)
                         These match the true AE wavefunctions inside core region
-    phit_jg (np.ndarray): Pseudo partial waves φ̃(r)*r, shape (nj, gcut)
+    phit_jg (np.ndarray): Pseudo partial waves φ̃(r), shape (nj, gcut)
                          Smooth functions matching φ outside core region
     nc_g (np.ndarray): All-electron core density n_c(r), shape (gcut,)
                        True electron density of core states
@@ -250,7 +249,7 @@ def  calc_paw(
                         Pseudized version of nc_g, smooth at origin
     vbar_g (np.ndarray): Local pseudopotential V_loc(r), shape (gcut,)
     l_j (np.ndarray): Angular momentum for each projector, shape (nj,)
-    pt_jg (np.ndarray): Projector functions p̃(r)*r, shape (nj, gcut)
+    pt_jg (np.ndarray): Projector functions p̃(r), shape (nj, gcut)
                        Dual functions to φ̃, satisfying ⟨p̃_i|φ̃_j⟩ = δ_ij
     Z (int): Atomic number (total nuclear charge)
     lmax (int): Maximum angular momentum for augmentation

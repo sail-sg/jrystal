@@ -159,7 +159,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     tmp_mat = np.zeros((n_proj, n_proj))
     tmp_mat[np.triu_indices(n_proj)] = results['Delta_lq'][0]
     tmp_mat = tmp_mat + tmp_mat.T - np.diag(np.diag(tmp_mat))
-    # NOTE: the jnp.sqrt(4 * jnp.pi) factor here is questionable
     pseudopot.nonlocal_d_matrix.append(tmp_mat / jnp.sqrt(4 * jnp.pi))
     n_proj_m = int(jnp.sum(2 * setup_data['l_j'] + 1))
     K_p[a] = expand(setup_data['K_p'], n_proj_m, setup_data['l_j'])
