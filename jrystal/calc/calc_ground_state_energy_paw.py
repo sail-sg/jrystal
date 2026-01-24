@@ -27,7 +27,7 @@ from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
 from tqdm import tqdm
 
-from .._src import energy, entropy, occupation, pw
+from .._src import energy, entropy, occupation, pw, xc
 from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
@@ -130,6 +130,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   e_xc0 = {}
   r_g = {}
   dr_g = {}
+  vbar_g = {}
   T_Lqp = {}
   pseudopot.r_grid = []
   pseudopot.nonlocal_beta_grid = []
@@ -181,6 +182,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     e_xc0[a] = setup_data["e_xc"]
     r_g[a] = setup_data["r_g"]
     dr_g[a] = setup_data["dr_g"]
+    vbar_g[a] = setup_data["vbar_g"]
 
   # TODO: refactor below codes
   # Build projector indices per atom for D_p construction
@@ -220,6 +222,19 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   freq_mask = create_freq_mask(config)
   ew = get_ewald_coulomb_repulsion(config)
   valence_charges = np.sum(pseudopot.valence_charges)
+
+  # Smooth local potential (vbar) for PAW e_zero contribution.
+  vbar_r_list = [r_g[a] for a in atoms_list]
+  vbar_grid_list = [vbar_g[a] for a in atoms_list]
+  vbar_charge_list = [0 for _ in atoms_list]
+  vbar_G = normcons.potential_local_reciprocal(
+    crystal.positions,
+    g_vec,
+    vbar_r_list,
+    vbar_grid_list,
+    vbar_charge_list,
+    crystal.vol
+  )
 
   # TODO: refactor below codes
   # Precompute compensation charge Fourier components on the PW grid.
@@ -406,7 +421,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     density = pw.density_grid(coeff, crystal.vol, occ)
     kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
 
-    xc = energy.xc_energy(
+    exc = energy.xc_energy(
       density, g_vec, crystal.vol, config.xc, kohn_sham=False
     )
 
@@ -479,6 +494,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
     # TODO: refactor below codes
     density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
+    e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol)
     # Add compensation charge to smooth density for Coulomb energy
     rho_comp_G = 0.0
     rho_core_G = 0.0
@@ -512,9 +528,15 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
         n = jnp.dot(Y_nL_local, n_sLg)
         # TODO: here we encounter negative density, we use a quick fix, should reconsider
         n = jnp.where(n > 0, n, 0)
-        e_g = -3/4 * (3 / np.pi)**(1/3) * n**(4/3)
+        # e_g = -3/4 * (3 / np.pi)**(1/3) * n**(4/3)
+        def _exc_density(n_sg):
+          if n_sg.ndim == 1:
+            n_sg = n_sg[None, :]
+          return xc.xc_density(n_sg, g_vec, xc_type=config.xc)
+        exc_density = jax.vmap(_exc_density)(n)
+        n_total = n if n.ndim == 2 else jnp.sum(n, axis=1)
         # E_xc_ = einsum(weight_n, e_g, dr_g[atom] * r_g[atom]**2, "i, ij, j") * 4 * jnp.pi
-        E_xc_ = jnp.einsum("i, ij, j", weight_n, e_g, dr_g[atom] * r_g[atom]**2) * 4 * jnp.pi
+        E_xc_ = jnp.einsum("i, ij, j", weight_n, n_total * exc_density, dr_g[atom] * r_g[atom]**2) * 4 * jnp.pi
         return E_xc_
 
       n_qg_ = n_qg[atom]
@@ -529,7 +551,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       e_ps = _calculate_xc_energy(D_sLq, nt_qg_, nct_g_)
       return e_ae - e_ps - e_xc0_
 
-    e_zero = 0
     for atom in atoms_list:
       D_p_packed = pack(D_p[atom])
       kinetic += jnp.sum(K_p[atom] * D_p[atom][0,0]).real + K_c[atom]
@@ -537,9 +558,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       hartree += M[atom] + jnp.dot(
         D_p_packed, (M_p[atom] + jnp.dot(M_pp[atom], D_p_packed))
       )
-      xc += calc_paw_xc_correction(atom)
+      exc += calc_paw_xc_correction(atom)
 
-    return kinetic + hartree + e_zero + xc, kinetic, hartree, xc
+    return kinetic + hartree + e_zero + exc, kinetic, hartree, exc
 
   def get_entropy(params_occ):
     occ = get_occupation(params_occ)
@@ -548,12 +569,12 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   def free_energy(
     params_pw, params_occ, temp, g_vec
   ):
-    total, kinetic, hartree, xc = total_energy(
+    total, kinetic, hartree, exc = total_energy(
       params_pw, params_occ, g_vec
     )
     etro = get_entropy(params_occ)
     free = total - temp * etro
-    return free, (total, etro, kinetic, hartree, xc)
+    return free, (total, etro, kinetic, hartree, exc)
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
@@ -613,7 +634,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       params, opt_state, loss_val, es = update(
         params, opt_state, temp, g_vec
       )
-      etot, entro, kinetic, hartree, xc = es
+      etot, entro, kinetic, hartree, exc = es
       etot = jax.block_until_ready(etot)
       train_time += time.time() - start
       converged = convergence_checker.check(etot)
@@ -627,7 +648,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       # )
       iters.set_description(
         f"Loss: {loss_val:.4f}|Energy: {etot:.4f}|"
-        f"Kinetic: {kinetic:.4f}|Hartree: {hartree:.4f}|XC: {xc:.4f}|E_zero: {etot - kinetic - hartree - xc:.4f}|"
+        f"Kinetic: {kinetic:.4f}|Hartree: {hartree:.4f}|XC: {exc:.4f}|E_zero: {etot - kinetic - hartree - exc:.4f}|"
       )
 
   if not converged:
@@ -649,12 +670,12 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   #   coeff, potential_nl, vol=crystal.vol, occupation=occ
   # )
 
-  xc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)
+  exc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)
 
   logging.info(f"Hartree Energy: {hartree:.4f} Ha")
-  logging.info(f"External (local) Energy: {external_local:.4f} Ha")
-  logging.info(f"External (nonlocal) Energy: {external_nonlocal:.4f} Ha")
-  logging.info(f"XC Energy: {xc:.4f} Ha")
+  # logging.info(f"External (local) Energy: {external_local:.4f} Ha")
+  # logging.info(f"External (nonlocal) Energy: {external_nonlocal:.4f} Ha")
+  logging.info(f"XC Energy: {exc:.4f} Ha")
   logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
   logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
   logging.info(f"Total Energy: {etot+ew:.4f} Ha")

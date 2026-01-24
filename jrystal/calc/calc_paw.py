@@ -204,7 +204,7 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   }
 
 
-def  calc_paw(setup_data: dict):
+def calc_paw(setup_data: dict):
   """Calculate PAW correction terms using QE UPF data in native convention.
   
   Input Convention (QE UPF as loaded by setup_qe):
