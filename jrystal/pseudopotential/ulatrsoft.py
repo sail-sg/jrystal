@@ -103,10 +103,16 @@ def get_ultrasoft_coeff_fun(
   psi_G = psi_G / jnp.sqrt(vol)
   # [kpt g atom_i]
 
-  q_mat = [
-    scipy.linalg.block_diag(*([q] * _m)) for q, _m in zip(nonlocal_q_matrix, m)
-  ]
-  q_mat = scipy.linalg.block_diag(*q_mat) * vol / np.prod(freq_mask.shape)
+  q_mat = []
+  for q, l_j, _m in zip(nonlocal_q_matrix, nonlocal_angular_momentum, m):
+    l_j = jnp.array(l_j, dtype=int)
+    # NOTE: the mast is only for GPAW
+    mask = (l_j[:, None] == l_j[None, :])
+    q = jnp.where(mask, q, 0.0)
+    q_mat += [
+      scipy.linalg.block_diag(np.kron(q, np.eye(_m))) 
+    ]
+  q_mat = scipy.linalg.block_diag(*q_mat) #* vol / np.prod(freq_mask.shape)
 
   def _get_s_sqrt(B, x):
     # print(jnp.linalg.eigvals(jnp.eye(B.shape[0]) + (B @ q_mat @ B.T.conj()).real).min())

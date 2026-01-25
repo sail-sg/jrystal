@@ -133,6 +133,7 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   phi_jg = jnp.array([wave['values'][:gcut2] for wave in pp_data['ae_partial_waves']])
   phit_jg = jnp.array([wave['values'][:gcut2] for wave in pp_data['pseudo_partial_waves']])
   pt_jg = jnp.array([proj['values'][:gcut2] for proj in pp_data['projector_functions']])
+  # Integration: \sqrt{4π} * ∫ n_c(r) * r² dr = N_core, n_c is the radial component
   nc_g = jnp.array(pp_data['ae_core_density'][:gcut2]) / jnp.sqrt(4 * jnp.pi)
   nct_g = jnp.array(pp_data['pseudo_core_density'][:gcut2]) / jnp.sqrt(4 * jnp.pi)
   
