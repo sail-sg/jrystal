@@ -116,7 +116,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   M = {}
   M_p = {}
   M_pp = {}
-  Kc = {}
   MB = {}
   MB_p = {}
   n_qg = {}
@@ -224,17 +223,17 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   valence_charges = np.sum(pseudopot.valence_charges)
 
   # Smooth local potential (vbar) for PAW e_zero contribution.
-  vbar_r_list = [r_g[a] for a in atoms_list]
-  vbar_grid_list = [vbar_g[a] for a in atoms_list]
-  vbar_charge_list = [0 for _ in atoms_list]
-  vbar_G = normcons.potential_local_reciprocal(
-    crystal.positions,
-    g_vec,
-    vbar_r_list,
-    vbar_grid_list,
-    vbar_charge_list,
-    crystal.vol
-  )
+  # vbar_r_list = [r_g[a] for a in atoms_list]
+  # vbar_grid_list = [vbar_g[a] for a in atoms_list]
+  # vbar_charge_list = [0 for _ in atoms_list]
+  # vbar_G = normcons.potential_local_reciprocal(
+  #   crystal.positions,
+  #   g_vec,
+  #   vbar_r_list,
+  #   vbar_grid_list,
+  #   vbar_charge_list,
+  #   crystal.vol
+  # )
 
   # TODO: refactor below codes
   # Precompute compensation charge Fourier components on the PW grid.
@@ -262,6 +261,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     for L in range(Lmax_val):
       l = int(np.floor(np.sqrt(L)))
       ghat_LG[L] = 4 * np.pi * (-1j) ** l * radial_int_lG[l] * Y_LG[L]
+    # Match FFT normalization used by density_grid_reciprocal
+    num_grids = np.prod(g_vec_grid.shape[:-1])
+    ghat_LG *= num_grids / crystal.vol
     return jnp.array(ghat_LG)
 
   def precompute_nct_G(g_vec_grid, nct_radial, r_radial, dr_radial):
@@ -274,12 +276,16 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     weights = r_radial**2 * dr_radial
     jl0 = spherical_jn(0, np.outer(g_flat, r_radial))
     radial_int = jl0 @ (nct_radial * weights)
-    nct_G = 4 * np.pi * radial_int.reshape(g_norm.shape)
+    nct_G = 4 * np.pi * radial_int.reshape(g_norm.shape) * np.prod(g_vec_grid.shape[:-1]) / crystal.vol
     return jnp.array(nct_G)
 
   ghat_LG = {}
   phase_G = {}
-  nct_G = {}
+  nct_G_ = {}
+  vbar_G_ = {}
+  nct_G = 0.0
+  vbar_G = 0.0
+  e_zero0 = 0.0
   for atom in atoms_list:
     ghat_LG[atom] = precompute_ghat_LG(
       g_vec, g_lg[atom], r_g[atom], dr_g[atom], lmax[atom]
@@ -287,9 +293,27 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     phase_G[atom] = jnp.exp(
       -1j * jnp.einsum("xyzc,c->xyz", g_vec, crystal.positions[atom_index_map[atom]])
     )
-    nct_G[atom] = precompute_nct_G(
-      g_vec, nct_g[atom], r_g[atom], dr_g[atom]
-    )
+    nct_G_[atom] = precompute_nct_G(g_vec, nct_g[atom], r_g[atom], dr_g[atom])
+    vbar_G_[atom] = precompute_nct_G(g_vec, vbar_g[atom]/jnp.sqrt(4 * jnp.pi), r_g[atom], dr_g[atom])
+    nct_G += phase_G[atom] * nct_G_[atom]
+    vbar_G += phase_G[atom] * vbar_G_[atom]
+    e_zero0 += jnp.sum(nct_g[atom] * jnp.sqrt(4 * jnp.pi) * vbar_g[atom] * r_g[atom]**2 * dr_g[atom])
+  nct_g_ = jnp.fft.ifftn(nct_G, axes=range(-3, 0)).real
+
+  # NOTE: test the total charge of the core electrons
+  nc_G_ = precompute_nct_G(g_vec, nc_g[atom], r_g[atom], dr_g[atom]) * crystal.vol / np.prod(g_vec.shape[:-1])
+  nc = jnp.sum(nc_g[atom] * 4 * jnp.pi * r_g[atom]**2 * dr_g[atom])
+  assert jnp.abs(nc - nc_G_[0,0,0]).max() < 1e-6, "Core charge does not match!"
+
+  # e_zero_nct = 0.0
+  # rho_core_G = 0.0
+  # for atom in atoms_list:
+  #   e_zero_nct += jnp.sum(nct_g[atom] * jnp.sqrt(4 * jnp.pi) * vbar_g[atom] * r_g[atom]**2 * dr_g[atom])
+  #   vbar_G_ = precompute_nct_G(g_vec, vbar_g[atom]/jnp.sqrt(4 * jnp.pi), r_g[atom], dr_g[atom])
+  #   rho_core_G += phase_G[atom] * nct_G[atom]
+  #   print(jnp.sum(nct_g[atom] * jnp.sqrt(4 * jnp.pi) * vbar_g[atom] * r_g[atom]**2 * dr_g[atom]))
+  #   print(normcons.energy_local(nct_G[atom], vbar_G_, crystal.vol))
+  # e_zero_nct_ = normcons.energy_local(rho_core_G, vbar_G, crystal.vol)
 
   convergence_checker = create_convergence_checker(config)
   converged = False
@@ -418,9 +442,12 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     # overlap1 = einsum(coeff, coeff.conj(), "s k band1 x y z, s k band2 x y z -> s k band1 band2")
     coeff = get_ultrasoft_coeff(coeff)
     occ = get_occupation(params_occ)
-    density = pw.density_grid(coeff, crystal.vol, occ)
     kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
 
+    # TODO: refactor below codes
+    density = pw.density_grid(coeff, crystal.vol, occ)
+    density = density.at[0].add(nct_g_)
+    density = density.at[0].set(jnp.where(density[0] > 0, density[0], 0))
     exc = energy.xc_energy(
       density, g_vec, crystal.vol, config.xc, kohn_sham=False
     )
@@ -492,12 +519,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       D_p = D_p.at[..., jnp.diag_indices(n)].set(D_p[..., jnp.diag_indices(n)] / 2)
       return D_p[0,0][jnp.triu_indices(n)].real * 2
 
-    # TODO: refactor below codes
-    density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-    e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol)
     # Add compensation charge to smooth density for Coulomb energy
     rho_comp_G = 0.0
-    rho_core_G = 0.0
     for atom in atoms_list:
       D_p_packed = pack(D_p[atom])
       Q_L = jnp.dot(D_p_packed, Delta_pL[atom])
@@ -505,16 +528,16 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       rho_comp_G += phase_G[atom] * jnp.tensordot(
         Q_L, ghat_LG[atom], axes=[0, 0]
       )
-      rho_core_G += phase_G[atom] * nct_G[atom]
-    density_reciprocal = density_reciprocal.at[0].add(rho_core_G)
-    density_reciprocal = density_reciprocal.at[0].add(rho_comp_G)
+    density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
+    e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol) + e_zero0
+    density_reciprocal = density_reciprocal.at[0].add(rho_comp_G + nct_G)
     hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
 
     def calc_paw_xc_correction(atom: str):
       def _calculate_xc_energy(D_sLq, n_qg, nc0_sg):
 
         n_sLg = jnp.dot(D_sLq, n_qg)  # shape: [n_spin, Lmax, n_g]
-        n_sLg = n_sLg.at[0].add(nc0_sg)
+        n_sLg = n_sLg.at[0].add(nc0_sg * jnp.sqrt(4 * jnp.pi))
         Y_nL_local = Y_nL[:, :Lmax_]  # Only use L up to Lmax
         # for n in range(50):  # 50 Lebedev points
         #   w = weight_n[n]
@@ -586,6 +609,71 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     spin_restricted=config.spin_restricted,
     sharding=sharding
   )
+  # def _check_uspp_overlap(params_pw):
+  #   """Check C^H S C = I for USPP transform using current coeffs."""
+  #   coeff_raw = pw.coeff(params_pw, freq_mask, sharding=sharding)
+  #   coeff_us = get_ultrasoft_coeff(coeff_raw)
+
+  #   coeff_mask = coeff_us.at[..., freq_mask].get()
+  #   coeff_mask = coeff_mask.reshape(coeff_mask.shape[:3] + (-1,))
+
+  #   proj_mask = proj_pw_overlap.at[..., freq_mask].get()
+  #   proj_mask = proj_mask.reshape(
+  #     proj_pw_overlap.shape[0], proj_pw_overlap.shape[1],
+  #     proj_pw_overlap.shape[2], -1
+  #   )
+  #   f_matrix = einsum(
+  #     coeff_mask, proj_mask,
+  #     "s k band g, k beta phi g -> s k band beta phi"
+  #   ) / jnp.sqrt(crystal.vol)
+
+  #   # Build q_mat = block_diag(kron(q, I_m)) with same masking as uatrsoft.py.
+  #   lmax_global = int(np.max(np.hstack(pseudopot.nonlocal_angular_momentum)))
+  #   m_dim = 2 * lmax_global + 1
+  #   q_blocks = []
+  #   for q, l_j in zip(
+  #     pseudopot.nonlocal_d_matrix, pseudopot.nonlocal_angular_momentum
+  #   ):
+  #     l_j = np.array(l_j, dtype=int)
+  #     mask = (l_j[:, None] == l_j[None, :])
+  #     q_eff = np.array(q) * np.sqrt(4 * np.pi)
+  #     q_eff = np.where(mask, q_eff, 0.0)
+  #     q_blocks.append(np.kron(q_eff, np.eye(m_dim)))
+
+  #   if q_blocks:
+  #     total = sum(b.shape[0] for b in q_blocks)
+  #     q_mat = np.zeros((total, total))
+  #     offset = 0
+  #     for b in q_blocks:
+  #       n = b.shape[0]
+  #       q_mat[offset:offset + n, offset:offset + n] = b
+  #       offset += n
+  #   else:
+  #     q_mat = np.zeros((0, 0))
+
+  #   # Check the overlap matrix for the first (spin, kpt) over a band subset.
+  #   nb_check = int(coeff_mask.shape[2])
+  #   c_mat = np.array(coeff_mask[0, 0, :nb_check]).T  # [G, B]
+  #   f_mat = np.array(f_matrix[0, 0, :nb_check]).reshape(nb_check, -1)  # [B, P]
+
+  #   if q_mat.shape[0] != f_mat.shape[1]:
+  #     logging.warning(
+  #       "USPP overlap check skipped: q_mat dim %d != f dim %d",
+  #       q_mat.shape[0], f_mat.shape[1]
+  #     )
+  #     return
+
+  #   s_cc = c_mat.conj().T @ c_mat
+  #   s_ff = f_mat.conj() @ (q_mat @ f_mat.T)
+  #   s_mat = s_cc + s_ff
+  #   diag_err = np.max(np.abs(np.diag(s_mat) - 1.0))
+  #   offdiag = s_mat - np.diag(np.diag(s_mat))
+  #   offdiag_err = np.max(np.abs(offdiag))
+  #   logging.info(
+  #     "USPP overlap check (B=%d): max|diag-1|=%.3e, max|offdiag|=%.3e",
+  #     nb_check, diag_err, offdiag_err
+  #   )
+  # _check_uspp_overlap(params_pw)
   params_occ = occupation.param_init(
     key, num_bands, valence_charges, num_kpts, crystal.spin, config.occupation
   )

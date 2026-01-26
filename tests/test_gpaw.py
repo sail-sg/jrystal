@@ -57,7 +57,11 @@ def run_case(geom_path: Path, cutoff_ha: float, kpts: tuple[int, int, int]) -> N
         xc="LDA",
         setups="paw",
         kpts=kpts,
-        txt=None
+        txt=None,
+        eigensolver={'name': 'etdm-fdpw'},
+        mixer={'backend': 'no-mixing'},
+        occupations={'name': 'fixed-uniform'},
+        symmetry='off',
     )
 
     atoms.calc = calc

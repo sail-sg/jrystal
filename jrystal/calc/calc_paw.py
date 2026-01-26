@@ -105,24 +105,17 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   a = grid_info['a']
   n = grid_info['n']
   i = jnp.arange(n)
-  r_g_original = a * i / (n - i)  # Keep original grid for g_lg calculation
-  dr_g_original = a * n / (n - i) ** 2
-  
-  # Make a copy for modification
-  r_g = r_g_original.copy()
-  dr_g = dr_g_original.copy()
-  
-  # NOTE: this modification is used to avoid the singularity at r=0
-  # as well as the integration error
-  r_g = r_g.at[0].set(1e-5)
-  dr_g = dr_g.at[0].set(0)
+  r_g = a * i / (n - i)  # Keep original grid for g_lg calculation
+  dr_g = a * n / (n - i) ** 2
   
   # Angular momentum information from valence states
   l_j = jnp.array([state['l'] for state in pp_data['valence_states']])
   lcut = max(l_j)
-  vals = jnp.array(pp_data['projector_functions'][0]['values'])
-  idx = jnp.where(vals != 0, jnp.arange(vals.size), -1)
-  gcut2 = int(jnp.max(idx)) + 1
+  # Match GPAW: gcut2 = rgd.ceil(2 * max(rcut_j))
+  rcut_j = jnp.array(data.rcut_j)
+  rcutmax = float(jnp.max(rcut_j))
+  rcut2 = 2 * rcutmax
+  gcut2 = int(data.rgd.ceil(rcut2))
   if gcut2 > len(r_g):
     gcut2 = len(r_g)
   
@@ -142,29 +135,20 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   
   lmax = lcut  # Maximum l for augmentation should equal lcut for GPAW compatibility
   
-  # Calculate g_lg shape functions for compensation charges
-  # We need to implement this properly for GPAW files
-  # Using the same Gaussian shape function approach as GPAW
-  
   shape_params = pp_data.get('shape_function')
   rc = shape_params.get('rc', None)
   sf_type = shape_params.get('type', 'gauss')
   
   # Initialize g_lg for all l values up to lmax
   g_lg = jnp.zeros((lmax + 1, gcut2))
-  
-  # Use the original grid (with r[0] = 0) for g_lg calculation to match GPAW exactly
-  r_g_for_glg = r_g_original[:gcut2]
-  dr_g_for_glg = dr_g_original[:gcut2]
-  
   if sf_type == 'gauss':
       # Gaussian shape functions following GPAW's convention
       # g_lg[0] = 4 / rc^3 / sqrt(pi) * exp(-(r/rc)^2)
-      g_lg = g_lg.at[0].set(4 / rc**3 / jnp.sqrt(jnp.pi) * jnp.exp(-(r_g_for_glg / rc)**2))
+      g_lg = g_lg.at[0].set(4 / rc**3 / jnp.sqrt(jnp.pi) * jnp.exp(-(r_g / rc)**2))
       
       # Higher l components: g_lg[l] = 2/(2l+1)/rc^2 * r * g_lg[l-1]
       for l in range(1, lmax + 1):
-          g_lg = g_lg.at[l].set(2.0 / (2 * l + 1) / rc**2 * r_g_for_glg * g_lg[l - 1])
+          g_lg = g_lg.at[l].set(2.0 / (2 * l + 1) / rc**2 * r_g * g_lg[l - 1])
       
       # Normalize each l-component according to GPAW convention
       # GPAW normalizes so that rgd.integrate(g_lg[l], l) = 4π
@@ -172,7 +156,7 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
       for l in range(lmax + 1):
           # Calculate integral with 4π factor (like rgd.integrate does)
           # Skip r=0 point in integration like GPAW does
-          integral_with_4pi = jnp.sum(g_lg[l, 1:] * r_g_for_glg[1:]**(l + 2) * dr_g_for_glg[1:]) * 4 * jnp.pi
+          integral_with_4pi = jnp.sum(g_lg[l, 1:] * r_g[1:]**(l + 2) * dr_g[1:]) * 4 * jnp.pi
           if integral_with_4pi > 1e-10:
               # Divide by integral and multiply by 4π to get correct normalization
               g_lg = g_lg.at[l].set(g_lg[l] / integral_with_4pi * (4 * jnp.pi))
@@ -183,6 +167,10 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
       for l in range(1, lmax + 1):
           g_lg = g_lg.at[l].set(2.0 / (2 * l + 1) / rc**2 * r_g * g_lg[l - 1])
 
+  # NOTE: this modification is used to avoid the singularity at r=0
+  # as well as the integration error
+  r_g = r_g.at[0].set(1e-5)
+  dr_g = dr_g.at[0].set(0)
   return {
     'r_g': r_g,
     'dr_g': dr_g,
@@ -200,7 +188,6 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
     'g_lg': g_lg,
     'K_p': pp_data['kinetic_energy_differences'],
     'K_c': pp_data['core_energy']['kinetic'] - pp_data['ae_energy']['kinetic'],
-    # 'K_c': pp_data['core_energy']['kinetic'],
     'e_xc': pp_data['ae_energy']["xc"]
   }
 

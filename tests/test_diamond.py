@@ -5,6 +5,8 @@ import numpy as np
 
 from gpaw import GPAW, PW
 
+RUN_ALIGNMENT = False
+
 """
 coeff: calc.wfs.kpt_u[0].psit_nG
 volume: calc.wfs.pd.gd.volume
@@ -351,14 +353,42 @@ a = 3.5668  # diamond lattice parameter in Angstrom
 bulk = bulk('C', 'diamond', a=a)
 
 k = 1
-calc = GPAW(mode=PW(100),       # cutoff energy in eV
+Ha = 27.211386245988
+cutoff_ev = 40.0 * Ha
+calc = GPAW(mode=PW(cutoff_ev),  # cutoff energy in eV (match jrystal 40 Ha)
+            xc='LDA',            # LDA (exchange+correlation); LDA_X needs datasets not present
             setups='paw',
-            kpts=(k, k, k),     # Monkhorst-Pack grid
-            txt=name + '.txt')
+            kpts=(k, k, k),      # Monkhorst-Pack grid
+            txt=None)
 
 bulk.calc = calc
 energy = bulk.get_potential_energy()
 print(energy)
+h = calc.hamiltonian
+print("GPAW energy components (Ha):")
+print(f"  e_total_free: {h.e_total_free:.12f}")
+print(f"  e_total_extrapolated: {h.e_total_extrapolated:.12f}")
+print(f"  e_kinetic: {h.e_kinetic:.12f}")
+print(f"  e_coulomb: {h.e_coulomb:.12f}")
+print(f"  e_zero: {h.e_zero:.12f}")
+print(f"  e_external: {h.e_external:.12f}")
+print(f"  e_xc: {h.e_xc:.12f}")
+print(f"  e_entropy: {h.e_entropy:.12f}")
+print(f"  e_total_free (eV): {h.e_total_free * Ha:.12f}")
+breakpoint()
+
+# Split XC into pseudo (smooth grid) and atomic PAW correction parts
+dens = calc.density
+vtmp_sg = h.finegd.zeros(h.nspins)
+e_xc_pseudo = h.xc.calculate(h.finegd, dens.nt_sg, vtmp_sg)
+e_xc_pseudo /= h.finegd.comm.size
+e_xc_atomic = 0.0
+for a, D_sp in dens.D_asp.items():
+    e_xc_atomic += h.xc.calculate_paw_correction(calc.setups[a], D_sp, a=a)
+print("GPAW XC split (Ha):")
+print(f"  e_xc_pseudo: {e_xc_pseudo:.12f}")
+print(f"  e_xc_atomic: {e_xc_atomic:.12f}")
+print(f"  e_xc_total: {e_xc_pseudo + e_xc_atomic:.12f}")
 
 P_ani = calc.wfs.kpt_u[0].P_ani
 
@@ -371,12 +401,13 @@ if P_ani is not None:
         f_GI = calc.wfs.pt.expand(q=0, cc=False)
         # breakpoint()
 
-# Compare wavefunctions directly first (on ALL grid points)
-# align_wavefunction()
+if RUN_ALIGNMENT:
+    # Compare wavefunctions directly first (on ALL grid points)
+    # align_wavefunction()
 
-# Then test density alignment
-align_density(np.array([[1.7834/2, 1.7834/2, 0]]))
-# align_density(np.array([[0, 0, 0]]))
+    # Then test density alignment
+    align_density(np.array([[1.7834/2, 1.7834/2, 0]]))
+    # align_density(np.array([[0, 0, 0]]))
 
 
 # print('Energy:', energy, 'eV')
@@ -395,52 +426,53 @@ align_density(np.array([[1.7834/2, 1.7834/2, 0]]))
 # print('FFT grid points:', calc.wfs.pd.gd.N_c.prod())
 # print('Cell volume:', calc.wfs.pd.gd.volume)
 
-# verify the overlap matrix calculation
-mat1 = _compute_proj_pw_overlap()
-_, mat2 = _compute_overlap_matrix(calc, 0)
-# breakpoint()
+if RUN_ALIGNMENT:
+    # verify the overlap matrix calculation
+    mat1 = _compute_proj_pw_overlap()
+    _, mat2 = _compute_overlap_matrix(calc, 0)
+    # breakpoint()
 
-coefficients = {}
-overlap_matrices = {}
+    coefficients = {}
+    overlap_matrices = {}
 
-# Compute G-space overlap matrices for each k-point
-for k_index in range(calc.wfs.kd.nibzkpts):
-    overlap_matrices[k_index], _ = _compute_overlap_matrix(calc, k_index)
-
-for spin in range(calc.wfs.nspins):
+    # Compute G-space overlap matrices for each k-point
     for k_index in range(calc.wfs.kd.nibzkpts):
-        print(f'\n--- Spin={spin}, k={k_index} ---')
+        overlap_matrices[k_index], _ = _compute_overlap_matrix(calc, k_index)
 
-        # Method 1: Use GPAW's internal method for comparison
-        kpt = calc.wfs.kpt_u[k_index]
-        psit = kpt.psit
-        P = kpt.projections
+    for spin in range(calc.wfs.nspins):
+        for k_index in range(calc.wfs.kd.nibzkpts):
+            print(f'\n--- Spin={spin}, k={k_index} ---')
 
-        S_gpaw = psit.matrix_elements(symmetric=True, cc=True)
-        if P is not None:
-            P2 = P.new()
-            calc.wfs.setups.dS.apply(P, out=P2)
-            from gpaw.utilities.blas import mmm
-            mmm(1.0, P.array, 'N', P2.array, 'C', 1.0, S_gpaw.array)
+            # Method 1: Use GPAW's internal method for comparison
+            kpt = calc.wfs.kpt_u[k_index]
+            psit = kpt.psit
+            P = kpt.projections
 
-        print(f'GPAW internal method:')
-        print(f'  S diagonal: {np.diag(S_gpaw.array).real[:4]}...')
-        print(f'  max|S - I| = {np.abs(S_gpaw.array - np.eye(len(S_gpaw.array))).max():.3e}')
+            S_gpaw = psit.matrix_elements(symmetric=True, cc=True)
+            if P is not None:
+                P2 = P.new()
+                calc.wfs.setups.dS.apply(P, out=P2)
+                from gpaw.utilities.blas import mmm
+                mmm(1.0, P.array, 'N', P2.array, 'C', 1.0, S_gpaw.array)
 
-        # Method 2: Our custom calculation
-        print(f'\nCustom calculation:')
-        S_custom = _compute_overlap_matrix_custom(calc, k_index)
+            print(f'GPAW internal method:')
+            print(f'  S diagonal: {np.diag(S_gpaw.array).real[:4]}...')
+            print(f'  max|S - I| = {np.abs(S_gpaw.array - np.eye(len(S_gpaw.array))).max():.3e}')
 
-        nbands = len(S_custom)
-        identity = np.eye(nbands, dtype=np.complex128)
-        max_dev = np.abs(S_custom - identity).max()
-        print(f'  max|S - I| = {max_dev:.3e}')
+            # Method 2: Our custom calculation
+            print(f'\nCustom calculation:')
+            S_custom = _compute_overlap_matrix_custom(calc, k_index)
 
-        # Compare the two methods
-        diff = np.abs(S_custom - S_gpaw.array).max()
-        print(f'\nDifference between methods: {diff:.3e}')
+            nbands = len(S_custom)
+            identity = np.eye(nbands, dtype=np.complex128)
+            max_dev = np.abs(S_custom - identity).max()
+            print(f'  max|S - I| = {max_dev:.3e}')
 
-        if diff > 1e-10:
-            print('WARNING: Custom and GPAW methods disagree!')
-            print(f'  Custom diagonal: {np.diag(S_custom).real}')
-            print(f'  GPAW diagonal: {np.diag(S_gpaw.array).real}')
+            # Compare the two methods
+            diff = np.abs(S_custom - S_gpaw.array).max()
+            print(f'\nDifference between methods: {diff:.3e}')
+
+            if diff > 1e-10:
+                print('WARNING: Custom and GPAW methods disagree!')
+                print(f'  Custom diagonal: {np.diag(S_custom).real}')
+                print(f'  GPAW diagonal: {np.diag(S_gpaw.array).real}')
