@@ -80,6 +80,21 @@ def run_case(geom_path: Path, cutoff_ha: float, kpts: tuple[int, int, int]) -> N
     print(f"  e_xc: {h.e_xc:.12f}")
     print(f"  e_entropy: {h.e_entropy:.12f}")
     print(f"  e_total_free (eV): {h.e_total_free * HA_TO_EV:.12f}")
+    print("GPAW occupations:")
+    wfs = calc.wfs
+    for i, kpt in enumerate(wfs.kpt_u):
+        kvec = getattr(kpt, "k", None)
+        if kvec is None:
+            kvec = getattr(kpt, "q", None)
+        weight = getattr(kpt, "weight", None)
+        spin = getattr(kpt, "s", None)
+        f_n = getattr(kpt, "f_n", None)
+        if f_n is None:
+            print(f"  kpt {i}: occupations not available")
+            continue
+        f_str = " ".join(f"{float(x):.6f}" for x in f_n)
+        print(f"  kpt {i} spin {spin} weight {weight} k={kvec}")
+        print(f"    f_n: {f_str}")
 
 
 def main() -> None:

@@ -99,6 +99,14 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   
   # Extract basic properties
   Z = int(pp_data['atom']['Z'])  # Total atomic number
+  valence = pp_data['atom'].get('valence')
+  if valence is None:
+    # Fallback: if valence not provided, use Z - core when available
+    core = pp_data['atom'].get('core')
+    if core is not None:
+      valence = float(Z) - float(core)
+    else:
+      valence = float(Z)
   
   # Construct radial grid
   grid_info = pp_data['radial_grid']
@@ -182,6 +190,7 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
     'l_j': l_j,
     'pt_jg': pt_jg,
     'Z': Z,
+    'valence': valence,
     'lmax': lmax,
     'lcut': lcut,
     'gcut2': gcut2,

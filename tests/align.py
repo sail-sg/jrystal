@@ -127,7 +127,7 @@ def compare_results(results_j, results_g):
 
 
 if __name__ == "__main__":
-  atom = "C"
+  atom = "Mg"
   xc = "PBE"
   results_j = run_jrystal(atom, xc)
   results_g = run_gpaw(atom, xc)
