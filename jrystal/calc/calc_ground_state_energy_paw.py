@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import time
+from types import SimpleNamespace
 from dataclasses import dataclass
 from math import ceil
 from typing import List, Union
@@ -39,7 +40,6 @@ from .opt_utils import (
   create_freq_mask,
   create_grids,
   create_optimizer,
-  create_pseudopotential,
   get_ewald_coulomb_repulsion,
   set_env_params,
 )
@@ -83,9 +83,33 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   set_env_params(config)
   key = jax.random.PRNGKey(config.seed)
   temp = config.smearing
+  gpaw_coeff_data = None
+  gpaw_kpts_frac = None
+  # gpaw_coeff_path = getattr(config, "gpaw_coeff_path", None)
+  # if gpaw_coeff_path:
+  #   gpaw_coeff_data = np.load(gpaw_coeff_path, allow_pickle=True)
+  #   if "grid_sizes" in gpaw_coeff_data:
+  #     grid_sizes = [int(x) for x in gpaw_coeff_data["grid_sizes"]]
+  #     if len(set(grid_sizes)) != 1:
+  #       raise ValueError(
+  #         f"GPAW grid_sizes {grid_sizes} are not cubic; set config.grid_sizes "
+  #         "accordingly before importing coefficients."
+  #       )
+  #     config.grid_sizes = int(grid_sizes[0])
+  #   kpts_frac = gpaw_coeff_data.get("kpts_frac", None)
+  #   if kpts_frac is not None:
+  #     gpaw_kpts_frac = np.asarray(kpts_frac)
 
   crystal = create_crystal(config)
-  pseudopot = create_pseudopotential(config)
+  # PAW path: avoid NC/USPP loader and build a minimal container directly.
+  pseudopot = SimpleNamespace(
+    r_grid=[],
+    nonlocal_beta_grid=[],
+    nonlocal_angular_momentum=[],
+    nonlocal_d_matrix=[],
+    valence_charges=[]
+  )
+  # valence_charges will be overridden by PAW setup data below
   valence_charges = np.sum(pseudopot.valence_charges)
   logging.info(f"Crystal: {crystal.symbols}")
   EPS = config.eps
@@ -135,21 +159,14 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   pseudopot.nonlocal_beta_grid = []
   pseudopot.nonlocal_angular_momentum = []
   pseudopot.nonlocal_d_matrix = []
-  # index to convert packed 2D indices to 1D index 
-  index1 = jnp.array([
-    [0, 1, 1, 1, 2, 3, 3, 3, 4, 4, 4, 4, 4],
-    [2, 1, 2, 3, 2, 1, 2, 3, 0, 1, 2, 3, 4]
-  ])
-  index2 = jnp.array([
-    [5, 6, 6, 6, 7, 8, 8, 8, 9, 9, 9, 9, 9],
-    [2, 1, 2, 3, 2, 1, 2, 3, 0, 1, 2, 3, 4]
-  ])
 
   xc_name = "LDA" if "lda" in config.xc.lower() else "PBE"
+  paw_valence_charges = []
   for a in atoms_list:
     # NOTE: current only support the element with one character, e.g. C is okay while He is not
     # TODO: modify the pseudopot object to dict structure
     setup_data = setup_gpaw(atom_symbol_map[a], xc_name)
+    paw_valence_charges.append(int(round(setup_data.get('valence', 0))))
     pseudopot.r_grid.append(setup_data['r_g'])
     pseudopot.nonlocal_beta_grid.append(setup_data['pt_jg'])
     pseudopot.nonlocal_angular_momentum.append(setup_data['l_j'])
@@ -183,6 +200,11 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     dr_g[a] = setup_data["dr_g"]
     vbar_g[a] = setup_data["vbar_g"]
 
+  # Override valence charges using PAW setup data
+  if paw_valence_charges:
+    pseudopot.valence_charges = np.array(paw_valence_charges)
+    valence_charges = np.sum(pseudopot.valence_charges)
+
   # TODO: refactor below codes
   # Build projector indices per atom for D_p construction
   l_max_global = int(np.max(np.hstack(pseudopot.nonlocal_angular_momentum)))
@@ -212,6 +234,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   sharding = NamedSharding(mesh, P('s', 'k'))  # shard by the kpt dimension.
 
   g_vec, r_vec, k_vec = create_grids(config)
+  if gpaw_kpts_frac is not None:
+    bvec = 2 * jnp.pi * jnp.linalg.inv(crystal.cell_vectors).T
+    k_vec = jnp.array(gpaw_kpts_frac) @ bvec
   num_kpts = k_vec.shape[0]
   logging.info(f"Number of G-vectors: {proper_grid_size(config.grid_sizes)}")
   logging.info(f"Number of k-vectors: {proper_grid_size(config.k_grid_sizes)}")
@@ -285,7 +310,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   vbar_G_ = {}
   nct_G = 0.0
   vbar_G = 0.0
-  e_zero0 = 0.0
   for atom in atoms_list:
     ghat_LG[atom] = precompute_ghat_LG(
       g_vec, g_lg[atom], r_g[atom], dr_g[atom], lmax[atom]
@@ -297,7 +321,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     vbar_G_[atom] = precompute_nct_G(g_vec, vbar_g[atom]/jnp.sqrt(4 * jnp.pi), r_g[atom], dr_g[atom])
     nct_G += phase_G[atom] * nct_G_[atom]
     vbar_G += phase_G[atom] * vbar_G_[atom]
-    e_zero0 += jnp.sum(nct_g[atom] * jnp.sqrt(4 * jnp.pi) * vbar_g[atom] * r_g[atom]**2 * dr_g[atom])
   nct_g_ = jnp.fft.ifftn(nct_G, axes=range(-3, 0)).real
 
   # NOTE: test the total charge of the core electrons
@@ -358,42 +381,11 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     beta_gk
   )
   # NOTE: we have checked that the overlap matrix we obtained is correct
-  # tmp = beta_gk[0].reshape(5, 64).T
+  # tmp = beta_gk[0].reshape(5, -1).T
   # overlap2 = compute_proj_pw_overlap(g_vec.reshape(-1, 3), crystal.positions[0])
-  # overlap1 = proj_pw_overlap[0, index1[0], index1[1], ...].reshape(13, config.grid_sizes**3).T
+  # idx = index_map[atoms_list[0]]
+  # overlap1 = proj_pw_overlap[0, idx[0], idx[1], ...].reshape(13, config.grid_sizes**3).T
   # print(jnp.abs(overlap1 - overlap2).max())
-
-  # NOTE: check the othorgonality of the wavefunctions here
-  # def expand(data: list, n_proj, l_j) -> jnp.ndarray:
-  #   """Expand the matrix from the size of radial component to the size of the projectors."""
-  #   data = jnp.array(data).reshape((len(l_j), len(l_j)))
-  #   expanded_data = jnp.zeros((n_proj, n_proj))
-  #   i1 = 0
-  #   for j1, l1 in enumerate(l_j):
-  #     for m1 in range(2 * l1 + 1):
-  #       i2 = 0
-  #       for j2, l2 in enumerate(l_j):
-  #         for m2 in range(2 * l2 + 1):
-  #           if l1 == l2 and m1 == m2:
-  #             expanded_data = expanded_data.at[i1, i2].set(data[j1, j2])
-  #           i2 += 1
-  #       i1 += 1
-  #   return expanded_data
-  # dO = expand(pseudopot.nonlocal_d_matrix[0], 13, setup_data['l_j'])
-  # overlap1 = einsum(
-  #   proj_pw_overlap[0, index1[0], index1[1], ...].reshape(13, config.grid_sizes**3),
-  #   proj_pw_overlap[0, index1[0], index1[1], ...].conj().reshape(13, config.grid_sizes**3),
-  #   dO, "proj1 g1, proj2 g2, proj1 proj2 -> g1 g2"
-  # )
-  # dO = expand(pseudopot.nonlocal_d_matrix[1], 13, setup_data['l_j'])
-  # overlap2 = einsum(
-  #   proj_pw_overlap[0, index2[0], index2[1], ...].reshape(13, config.grid_sizes**3),
-  #   proj_pw_overlap[0, index2[0], index2[1], ...].conj().reshape(13, config.grid_sizes**3),
-  #   dO, "proj1 g1, proj2 g2, proj1 proj2 -> g1 g2"
-  # )
-  # S = jnp.eye(config.grid_sizes**3) + overlap1 + overlap2
-  # print(jnp.abs(S - S.T.conj()).max())
-  # print(jnp.linalg.eigvals(S).min())
 
   end = time.time()
   logging.info(f"Nonlocal potential done. Times: {end - start:.2f} seconds")
@@ -435,25 +427,22 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   from gpaw.sphere.lebedev import weight_n, Y_nL
   weight_n = jnp.array(weight_n)
   Y_nL = jnp.array(Y_nL)
-  
-  def total_energy(params_pw, params_occ, g_vec, pseudopot=pseudopot):
-    coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
-    # this is the original overlap without PAW correction
-    # overlap1 = einsum(coeff, coeff.conj(), "s k band1 x y z, s k band2 x y z -> s k band1 band2")
-    coeff = get_ultrasoft_coeff(coeff)
-    occ = get_occupation(params_occ)
-    kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
 
-    # TODO: refactor below codes
-    density = pw.density_grid(coeff, crystal.vol, occ)
-    density = density.at[0].add(nct_g_)
-    density = density.at[0].set(jnp.where(density[0] > 0, density[0], 0))
-    exc = energy.xc_energy(
-      density, g_vec, crystal.vol, config.xc, kohn_sham=False
-    )
+  def pack(D_p: jnp.ndarray) -> jnp.ndarray:
+    """Pack a Hermitian matrix for better efficiency
+
+    The diagonal elements are halfed to calculate the inner product
+    """
+
+    n = D_p.shape[-1]
+    tmp = D_p.copy()
+    tmp = tmp.at[..., jnp.arange(n), jnp.arange(n)].set(tmp[..., jnp.arange(n), jnp.arange(n)] / 2)
+    return tmp[0,0][jnp.triu_indices(n)].real * 2
+  
+  def calc_atomic_density_matrix(coeff, occ, return_f_matrix: bool = False):
 
     _f_matrix = einsum(
-      coeff,
+      coeff.conj(),
       proj_pw_overlap,
       "s k band x y z, k  beta phi x y z -> s k band beta phi"
     )
@@ -469,36 +458,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     """
     _f_matrix /= jnp.sqrt(crystal.vol)
 
-    # NOTE: check the othorgonality of the wavefunctions here
-    # def expand(data: list, n_proj, l_j) -> jnp.ndarray:
-    #   """Expand the matrix from the size of radial component to the size of the projectors."""
-    #   data = jnp.array(data).reshape((len(l_j), len(l_j)))
-    #   expanded_data = jnp.zeros((n_proj, n_proj))
-    #   i1 = 0
-    #   for j1, l1 in enumerate(l_j):
-    #     for m1 in range(2 * l1 + 1):
-    #       i2 = 0
-    #       for j2, l2 in enumerate(l_j):
-    #         for m2 in range(2 * l2 + 1):
-    #           if l1 == l2 and m1 == m2:
-    #             expanded_data = expanded_data.at[i1, i2].set(data[j1, j2])
-    #           i2 += 1
-    #       i1 += 1
-    #   return expanded_data
-    # dO = expand(pseudopot.nonlocal_d_matrix[0], 13, setup_data['l_j'])
-    # overlap1 = einsum(coeff, coeff.conj(), "s k band1 x y z, s k band2 x y z -> s k band1 band2")
-    # # correction1 = einsum(_f_matrix[..., index1[0], index1[1]], dO, _f_matrix[..., index1[0], index1[1]], "s k band1 proj1, proj1 proj2, s k band2 proj2 -> s k band1 band2")
-    # correction1 = einsum(_f_matrix[..., index1[0], index1[1]], _f_matrix[..., index1[0], index1[1]], "s k band1 proj1, s k band2 proj1 -> s k band1 band2") 
-    # dO = expand(pseudopot.nonlocal_d_matrix[1], 13, setup_data['l_j'])
-    # # correction2 = einsum(_f_matrix[..., index2[0], index2[1]], dO, _f_matrix[..., index2[0], index2[1]], "s k band1 proj1, proj1 proj2, s k band2 proj2 -> s k band1 band2")
-    # correction2 = einsum(_f_matrix[..., index2[0], index2[1]], _f_matrix[..., index2[0], index2[1]], "s k band1 proj1, s k band2 proj1 -> s k band1 band2")
-    # overlap = overlap1 + (correction1 + correction2)
-    # overlap = overlap1 + (correction1 + correction2) / crystal.vol
-
-    # for a, D_sii in wfs.D_asii.items():
-    #   Q_L = jnp.einsum('ij, ijL -> L',
-    #     D_sii[:wfs.ndensities].real, wfs.delta_aiiL[a])
-    #   Q_L[0] += wfs.delta0_a[a]
     D_p = {}
     for atom in atoms_list:
       idx = index_map[atom]
@@ -507,33 +466,13 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
         occ,
         _f_matrix[..., idx[0], idx[1]],
         "s k band proj1, s k band, s k band proj2 -> s k proj1 proj2"
-      ).real
-
-    def pack(D_p: jnp.ndarray) -> jnp.ndarray:
-      """Pack a Hermitian matrix for better efficiency
-
-      The diagonal elements are halfed to calculate the inner product
-      """
-
-      n = D_p.shape[-1]
-      D_p = D_p.at[..., jnp.diag_indices(n)].set(D_p[..., jnp.diag_indices(n)] / 2)
-      return D_p[0,0][jnp.triu_indices(n)].real * 2
-
-    # Add compensation charge to smooth density for Coulomb energy
-    rho_comp_G = 0.0
-    for atom in atoms_list:
-      D_p_packed = pack(D_p[atom])
-      Q_L = jnp.dot(D_p_packed, Delta_pL[atom])
-      Q_L = Q_L.at[0].add(Delta0[atom])
-      rho_comp_G += phase_G[atom] * jnp.tensordot(
-        Q_L, ghat_LG[atom], axes=[0, 0]
       )
-    density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-    e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol) + e_zero0
-    density_reciprocal = density_reciprocal.at[0].add(rho_comp_G + nct_G)
-    hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
 
-    def calc_paw_xc_correction(atom: str):
+    if return_f_matrix:
+      return D_p, _f_matrix
+    return D_p
+  
+  def calc_paw_xc_correction(atom: str, D_p_packed):
       def _calculate_xc_energy(D_sLq, n_qg, nc0_sg):
 
         n_sLg = jnp.dot(D_sLq, n_qg)  # shape: [n_spin, Lmax, n_g]
@@ -574,14 +513,49 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       e_ps = _calculate_xc_energy(D_sLq, nt_qg_, nct_g_)
       return e_ae - e_ps - e_xc0_
 
+  def total_energy(params_pw, params_occ, g_vec, pseudopot=pseudopot):
+    coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
+    # this is the original overlap without PAW correction
+    # overlap1 = einsum(coeff, coeff.conj(), "s k band1 x y z, s k band2 x y z -> s k band1 band2")
+    coeff = get_ultrasoft_coeff(coeff)
+    occ = get_occupation(params_occ)
+    if gpaw_coeff_data is not None:
+      coeff = coeff_cmp
+      occ = coeff_cmp
+    kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
+
+    # TODO: refactor below codes
+    density = pw.density_grid(coeff, crystal.vol, occ)
+    density = density.at[0].add(nct_g_)
+    density = density.at[0].set(jnp.where(density[0] > 0, density[0], 0))
+    exc = energy.xc_energy(
+      density, g_vec, crystal.vol, config.xc, kohn_sham=False
+    )
+    D_p = calc_atomic_density_matrix(coeff, occ)
+
+    # Add compensation charge to smooth density for Coulomb energy
+    rho_comp_G = 0.0
+    for atom in atoms_list:
+      D_p_packed = pack(D_p[atom])
+      Q_L = jnp.dot(D_p_packed, Delta_pL[atom])
+      Q_L = Q_L.at[0].add(Delta0[atom])
+      rho_comp_G += phase_G[atom] * jnp.tensordot(
+        Q_L, ghat_LG[atom], axes=[0, 0]
+      )
+    density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
+    e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol)
+    density_reciprocal = density_reciprocal.at[0].add(rho_comp_G + nct_G)
+    hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
+
     for atom in atoms_list:
       D_p_packed = pack(D_p[atom])
       kinetic += jnp.sum(K_p[atom] * D_p[atom][0,0]).real + K_c[atom]
-      e_zero += MB[atom] + jnp.sum(MB_p[atom] * D_p_packed)
+      # nct contribution to e_zero is canceled out
+      e_zero += jnp.sum(MB_p[atom] * D_p_packed)
       hartree += M[atom] + jnp.dot(
         D_p_packed, (M_p[atom] + jnp.dot(M_pp[atom], D_p_packed))
       )
-      exc += calc_paw_xc_correction(atom)
+      exc += calc_paw_xc_correction(atom, D_p_packed)
 
     return kinetic + hartree + e_zero + exc, kinetic, hartree, exc
 
@@ -598,6 +572,75 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     etro = get_entropy(params_occ)
     free = total - temp * etro
     return free, (total, etro, kinetic, hartree, exc)
+
+  if gpaw_coeff_data is not None:
+    coeff = gpaw_coeff_data["coeff"]
+    occ = gpaw_coeff_data["occupation"]
+    coeff_cmp = jnp.array(np.asarray(coeff))
+    occ_cmp = jnp.array(occ)
+    if coeff_cmp.ndim == 4:
+      coeff_cmp = coeff_cmp[None, ...]
+    if occ_cmp.ndim == 2:
+      occ_cmp = occ_cmp[None, ...]
+    ngrid = np.prod(coeff_cmp.shape[-3:])
+    coeff_cmp = coeff_cmp * (jnp.sqrt(crystal.vol) / ngrid)
+    D_p_cmp, f_matrix_cmp = calc_atomic_density_matrix(
+      coeff_cmp, occ_cmp, return_f_matrix=True
+    )
+    print(f"GPAW coeff keys: {gpaw_coeff_data.files}")
+    # Compare P_ni via exported f_GI from GPAW
+    for s in range(coeff_cmp.shape[0]):
+      for k in range(coeff_cmp.shape[1]):
+        key_f = f"proj_f_GI_k{k}"
+        key_q = f"proj_Q_G_k{k}"
+        key_idx = f"proj_indices_k{k}"
+        if key_f not in gpaw_coeff_data.files:
+          continue
+        f_GI = np.asarray(gpaw_coeff_data[key_f])
+        Q_G = np.asarray(gpaw_coeff_data[key_q])
+        indices = np.asarray(gpaw_coeff_data[key_idx])
+        flat = coeff_cmp[s, k].reshape(coeff_cmp.shape[2], -1)
+        psit_nG = flat[:, Q_G]
+        P_alt = psit_nG @ f_GI.conj()
+        for a, I1, I2 in indices:
+          key = f"P_ani_{a}_s{s}_k{k}"
+          if key not in gpaw_coeff_data.files:
+            continue
+          gpaw_P = np.asarray(gpaw_coeff_data[key])
+          diff = float(np.max(np.abs(P_alt[:, I1:I2] - gpaw_P)))
+          print(f"P_ni (from f_GI) compare atom {a} s{s} k{k}: max|Δ| = {diff:.6e}")
+    for atom in atoms_list:
+      idx = atom_index_map[atom]
+      beta_idx, phi_idx = index_map[atom]
+      P_cmp = f_matrix_cmp[..., beta_idx, phi_idx]
+      for s in range(P_cmp.shape[0]):
+        for k in range(P_cmp.shape[1]):
+          key = f"P_ani_{idx}_s{s}_k{k}"
+          if key not in gpaw_coeff_data.files:
+            continue
+          gpaw_P = np.asarray(gpaw_coeff_data[key])
+          diff = float(jnp.max(jnp.abs(P_cmp[s, k].conj() - gpaw_P)))
+          print(f"P_ni compare atom {atom} s{s} k{k}: max|Δ| = {diff:.6e}")
+    for atom in atoms_list:
+      idx = atom_index_map[atom]
+      key = f"D_asp_{idx}"
+      if key not in gpaw_coeff_data.files:
+        continue
+      gpaw_packed = np.asarray(gpaw_coeff_data[key])[0]
+      diff = float(jnp.max(jnp.abs(gpaw_packed - pack(D_p_cmp[atom]))))
+      print(f"D_asp compare atom {atom}: max|Δ| = {diff:.6e}")
+      breakpoint()
+    total, kinetic, hartree, exc = total_energy(
+      params_pw, params_occ, g_vec
+    )
+    total = jax.block_until_ready(total)
+    logging.info("Imported GPAW coefficients; Jrystal energy evaluation:")
+    logging.info(f"Total Energy: {total:.6f} Ha")
+    logging.info(f"Kinetic: {kinetic:.6f} Ha")
+    logging.info(f"Hartree: {hartree:.6f} Ha")
+    logging.info(f"XC: {exc:.6f} Ha")
+    logging.info(f"E_zero: {e_zero:.6f} Ha")
+    return density
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
@@ -746,17 +789,16 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   #        END OF OPTIMIZATION        #
   #####################################
   coeff = pw.coeff(params["pw"], freq_mask)
+  coeff = get_ultrasoft_coeff(coeff)
   occ = get_occupation(params["occ"])
   density = pw.density_grid(coeff, crystal.vol, occ)
   density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-  kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
-  hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
-  # external_local = normcons.energy_local(
-  #   density_reciprocal, potential_loc, vol=crystal.vol
-  # )
-  # external_nonlocal = normcons.energy_nonlocal(
-  #   coeff, potential_nl, vol=crystal.vol, occupation=occ
-  # )
+  # kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
+  # hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
+  e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol)
+  D_p = calc_atomic_density_matrix(coeff, occ)
+  for atom in atoms_list:
+    e_zero += MB[atom] + jnp.sum(MB_p[atom] * pack(D_p[atom]))
 
   exc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)
 

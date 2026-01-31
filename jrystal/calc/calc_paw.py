@@ -175,10 +175,6 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
       for l in range(1, lmax + 1):
           g_lg = g_lg.at[l].set(2.0 / (2 * l + 1) / rc**2 * r_g * g_lg[l - 1])
 
-  # NOTE: this modification is used to avoid the singularity at r=0
-  # as well as the integration error
-  r_g = r_g.at[0].set(1e-5)
-  dr_g = dr_g.at[0].set(0)
   return {
     'r_g': r_g,
     'dr_g': dr_g,
@@ -361,8 +357,8 @@ def calc_paw(setup_data: dict):
   def calc_compensation_charges():
 
     index = jnp.triu_indices(nj)
-    n_qg = (phi_jg[:, None, :] * phi_jg[None])[index] / r_g**2 / 4 / jnp.pi
-    nt_qg = (phit_jg[:, None, :] * phit_jg[None])[index] / r_g**2 / 4 / jnp.pi
+    n_qg = (setup_data['phi_jg'][:, None, :] * setup_data['phi_jg'][None])[index] / 4 / jnp.pi
+    nt_qg = (setup_data['phit_jg'][:, None, :] * setup_data['phit_jg'][None])[index] / 4 / jnp.pi
 
     # NOTE: check the calculation of the multipoles moment, similar
     # results can be observed in test_paw.test_augmentation_charge
@@ -395,6 +391,7 @@ def calc_paw(setup_data: dict):
   B_ii = calculate_projector_overlaps()
 
   r_max = jnp.maximum(r_g[None], r_g[:, None])
+  r_max = jnp.where(r_max < 1e-14, 1e-14, r_max)
   r_min = jnp.minimum(r_g[None], r_g[:, None])
 
   def integrate_radial_function(f_g):
@@ -486,12 +483,12 @@ def calc_paw(setup_data: dict):
     return (integrate_radial_function(phi1 * phi2 / r_g**4) * l * (l + 1) +
       integrate_radial_function(dphi1dr * dphi2dr / r_g**2)) / 2
 
-  K = jnp.zeros((nj, nj))
-  for i in range(nj):
-    for j in range(i, nj):
-      if l_j[i] == l_j[j]:
-        K = K.at[i, j].set(calc_kinetic_energy(jnp.array(phi_jg[i]), jnp.array(phi_jg[j]), l_j[i]))
-        K = K.at[j, i].set(K[i, j])
+  # K = jnp.zeros((nj, nj))
+  # for i in range(nj):
+  #   for j in range(i, nj):
+  #     if l_j[i] == l_j[j]:
+  #       K = K.at[i, j].set(calc_kinetic_energy(jnp.array(phi_jg[i]), jnp.array(phi_jg[j]), l_j[i]))
+  #       K = K.at[j, i].set(K[i, j])
 
   # K_p = jnp.zeros((ni, ni))
   # for i in range(ni):
@@ -600,7 +597,7 @@ def compute_proj_pw_overlap(
     We perform the radial integration in real space and compare the results with f_GI
     """
 
-    pp_data = parse_paw_setup(f'/home/aiops/zhaojx/M_p-align-claude/pseudopotential/C.PBE')
+    pp_data = parse_paw_setup(f'/home/aiops/zhaojx/paw-minimal/pseudopotential/C.LDA')
     from scipy.special import spherical_jn
 
     gcut2 = 258
