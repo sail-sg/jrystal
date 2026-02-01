@@ -1,5 +1,4 @@
 import multiprocessing as mp
-import os
 from concurrent.futures import ProcessPoolExecutor
 
 from ..pseudopotential.beta import _beta_sbt_single_atom
@@ -27,13 +26,10 @@ def pre_calc_beta_sbt(pseudopot, g_vector_grid, kpts, save_cache=False):
                      pseudopot.nonlocal_angular_momentum):
     args_list.append((r, b, l, g_vector_grid, kpts))
 
-  # Use multiprocessing Pool to parallelize computation unless disabled.
-  if os.environ.get("JRYSTAL_DISABLE_MP", "") == "1":
-    output = [_to_map(args) for args in args_list]
-  else:
-    mp.set_start_method("spawn", force=True)
-    with ProcessPoolExecutor(max_workers=mp.cpu_count() // 2) as exe:
-      output = list(exe.map(_to_map, args_list))
+  # Use multiprocessing Pool to parallelize computation
+  mp.set_start_method("spawn", force=True)
+  with ProcessPoolExecutor(max_workers=mp.cpu_count()//2) as exe:
+    output = list(exe.map(_to_map, args_list))
 
   # Create cache directory if it doesn't exist
   if save_cache:

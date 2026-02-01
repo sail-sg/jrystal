@@ -5,7 +5,6 @@ import math
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -20,11 +19,9 @@ def test_energy_diamond_ci() -> None:
   env.setdefault("JAX_PLATFORMS", "cpu")
   env.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
   env.setdefault("PYTHONUNBUFFERED", "1")
-  env.setdefault("JRYSTAL_DISABLE_MP", "1")
 
   result = subprocess.run(
-    [sys.executable, str(repo_root / "main.py"), "-m", "energy",
-     "-c", str(config_path)],
+    ["jrystal", "-m", "energy", "-c", str(config_path)],
     cwd=str(repo_root),
     env=env,
     text=True,
@@ -39,14 +36,46 @@ def test_energy_diamond_ci() -> None:
       f"stderr:\n{result.stderr}\n"
     )
 
-  match = re.findall(r"Energy:\s*([-+0-9.eE]+)", output)
+  pattern = (
+    r"Energy:\s*([-+0-9.eE]+)\|"
+    r"Kinetic:\s*([-+0-9.eE]+)\|"
+    r"Hartree:\s*([-+0-9.eE]+)\|"
+    r"XC:\s*([-+0-9.eE]+)\|"
+    r"E_zero:\s*([-+0-9.eE]+)"
+  )
+  match = re.findall(pattern, output)
   if not match:
     raise AssertionError(
-      "Could not find Energy in jrystal output. "
+      "Could not find energy components in jrystal output. "
       "Ensure verbose logging is enabled."
     )
 
-  energy = float(match[-1])
+  energy, kinetic, hartree, exc, e_zero = map(float, match[-1])
+  expected = {
+    "energy": -139.5703,
+    "kinetic": 2.2003,
+    "hartree": -140.7784,
+    "xc": -0.9678,
+    "e_zero": -0.0244
+  }
+  actual = {
+    "energy": energy,
+    "kinetic": kinetic,
+    "hartree": hartree,
+    "xc": exc,
+    "e_zero": e_zero
+  }
+  tol = 5e-2
+  for key, ref in expected.items():
+    val = actual[key]
+    if not math.isfinite(val):
+      raise AssertionError(f"{key} is not finite: {val}")
+    if abs(val - ref) > tol:
+      raise AssertionError(
+        f"{key} mismatch: {val:.4f} vs {ref:.4f} (tol {tol})"
+      )
+
+  energy = actual["energy"]
   if not math.isfinite(energy):
     raise AssertionError(f"Energy is not finite: {energy}")
   if energy >= 0:
