@@ -5,6 +5,7 @@ multiplied by r^l up to a constant normalization factor.
 """
 from __future__ import annotations
 
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -23,13 +24,30 @@ def _import_gpaw():
     return Yarr
 
 
+def _import_spherical():
+  try:
+    from jrystal.pseudopotential.spherical import (  # noqa: WPS433
+      batch_sph_harm_real,
+      cartesian_to_spherical,
+    )
+    return batch_sph_harm_real, cartesian_to_spherical
+  except Exception:
+    repo_root = Path(__file__).resolve().parents[1]
+    sph_path = repo_root / "jrystal" / "pseudopotential" / "spherical.py"
+    spec = importlib.util.spec_from_file_location(
+      "jrystal_pseudopotential_spherical",
+      sph_path,
+    )
+    if spec is None or spec.loader is None:
+      raise ImportError(f"Unable to load {sph_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.batch_sph_harm_real, module.cartesian_to_spherical
+
+
 def main() -> None:
   # Local imports to avoid jax dependency at module import time.
-  from jrystal.pseudopotential.spherical import (  # noqa: WPS433
-    batch_sph_harm_real,
-    cartesian_to_spherical,
-  )
-
+  batch_sph_harm_real, cartesian_to_spherical = _import_spherical()
   Yarr = _import_gpaw()
 
   rng = np.random.default_rng(0)
