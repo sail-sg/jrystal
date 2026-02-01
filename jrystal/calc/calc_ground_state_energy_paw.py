@@ -44,8 +44,6 @@ from .opt_utils import (
   set_env_params,
 )
 from .pre_calc import pre_calc_beta_sbt
-from gpaw.spherical_harmonics import Yarr
-from scipy.special import spherical_jn
 
 
 @dataclass
@@ -69,6 +67,19 @@ class GroundStateEnergyOutput:
   total_energy_history: List[float]
 
 
+def pack(D_p: jnp.ndarray) -> jnp.ndarray:
+  """Pack a Hermitian matrix for better efficiency.
+
+  The diagonal elements are halved to calculate the inner product.
+  """
+  n = D_p.shape[-1]
+  tmp = D_p.copy()
+  tmp = tmp.at[..., jnp.arange(n), jnp.arange(n)].set(
+    tmp[..., jnp.arange(n), jnp.arange(n)] / 2
+  )
+  return tmp[0, 0][jnp.triu_indices(n)].real * 2
+
+
 def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   """Calculate the ground state energy of a crystal with norm-conserving
   pseudopotential.
@@ -81,6 +92,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   """
   # Initialize and Prepare variables.
   set_env_params(config)
+  from gpaw.spherical_harmonics import Yarr
+  from scipy.special import spherical_jn
   key = jax.random.PRNGKey(config.seed)
   temp = config.smearing
   gpaw_coeff_data = None
@@ -301,17 +314,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   weight_n = jnp.array(weight_n)
   Y_nL = jnp.array(Y_nL)
 
-  def pack(D_p: jnp.ndarray) -> jnp.ndarray:
-    """Pack a Hermitian matrix for better efficiency
-
-    The diagonal elements are halfed to calculate the inner product
-    """
-
-    n = D_p.shape[-1]
-    tmp = D_p.copy()
-    tmp = tmp.at[..., jnp.arange(n), jnp.arange(n)].set(tmp[..., jnp.arange(n), jnp.arange(n)] / 2)
-    return tmp[0,0][jnp.triu_indices(n)].real * 2
-  
   def calc_atomic_density_matrix(coeff, occ, return_f_matrix: bool = False):
 
     _f_matrix = einsum(
@@ -395,7 +397,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
     kinetic_pseudo = kinetic
 
-    # TODO: refactor below codes
     density = pw.density_grid(coeff, crystal.vol, occ)
     density = density.at[0].add(nct_g_)
     density = density.at[0].set(jnp.where(density[0] > 0, density[0], 0))
@@ -674,10 +675,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
         logging.info("Converged.")
         break
 
-      # iters.set_description(
-      #   f"Loss: {loss_val:.4f}|Energy: {etot:.4f}|"
-      #   f"Entropy: {entro:.4f}|T: {temp:.2E}"
-      # )
       iters.set_description(
         f"Loss: {loss_val:.4f}|Energy: {etot:.4f}|"
         f"Kinetic: {kinetic:.4f}|Hartree: {hartree:.4f}|XC: {exc:.4f}|E_zero: {etot - kinetic - hartree - exc:.4f}|"
