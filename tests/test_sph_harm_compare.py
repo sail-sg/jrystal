@@ -19,10 +19,15 @@ def _import_gpaw():
     return Yarr
   except Exception:
     repo_root = Path(__file__).resolve().parents[1]
-    gpaw_path = repo_root / "jrystal" / "gpaw"
-    sys.path.insert(0, str(gpaw_path))
-    from gpaw.spherical_harmonics import Yarr  # type: ignore
-    return Yarr
+    gpaw_path = repo_root / "gpaw"
+    if gpaw_path.exists():
+      sys.path.insert(0, str(gpaw_path))
+      try:
+        from gpaw.spherical_harmonics import Yarr  # type: ignore
+        return Yarr
+      except Exception:
+        pass
+    return None
 
 
 def _import_spherical():
@@ -63,6 +68,9 @@ def main() -> None:
   # Local imports to avoid jax dependency at module import time.
   batch_sph_harm_real, cartesian_to_spherical = _import_spherical()
   Yarr = _import_gpaw()
+  if Yarr is None:
+    print("gpaw not available; skipping spherical harmonics comparison")
+    return
 
   rng = np.random.default_rng(0)
   r_av = rng.normal(size=(256, 3))
