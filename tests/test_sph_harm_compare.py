@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import types
 from pathlib import Path
 
 import numpy as np
@@ -34,13 +35,26 @@ def _import_spherical():
   except Exception:
     repo_root = Path(__file__).resolve().parents[1]
     sph_path = repo_root / "jrystal" / "pseudopotential" / "spherical.py"
+    jrystal_path = repo_root / "jrystal"
+    pseudo_path = jrystal_path / "pseudopotential"
+
+    if "jrystal" not in sys.modules:
+      jrystal_pkg = types.ModuleType("jrystal")
+      jrystal_pkg.__path__ = [str(jrystal_path)]
+      sys.modules["jrystal"] = jrystal_pkg
+    if "jrystal.pseudopotential" not in sys.modules:
+      pseudo_pkg = types.ModuleType("jrystal.pseudopotential")
+      pseudo_pkg.__path__ = [str(pseudo_path)]
+      sys.modules["jrystal.pseudopotential"] = pseudo_pkg
+
     spec = importlib.util.spec_from_file_location(
-      "jrystal_pseudopotential_spherical",
+      "jrystal.pseudopotential.spherical",
       sph_path,
     )
     if spec is None or spec.loader is None:
       raise ImportError(f"Unable to load {sph_path}")
     module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module.batch_sph_harm_real, module.cartesian_to_spherical
 
