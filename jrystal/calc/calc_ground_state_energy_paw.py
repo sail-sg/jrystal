@@ -34,7 +34,7 @@ from ..config import JrystalConfigDict
 from ..pseudopotential import normcons
 from .convergence import create_convergence_checker
 from ..pseudopotential.paw_setup import build_paw_setup
-from .calc_paw import compute_proj_pw_overlap
+from ..pseudopotential.paw_calc import compute_proj_pw_overlap
 from .opt_utils import (
   create_crystal,
   create_freq_mask,
@@ -131,19 +131,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   freq_mask = create_freq_mask(config)
   ew = get_ewald_coulomb_repulsion(config)
 
-  # Smooth local potential (vbar) for PAW e_zero contribution.
-  # vbar_r_list = [r_g[a] for a in atoms_list]
-  # vbar_grid_list = [vbar_g[a] for a in atoms_list]
-  # vbar_charge_list = [0 for _ in atoms_list]
-  # vbar_G = normcons.potential_local_reciprocal(
-  #   crystal.positions,
-  #   g_vec,
-  #   vbar_r_list,
-  #   vbar_grid_list,
-  #   vbar_charge_list,
-  #   crystal.vol
-  # )
-
   # TODO: refactor below codes
   # Precompute compensation charge Fourier components on the PW grid.
   def precompute_ghat_LG(g_vec_grid, g_lg_radial, r_radial, dr_radial, lmax_val):
@@ -232,16 +219,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   )
   assert jnp.abs(nc - nc_G_[0,0,0]).max() < 1e-6, "Core charge does not match!"
 
-  # e_zero_nct = 0.0
-  # rho_core_G = 0.0
-  # for atom in atoms_list:
-  #   e_zero_nct += jnp.sum(nct_g[atom] * jnp.sqrt(4 * jnp.pi) * vbar_g[atom] * r_g[atom]**2 * dr_g[atom])
-  #   vbar_G_ = precompute_nct_G(g_vec, vbar_g[atom]/jnp.sqrt(4 * jnp.pi), r_g[atom], dr_g[atom])
-  #   rho_core_G += phase_G[atom] * nct_G[atom]
-  #   print(jnp.sum(nct_g[atom] * jnp.sqrt(4 * jnp.pi) * vbar_g[atom] * r_g[atom]**2 * dr_g[atom]))
-  #   print(normcons.energy_local(nct_G[atom], vbar_G_, crystal.vol))
-  # e_zero_nct_ = normcons.energy_local(rho_core_G, vbar_G, crystal.vol)
-
   convergence_checker = create_convergence_checker(config)
   converged = False
   # initialize pseudopotential
@@ -294,7 +271,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     f"Times: {end - start:.2f} seconds"
   )
 
-  from ..pseudopotential.ulatrsoft import get_ultrasoft_coeff_fun
+  from ..pseudopotential.ultrasoft import get_ultrasoft_coeff_fun
   get_ultrasoft_coeff = get_ultrasoft_coeff_fun(
     crystal.positions,
     k_vec,
@@ -374,14 +351,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
         n_sLg = jnp.dot(D_sLq, n_qg)  # shape: [n_spin, Lmax, n_g]
         n_sLg = n_sLg.at[0].add(nc0_sg * jnp.sqrt(4 * jnp.pi))
         Y_nL_local = Y_nL[:, :Lmax_]  # Only use L up to Lmax
-        # for n in range(50):  # 50 Lebedev points
-        #   w = weight_n[n]
-        #   Y_L = Y_nL_local[n]  # shape: [Lmax]
-        #   n_sg = jnp.dot(Y_L, n_sLg)  # shape: [n_spin, n_g]
-        #   n_sg = jnp.where(n_sg > 0, n_sg, 0)
-        #   e_g = -3/4 * (3 / np.pi)**(1/3) * n_sg**(4/3)
-        #   E_xc += w * jnp.sum(e_g * dr_g[atom] * r_g[atom]**2, axis=-1) * 4 * jnp.pi
-
         # vectorized version
         n = jnp.dot(Y_nL_local, n_sLg)
         # TODO: here we encounter negative density, we use a quick fix, should reconsider

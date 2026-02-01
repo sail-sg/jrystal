@@ -19,7 +19,7 @@ import numpy as np
 
 from gpaw.setup_data import SetupData
 
-from ..calc.calc_paw import calc_paw
+from .paw_calc import calc_paw
 from .dataclass import PawPseudopotential, PawSetupBundle
 from .load_gpaw import parse_paw_setup
 from .load_qe import parse_upf
@@ -176,6 +176,9 @@ def build_paw_setup(crystal, xc_name: str) -> PawSetupBundle:
 def setup_qe():
   """Load and parse QE UPF pseudopotential file.
   
+  WARNING: this function is deprecated and jrystal currently only supports PAW
+  calculations using the pp data from GPAW
+
   This function reads a Quantum ESPRESSO UPF file and extracts PAW data.
   Values are returned in QE's native storage convention without conversion.
   QE UPF Storage Conventions (as documented in paw_pp_file_documentation.md)

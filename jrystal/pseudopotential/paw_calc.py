@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from gpaw.gaunt import gaunt
 from gpaw.new import zips
 
-from ..pseudopotential.load_gpaw import parse_paw_setup
+from .load_gpaw import parse_paw_setup
 
 
 def calc_paw(setup_data: dict):
@@ -471,59 +471,3 @@ def compute_proj_pw_overlap(
 
     structure_factor = jnp.exp(-1.j * G_grid @ pos).reshape(-1, 1)
     return overlap_ * structure_factor
-
-
-def calc_paw_xc_correction(
-  D_asp: list,
-  setups: list,
-  xc_kernel: callable,
-  nspins: int = 1,
-  ):
-
-  from gpaw.sphere.lebedev import R_nv, weight_n, Y_nL
-  def _calculate_xc_energy(D_sLq, n_qg, nc0_sg):
-    n_sLg = jnp.dot(D_sLq, n_qg)  # shape: [n_spin, Lmax, n_g]
-    n_sLg[:, 0, :] += nc0_sg
-    E_xc = 0.0
-    Y_nL_local = Y_nL[:, :Lmax]  # Only use L up to Lmax
-    for n in range(50):  # 50 Lebedev points
-      w = weight_n[n]
-      Y_L = Y_nL_local[n]  # shape: [Lmax]
-      n_sg = jnp.dot(Y_L, n_sLg)  # shape: [n_spin, n_g]
-      e_g = rgd.empty()
-      dedn_sg = rgd.zeros(nspins)
-      xc_kernel.calculate(e_g, n_sg, dedn_sg)
-      E_xc += w * rgd.integrate(e_g)
-
-    return E_xc
-
-  delta_e_xc_total = 0.0
-
-  for a, D_sp in D_asp.items():
-    setup = setups[a]
-    xcc = setup.xc_correction
-
-    if xcc is None:
-        continue
-
-    # Get data from xc_correction object
-    rgd = setup.rgd
-    n_qg = setup.local_corr.n_qg      # AE radial products: phi_j1 * phi_j2
-    nt_qg = setup.local_corr.nt_qg    # PS radial products: phit_j1 * phit_j2
-    nc_g = setup.local_corr.nc_g      # Core density
-    nct_g = setup.local_corr.nct_g    # Smooth core density
-    rgd = xcc.rgd   # use the truncated grid!!!
-    T_Lqp = setup.local_corr.T_Lqp
-    e_xc0 = setup.data.e_xc    # Reference atom XC energy
-    Lmax = (2 * setup.lmax + 1)**2
-    D_sLq = jnp.inner(D_sp, T_Lqp)
-
-    nc0_sg = nc_g / nspins
-    nct0_sg = nct_g / nspins
-    e_ae = _calculate_xc_energy(D_sLq, n_qg, nc0_sg)
-    e_ps = _calculate_xc_energy(D_sLq, nt_qg, nct0_sg)
-    delta_e_xc = e_ae - e_ps - e_xc0
-    delta_e_xc_total += delta_e_xc
-    print(f"Atom {a}: E_AE={e_ae:.6f}, E_PS={e_ps:.6f}, E_xc0={e_xc0:.6f}, Delta={delta_e_xc:.6f} Ha")
-
-  return delta_e_xc_total
