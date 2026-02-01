@@ -261,7 +261,7 @@ def _import_spherical():
     return module.batch_sph_harm_real, module.cartesian_to_spherical
 
 
-def main() -> None:
+def test_sph_harm_compare() -> None:
   batch_sph_harm_real, cartesian_to_spherical = _import_spherical()
   r_av = R_AV
   gpaw_vals = Y_MA
@@ -291,7 +291,3 @@ def main() -> None:
       raise AssertionError(
         f"L={L} l={l} m={m} max_rel={max_rel:.3e} exceeds tolerance"
       )
-
-
-if __name__ == "__main__":
-  main()

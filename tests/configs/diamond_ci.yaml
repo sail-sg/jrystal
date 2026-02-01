@@ -1,0 +1,72 @@
+################################################
+#             Crystal Setting                  #
+################################################
+crystal: diamond
+crystal_file_path_path: null
+spin: 0
+gpaw_coeff_path: null
+save_dir: null
+
+################################################
+#         Exchange-Correlation Setting         #
+################################################
+xc: "lda_x+lda_c_pw"
+
+################################################
+#           Pseudopotential Setting            #
+################################################
+use_pseudopotential: true
+pseudopotential_type: "nc"
+pseudopotential_file_dir: null
+
+################################################
+#       Planewave Hyper-parameters             #
+################################################
+freq_mask_method: "spherical"
+cutoff_energy: 20
+grid_sizes: 16
+k_grid_sizes: [1, 1, 1]
+occupation: "simplex-projector"
+smearing: 0.001
+empty_bands: 4
+spin_restricted: true
+
+ewald_args:
+  ewald_eta: 0.1
+  ewald_cutoff: 2.0e+4
+
+################################################
+#           Optimizizer Setting                #
+################################################
+epoch: 10000
+optimizer: "adam"
+optimizer_args:
+  learning_rate: 0.01
+  b1: 0.9
+  b2: 0.99
+scheduler: null
+convergence_window_size: 20
+convergence_condition: 1.e-6
+
+################################################
+# Band Structure Calculation Hyper-parameters #
+################################################
+band_structure_empty_bands: null
+k_path_special_points: "LGXL"
+num_kpoints: 64
+k_path_file: null
+band_structure_epoch: 5000
+k_path_fine_tuning: true
+k_path_fine_tuning_epoch: 300
+
+################################################
+#              System Setting                  #
+################################################
+seed: 123
+parallel_over_k_mesh: False
+parallel_over_k_path: True
+xla_preallocate: True
+jax_enable_x64: True
+jax_debug_nans: False
+verbose: True
+eps: 1.e-08
