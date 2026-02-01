@@ -18,7 +18,7 @@ import numpy as np
 from jaxtyping import Float, Array, Int
 
 from .._src.crystal import Crystal
-from .load import parse_upf, find_upf
+from .load_qe import parse_upf, find_upf
 
 
 @dataclass

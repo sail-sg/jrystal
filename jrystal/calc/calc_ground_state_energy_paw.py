@@ -33,7 +33,8 @@ from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
 from ..pseudopotential import normcons
 from .convergence import create_convergence_checker
-from .calc_paw import build_paw_setup, compute_proj_pw_overlap
+from ..pseudopotential.paw_setup import build_paw_setup
+from .calc_paw import compute_proj_pw_overlap
 from .opt_utils import (
   create_crystal,
   create_freq_mask,

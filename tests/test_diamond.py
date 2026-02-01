@@ -161,7 +161,7 @@ def _compute_proj_pw_overlap():
     if str(devs_dir) not in sys.path:
         sys.path.insert(0, str(devs_dir))
 
-    from jrystal.calc.gpaw_load import parse_paw_setup
+    from jrystal.pseudopotential.load_gpaw import parse_paw_setup
   
     # Load GPAW setup file
     pp_data = parse_paw_setup(f'/home/aiops/zhaojx/paw-minimal/pseudopotential/C.LDA')
