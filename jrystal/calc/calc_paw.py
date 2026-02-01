@@ -3,6 +3,7 @@ from functools import partial
 import jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
+import numpy as np
 
 from gpaw.gaunt import gaunt
 from gpaw.new import zips
@@ -10,6 +11,155 @@ from gpaw.setup_data import SetupData
 # from jrystal.pseudopotential.load import parse_upf
 
 from .gpaw_load import parse_paw_setup
+from ..pseudopotential.dataclass import PawPseudopotential, PawSetupBundle
+
+
+def _expand_paw_matrix(data: list, n_proj, l_j) -> jnp.ndarray:
+  """Expand a radial matrix to the projector (l,m) basis."""
+  data = jnp.array(data).reshape((len(l_j), len(l_j)))
+  expanded_data = jnp.zeros((n_proj, n_proj))
+  i1 = 0
+  for j1, l1 in enumerate(l_j):
+    for m1 in range(2 * l1 + 1):
+      i2 = 0
+      for j2, l2 in enumerate(l_j):
+        for m2 in range(2 * l2 + 1):
+          if l1 == l2 and m1 == m2:
+            expanded_data = expanded_data.at[i1, i2].set(data[j1, j2])
+          i2 += 1
+      i1 += 1
+  return expanded_data
+
+
+def build_paw_setup(crystal, xc_name: str) -> PawSetupBundle:
+  """Build PAW setup data and a minimal pseudopotential container."""
+  atom_symbols = list(crystal.symbols)
+  atoms_list = [f"{sym}{i + 1}" for i, sym in enumerate(atom_symbols)]
+  atom_symbol_map = {label: sym for label, sym in zip(atoms_list, atom_symbols)}
+  atom_index_map = {label: i for i, label in enumerate(atoms_list)}
+
+  K_p = {}
+  K_c = {}
+  M = {}
+  M_p = {}
+  M_pp = {}
+  MB = {}
+  MB_p = {}
+  n_qg = {}
+  nt_qg = {}
+  nc_g = {}
+  nct_g = {}
+  g_lg = {}
+  Delta_pL = {}
+  Delta0 = {}
+  lmax = {}
+  e_xc0 = {}
+  r_g = {}
+  dr_g = {}
+  vbar_g = {}
+  T_Lqp = {}
+
+  r_grid_list = []
+  nonlocal_beta_grid = []
+  nonlocal_angular_momentum = []
+  nonlocal_d_matrix = []
+  paw_valence_charges = []
+
+  for a in atoms_list:
+    setup_data = setup_gpaw(atom_symbol_map[a], xc_name)
+    paw_valence_charges.append(int(round(setup_data.get('valence', 0))))
+
+    r_grid_list.append(setup_data['r_g'])
+    nonlocal_beta_grid.append(setup_data['pt_jg'])
+    nonlocal_angular_momentum.append(setup_data['l_j'])
+
+    results = calc_paw(setup_data)
+    n_proj = setup_data['pt_jg'].shape[0]
+    tmp_mat = np.zeros((n_proj, n_proj))
+    tmp_mat[np.triu_indices(n_proj)] = results['Delta_lq'][0]
+    tmp_mat = tmp_mat + tmp_mat.T - np.diag(np.diag(tmp_mat))
+    nonlocal_d_matrix.append(tmp_mat / jnp.sqrt(4 * jnp.pi))
+
+    n_proj_m = int(jnp.sum(2 * setup_data['l_j'] + 1))
+    K_p[a] = _expand_paw_matrix(setup_data['K_p'], n_proj_m, setup_data['l_j'])
+    K_c[a] = setup_data['K_c']
+    M[a] = results["M"]
+    M_p[a] = results["M_p"]
+    M_pp[a] = results["M_pp"]
+    MB[a] = results["MB"]
+    MB_p[a] = results["MB_p"]
+    n_qg[a] = results["n_qg"]
+    nt_qg[a] = results["nt_qg"]
+    T_Lqp[a] = results["T_Lqp"]
+    g_lg[a] = results["g_lg"]
+    Delta_pL[a] = results["Delta_pL"]
+    Delta0[a] = results["Delta0"]
+
+    nc_g[a] = setup_data["nc_g"]
+    nct_g[a] = setup_data["nct_g"]
+    lmax[a] = int(setup_data["lmax"])
+    e_xc0[a] = setup_data["e_xc"]
+    r_g[a] = setup_data["r_g"]
+    dr_g[a] = setup_data["dr_g"]
+    vbar_g[a] = setup_data["vbar_g"]
+
+  pseudopot = PawPseudopotential(
+    num_atom=len(atom_symbols),
+    positions=crystal.positions,
+    charges=crystal.charges,
+    atomic_symbols=atom_symbols,
+    valence_charges=paw_valence_charges,
+    r_grid=r_grid_list,
+    nonlocal_beta_grid=nonlocal_beta_grid,
+    nonlocal_angular_momentum=nonlocal_angular_momentum,
+    nonlocal_d_matrix=nonlocal_d_matrix
+  )
+
+  # Build projector indices per atom for D_p construction
+  l_max_global = int(np.max(np.hstack(nonlocal_angular_momentum)))
+  beta_counts = [len(l_list) for l_list in nonlocal_angular_momentum]
+  beta_offsets = np.cumsum([0] + beta_counts[:-1])
+  index_map = {}
+  for a, offset, l_list in zip(atoms_list, beta_offsets, nonlocal_angular_momentum):
+    beta_idx = []
+    phi_idx = []
+    for b, l in enumerate(l_list):
+      l = int(l)
+      for m in range(-l, l + 1):
+        beta_idx.append(offset + b)
+        phi_idx.append(l_max_global + m)
+    index_map[a] = (jnp.array(beta_idx), jnp.array(phi_idx))
+
+  valence_charges = np.sum(pseudopot.valence_charges)
+
+  return PawSetupBundle(
+    pseudopot=pseudopot,
+    atoms_list=atoms_list,
+    atom_symbol_map=atom_symbol_map,
+    atom_index_map=atom_index_map,
+    index_map=index_map,
+    valence_charges=valence_charges,
+    K_p=K_p,
+    K_c=K_c,
+    M=M,
+    M_p=M_p,
+    M_pp=M_pp,
+    MB=MB,
+    MB_p=MB_p,
+    n_qg=n_qg,
+    nt_qg=nt_qg,
+    nc_g=nc_g,
+    nct_g=nct_g,
+    g_lg=g_lg,
+    Delta_pL=Delta_pL,
+    Delta0=Delta0,
+    lmax=lmax,
+    e_xc0=e_xc0,
+    r_g=r_g,
+    dr_g=dr_g,
+    vbar_g=vbar_g,
+    T_Lqp=T_Lqp
+  )
 
 def setup_qe():
   """Load and parse QE UPF pseudopotential file.

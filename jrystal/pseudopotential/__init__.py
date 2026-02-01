@@ -22,12 +22,19 @@ are not yet fully differentiable.
 
 """
 from . import beta, dataclass, load, local, nloc, normcons, spherical, utils
-from .dataclass import NormConservingPseudopotential, Pseudopotential
+from .dataclass import (
+  NormConservingPseudopotential,
+  Pseudopotential,
+  PawPseudopotential,
+  PawSetupBundle,
+)
 
 __all__ = [
   "dataclass",
   "Pseudopotential",
   "NormConservingPseudopotential",
+  "PawPseudopotential",
+  "PawSetupBundle",
   'local',
   'load',
   'spherical',

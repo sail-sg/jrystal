@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Union
+from typing import Dict, List, Tuple, Union
 from dataclasses import dataclass
 import numpy as np
 from jaxtyping import Float, Array, Int
@@ -323,3 +323,45 @@ class UltrasoftPseudopotential(NormConservingPseudopotential):
       nonlocal_augmentation_qij=nonlocal_augmentation_qij,
       nonlocal_augmentation_q_with_l=nonlocal_augmentation_q_with_l
     )
+
+
+@dataclass
+class PawPseudopotential(Pseudopotential):
+  """PAW pseudopotential container for plane-wave routines."""
+
+  r_grid: List[Float[Array, "num_r"]]
+  nonlocal_beta_grid: List[Float[Array, "num_beta num_r"]]
+  nonlocal_angular_momentum: List[List[int]]
+  nonlocal_d_matrix: List[Float[Array, "num_beta num_beta"]]
+
+
+@dataclass
+class PawSetupBundle:
+  """PAW setup bundle for energy and density corrections."""
+
+  pseudopot: PawPseudopotential
+  atoms_list: List[str]
+  atom_symbol_map: Dict[str, str]
+  atom_index_map: Dict[str, int]
+  index_map: Dict[str, Tuple[Array, Array]]
+  valence_charges: float
+  K_p: Dict[str, Array]
+  K_c: Dict[str, float]
+  M: Dict[str, float]
+  M_p: Dict[str, Array]
+  M_pp: Dict[str, Array]
+  MB: Dict[str, float]
+  MB_p: Dict[str, Array]
+  n_qg: Dict[str, Array]
+  nt_qg: Dict[str, Array]
+  nc_g: Dict[str, Array]
+  nct_g: Dict[str, Array]
+  g_lg: Dict[str, Array]
+  Delta_pL: Dict[str, Array]
+  Delta0: Dict[str, float]
+  lmax: Dict[str, int]
+  e_xc0: Dict[str, float]
+  r_g: Dict[str, Array]
+  dr_g: Dict[str, Array]
+  vbar_g: Dict[str, Array]
+  T_Lqp: Dict[str, Array]
