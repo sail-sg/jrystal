@@ -5,6 +5,7 @@ import math
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -19,9 +20,11 @@ def test_energy_diamond_ci() -> None:
   env.setdefault("JAX_PLATFORMS", "cpu")
   env.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
   env.setdefault("PYTHONUNBUFFERED", "1")
+  env.setdefault("JRYSTAL_DISABLE_MP", "1")
 
   result = subprocess.run(
-    ["jrystal", "-m", "energy", "-c", str(config_path)],
+    [sys.executable, str(repo_root / "main.py"), "-m", "energy",
+     "-c", str(config_path)],
     cwd=str(repo_root),
     env=env,
     text=True,
