@@ -28,6 +28,11 @@ import jax
 import jax.interpreters
 import jax.numpy as jnp
 from jax import core
+try:
+  Primitive = core.Primitive
+except AttributeError:  # JAX >= 0.6.0
+  from jax.extend import core as core_ext
+  Primitive = core_ext.Primitive
 from jax._src.interpreters import batching
 from jax.interpreters import mlir
 
@@ -76,11 +81,11 @@ def _fftn_impl(x: jnp.ndarray) -> jnp.ndarray:
 
 
 # Primitive definitions
-_ifftn_p = core.Primitive("ifftn_sharding")
+_ifftn_p = Primitive("ifftn_sharding")
 _ifftn_p.def_impl(_ifftn_impl)
 mlir.register_lowering(_ifftn_p, mlir.lower_fun(_ifftn_impl, False))
 
-_fftn_p = core.Primitive("fftn_sharding")
+_fftn_p = Primitive("fftn_sharding")
 _fftn_p.def_impl(_fftn_impl)
 mlir.register_lowering(_fftn_p, mlir.lower_fun(_fftn_impl, False))
 

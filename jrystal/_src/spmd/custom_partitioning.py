@@ -9,6 +9,11 @@ from jax import tree_util
 from jax._src import api_util, config, custom_api_util, dispatch
 # from jax.extend import core
 from jax import core
+try:
+  Primitive = core.Primitive
+except AttributeError:  # JAX >= 0.6.0
+  from jax.extend import core as core_ext
+  Primitive = core_ext.Primitive
 from jax._src import linear_util as lu
 from jax._src import mesh as mesh_lib
 from jax._src import sharding_impls
@@ -27,7 +32,7 @@ from jax._src.lib.mlir import ir
 from jax._src.lib.mlir.dialects import hlo
 
 _CUSTOM_PARTITIONING_CALL_NAME = "CustomSPMDPartitioningJrystal"
-custom_partitioning_p = core.Primitive("jrystal_custom_partitioning")
+custom_partitioning_p = Primitive("jrystal_custom_partitioning")
 custom_partitioning_p.multiple_results = True
 dispatch.prim_requires_devices_during_lowering.add(custom_partitioning_p)
 custom_partitioning_p.def_abstract_eval(_custom_partitioning_abstract_eval)
