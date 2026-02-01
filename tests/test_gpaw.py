@@ -49,6 +49,8 @@ def _export_coefficients(calc: GPAW, output_path: Path) -> None:
     wfs = calc.wfs
     pd = wfs.pd
     shape = tuple(pd.gd.N_c)
+    h = calc.hamiltonian
+    dens = calc.density
 
     nspins = wfs.nspins
     nkpts = max(kpt.k for kpt in wfs.kpt_u) + 1 if wfs.kpt_u else 0
@@ -132,6 +134,61 @@ def _export_coefficients(calc: GPAW, output_path: Path) -> None:
     if kpts_frac is None:
         kpts_frac = getattr(wfs.kd, "ibzk_kc", None)
 
+    # Compute pseudo vs atomic energy parts following GPAW update() splitting
+    gpaw_energy_parts = {
+        "e_kinetic_pseudo": 0.0,
+        "e_kinetic_atomic": 0.0,
+        "e_coulomb_pseudo": 0.0,
+        "e_coulomb_atomic": 0.0,
+        "e_zero_pseudo": 0.0,
+        "e_zero_atomic": 0.0,
+        "e_xc_pseudo": 0.0,
+        "e_xc_atomic": 0.0,
+        "e_external_pseudo": 0.0,
+        "e_external_atomic": 0.0,
+    }
+    try:
+        finegrid = h.update_pseudo_potential(dens)  # [coulomb, zero, external, xc]
+        coarse = h.calculate_kinetic_energy(dens)
+        W_aL = h.calculate_atomic_hamiltonians(dens)
+        atomic = h.update_corrections(dens, W_aL)  # [kinetic, coulomb, zero, external, xc]
+
+        finegrid *= h.finegd.comm.size / h.world.size
+        coarse *= h.gd.comm.size / h.world.size
+
+        # Sum over MPI if needed
+        if h.world.size > 1:
+            h.world.sum(finegrid)
+            coarse = h.world.sum_scalar(coarse)
+            h.world.sum(atomic)
+
+        gpaw_energy_parts.update(
+            {
+                "e_kinetic_pseudo": float(coarse),
+                "e_kinetic_atomic": float(atomic[0]),
+                "e_coulomb_pseudo": float(finegrid[0]),
+                "e_coulomb_atomic": float(atomic[1]),
+                "e_zero_pseudo": float(finegrid[1]),
+                "e_zero_atomic": float(atomic[2]),
+                "e_external_pseudo": float(finegrid[2]),
+                "e_external_atomic": float(atomic[3]),
+                "e_xc_pseudo": float(finegrid[3]),
+                "e_xc_atomic": float(atomic[4]),
+            }
+        )
+        # For direct minimization, prefer GPAW's direct kinetic energy
+        kin_total = h.calculate_kinetic_energy_directly(dens, wfs)
+        kin_atomic = 0.0
+        for a, D_sp in dens.D_asp.items():
+            setup = wfs.setups[a]
+            D_p = D_sp.sum(0)
+            kin_atomic += float(np.dot(setup.K_p, D_p) + setup.Kc)
+        kin_atomic = dens.gd.comm.sum_scalar(kin_atomic)
+        gpaw_energy_parts["e_kinetic_atomic"] = float(kin_atomic)
+        gpaw_energy_parts["e_kinetic_pseudo"] = float(kin_total - kin_atomic)
+    except Exception as exc:  # keep export robust
+        print(f"[warn] Failed to compute GPAW energy split: {exc}")
+
     np.savez(
         output_path,
         coeff=coeff,
@@ -140,6 +197,24 @@ def _export_coefficients(calc: GPAW, output_path: Path) -> None:
         gvec=np.asarray(pd.G_Qv),
         kpts_frac=None if kpts_frac is None else np.asarray(kpts_frac),
         cell=np.asarray(wfs.gd.cell_cv),
+        gpaw_e_total_free=float(h.e_total_free),
+        gpaw_e_total_extrapolated=float(h.e_total_extrapolated),
+        gpaw_e_kinetic=float(h.e_kinetic),
+        gpaw_e_coulomb=float(h.e_coulomb),
+        gpaw_e_zero=float(h.e_zero),
+        gpaw_e_external=float(h.e_external),
+        gpaw_e_xc=float(h.e_xc),
+        gpaw_e_entropy=float(h.e_entropy),
+        gpaw_e_kinetic_pseudo=float(gpaw_energy_parts["e_kinetic_pseudo"]),
+        gpaw_e_kinetic_atomic=float(gpaw_energy_parts["e_kinetic_atomic"]),
+        gpaw_e_coulomb_pseudo=float(gpaw_energy_parts["e_coulomb_pseudo"]),
+        gpaw_e_coulomb_atomic=float(gpaw_energy_parts["e_coulomb_atomic"]),
+        gpaw_e_zero_pseudo=float(gpaw_energy_parts["e_zero_pseudo"]),
+        gpaw_e_zero_atomic=float(gpaw_energy_parts["e_zero_atomic"]),
+        gpaw_e_xc_pseudo=float(gpaw_energy_parts["e_xc_pseudo"]),
+        gpaw_e_xc_atomic=float(gpaw_energy_parts["e_xc_atomic"]),
+        gpaw_e_external_pseudo=float(gpaw_energy_parts["e_external_pseudo"]),
+        gpaw_e_external_atomic=float(gpaw_energy_parts["e_external_atomic"]),
         **d_asp,
         **d_asp_calc,
         **proj,

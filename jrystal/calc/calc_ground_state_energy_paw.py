@@ -104,31 +104,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   xc_name = "LDA" if "lda" in config.xc.lower() else "PBE"
   paw = build_paw_setup(crystal, xc_name)
   pseudopot = paw.pseudopot
-  atoms_list = paw.atoms_list
-  atom_symbol_map = paw.atom_symbol_map
-  atom_index_map = paw.atom_index_map
-  index_map = paw.index_map
-  valence_charges = paw.valence_charges
-  K_p = paw.K_p
-  K_c = paw.K_c
-  M = paw.M
-  M_p = paw.M_p
-  M_pp = paw.M_pp
-  MB = paw.MB
-  MB_p = paw.MB_p
-  n_qg = paw.n_qg
-  nt_qg = paw.nt_qg
-  nc_g = paw.nc_g
-  nct_g = paw.nct_g
-  g_lg = paw.g_lg
-  Delta_pL = paw.Delta_pL
-  Delta0 = paw.Delta0
-  lmax = paw.lmax
-  e_xc0 = paw.e_xc0
-  r_g = paw.r_g
-  dr_g = paw.dr_g
-  vbar_g = paw.vbar_g
-  T_Lqp = paw.T_Lqp
   logging.info(f"Crystal: {crystal.symbols}")
   EPS = config.eps
 
@@ -150,12 +125,11 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   num_kpts = k_vec.shape[0]
   logging.info(f"Number of G-vectors: {proper_grid_size(config.grid_sizes)}")
   logging.info(f"Number of k-vectors: {proper_grid_size(config.k_grid_sizes)}")
-  num_bands = ceil(valence_charges / 2) + config.empty_bands
+  num_bands = ceil(paw.valence_charges / 2) + config.empty_bands
   logging.info(f"num_bands: {num_bands}")
   logging.info(f"XC functional: {config.xc}")
   freq_mask = create_freq_mask(config)
   ew = get_ewald_coulomb_repulsion(config)
-  valence_charges = np.sum(pseudopot.valence_charges)
 
   # Smooth local potential (vbar) for PAW e_zero contribution.
   # vbar_r_list = [r_g[a] for a in atoms_list]
@@ -221,23 +195,41 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   nct_G = 0.0
   vbar_G = 0.0
   e_zero0 = 0.0
-  for atom in atoms_list:
+  for atom in paw.atoms_list:
     ghat_LG[atom] = precompute_ghat_LG(
-      g_vec, g_lg[atom], r_g[atom], dr_g[atom], lmax[atom]
+      g_vec, paw.g_lg[atom], paw.r_g[atom], paw.dr_g[atom], paw.lmax[atom]
     )
     phase_G[atom] = jnp.exp(
-      -1j * jnp.einsum("xyzc,c->xyz", g_vec, crystal.positions[atom_index_map[atom]])
+      -1j * jnp.einsum(
+        "xyzc,c->xyz",
+        g_vec,
+        crystal.positions[paw.atom_index_map[atom]]
+      )
     )
-    nct_G_[atom] = precompute_nct_G(g_vec, nct_g[atom], r_g[atom], dr_g[atom])
-    vbar_G_[atom] = precompute_nct_G(g_vec, vbar_g[atom]/jnp.sqrt(4 * jnp.pi), r_g[atom], dr_g[atom])
+    nct_G_[atom] = precompute_nct_G(
+      g_vec, paw.nct_g[atom], paw.r_g[atom], paw.dr_g[atom]
+    )
+    vbar_G_[atom] = precompute_nct_G(
+      g_vec,
+      paw.vbar_g[atom] / jnp.sqrt(4 * jnp.pi),
+      paw.r_g[atom],
+      paw.dr_g[atom],
+    )
     nct_G += phase_G[atom] * nct_G_[atom]
     vbar_G += phase_G[atom] * vbar_G_[atom]
-    e_zero0 += jnp.sum(nct_g[atom] * jnp.sqrt(4 * jnp.pi) * vbar_g[atom] * r_g[atom]**2 * dr_g[atom])
+    e_zero0 += jnp.sum(
+      paw.nct_g[atom] * jnp.sqrt(4 * jnp.pi) * paw.vbar_g[atom]
+      * paw.r_g[atom]**2 * paw.dr_g[atom]
+    )
   nct_g_ = jnp.fft.ifftn(nct_G, axes=range(-3, 0)).real
 
   # NOTE: test the total charge of the core electrons
-  nc_G_ = precompute_nct_G(g_vec, nc_g[atom], r_g[atom], dr_g[atom]) * crystal.vol / np.prod(g_vec.shape[:-1])
-  nc = jnp.sum(nc_g[atom] * 4 * jnp.pi * r_g[atom]**2 * dr_g[atom])
+  nc_G_ = precompute_nct_G(
+    g_vec, paw.nc_g[atom], paw.r_g[atom], paw.dr_g[atom]
+  ) * crystal.vol / np.prod(g_vec.shape[:-1])
+  nc = jnp.sum(
+    paw.nc_g[atom] * 4 * jnp.pi * paw.r_g[atom]**2 * paw.dr_g[atom]
+  )
   assert jnp.abs(nc - nc_G_[0,0,0]).max() < 1e-6, "Core charge does not match!"
 
   # e_zero_nct = 0.0
@@ -255,14 +247,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   # initialize pseudopotential
   logging.info("Initializing pseudopotential (local)...")
   start = time.time()
-  # potential_loc = normcons.potential_local_reciprocal(
-  #   crystal.positions,
-  #   g_vec,
-  #   pseudopot.r_grid,
-  #   pseudopot.local_potential_grid,
-  #   pseudopot.local_potential_charge,
-  #   crystal.vol
-  # )
 
   k_vec = jax.device_put(k_vec, NamedSharding(mesh, P('k')))
   logging.info(
@@ -371,8 +355,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     _f_matrix /= jnp.sqrt(crystal.vol)
 
     D_p = {}
-    for atom in atoms_list:
-      idx = index_map[atom]
+    for atom in paw.atoms_list:
+      idx = paw.index_map[atom]
       D_p[atom] = einsum(
         _f_matrix[..., idx[0], idx[1]].conj(),
         occ,
@@ -410,16 +394,21 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
         exc_density = jax.vmap(_exc_density)(n)
         n_total = n if n.ndim == 2 else jnp.sum(n, axis=1)
         # E_xc_ = einsum(weight_n, e_g, dr_g[atom] * r_g[atom]**2, "i, ij, j") * 4 * jnp.pi
-        E_xc_ = jnp.einsum("i, ij, j", weight_n, n_total * exc_density, dr_g[atom] * r_g[atom]**2) * 4 * jnp.pi
+        E_xc_ = jnp.einsum(
+          "i, ij, j",
+          weight_n,
+          n_total * exc_density,
+          paw.dr_g[atom] * paw.r_g[atom]**2
+        ) * 4 * jnp.pi
         return E_xc_
 
-      n_qg_ = n_qg[atom]
-      nt_qg_ = nt_qg[atom]
-      nc_g_ = nc_g[atom]
-      nct_g_ = nct_g[atom]
-      T_Lqp_ = T_Lqp[atom]
-      e_xc0_ = e_xc0[atom]
-      Lmax_ = (2 * lmax[atom] + 1)**2
+      n_qg_ = paw.n_qg[atom]
+      nt_qg_ = paw.nt_qg[atom]
+      nc_g_ = paw.nc_g[atom]
+      nct_g_ = paw.nct_g[atom]
+      T_Lqp_ = paw.T_Lqp[atom]
+      e_xc0_ = paw.e_xc0[atom]
+      Lmax_ = (2 * paw.lmax[atom] + 1)**2
       D_sLq = jnp.inner(D_p_packed, T_Lqp_)
       e_ae = _calculate_xc_energy(D_sLq, n_qg_, nc_g_)
       e_ps = _calculate_xc_energy(D_sLq, nt_qg_, nct_g_)
@@ -449,10 +438,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
     # Add compensation charge to smooth density for Coulomb energy
     rho_comp_G = 0.0
-    for atom in atoms_list:
+    for atom in paw.atoms_list:
       D_p_packed = pack(D_p[atom])
-      Q_L = jnp.dot(D_p_packed, Delta_pL[atom])
-      Q_L = Q_L.at[0].add(Delta0[atom])
+      Q_L = jnp.dot(D_p_packed, paw.Delta_pL[atom])
+      Q_L = Q_L.at[0].add(paw.Delta0[atom])
       rho_comp_G += phase_G[atom] * jnp.tensordot(
         Q_L, ghat_LG[atom], axes=[0, 0]
       )
@@ -463,13 +452,13 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
     hartree_pseudo = hartree
 
-    for atom in atoms_list:
+    for atom in paw.atoms_list:
       D_p_packed = pack(D_p[atom])
-      kinetic += jnp.sum(K_p[atom] * D_p[atom][0,0]).real + K_c[atom]
+      kinetic += jnp.sum(paw.K_p[atom] * D_p[atom][0,0]).real + paw.K_c[atom]
       # nct contribution to e_zero is canceled out with MB
-      e_zero += jnp.sum(MB_p[atom] * D_p_packed) + MB[atom]
-      hartree += M[atom] + jnp.dot(
-        D_p_packed, (M_p[atom] + jnp.dot(M_pp[atom], D_p_packed))
+      e_zero += jnp.sum(paw.MB_p[atom] * D_p_packed) + paw.MB[atom]
+      hartree += paw.M[atom] + jnp.dot(
+        D_p_packed, (paw.M_p[atom] + jnp.dot(paw.M_pp[atom], D_p_packed))
       )
       exc += calc_paw_xc_correction(atom, D_p_packed)
 
@@ -578,7 +567,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   #   )
   # _check_uspp_overlap(params_pw)
   params_occ = occupation.param_init(
-    key, num_bands, valence_charges, num_kpts, crystal.spin, config.occupation
+    key, num_bands, paw.valence_charges, num_kpts, crystal.spin, config.occupation
   )
   params_occ = jax.device_put(params_occ, sharding)
   params = {"pw": params_pw, "occ": params_occ}
@@ -620,9 +609,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
           gpaw_P = np.asarray(gpaw_coeff_data[key])
           diff = float(np.max(np.abs(P_alt[:, I1:I2] - gpaw_P)))
           print(f"P_ni (from f_GI) compare atom {a} s{s} k{k}: max|Δ| = {diff:.6e}")
-    for atom in atoms_list:
-      idx = atom_index_map[atom]
-      beta_idx, phi_idx = index_map[atom]
+    for atom in paw.atoms_list:
+      idx = paw.atom_index_map[atom]
+      beta_idx, phi_idx = paw.index_map[atom]
       P_cmp = f_matrix_cmp[..., beta_idx, phi_idx]
       for s in range(P_cmp.shape[0]):
         for k in range(P_cmp.shape[1]):
@@ -632,8 +621,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
           gpaw_P = np.asarray(gpaw_coeff_data[key])
           diff = float(jnp.max(jnp.abs(P_cmp[s, k].conj() - gpaw_P)))
           print(f"P_ni compare atom {atom} s{s} k{k}: max|Δ| = {diff:.6e}")
-    for atom in atoms_list:
-      idx = atom_index_map[atom]
+    for atom in paw.atoms_list:
+      idx = paw.atom_index_map[atom]
       key = f"D_asp_{idx}"
       if key not in gpaw_coeff_data.files:
         continue
@@ -740,8 +729,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   # hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
   e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol)
   D_p = calc_atomic_density_matrix(coeff, occ)
-  for atom in atoms_list:
-    e_zero += MB[atom] + jnp.sum(MB_p[atom] * pack(D_p[atom]))
+  for atom in paw.atoms_list:
+    e_zero += paw.MB[atom] + jnp.sum(paw.MB_p[atom] * pack(D_p[atom]))
 
   exc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)
 
