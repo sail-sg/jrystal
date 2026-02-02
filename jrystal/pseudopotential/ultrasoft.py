@@ -106,13 +106,14 @@ def get_ultrasoft_coeff_fun(
   q_mat = []
   for q, l_j, _m in zip(nonlocal_q_matrix, nonlocal_angular_momentum, m):
     l_j = jnp.array(l_j, dtype=int)
-    # NOTE: the mast is only for GPAW
+    # NOTE: the mast is only for GPAW pp data, QE pp data stores q_ij only for
+    # same l
     mask = (l_j[:, None] == l_j[None, :])
     q = jnp.where(mask, q, 0.0)
     q_mat += [
       scipy.linalg.block_diag(np.kron(q, np.eye(_m))) 
     ]
-  q_mat = scipy.linalg.block_diag(*q_mat) #* vol / np.prod(freq_mask.shape)
+  q_mat = scipy.linalg.block_diag(*q_mat)
 
   def _get_s_sqrt(B, x):
     # print(jnp.linalg.eigvals(jnp.eye(B.shape[0]) + (B @ q_mat @ B.T.conj()).real).min())
@@ -180,6 +181,7 @@ def _get_ultrasoft_coeff_fun(
     < C' | S | C' > = 1
 
   where S is the overlap operator in ultrasoft pseudopotential.
+  TODO: should we delete this deprecated function?
   """
   # transform the q_ij matrix (1D radial) to the real space. The difference is
   # sizes = g_vector_grid.shape[:3]

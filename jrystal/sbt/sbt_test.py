@@ -33,7 +33,7 @@ class TestSBTConsistency(absltest.TestCase):
     # Create logarithmic r grid (as required by pysbt)
     self.pseudo = NCPP.create(self.crystal, self.pseudo_file)
     self.beta = np.array(self.pseudo.nonlocal_beta_grid[0], dtype=np.float64)
-    self.r_ab = np.array(self.pseudo.r_ab[0], dtype=np.float64)
+    self.dr = np.array(self.pseudo.dr_grid[0], dtype=np.float64)
     self.r_grid = np.array(self.pseudo.r_grid[0], dtype=np.float64)
     self.angmom = np.array(
       self.pseudo.nonlocal_angular_momentum[0], dtype=np.int64
@@ -57,7 +57,7 @@ class TestSBTConsistency(absltest.TestCase):
       self.beta,
       l=self.angmom,
       kmax=100,
-      delta_r=self.r_ab
+      dr_grid=self.dr
     )
 
     beta_g2 = CubicSpline(gg2, beta_g2, axis=-1)(xx)
@@ -89,7 +89,7 @@ class TestSBTConsistency(absltest.TestCase):
       self.beta,
       l=angmom,
       kmax=100,
-      delta_r=self.r_ab
+      dr_grid=self.dr
     )
 
     beta_g2 = CubicSpline(gg2, beta_g2, axis=-1)(xx)

@@ -22,9 +22,13 @@ def pre_calc_beta_sbt(pseudopot, g_vector_grid, kpts, save_cache=False):
   """
   # Prepare arguments for multiprocessing
   args_list = []
-  for r, b, l in zip(pseudopot.r_grid, pseudopot.nonlocal_beta_grid,
-                     pseudopot.nonlocal_angular_momentum):
-    args_list.append((r, b, l, g_vector_grid, kpts))
+  for r, dr, b, l in zip(
+    pseudopot.r_grid,
+    pseudopot.dr_grid,
+    pseudopot.nonlocal_beta_grid,
+    pseudopot.nonlocal_angular_momentum,
+  ):
+    args_list.append((r, dr, b, l, g_vector_grid, kpts))
 
   # Use multiprocessing Pool to parallelize computation
   mp.set_start_method("spawn", force=True)

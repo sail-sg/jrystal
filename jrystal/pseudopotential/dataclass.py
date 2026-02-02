@@ -74,7 +74,7 @@ class NormConservingPseudopotential(Pseudopotential):
   """
 
   r_grid: List[Float[Array, "num_r"]]
-  r_ab: List[Float[Array, "num_r"]]
+  dr_grid: List[Float[Array, "num_r"]]
   r_cutoff: List[float]
   l_max: int
   l_max_rho: int
@@ -105,7 +105,7 @@ class NormConservingPseudopotential(Pseudopotential):
 
     valence_charges = []
     r_grid = []
-    r_ab = []
+    dr_grid = []
     r_cutoff = []
     l_max = []
     l_max_rho = []
@@ -122,7 +122,7 @@ class NormConservingPseudopotential(Pseudopotential):
       valence_charges.append(int(float(pp["PP_HEADER"]["z_valence"])))
       _r_grid = np.array(pp["PP_MESH"]["PP_R"])
       r_grid.append(_r_grid[_r_grid > 0])
-      r_ab.append(np.array(pp["PP_MESH"]["PP_RAB"])[_r_grid > 0])
+      dr_grid.append(np.array(pp["PP_MESH"]["PP_RAB"])[_r_grid > 0])
       # r_cutoff.append(float(pp["PP_NONLOCAL"]["PP_BETA"]["cutoff_radius"][0]))
       r_cutoff.append(None)
       l_max.append(int(pp["PP_HEADER"]["l_max"]))
@@ -177,7 +177,7 @@ class NormConservingPseudopotential(Pseudopotential):
       atomic_symbols,
       valence_charges,
       r_grid,
-      r_ab,
+      dr_grid,
       r_cutoff,
       l_max,
       l_max_rho,
@@ -330,6 +330,7 @@ class PawPseudopotential(Pseudopotential):
   """PAW pseudopotential container for plane-wave routines."""
 
   r_grid: List[Float[Array, "num_r"]]
+  dr_grid: List[Float[Array, "num_r"]]
   nonlocal_beta_grid: List[Float[Array, "num_beta num_r"]]
   nonlocal_angular_momentum: List[List[int]]
   nonlocal_d_matrix: List[Float[Array, "num_beta num_beta"]]

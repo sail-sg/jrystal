@@ -70,7 +70,8 @@ def build_paw_setup(crystal, xc_name: str) -> PawSetupBundle:
   vbar_g = {}
   T_Lqp = {}
 
-  r_grid_list = []
+  r_grids = []
+  dr_grids = []
   nonlocal_beta_grid = []
   nonlocal_angular_momentum = []
   nonlocal_d_matrix = []
@@ -80,7 +81,8 @@ def build_paw_setup(crystal, xc_name: str) -> PawSetupBundle:
     setup_data = setup_gpaw(atom_symbol_map[a], xc_name)
     paw_valence_charges.append(int(round(setup_data.get('valence', 0))))
 
-    r_grid_list.append(setup_data['r_g'])
+    r_grids.append(setup_data['r_g'])
+    dr_grids.append(setup_data['dr_g'])
     nonlocal_beta_grid.append(setup_data['pt_jg'])
     nonlocal_angular_momentum.append(setup_data['l_j'])
 
@@ -120,7 +122,8 @@ def build_paw_setup(crystal, xc_name: str) -> PawSetupBundle:
     charges=crystal.charges,
     atomic_symbols=atom_symbols,
     valence_charges=paw_valence_charges,
-    r_grid=r_grid_list,
+    r_grid=r_grids,
+    dr_grid=dr_grids,
     nonlocal_beta_grid=nonlocal_beta_grid,
     nonlocal_angular_momentum=nonlocal_angular_momentum,
     nonlocal_d_matrix=nonlocal_d_matrix
@@ -176,7 +179,7 @@ def build_paw_setup(crystal, xc_name: str) -> PawSetupBundle:
 def setup_qe():
   """Load and parse QE UPF pseudopotential file.
   
-  WARNING: this function is deprecated and jrystal currently only supports PAW
+  WARNING NOTE: this function is deprecated and jrystal currently only supports PAW
   calculations using the pp data from GPAW
 
   This function reads a Quantum ESPRESSO UPF file and extracts PAW data.
