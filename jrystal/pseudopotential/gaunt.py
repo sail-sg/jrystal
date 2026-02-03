@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .gpaw_spherical_harmonics import YL, gam
+from .spherical_harmonics import YL, gam
 
 _gaunt = {}
 
