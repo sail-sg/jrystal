@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import time
+from functools import partial
 from dataclasses import dataclass
 from math import ceil
 from typing import List, Union
@@ -27,15 +28,18 @@ from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
 from tqdm import tqdm
 
-from .._src import energy, entropy, occupation, pw, xc
+from .._src import energy, entropy, occupation, pw
 from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
 from ..pseudopotential import normcons
-from ..pseudopotential.utils import map_over_atoms
+from ..pseudopotential.utils import map_over_atoms, pack
 from .convergence import create_convergence_checker
 from ..pseudopotential.paw_setup import build_paw_precompute, build_paw_setup
-from ..pseudopotential.paw_calc import compute_proj_pw_overlap
+from ..pseudopotential.paw_calc import (
+  build_paw_xc_correction,
+  compute_proj_pw_overlap,
+)
 from .opt_utils import (
   create_crystal,
   create_freq_mask,
@@ -65,19 +69,6 @@ class GroundStateEnergyOutput:
   params_occ: dict
   total_energy: Union[float, jax.Array]
   total_energy_history: List[float]
-
-
-def pack(D_p: jnp.ndarray) -> jnp.ndarray:
-  """Pack a Hermitian matrix for better efficiency.
-
-  The diagonal elements are halved to calculate the inner product.
-  """
-  n = D_p.shape[-1]
-  tmp = D_p.copy()
-  tmp = tmp.at[..., jnp.arange(n), jnp.arange(n)].set(
-    tmp[..., jnp.arange(n), jnp.arange(n)] / 2
-  )
-  return tmp[0, 0][jnp.triu_indices(n)].real * 2
 
 
 def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
@@ -230,10 +221,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       spin_restricted=config.spin_restricted
     )
   
-  from gpaw.sphere.lebedev import weight_n, Y_nL
-  weight_n = jnp.array(weight_n)
-  Y_nL = jnp.array(Y_nL)
-
   def calc_atomic_density_matrix(coeff, occ, return_f_matrix: bool = False):
 
     _f_matrix = einsum(
@@ -272,44 +259,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       return D_p_list, _f_matrix
     return D_p_list
   
-  def calc_paw_xc_correction(atom: str, D_p_packed):
-      def _calculate_xc_energy(D_sLq, n_qg, nc0_sg):
-
-        n_sLg = jnp.dot(D_sLq, n_qg)  # shape: [n_spin, Lmax, n_g]
-        n_sLg = n_sLg.at[0].add(nc0_sg * jnp.sqrt(4 * jnp.pi))
-        Y_nL_local = Y_nL[:, :Lmax_]  # Only use L up to Lmax
-        # vectorized version
-        n = jnp.dot(Y_nL_local, n_sLg)
-        # TODO: here we encounter negative density, we use a quick fix, should reconsider
-        n = jnp.where(n > 0, n, 0)
-        # e_g = -3/4 * (3 / np.pi)**(1/3) * n**(4/3)
-        def _exc_density(n_sg):
-          if n_sg.ndim == 1:
-            n_sg = n_sg[None, :]
-          return xc.xc_density(n_sg, g_vec, xc_type=config.xc)
-        exc_density = jax.vmap(_exc_density)(n)
-        n_total = n if n.ndim == 2 else jnp.sum(n, axis=1)
-        # E_xc_ = einsum(weight_n, e_g, dr_g[atom] * r_g[atom]**2, "i, ij, j") * 4 * jnp.pi
-        E_xc_ = jnp.einsum(
-          "i, ij, j",
-          weight_n,
-          n_total * exc_density,
-          paw.dr_g[atom] * paw.r_g[atom]**2
-        ) * 4 * jnp.pi
-        return E_xc_
-
-      n_qg_ = paw.n_qg[atom]
-      nt_qg_ = paw.nt_qg[atom]
-      nc_g_ = paw.nc_g[atom]
-      nct_g_ = paw.nct_g[atom]
-      T_Lqp_ = paw.T_Lqp[atom]
-      e_xc0_ = paw.e_xc0[atom]
-      Lmax_ = (2 * paw.lmax[atom] + 1)**2
-      D_sLq = jnp.inner(D_p_packed, T_Lqp_)
-      e_ae = _calculate_xc_energy(D_sLq, n_qg_, nc_g_)
-      e_ps = _calculate_xc_energy(D_sLq, nt_qg_, nct_g_)
-      return e_ae - e_ps - e_xc0_
-
   atoms_list = paw.atoms_list
   delta_pL_list = [paw.Delta_pL[atom] for atom in atoms_list]
   delta0_list = [paw.Delta0[atom] for atom in atoms_list]
@@ -322,6 +271,9 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   m_list = [paw.M[atom] for atom in atoms_list]
   m_p_list = [paw.M_p[atom] for atom in atoms_list]
   m_pp_list = [paw.M_pp[atom] for atom in atoms_list]
+  calc_paw_xc_correction = build_paw_xc_correction(
+    paw, g_vec, config.xc
+  )
 
   def total_energy(params_pw, params_occ, g_vec, pseudopot=pseudopot, return_components: bool = False):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
@@ -454,7 +406,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     d_p_cmp_list, f_matrix_cmp = calc_atomic_density_matrix(
       coeff_cmp, occ_cmp, return_f_matrix=True
     )
-    print(f"GPAW coeff keys: {gpaw_coeff_data.files}")
     # Compare P_ni via exported f_GI from GPAW
     for s in range(coeff_cmp.shape[0]):
       for k in range(coeff_cmp.shape[1]):

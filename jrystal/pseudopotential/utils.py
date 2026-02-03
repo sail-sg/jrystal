@@ -47,6 +47,19 @@ def map_over_atoms(fun: Callable[..., Any]) -> Callable[..., List]:
   return map_fun
 
 
+def pack(D_p: jnp.ndarray) -> jnp.ndarray:
+  """Pack a Hermitian matrix for better efficiency.
+
+  The diagonal elements are halved to calculate the inner product.
+  """
+  n = D_p.shape[-1]
+  tmp = D_p.copy()
+  tmp = tmp.at[..., jnp.arange(n), jnp.arange(n)].set(
+    tmp[..., jnp.arange(n), jnp.arange(n)] / 2
+  )
+  return tmp[0, 0][jnp.triu_indices(n)].real * 2
+
+
 def stack_with_padding(array_list: List[List]):
   # Input validation
   if not array_list:

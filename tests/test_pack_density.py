@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import jax.numpy as jnp
 
-from jrystal.calc.calc_ground_state_energy_paw import pack
+from jrystal.pseudopotential.utils import pack
 
 
 def test_pack_density_matrix_values() -> None:

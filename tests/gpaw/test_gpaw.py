@@ -8,6 +8,8 @@ from ase.io import read
 import numpy as np
 from gpaw import GPAW, PW
 
+from jrystal.pseudopotential.utils import pack
+
 HA_TO_EV = 27.211386245988
 
 
@@ -71,17 +73,6 @@ def _export_coefficients(calc: GPAW, output_path: Path) -> None:
     proj = {}
     proj_pw = {}
     d_calc_full = {}
-    def pack(D_p: np.ndarray) -> np.ndarray:
-        """Pack a Hermitian matrix for better efficiency
-
-        The diagonal elements are halfed to calculate the inner product
-        """
-
-        n = D_p.shape[-1]
-        tmp = D_p.copy()
-        tmp[np.diag_indices(n)] = tmp[np.diag_indices(n)] / 2
-        return tmp[np.triu_indices(n)].real * 2
-
     for kpt in wfs.kpt_u:
         s = kpt.s
         k = kpt.k

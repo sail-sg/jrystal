@@ -3,9 +3,10 @@ from functools import partial
 import jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
-from gpaw.gaunt import gaunt
-from gpaw.new import zips
 
+from .gaunt import gaunt
+
+from .._src import xc
 from .load_gpaw import parse_paw_setup
 
 
@@ -131,7 +132,8 @@ def calc_paw(setup_data: dict):
     i = 0
     j = 0
     jlL_i = []
-    for l, n in zips(l_j, n_j):
+    assert len(l_j) == len(n_j)
+    for l, n in zip(l_j, n_j):
       for m in range(2 * l + 1):
         jlL_i.append((j, l, l**2 + m))
         i += 1
@@ -398,6 +400,56 @@ def calc_paw(setup_data: dict):
     'vbar_g': vbar_g,
     'T_Lqp': T_Lqp
   }
+
+
+def build_paw_xc_correction(paw, g_vec, xc_type: str):
+  """Build a PAW XC correction helper using precomputed Lebedev data."""
+  from .lebedev import weight_n, Y_nL
+
+  weight_n = jnp.array(weight_n)
+  Y_nL = jnp.array(Y_nL)
+
+  def _calculate_xc_energy(D_sLq, n_qg, nc0_sg, dr_g, r_g, lmax):
+    n_sLg = jnp.dot(D_sLq, n_qg)  # shape: [n_spin, Lmax, n_g]
+    n_sLg = n_sLg.at[0].add(nc0_sg * jnp.sqrt(4 * jnp.pi))
+    Lmax = (2 * lmax + 1)**2
+    Y_nL_local = Y_nL[:, :Lmax]  # Only use L up to Lmax
+    n = jnp.dot(Y_nL_local, n_sLg)
+    # TODO: here we encounter negative density, we use a quick fix, should reconsider
+    n = jnp.where(n > 0, n, 0)
+
+    def _exc_density(n_sg):
+      if n_sg.ndim == 1:
+        n_sg = n_sg[None, :]
+      return xc.xc_density(n_sg, g_vec, xc_type=xc_type)
+
+    exc_density = jax.vmap(_exc_density)(n)
+    n_total = n if n.ndim == 2 else jnp.sum(n, axis=1)
+    E_xc_ = jnp.einsum(
+      "i, ij, j",
+      weight_n,
+      n_total * exc_density,
+      dr_g * r_g**2
+    ) * 4 * jnp.pi
+    return E_xc_
+
+  def calc_paw_xc_correction(atom: str, D_p_packed):
+    n_qg = paw.n_qg[atom]
+    nt_qg = paw.nt_qg[atom]
+    nc_g = paw.nc_g[atom]
+    nct_g = paw.nct_g[atom]
+    T_Lqp = paw.T_Lqp[atom]
+    e_xc0 = paw.e_xc0[atom]
+    dr_g = paw.dr_g[atom]
+    r_g = paw.r_g[atom]
+    lmax = paw.lmax[atom]
+
+    D_sLq = jnp.inner(D_p_packed, T_Lqp)
+    e_ae = _calculate_xc_energy(D_sLq, n_qg, nc_g, dr_g, r_g, lmax)
+    e_ps = _calculate_xc_energy(D_sLq, nt_qg, nct_g, dr_g, r_g, lmax)
+    return e_ae - e_ps - e_xc0
+
+  return calc_paw_xc_correction
 
 
 def compute_proj_pw_overlap(

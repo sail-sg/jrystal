@@ -17,8 +17,6 @@ jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 import numpy as np
 
-from gpaw.setup_data import SetupData
-
 from .paw_calc import calc_paw
 from .dataclass import PawPseudopotential, PawSetupBundle
 from .load_gpaw import parse_paw_setup
@@ -184,7 +182,7 @@ def build_paw_precompute(paw, crystal, g_vec):
   Returns:
     Tuple of (ghat_LG, phase_G, nct_G, vbar_G, e_zero0, nct_g).
   """
-  from gpaw.spherical_harmonics import Yarr
+  from .spherical_harmonics import Yarr
 
   def precompute_ghat_LG(g_vec_grid, g_lg_radial, r_radial, dr_radial, lmax_val):
     g_vec_np = np.array(g_vec_grid)
@@ -323,9 +321,6 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
     f'/home/aiops/zhaojx/paw-minimal/pseudopotential/{atom_type}.{xc_name}'
   )
   
-  # Also load using GPAW's native loader to get shape_function parameters
-  data = SetupData(atom_type, xc_name, readxml=True)
-  
   # Extract basic properties
   Z = int(pp_data['atom']['Z'])  # Total atomic number
   valence = pp_data['atom'].get('valence')
@@ -348,11 +343,18 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   # Angular momentum information from valence states
   l_j = jnp.array([state['l'] for state in pp_data['valence_states']])
   lcut = max(l_j)
-  # Match GPAW: gcut2 = rgd.ceil(2 * max(rcut_j))
-  rcut_j = jnp.array(data.rcut_j)
-  rcutmax = float(jnp.max(rcut_j))
-  rcut2 = 2 * rcutmax
-  gcut2 = int(data.rgd.ceil(rcut2))
+  rc_values = [
+    state.get('rc') for state in pp_data.get('valence_states', [])
+    if state.get('rc') is not None
+  ]
+  if rc_values:
+    rcutmax = float(np.max(rc_values))
+  else:
+    shape_rc = pp_data.get('shape_function', {}).get('rc')
+    rcutmax = float(shape_rc) if shape_rc is not None else float(r_g[-1])
+
+  rcut2 = 2.0 * rcutmax
+  gcut2 = int(np.searchsorted(r_g, rcut2, side='left'))
   if gcut2 > len(r_g):
     gcut2 = len(r_g)
   
