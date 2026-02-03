@@ -23,6 +23,7 @@ from .utils import map_over_atoms
 
 __all__ = [
   'get_ultrasoft_coeff_fun',
+  'check_uspp_overlap',
   'density_grid',
   'density_grid_reciprocal',
   'potential_local_reciprocal',
@@ -148,6 +149,81 @@ def get_ultrasoft_coeff_fun(
     return output
 
   return f
+
+
+def check_uspp_overlap(
+  params_pw,
+  *,
+  freq_mask,
+  sharding,
+  get_ultrasoft_coeff,
+  proj_pw_overlap,
+  crystal_vol,
+  pseudopot
+):
+  """Check C^H S C = I for USPP transform using current coeffs."""
+  coeff_raw = pw.coeff(params_pw, freq_mask, sharding=sharding)
+  coeff_us = get_ultrasoft_coeff(coeff_raw)
+
+  coeff_mask = coeff_us.at[..., freq_mask].get()
+  coeff_mask = coeff_mask.reshape(coeff_mask.shape[:3] + (-1,))
+
+  proj_mask = proj_pw_overlap.at[..., freq_mask].get()
+  proj_mask = proj_mask.reshape(
+    proj_pw_overlap.shape[0], proj_pw_overlap.shape[1],
+    proj_pw_overlap.shape[2], -1
+  )
+  f_matrix = einsum(
+    coeff_mask, proj_mask,
+    "s k band g, k beta phi g -> s k band beta phi"
+  ) / jnp.sqrt(crystal_vol)
+
+  # Build q_mat = block_diag(kron(q, I_m)) with same masking as
+  # uatrsoft.py.
+  lmax_global = int(
+    np.max(np.hstack(pseudopot.nonlocal_angular_momentum))
+  )
+  m_dim = 2 * lmax_global + 1
+  q_blocks = []
+  for q, l_j in zip(
+    pseudopot.nonlocal_d_matrix, pseudopot.nonlocal_angular_momentum
+  ):
+    l_j = np.array(l_j, dtype=int)
+    mask = (l_j[:, None] == l_j[None, :])
+    q_eff = np.array(q) * np.sqrt(4 * np.pi)
+    q_eff = np.where(mask, q_eff, 0.0)
+    q_blocks.append(np.kron(q_eff, np.eye(m_dim)))
+
+  if q_blocks:
+    total = sum(b.shape[0] for b in q_blocks)
+    q_mat = np.zeros((total, total))
+    offset = 0
+    for b in q_blocks:
+      n = b.shape[0]
+      q_mat[offset:offset + n, offset:offset + n] = b
+      offset += n
+  else:
+    q_mat = np.zeros((0, 0))
+
+  # Check the overlap matrix for the first (spin, kpt) over a band subset.
+  nb_check = int(coeff_mask.shape[2])
+  c_mat = np.array(coeff_mask[0, 0, :nb_check]).T  # [G, B]
+  # [B, P]
+  f_mat = np.array(f_matrix[0, 0, :nb_check]).reshape(nb_check, -1)
+
+  if q_mat.shape[0] != f_mat.shape[1]:
+    logging.warning(
+      "USPP overlap check skipped: q_mat dim %d != f dim %d",
+      q_mat.shape[0], f_mat.shape[1]
+    )
+    return
+
+  s_cc = c_mat.conj().T @ c_mat
+  s_ff = f_mat.conj() @ (q_mat @ f_mat.T)
+  s_mat = s_cc + s_ff
+  assert jnp.allclose(s_mat, jnp.eye(nb_check), atol=1e-10), (
+    "USPP overlap check failed: C^H S C != I"
+  )
 
 
 def _get_ultrasoft_coeff_fun(

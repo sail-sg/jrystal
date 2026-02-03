@@ -23,6 +23,8 @@ from .paw_calc import calc_paw
 from .dataclass import PawPseudopotential, PawSetupBundle
 from .load_gpaw import parse_paw_setup
 from .load_qe import parse_upf
+from .beta import _beta_sbt_single_atom
+from .utils import map_over_atoms
 
 
 def _expand_paw_matrix(data: list, n_proj, l_j) -> jnp.ndarray:
@@ -176,73 +178,132 @@ def build_paw_setup(crystal, xc_name: str) -> PawSetupBundle:
   )
 
 
-def setup_qe():
-  """Load and parse QE UPF pseudopotential file.
-  
-  WARNING NOTE: this function is deprecated and jrystal currently only supports PAW
-  calculations using the pp data from GPAW
+def build_paw_precompute(paw, crystal, g_vec):
+  """Precompute PAW compensation charge terms on the PW grid.
 
-  This function reads a Quantum ESPRESSO UPF file and extracts PAW data.
-  Values are returned in QE's native storage convention without conversion.
-  QE UPF Storage Conventions (as documented in paw_pp_file_documentation.md)
-  
   Returns:
-    Tuple of arrays containing PAW data in QE native convention
+    Tuple of (ghat_LG, phase_G, nct_G, vbar_G, e_zero0, nct_g).
   """
-  
-  # load the pseudopotential
-  pp_dict = parse_upf('/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF')
-  Z = 6  # Atomic number for Carbon
-  lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug'])  # Max l for augmentation
-  l_j = jnp.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # l for each projector
-  lcut = max(l_j)  # Maximum l among projectors
-  rcut_j = jnp.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # Rcut for projectors
-  gcut_j = jnp.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # Grid indices
-  gcut = jnp.max(gcut_j)  # Use maximum grid index for uniform cutoff
-  
-  # Extract radial grid (units: Bohr)
-  r_g = jnp.array(pp_dict['PP_MESH']['PP_R'])[:gcut]  # Radial points
-  dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB'])[:gcut]  # r * dr for integration
-  
-  # Extract radial functions (in QE storage convention)
-  pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :gcut]  # β(r) * r * √(4π)
-  phi_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :gcut]  # φ(r) * r * √(4π)
-  phit_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :gcut]  # φ̃(r) * r * √(4π)
-  # Core densities (stored as n(r) without factors in QE)
-  # Integration: ∫ n_c(r) * 4π * r² dr = N_core
-  nc_g = jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:gcut]  # AE core density n_c(r)
-  nct_g = jnp.array(pp_dict['PP_NLCC'])[:gcut]  # Pseudo core density ñ_c(r)
-  vbar_g = jnp.array(pp_dict['PP_LOCAL'])[:gcut]  # Local pseudopotential V_loc(r)
+  from gpaw.spherical_harmonics import Yarr
 
-  # Augmentation charge setup
-  nj = len(l_j)  # Number of projector radial functions
-  nq = nj * (nj + 1) // 2  # Number of unique pairs (upper triangular)
-  
-  # Augmentation functions Q_ij^l(r) - stored as Q(r) * r² in QE
-  # Convert to physical Q(r) by dividing by r² and 4π
-  n_lqg = jnp.zeros((2 * lcut + 1, nq, gcut))
-  
-  # Multipole moments Δ_lq from PP_MULTIPOLES
-  # NOTE: this is the same as our calculation, we do not use it
-  Delta_lq = jnp.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_MULTIPOLES']).reshape(lmax + 1, nj, nj)
-  Delta_lq = jnp.transpose(Delta_lq, (1, 2, 0))[jnp.triu_indices(nj)].T
-  
-  # Extract augmentation functions Q_ij^l(r) from PP_QIJ
-  for qijl in pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ']:
-    # QE stores Q(r) * r², convert to Q(r) / 4π for internal use
-    n_lqg = n_lqg.at[
-      int(qijl['angular_momentum']),
-      int(qijl['first_index']) * nj + int(qijl['second_index'])
-    ].set(jnp.array(qijl['values'][:gcut]) / r_g[:gcut]**2 / 4 / jnp.pi)
+  def precompute_ghat_LG(g_vec_grid, g_lg_radial, r_radial, dr_radial, lmax_val):
+    g_vec_np = np.array(g_vec_grid)
+    g_norm = np.linalg.norm(g_vec_np, axis=-1)
+    g_hat = np.zeros_like(g_vec_np)
+    mask = g_norm > 0
+    g_hat[mask] = g_vec_np[mask] / g_norm[mask][..., None]
+    Lmax_val = (lmax_val + 1) ** 2
+    Y_LG = Yarr(list(range(Lmax_val)), g_hat)
 
-  assert r_g.shape[0] == gcut
-  assert dr_g.shape[0] == gcut
-  assert phi_jg.shape[1] == gcut
-  assert phit_jg.shape[1] == gcut
-  assert nc_g.shape[0] == gcut
-  assert nct_g.shape[0] == gcut
-  
-  return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, l_j, pt_jg, Z, lmax, lcut, gcut
+    l_list = np.arange(lmax_val + 1, dtype=int)
+    radial_int_lG = _beta_sbt_single_atom(
+      np.array(r_radial),
+      np.array(dr_radial),
+      np.array(g_lg_radial),
+      l_list,
+      g_vec_np,
+      None,
+    )[0]
+
+    ghat_LG = np.zeros((Lmax_val, *g_norm.shape), dtype=np.complex128)
+    for L in range(Lmax_val):
+      l = int(np.floor(np.sqrt(L)))
+      ghat_LG[L] = 4 * np.pi * (-1j) ** l * radial_int_lG[l] * Y_LG[L]
+    # Match FFT normalization used by density_grid_reciprocal
+    num_grids = np.prod(g_vec_grid.shape[:-1])
+    ghat_LG *= num_grids / crystal.vol
+    ghat_LG = jnp.array(ghat_LG)
+
+    return ghat_LG
+
+  num_grids = np.prod(g_vec.shape[:-1])
+  atoms_list = paw.atoms_list
+  positions = [
+    crystal.positions[paw.atom_index_map[atom]] for atom in atoms_list
+  ]
+  g_lg_list = [paw.g_lg[atom] for atom in atoms_list]
+  r_g_list = [paw.r_g[atom] for atom in atoms_list]
+  dr_g_list = [paw.dr_g[atom] for atom in atoms_list]
+  lmax_list = [paw.lmax[atom] for atom in atoms_list]
+  nct_g_list = [paw.nct_g[atom] for atom in atoms_list]
+  vbar_g_list = [paw.vbar_g[atom] for atom in atoms_list]
+
+  @map_over_atoms
+  def _precompute_atom(position, g_lg, r_g, dr_g, lmax, nct_g, vbar_g):
+    ghat_LG = precompute_ghat_LG(g_vec, g_lg, r_g, dr_g, lmax)
+    phase_G = jnp.exp(
+      -1j * jnp.einsum(
+        "xyzc,c->xyz",
+        g_vec,
+        position
+      )
+    )
+    nct_G_atom = _beta_sbt_single_atom(
+      r_g,
+      dr_g,
+      nct_g[None, :],
+      np.array([0]),
+      g_vec,
+      None,
+    )[0, 0] * 4 * np.pi * num_grids / crystal.vol
+    vbar_G_atom = _beta_sbt_single_atom(
+      r_g,
+      dr_g,
+      vbar_g[None, :] / jnp.sqrt(4 * jnp.pi),
+      np.array([0]),
+      g_vec,
+      None,
+    )[0, 0] * 4 * np.pi * num_grids / crystal.vol
+    e_zero0_atom = jnp.sum(
+      nct_g * jnp.sqrt(4 * jnp.pi) * vbar_g
+      * r_g**2 * dr_g
+    )
+    return (
+      ghat_LG,
+      phase_G,
+      phase_G * nct_G_atom,
+      phase_G * vbar_G_atom,
+      e_zero0_atom,
+    )
+
+  outputs = _precompute_atom(
+    positions, g_lg_list, r_g_list, dr_g_list, lmax_list, nct_g_list,
+    vbar_g_list
+  )
+  if outputs:
+    ghat_list, phase_list, nct_terms, vbar_terms, e_zero_terms = zip(
+      *outputs
+    )
+  else:
+    ghat_list = []
+    phase_list = []
+    nct_terms = []
+    vbar_terms = []
+    e_zero_terms = []
+
+  ghat_LG = dict(zip(atoms_list, ghat_list))
+  phase_G = dict(zip(atoms_list, phase_list))
+  nct_G = sum(nct_terms) if nct_terms else 0.0
+  vbar_G = sum(vbar_terms) if vbar_terms else 0.0
+  e_zero0 = sum(e_zero_terms) if e_zero_terms else 0.0
+
+  nct_g = jnp.fft.ifftn(nct_G, axes=range(-3, 0)).real
+
+  # NOTE: test the total charge of the core electrons
+  atom = paw.atoms_list[-1]
+  _ = _beta_sbt_single_atom(
+    paw.r_g[atom],
+    paw.dr_g[atom],
+    paw.nc_g[atom][None, :],
+    np.array([0]),
+    g_vec,
+    None,
+  )[0, 0] * 4 * np.pi * num_grids / crystal.vol
+  nc = jnp.sum(
+    paw.nc_g[atom] * 4 * jnp.pi * paw.r_g[atom]**2 * paw.dr_g[atom]
+  )
+  print(f"Core charge from real space integration: {nc:.6f}")
+  return ghat_LG, phase_G, nct_G, vbar_G, e_zero0, nct_g
 
 
 def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
@@ -363,3 +424,72 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
     'K_c': pp_data['core_energy']['kinetic'] - pp_data['ae_energy']['kinetic'],
     'e_xc': pp_data['ae_energy']["xc"]
   }
+
+
+def setup_qe():
+  """Load and parse QE UPF pseudopotential file.
+  
+  WARNING NOTE: this function is deprecated and jrystal currently only supports PAW
+  calculations using the pp data from GPAW
+
+  This function reads a Quantum ESPRESSO UPF file and extracts PAW data.
+  Values are returned in QE's native storage convention without conversion.
+  QE UPF Storage Conventions (as documented in paw_pp_file_documentation.md)
+  
+  Returns:
+    Tuple of arrays containing PAW data in QE native convention
+  """
+  
+  # load the pseudopotential
+  pp_dict = parse_upf('/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF')
+  Z = 6  # Atomic number for Carbon
+  lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug'])  # Max l for augmentation
+  l_j = jnp.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # l for each projector
+  lcut = max(l_j)  # Maximum l among projectors
+  rcut_j = jnp.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # Rcut for projectors
+  gcut_j = jnp.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # Grid indices
+  gcut = jnp.max(gcut_j)  # Use maximum grid index for uniform cutoff
+  
+  # Extract radial grid (units: Bohr)
+  r_g = jnp.array(pp_dict['PP_MESH']['PP_R'])[:gcut]  # Radial points
+  dr_g = jnp.array(pp_dict['PP_MESH']['PP_RAB'])[:gcut]  # r * dr for integration
+  
+  # Extract radial functions (in QE storage convention)
+  pt_jg = jnp.array([proj['values'] for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])[:, :gcut]  # β(r) * r * √(4π)
+  phi_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_AEWFC']])[:, :gcut]  # φ(r) * r * √(4π)
+  phit_jg = jnp.array([phi['values'] for phi in pp_dict['PP_FULL_WFC']['PP_PSWFC']])[:, :gcut]  # φ̃(r) * r * √(4π)
+  # Core densities (stored as n(r) without factors in QE)
+  # Integration: ∫ n_c(r) * 4π * r² dr = N_core
+  nc_g = jnp.array(pp_dict['PP_PAW']['PP_AE_NLCC'])[:gcut]  # AE core density n_c(r)
+  nct_g = jnp.array(pp_dict['PP_NLCC'])[:gcut]  # Pseudo core density ñ_c(r)
+  vbar_g = jnp.array(pp_dict['PP_LOCAL'])[:gcut]  # Local pseudopotential V_loc(r)
+
+  # Augmentation charge setup
+  nj = len(l_j)  # Number of projector radial functions
+  nq = nj * (nj + 1) // 2  # Number of unique pairs (upper triangular)
+  
+  # Augmentation functions Q_ij^l(r) - stored as Q(r) * r² in QE
+  # Convert to physical Q(r) by dividing by r² and 4π
+  n_lqg = jnp.zeros((2 * lcut + 1, nq, gcut))
+  
+  # Multipole moments Δ_lq from PP_MULTIPOLES
+  # NOTE: this is the same as our calculation, we do not use it
+  Delta_lq = jnp.array(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_MULTIPOLES']).reshape(lmax + 1, nj, nj)
+  Delta_lq = jnp.transpose(Delta_lq, (1, 2, 0))[jnp.triu_indices(nj)].T
+  
+  # Extract augmentation functions Q_ij^l(r) from PP_QIJ
+  for qijl in pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['PP_QIJ']:
+    # QE stores Q(r) * r², convert to Q(r) / 4π for internal use
+    n_lqg = n_lqg.at[
+      int(qijl['angular_momentum']),
+      int(qijl['first_index']) * nj + int(qijl['second_index'])
+    ].set(jnp.array(qijl['values'][:gcut]) / r_g[:gcut]**2 / 4 / jnp.pi)
+
+  assert r_g.shape[0] == gcut
+  assert dr_g.shape[0] == gcut
+  assert phi_jg.shape[1] == gcut
+  assert phit_jg.shape[1] == gcut
+  assert nc_g.shape[0] == gcut
+  assert nct_g.shape[0] == gcut
+  
+  return r_g, dr_g, phi_jg, phit_jg, nc_g, nct_g, vbar_g, l_j, pt_jg, Z, lmax, lcut, gcut

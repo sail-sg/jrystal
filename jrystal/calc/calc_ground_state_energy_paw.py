@@ -32,16 +32,15 @@ from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
 from ..pseudopotential import normcons
-from ..pseudopotential.beta import _beta_sbt_single_atom
+from ..pseudopotential.utils import map_over_atoms
 from .convergence import create_convergence_checker
-from ..pseudopotential.paw_setup import build_paw_setup
+from ..pseudopotential.paw_setup import build_paw_precompute, build_paw_setup
 from ..pseudopotential.paw_calc import compute_proj_pw_overlap
 from .opt_utils import (
   create_crystal,
   create_freq_mask,
   create_grids,
   create_optimizer,
-  get_ewald_coulomb_repulsion,
   set_env_params,
 )
 from .pre_calc import pre_calc_beta_sbt
@@ -93,8 +92,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   """
   # Initialize and Prepare variables.
   set_env_params(config)
-  from gpaw.spherical_harmonics import Yarr
-  from scipy.special import spherical_jn
   key = jax.random.PRNGKey(config.seed)
   temp = config.smearing
   gpaw_coeff_data = None
@@ -143,135 +140,14 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   logging.info(f"num_bands: {num_bands}")
   logging.info(f"XC functional: {config.xc}")
   freq_mask = create_freq_mask(config)
-  ew = get_ewald_coulomb_repulsion(config)
-
-  sbt_check = {"ghat": False, "nct": False}
-  # Precompute compensation charge Fourier components on the PW grid.
-  def _precompute_ghat_LG_manual(
-    g_vec_grid, g_lg_radial, r_radial, dr_radial, lmax_val
-  ):
-    g_vec_np = np.array(g_vec_grid)
-    g_lg_radial = np.array(g_lg_radial)
-    r_radial = np.array(r_radial)
-    dr_radial = np.array(dr_radial)
-    g_norm = np.linalg.norm(g_vec_np, axis=-1)
-    g_hat = np.zeros_like(g_vec_np)
-    mask = g_norm > 0
-    g_hat[mask] = g_vec_np[mask] / g_norm[mask][..., None]
-    Lmax_val = (lmax_val + 1) ** 2
-    Y_LG = Yarr(list(range(Lmax_val)), g_hat)
-
-    g_flat = g_norm.reshape(-1)
-    weights = r_radial**2 * dr_radial
-    radial_int_lG = []
-    for l in range(lmax_val + 1):
-      jl = spherical_jn(l, np.outer(g_flat, r_radial))
-      radial_int = jl @ (g_lg_radial[l] * weights)
-      radial_int_lG.append(radial_int.reshape(g_norm.shape))
-
-    ghat_LG = np.zeros((Lmax_val, *g_norm.shape), dtype=np.complex128)
-    for L in range(Lmax_val):
-      l = int(np.floor(np.sqrt(L)))
-      ghat_LG[L] = 4 * np.pi * (-1j) ** l * radial_int_lG[l] * Y_LG[L]
-    # Match FFT normalization used by density_grid_reciprocal
-    num_grids = np.prod(g_vec_grid.shape[:-1])
-    ghat_LG *= num_grids / crystal.vol
-    return jnp.array(ghat_LG)
-
-  def precompute_ghat_LG(g_vec_grid, g_lg_radial, r_radial, dr_radial, lmax_val):
-    g_vec_np = np.array(g_vec_grid)
-    g_norm = np.linalg.norm(g_vec_np, axis=-1)
-    g_hat = np.zeros_like(g_vec_np)
-    mask = g_norm > 0
-    g_hat[mask] = g_vec_np[mask] / g_norm[mask][..., None]
-    Lmax_val = (lmax_val + 1) ** 2
-    Y_LG = Yarr(list(range(Lmax_val)), g_hat)
-
-    l_list = np.arange(lmax_val + 1, dtype=int)
-    radial_int_lG = _beta_sbt_single_atom(
-      np.array(r_radial),
-      np.array(dr_radial),
-      np.array(g_lg_radial),
-      l_list,
-      g_vec_np,
-      None,
-    )[0]
-
-    ghat_LG = np.zeros((Lmax_val, *g_norm.shape), dtype=np.complex128)
-    for L in range(Lmax_val):
-      l = int(np.floor(np.sqrt(L)))
-      ghat_LG[L] = 4 * np.pi * (-1j) ** l * radial_int_lG[l] * Y_LG[L]
-    # Match FFT normalization used by density_grid_reciprocal
-    num_grids = np.prod(g_vec_grid.shape[:-1])
-    ghat_LG *= num_grids / crystal.vol
-    ghat_LG = jnp.array(ghat_LG)
-
-    if not sbt_check["ghat"]:
-      ref = _precompute_ghat_LG_manual(
-        g_vec_grid, g_lg_radial, r_radial, dr_radial, lmax_val
-      )
-      diff = jnp.max(jnp.abs(ref - ghat_LG))
-      logging.info(f"PAW ghat_LG SBT check: max|Δ|={diff:.3e}")
-      sbt_check["ghat"] = True
-
-    return ghat_LG
-
-  ghat_LG = {}
-  phase_G = {}
-  nct_G_ = {}
-  vbar_G_ = {}
-  nct_G = 0.0
-  vbar_G = 0.0
-  e_zero0 = 0.0
-  for atom in paw.atoms_list:
-    ghat_LG[atom] = precompute_ghat_LG(
-      g_vec, paw.g_lg[atom], paw.r_g[atom], paw.dr_g[atom], paw.lmax[atom]
-    )
-    phase_G[atom] = jnp.exp(
-      -1j * jnp.einsum(
-        "xyzc,c->xyz",
-        g_vec,
-        crystal.positions[paw.atom_index_map[atom]]
-      )
-    )
-    nct_G_[atom] = _beta_sbt_single_atom(
-      paw.r_g[atom],
-      paw.dr_g[atom],
-      paw.nct_g[atom][None, :],
-      np.array([0]),
-      g_vec,
-      None,
-    )[0, 0] * 4 * np.pi * np.prod(g_vec.shape[:-1]) / crystal.vol
-    vbar_G_[atom] = _beta_sbt_single_atom(
-      paw.r_g[atom],
-      paw.dr_g[atom],
-      paw.vbar_g[atom][None, :] / jnp.sqrt(4 * jnp.pi),
-      np.array([0]),
-      g_vec,
-      None,
-    )[0, 0] * 4 * np.pi * np.prod(g_vec.shape[:-1]) / crystal.vol
-    nct_G += phase_G[atom] * nct_G_[atom]
-    vbar_G += phase_G[atom] * vbar_G_[atom]
-    e_zero0 += jnp.sum(
-      paw.nct_g[atom] * jnp.sqrt(4 * jnp.pi) * paw.vbar_g[atom]
-      * paw.r_g[atom]**2 * paw.dr_g[atom]
-    )
-  nct_g_ = jnp.fft.ifftn(nct_G, axes=range(-3, 0)).real
-
-  # NOTE: test the total charge of the core electrons
-  nc_G_ = nct_G_[atom] = _beta_sbt_single_atom(
-    paw.r_g[atom],
-    paw.dr_g[atom],
-    paw.nc_g[atom][None, :],
-    np.array([0]),
-    g_vec,
-    None,
-  )[0, 0] * 4 * np.pi * np.prod(g_vec.shape[:-1]) / crystal.vol
-  nc = jnp.sum(
-    paw.nc_g[atom] * 4 * jnp.pi * paw.r_g[atom]**2 * paw.dr_g[atom]
-  )
-  print(f"Core charge from real space integration: {nc:.6f}")
-  # assert jnp.abs(nc - nc_G_[0,0,0]).max() < 1e-6, "Core charge does not match!"
+  (
+    ghat_LG,
+    phase_G,
+    nct_G,
+    vbar_G,
+    e_zero0,
+    nct_g_,
+  ) = build_paw_precompute(paw, crystal, g_vec)
 
   convergence_checker = create_convergence_checker(config)
   converged = False
@@ -325,7 +201,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     f"Times: {end - start:.2f} seconds"
   )
 
-  from ..pseudopotential.ultrasoft import get_ultrasoft_coeff_fun
+  from ..pseudopotential.ultrasoft import (
+    check_uspp_overlap,
+    get_ultrasoft_coeff_fun,
+  )
   get_ultrasoft_coeff = get_ultrasoft_coeff_fun(
     crystal.positions,
     k_vec,
@@ -374,19 +253,24 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     """
     _f_matrix /= jnp.sqrt(crystal.vol)
 
-    D_p = {}
-    for atom in paw.atoms_list:
-      idx = paw.index_map[atom]
-      D_p[atom] = einsum(
-        _f_matrix[..., idx[0], idx[1]].conj(),
+    atoms_list = paw.atoms_list
+    idx_list = [paw.index_map[atom] for atom in atoms_list]
+
+    @map_over_atoms
+    def _calc_d_p(idx):
+      l_idx, m_idx = idx
+      return einsum(
+        _f_matrix[..., l_idx, m_idx].conj(),
         occ,
-        _f_matrix[..., idx[0], idx[1]],
+        _f_matrix[..., l_idx, m_idx],
         "s k band proj1, s k band, s k band proj2 -> s k proj1 proj2"
       )
 
+    D_p_list = _calc_d_p(idx_list)
+
     if return_f_matrix:
-      return D_p, _f_matrix
-    return D_p
+      return D_p_list, _f_matrix
+    return D_p_list
   
   def calc_paw_xc_correction(atom: str, D_p_packed):
       def _calculate_xc_energy(D_sLq, n_qg, nc0_sg):
@@ -426,10 +310,21 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       e_ps = _calculate_xc_energy(D_sLq, nt_qg_, nct_g_)
       return e_ae - e_ps - e_xc0_
 
+  atoms_list = paw.atoms_list
+  delta_pL_list = [paw.Delta_pL[atom] for atom in atoms_list]
+  delta0_list = [paw.Delta0[atom] for atom in atoms_list]
+  phase_list = [phase_G[atom] for atom in atoms_list]
+  ghat_list = [ghat_LG[atom] for atom in atoms_list]
+  k_p_list = [paw.K_p[atom] for atom in atoms_list]
+  k_c_list = [paw.K_c[atom] for atom in atoms_list]
+  mb_p_list = [paw.MB_p[atom] for atom in atoms_list]
+  mb_list = [paw.MB[atom] for atom in atoms_list]
+  m_list = [paw.M[atom] for atom in atoms_list]
+  m_p_list = [paw.M_p[atom] for atom in atoms_list]
+  m_pp_list = [paw.M_pp[atom] for atom in atoms_list]
+
   def total_energy(params_pw, params_occ, g_vec, pseudopot=pseudopot, return_components: bool = False):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
-    # this is the original overlap without PAW correction
-    # overlap1 = einsum(coeff, coeff.conj(), "s k band1 x y z, s k band2 x y z -> s k band1 band2")
     coeff = get_ultrasoft_coeff(coeff)
     occ = get_occupation(params_occ)
     if gpaw_coeff_data is not None:
@@ -445,17 +340,19 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       density, g_vec, crystal.vol, config.xc, kohn_sham=False
     )
     exc_pseudo = exc
-    D_p = calc_atomic_density_matrix(coeff, occ)
+    d_p_list = calc_atomic_density_matrix(coeff, occ)
 
-    # Add compensation charge to smooth density for Coulomb energy
-    rho_comp_G = 0.0
-    for atom in paw.atoms_list:
-      D_p_packed = pack(D_p[atom])
-      Q_L = jnp.dot(D_p_packed, paw.Delta_pL[atom])
-      Q_L = Q_L.at[0].add(paw.Delta0[atom])
-      rho_comp_G += phase_G[atom] * jnp.tensordot(
-        Q_L, ghat_LG[atom], axes=[0, 0]
-      )
+    @map_over_atoms
+    def _rho_comp_term(D_p_atom, Delta_pL, Delta0, phase, ghat):
+      D_p_packed = pack(D_p_atom)
+      Q_L = jnp.dot(D_p_packed, Delta_pL)
+      Q_L = Q_L.at[0].add(Delta0)
+      return phase * jnp.tensordot(Q_L, ghat, axes=[0, 0])
+
+    rho_terms = _rho_comp_term(
+      d_p_list, delta_pL_list, delta0_list, phase_list, ghat_list
+    )
+    rho_comp_G = sum(rho_terms) if rho_terms else 0.0
     density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
     e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol) + e_zero0
     e_zero_pseudo = e_zero
@@ -463,15 +360,30 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
     hartree_pseudo = hartree
 
-    for atom in paw.atoms_list:
-      D_p_packed = pack(D_p[atom])
-      kinetic += jnp.sum(paw.K_p[atom] * D_p[atom][0,0]).real + paw.K_c[atom]
+    @map_over_atoms
+    def _atomic_terms(
+      atom, D_p_atom, K_p, K_c, MB_p, MB, M, M_p, M_pp
+    ):
+      D_p_packed = pack(D_p_atom)
+      kin_add = jnp.sum(K_p * D_p_atom[0, 0]).real + K_c
       # nct contribution to e_zero is canceled out with MB
-      e_zero += jnp.sum(paw.MB_p[atom] * D_p_packed) + paw.MB[atom]
-      hartree += paw.M[atom] + jnp.dot(
-        D_p_packed, (paw.M_p[atom] + jnp.dot(paw.M_pp[atom], D_p_packed))
+      e_zero_add = jnp.sum(MB_p * D_p_packed) + MB
+      hartree_add = M + jnp.dot(
+        D_p_packed, (M_p + jnp.dot(M_pp, D_p_packed))
       )
-      exc += calc_paw_xc_correction(atom, D_p_packed)
+      exc_add = calc_paw_xc_correction(atom, D_p_packed)
+      return kin_add, e_zero_add, hartree_add, exc_add
+
+    atom_terms = _atomic_terms(
+      atoms_list, d_p_list, k_p_list, k_c_list, mb_p_list, mb_list,
+      m_list, m_p_list, m_pp_list
+    )
+    if atom_terms:
+      kin_terms, e_zero_terms, hartree_terms, exc_terms = zip(*atom_terms)
+      kinetic += sum(kin_terms)
+      e_zero += sum(e_zero_terms)
+      hartree += sum(hartree_terms)
+      exc += sum(exc_terms)
 
     total = kinetic + hartree + e_zero + exc
     if return_components:
@@ -512,71 +424,15 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     spin_restricted=config.spin_restricted,
     sharding=sharding
   )
-  # def _check_uspp_overlap(params_pw):
-  #   """Check C^H S C = I for USPP transform using current coeffs."""
-  #   coeff_raw = pw.coeff(params_pw, freq_mask, sharding=sharding)
-  #   coeff_us = get_ultrasoft_coeff(coeff_raw)
-
-  #   coeff_mask = coeff_us.at[..., freq_mask].get()
-  #   coeff_mask = coeff_mask.reshape(coeff_mask.shape[:3] + (-1,))
-
-  #   proj_mask = proj_pw_overlap.at[..., freq_mask].get()
-  #   proj_mask = proj_mask.reshape(
-  #     proj_pw_overlap.shape[0], proj_pw_overlap.shape[1],
-  #     proj_pw_overlap.shape[2], -1
-  #   )
-  #   f_matrix = einsum(
-  #     coeff_mask, proj_mask,
-  #     "s k band g, k beta phi g -> s k band beta phi"
-  #   ) / jnp.sqrt(crystal.vol)
-
-  #   # Build q_mat = block_diag(kron(q, I_m)) with same masking as uatrsoft.py.
-  #   lmax_global = int(np.max(np.hstack(pseudopot.nonlocal_angular_momentum)))
-  #   m_dim = 2 * lmax_global + 1
-  #   q_blocks = []
-  #   for q, l_j in zip(
-  #     pseudopot.nonlocal_d_matrix, pseudopot.nonlocal_angular_momentum
-  #   ):
-  #     l_j = np.array(l_j, dtype=int)
-  #     mask = (l_j[:, None] == l_j[None, :])
-  #     q_eff = np.array(q) * np.sqrt(4 * np.pi)
-  #     q_eff = np.where(mask, q_eff, 0.0)
-  #     q_blocks.append(np.kron(q_eff, np.eye(m_dim)))
-
-  #   if q_blocks:
-  #     total = sum(b.shape[0] for b in q_blocks)
-  #     q_mat = np.zeros((total, total))
-  #     offset = 0
-  #     for b in q_blocks:
-  #       n = b.shape[0]
-  #       q_mat[offset:offset + n, offset:offset + n] = b
-  #       offset += n
-  #   else:
-  #     q_mat = np.zeros((0, 0))
-
-  #   # Check the overlap matrix for the first (spin, kpt) over a band subset.
-  #   nb_check = int(coeff_mask.shape[2])
-  #   c_mat = np.array(coeff_mask[0, 0, :nb_check]).T  # [G, B]
-  #   f_mat = np.array(f_matrix[0, 0, :nb_check]).reshape(nb_check, -1)  # [B, P]
-
-  #   if q_mat.shape[0] != f_mat.shape[1]:
-  #     logging.warning(
-  #       "USPP overlap check skipped: q_mat dim %d != f dim %d",
-  #       q_mat.shape[0], f_mat.shape[1]
-  #     )
-  #     return
-
-  #   s_cc = c_mat.conj().T @ c_mat
-  #   s_ff = f_mat.conj() @ (q_mat @ f_mat.T)
-  #   s_mat = s_cc + s_ff
-  #   diag_err = np.max(np.abs(np.diag(s_mat) - 1.0))
-  #   offdiag = s_mat - np.diag(np.diag(s_mat))
-  #   offdiag_err = np.max(np.abs(offdiag))
-  #   logging.info(
-  #     "USPP overlap check (B=%d): max|diag-1|=%.3e, max|offdiag|=%.3e",
-  #     nb_check, diag_err, offdiag_err
-  #   )
-  # _check_uspp_overlap(params_pw)
+  check_uspp_overlap(
+    params_pw,
+    freq_mask=freq_mask,
+    sharding=sharding,
+    get_ultrasoft_coeff=get_ultrasoft_coeff,
+    proj_pw_overlap=proj_pw_overlap,
+    crystal_vol=crystal.vol,
+    pseudopot=pseudopot
+  )
   params_occ = occupation.param_init(
     key, num_bands, paw.valence_charges, num_kpts, crystal.spin, config.occupation
   )
@@ -595,7 +451,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       occ_cmp = occ_cmp[None, ...]
     ngrid = np.prod(coeff_cmp.shape[-3:])
     coeff_cmp = coeff_cmp * (jnp.sqrt(crystal.vol) / ngrid)
-    D_p_cmp, f_matrix_cmp = calc_atomic_density_matrix(
+    d_p_cmp_list, f_matrix_cmp = calc_atomic_density_matrix(
       coeff_cmp, occ_cmp, return_f_matrix=True
     )
     print(f"GPAW coeff keys: {gpaw_coeff_data.files}")
@@ -620,10 +476,14 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
           gpaw_P = np.asarray(gpaw_coeff_data[key])
           diff = float(np.max(np.abs(P_alt[:, I1:I2] - gpaw_P)))
           print(f"P_ni (from f_GI) compare atom {a} s{s} k{k}: max|Δ| = {diff:.6e}")
-    for atom in paw.atoms_list:
-      idx = paw.atom_index_map[atom]
-      beta_idx, phi_idx = paw.index_map[atom]
-      P_cmp = f_matrix_cmp[..., beta_idx, phi_idx]
+    atoms_list = paw.atoms_list
+    idx_list = [paw.atom_index_map[atom] for atom in atoms_list]
+    l_m_list = [paw.index_map[atom] for atom in atoms_list]
+
+    @map_over_atoms
+    def _compare_p_ni(atom, idx, l_m):
+      l_idx, m_idx = l_m
+      P_cmp = f_matrix_cmp[..., l_idx, m_idx]
       for s in range(P_cmp.shape[0]):
         for k in range(P_cmp.shape[1]):
           key = f"P_ani_{idx}_s{s}_k{k}"
@@ -631,15 +491,21 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
             continue
           gpaw_P = np.asarray(gpaw_coeff_data[key])
           diff = float(jnp.max(jnp.abs(P_cmp[s, k].conj() - gpaw_P)))
-          print(f"P_ni compare atom {atom} s{s} k{k}: max|Δ| = {diff:.6e}")
-    for atom in paw.atoms_list:
-      idx = paw.atom_index_map[atom]
+          print(
+            f"P_ni compare atom {atom} s{s} k{k}: max|Δ| = {diff:.6e}"
+          )
+
+    @map_over_atoms
+    def _compare_d_asp(atom, idx, D_p_atom):
       key = f"D_asp_{idx}"
       if key not in gpaw_coeff_data.files:
-        continue
+        return
       gpaw_packed = np.asarray(gpaw_coeff_data[key])[0]
-      diff = float(jnp.max(jnp.abs(gpaw_packed - pack(D_p_cmp[atom]))))
+      diff = float(jnp.max(jnp.abs(gpaw_packed - pack(D_p_atom))))
       print(f"D_asp compare atom {atom}: max|Δ| = {diff:.6e}")
+
+    _compare_p_ni(atoms_list, idx_list, l_m_list)
+    _compare_d_asp(atoms_list, idx_list, d_p_cmp_list)
     total, kinetic, hartree, exc, e_zero, comps = total_energy(
       params_pw, params_occ, g_vec, return_components=True
     )
@@ -735,9 +601,18 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   # kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
   # hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
   e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol)
-  D_p = calc_atomic_density_matrix(coeff, occ)
-  for atom in paw.atoms_list:
-    e_zero += paw.MB[atom] + jnp.sum(paw.MB_p[atom] * pack(D_p[atom]))
+  d_p_list = calc_atomic_density_matrix(coeff, occ)
+  atoms_list = paw.atoms_list
+  mb_list = [paw.MB[atom] for atom in atoms_list]
+  mb_p_list = [paw.MB_p[atom] for atom in atoms_list]
+
+  @map_over_atoms
+  def _e_zero_term(D_p_atom, MB, MB_p):
+    return MB + jnp.sum(MB_p * pack(D_p_atom))
+
+  e_zero_terms = _e_zero_term(d_p_list, mb_list, mb_p_list)
+  if e_zero_terms:
+    e_zero += sum(e_zero_terms)
 
   exc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)
 
@@ -746,7 +621,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   # # logging.info(f"External (nonlocal) Energy: {external_nonlocal:.4f} Ha")
   # logging.info(f"XC Energy: {exc:.4f} Ha")
   # logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
-  # logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
-  # logging.info(f"Total Energy: {etot+ew:.4f} Ha")
+  # logging.info(f"Total Energy: {etot:.4f} Ha")
 
   return density
