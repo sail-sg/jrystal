@@ -92,30 +92,6 @@ def calc_paw(setup_data: dict):
   n_rgd = r_g.shape[0]  # number of grid points
   nj = phi_jg.shape[0]  # number of projectors radial functions
   
-  # Generate n_j following GPAW convention:
-  # - Use principal quantum number for occupied states (2 for Carbon's 2s, 2p)
-  # - Use -1 for unoccupied/virtual states
-  # For Carbon: typically [2, 2, -1, -1] for [2s, 2p, virtual_s, virtual_p]
-  n_j = []
-  # First two are occupied (2s^2 2p^2 for Carbon)
-  occupied_count = {'s': 1, 'p': 1}  # Carbon has occupied 2s and 2p
-  for i, l in enumerate(l_j):
-    if l == 0:  # s orbital
-      if occupied_count.get('s', 0) > 0:
-        n_j.append(2)  # 2s
-        occupied_count['s'] -= 1
-      else:
-        n_j.append(-1)  # virtual s
-    elif l == 1:  # p orbital
-      if occupied_count.get('p', 0) > 0:
-        n_j.append(2)  # 2p
-        occupied_count['p'] -= 1
-      else:
-        n_j.append(-1)  # virtual p
-    else:  # d or higher
-      n_j.append(-1)  # virtual
-  n_j = jnp.array(n_j)
-  
   ni = nj + l_j.sum() * 2  # number of projectors
   nq = nj * (nj + 1) // 2  # number of radial function pairs
   _np = ni * (ni + 1) // 2  # number of projector pairs
@@ -132,8 +108,7 @@ def calc_paw(setup_data: dict):
     i = 0
     j = 0
     jlL_i = []
-    assert len(l_j) == len(n_j)
-    for l, n in zip(l_j, n_j):
+    for l in l_j:
       for m in range(2 * l + 1):
         jlL_i.append((j, l, l**2 + m))
         i += 1
