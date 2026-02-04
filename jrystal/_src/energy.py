@@ -445,7 +445,7 @@ def total_energy_paw(
     atom, D_p_atom, K_p, K_c, MB_p, MB, M, M_p, M_pp
   ):
     D_p_packed = pack(D_p_atom)
-    kin_add = jnp.sum(K_p * D_p_atom[0, 0]).real + K_c
+    kin_add = jnp.sum(K_p * D_p_atom).real + K_c
     # nct contribution to e_zero is canceled out with MB
     e_zero_add = jnp.sum(MB_p * D_p_packed) + MB
     hartree_add = M + jnp.dot(

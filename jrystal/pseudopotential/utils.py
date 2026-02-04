@@ -52,12 +52,15 @@ def pack(D_p: jnp.ndarray) -> jnp.ndarray:
 
   The diagonal elements are halved to calculate the inner product.
   """
+  D_p = jnp.asarray(D_p)
+  if D_p.ndim != 2:
+    raise ValueError(f"pack expects a 2D matrix, got shape {D_p.shape}")
   n = D_p.shape[-1]
   tmp = D_p.copy()
-  tmp = tmp.at[..., jnp.arange(n), jnp.arange(n)].set(
-    tmp[..., jnp.arange(n), jnp.arange(n)] / 2
+  tmp = tmp.at[jnp.arange(n), jnp.arange(n)].set(
+    tmp[jnp.arange(n), jnp.arange(n)] / 2
   )
-  return tmp[0, 0][jnp.triu_indices(n)].real * 2
+  return tmp[jnp.triu_indices(n)].real * 2
 
 
 def stack_with_padding(array_list: List[List]):

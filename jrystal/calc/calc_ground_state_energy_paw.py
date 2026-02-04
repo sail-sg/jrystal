@@ -246,11 +246,12 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     @map_over_atoms
     def _calc_d_p(idx):
       l_idx, m_idx = idx
+      # NOTE: may have problem if XC functional distinguishes spin
       return einsum(
         _f_matrix[..., l_idx, m_idx].conj(),
         occ,
         _f_matrix[..., l_idx, m_idx],
-        "s k band proj1, s k band, s k band proj2 -> s k proj1 proj2"
+        "s k band proj1, s k band, s k band proj2 -> proj1 proj2"
       )
 
     D_p_list = _calc_d_p(idx_list)
@@ -317,7 +318,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       atom, D_p_atom, K_p, K_c, MB_p, MB, M, M_p, M_pp
     ):
       D_p_packed = pack(D_p_atom)
-      kin_add = jnp.sum(K_p * D_p_atom[0, 0]).real + K_c
+      kin_add = jnp.sum(K_p * D_p_atom).real + K_c
       # nct contribution to e_zero is canceled out with MB
       e_zero_add = jnp.sum(MB_p * D_p_packed) + MB
       hartree_add = M + jnp.dot(
