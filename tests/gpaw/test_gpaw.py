@@ -21,7 +21,7 @@ def _parse_config(path: Path) -> dict:
             return yaml.safe_load(handle) or {}
     except Exception:
         data = {}
-        keys = {"crystal", "crystal_file_path_path",
+        keys = {"crystal", "crystal_file_path",
                 "cutoff_energy", "k_grid_sizes"}
         with path.open("r", encoding="utf-8") as handle:
             for line in handle:
@@ -281,7 +281,7 @@ def main() -> None:
     cfg = _parse_config(config_path)
 
     crystal = cfg.get("crystal")
-    crystal_file = cfg.get("crystal_file_path_path")
+    crystal_file = cfg.get("crystal_file_path")
     cutoff_ha = float(cfg.get("cutoff_energy", 40.0))
     k_grid = cfg.get("k_grid_sizes", [1, 1, 1])
     if isinstance(k_grid, (int, float)):
@@ -293,7 +293,7 @@ def main() -> None:
     elif crystal_file:
         geom_path = Path(crystal_file)
     else:
-        raise ValueError("No crystal or crystal_file_path_path in config.")
+        raise ValueError("No crystal or crystal_file_path in config.")
 
     export_path = cfg.get("gpaw_coeff_path")
     if export_path:

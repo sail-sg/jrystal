@@ -108,7 +108,7 @@ def create_crystal(config: JrystalConfigDict) -> Crystal:
   if config.crystal is not None:
     path = _pkg_path + '/geometry/' + config.crystal + '.xyz'
   else:
-    path = config.crystal_file_path_path
+    path = config.crystal_file_path
   crystal = Crystal.create_from_file(file_path=path, spin=config.spin)
   check_spin_number(crystal.num_electron, crystal.spin)
   return crystal

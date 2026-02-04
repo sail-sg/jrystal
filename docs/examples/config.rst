@@ -38,7 +38,7 @@ The configuration file must be in YAML format and contain the following sections
 **Crystal Structure**
 
 - ``crystal``: Identifier for the crystal structure. The program searches for ``$CRYSTAL.xyz`` in the geometry directory
-- ``crystal_file_path_path``: Explicit path to the crystal structure file (takes precedence over ``crystal`` if both are specified)
+- ``crystal_file_path``: Explicit path to the crystal structure file (takes precedence over ``crystal`` if both are specified)
 
 **Exchange-Correlation Functional**
 

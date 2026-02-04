@@ -2,7 +2,7 @@
 #             Crystal Setting                  #
 ################################################
 crystal: diamond
-crystal_file_path_path: null
+crystal_file_path: null
 spin: 0
 gpaw_coeff_path: null
 save_dir: null
