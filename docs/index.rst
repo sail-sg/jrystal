@@ -86,7 +86,7 @@ Call Graph
     <script src="_static/graph.js?v={{ now() }}"></script>
 
 
-This project is a `JAX <https://github.com/google/jax/>`_-based package for differantiable density functional theory computation of solids.
+This project is a `JAX <https://github.com/google/jax/>`_-based package for differentiable density functional theory computation of solids.
 
 
 Installation

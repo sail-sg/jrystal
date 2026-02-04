@@ -389,8 +389,6 @@ def build_paw_xc_correction(paw, g_vec, xc_type: str):
     Lmax = (2 * lmax + 1)**2
     Y_nL_local = Y_nL[:, :Lmax]  # Only use L up to Lmax
     n = jnp.dot(Y_nL_local, n_sLg)
-    # TODO: here we encounter negative density, we use a quick fix, should reconsider
-    n = jnp.where(n > 0, n, 0)
 
     def _exc_density(n_sg):
       if n_sg.ndim == 1:

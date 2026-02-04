@@ -157,7 +157,6 @@ def beta_sbt_grid(
     functions evaluated in reciprocal space grid.
 
   """
-  # TODO: parallelize the calculation.
   output = []
   for r, dr, b, l in zip(
     r_grid, dr_grid, nonlocal_beta_grid, nonlocal_angular_momentum
