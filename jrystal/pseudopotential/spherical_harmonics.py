@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from math import pi
 import numpy as np
+import jax.numpy as jnp
 
 def Yarr(L_M, R_Av):
   """Calculate real spherical harmonics L_M at positions R_Av."""
@@ -10,6 +11,19 @@ def Yarr(L_M, R_Av):
   for M, L in enumerate(L_M):
     for c, n in YL[L]:
       Y_MA[M] += c * np.prod(np.power(R_Av, n), axis=-1)
+  return Y_MA
+
+
+def yarr_jax(L_M, R_Av):
+  """JAX version of GPAW-style real spherical harmonics.
+
+  Note: YL encodes solid harmonics; passing unit vectors yields angular-only
+  values.
+  """
+  Y_MA = jnp.zeros((len(L_M), *R_Av.shape[:-1]))
+  for M, L in enumerate(L_M):
+    for c, n in YL[L]:
+      Y_MA = Y_MA.at[M].add(c * jnp.prod(jnp.power(R_Av, jnp.array(n)), axis=-1))
   return Y_MA
 
 g = [1.0]

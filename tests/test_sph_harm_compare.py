@@ -11,6 +11,7 @@ import types
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 R_AV = np.array(
 [[ 0.1257302210933933, -0.1321048632913019,  0.6404226504432821],
@@ -287,7 +288,59 @@ def test_sph_harm_compare() -> None:
     ratio_mean = float(np.mean(ratio))
     max_rel = float(np.max(np.abs(ratio - ratio_mean)) /
                     (abs(ratio_mean) + 1e-12))
-    if max_rel > 1e-6:
+    if max_rel > 1e-12:
       raise AssertionError(
         f"L={L} l={l} m={m} max_rel={max_rel:.3e} exceeds tolerance"
+      )
+
+
+def test_yarr_jax_vs_scipy() -> None:
+  from scipy.special import sph_harm_y
+  from jrystal.pseudopotential.spherical_harmonics import yarr_jax
+
+  r_av = R_AV
+  r = np.linalg.norm(r_av, axis=1, keepdims=True)
+  r = np.where(r < 1e-12, 1e-12, r)
+  r_unit = r_av / r
+
+  l_list = np.array([0, 1, 1, 1, 2, 2, 2, 2, 2], dtype=int)
+  m_list = np.array([0, -1, 0, 1, -2, -1, 0, 1, 2], dtype=int)
+  L_list = np.arange(len(l_list), dtype=int)
+
+  theta = np.arccos(np.clip(r_unit[:, 2], -1.0, 1.0))
+  phi = np.arctan2(r_unit[:, 1], r_unit[:, 0])
+
+  yarr = np.asarray(yarr_jax(list(L_list), r_unit))
+
+  rng = np.random.default_rng(0)
+  idx = rng.permutation(r_unit.shape[0])
+  split = r_unit.shape[0] // 2
+  fit_idx = idx[:split]
+  test_idx = idx[split:]
+
+  for l in (0, 1, 2):
+    L_sel = [L for L, ll in enumerate(l_list) if ll == l]
+    A_fit = yarr[L_sel][:, fit_idx].T
+    A_test = yarr[L_sel][:, test_idx].T
+
+    m_vals = np.arange(-l, l + 1)
+    B_fit = np.stack(
+      [sph_harm_y(l, int(m), theta[fit_idx], phi[fit_idx]) for m in m_vals],
+      axis=1,
+    )
+    B_test = np.stack(
+      [sph_harm_y(l, int(m), theta[test_idx], phi[test_idx]) for m in m_vals],
+      axis=1,
+    )
+
+    T, _, _, _ = np.linalg.lstsq(A_fit, B_fit, rcond=None)
+    B_pred = A_test @ T
+    max_rel = float(
+      np.max(np.abs(B_pred - B_test)) /
+      (np.max(np.abs(B_test)) + 1e-12)
+    )
+    print(f"l={l} max_rel={max_rel:.3e}")
+    if max_rel > 1e-12:
+      raise AssertionError(
+        f"SciPy basis mismatch for l={l}: max_rel={max_rel:.3e}"
       )

@@ -15,6 +15,7 @@
 from typing import List, Optional
 
 import numpy as np
+import jax.numpy as jnp
 from jaxtyping import Array, Float, Int
 
 # from interpax import CubicSpline
@@ -81,6 +82,45 @@ def _beta_sbt_single_atom(
   beta_sbt = CubicSpline(k, beta_k, axis=1)(radius)
   beta_sbt = np.swapaxes(beta_sbt, 0, 1)
   return beta_sbt
+
+
+def _spherical_jn_all(lmax, x):
+  """Compute spherical Bessel j_l for l=0..lmax on JAX."""
+  x_safe = jnp.where(x == 0, 1.0, x)
+  j0 = jnp.sin(x_safe) / x_safe
+  j0 = jnp.where(x == 0, 1.0, j0)
+  if lmax == 0:
+    return jnp.expand_dims(j0, axis=0)
+  j1 = jnp.sin(x_safe) / x_safe**2 - jnp.cos(x_safe) / x_safe
+  j1 = jnp.where(x == 0, 0.0, j1)
+  j_list = [j0, j1]
+  for l in range(1, lmax):
+    j_next = (2 * l + 1) / x_safe * j_list[-1] - j_list[-2]
+    j_next = jnp.where(x == 0, 0.0, j_next)
+    j_list.append(j_next)
+  return jnp.stack(j_list[:lmax + 1], axis=0)
+
+
+def _beta_sbt_single_atom_direct(
+  r_grid,
+  dr_grid,
+  f_lr,
+  l_list,
+  g_vec_grid
+):
+  """Direct spherical Bessel transform on the target G grid.
+
+  TODO: consider chunking g_flat to reduce peak memory.
+  """
+  g_norm = jnp.linalg.norm(g_vec_grid, axis=-1)
+  g_flat = g_norm.reshape(-1)
+  x = g_flat[:, None] * r_grid[None, :]
+  lmax = int(jnp.max(l_list))
+  j_l = _spherical_jn_all(lmax, x)  # [l, G, R]
+  weights = r_grid**2 * dr_grid
+  f_lr = jnp.array(f_lr)
+  radial_int_all = jnp.einsum('lgr,lr,r->lg', j_l, f_lr, weights)
+  return jnp.take(radial_int_all, l_list, axis=0)
 
 
 def beta_sbt_grid(
