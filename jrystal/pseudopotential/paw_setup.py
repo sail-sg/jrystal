@@ -176,6 +176,133 @@ def build_paw_setup(crystal, xc_name: str) -> PawSetupBundle:
   )
 
 
+def _build_paw_precompute(paw, crystal, g_vec):
+  """CPU-boundary precompute for PAW terms (NumPy + one-time JAX transfer)."""
+  from .spherical_harmonics import Yarr
+
+  g_vec_np = np.asarray(g_vec)
+  num_grids = int(np.prod(g_vec_np.shape[:-1]))
+
+  atoms_list = paw.atoms_list
+  positions = [
+    np.asarray(crystal.positions[paw.atom_index_map[atom]])
+    for atom in atoms_list
+  ]
+  g_lg_list = [np.asarray(paw.g_lg[atom]) for atom in atoms_list]
+  r_g_list = [np.asarray(paw.r_g[atom]) for atom in atoms_list]
+  dr_g_list = [np.asarray(paw.dr_g[atom]) for atom in atoms_list]
+  lmax_list = [paw.lmax[atom] for atom in atoms_list]
+  nct_g_list = [np.asarray(paw.nct_g[atom]) for atom in atoms_list]
+  vbar_g_list = [np.asarray(paw.vbar_g[atom]) for atom in atoms_list]
+
+  def precompute_ghat_LG(g_vec_grid, g_lg_radial, r_radial, dr_radial, lmax_val):
+    g_norm = np.linalg.norm(g_vec_grid, axis=-1)
+    g_hat = np.zeros_like(g_vec_np)
+    mask = g_norm > 0
+    g_hat[mask] = g_vec_grid[mask] / g_norm[mask][..., None]
+    Lmax_val = (lmax_val + 1) ** 2
+    Y_LG = Yarr(list(range(Lmax_val)), g_hat)
+
+    l_list = np.arange(lmax_val + 1, dtype=int)
+    radial_int_lG = _beta_sbt_single_atom(
+      r_radial,
+      dr_radial,
+      g_lg_radial,
+      l_list,
+      g_vec_grid,
+      None,
+    )[0]
+
+    ghat_LG = np.zeros((Lmax_val, *g_norm.shape), dtype=np.complex128)
+    for L in range(Lmax_val):
+      l = int(np.floor(np.sqrt(L)))
+      ghat_LG[L] = 4 * np.pi * (-1j) ** l * radial_int_lG[l] * Y_LG[L]
+    # Match FFT normalization used by density_grid_reciprocal
+    ghat_LG *= num_grids / crystal.vol
+    return ghat_LG
+
+  @map_over_atoms
+  def _precompute_atom(position, g_lg, r_g, dr_g, lmax, nct_g, vbar_g):
+    ghat_LG = precompute_ghat_LG(g_vec_np, g_lg, r_g, dr_g, lmax)
+    phase_G = np.exp(
+      -1j * np.einsum("xyzc,c->xyz", g_vec_np, position)
+    )
+    nct_G_atom = _beta_sbt_single_atom(
+      r_g,
+      dr_g,
+      nct_g[None, :],
+      np.array([0]),
+      g_vec_np,
+      None,
+    )[0, 0] * 4 * np.pi * num_grids / crystal.vol
+    vbar_G_atom = _beta_sbt_single_atom(
+      r_g,
+      dr_g,
+      vbar_g[None, :] / np.sqrt(4 * np.pi),
+      np.array([0]),
+      g_vec_np,
+      None,
+    )[0, 0] * 4 * np.pi * num_grids / crystal.vol
+    e_zero0_atom = np.sum(
+      nct_g * np.sqrt(4 * np.pi) * vbar_g * r_g**2 * dr_g
+    )
+    return (
+      ghat_LG,
+      phase_G,
+      phase_G * nct_G_atom,
+      phase_G * vbar_G_atom,
+      e_zero0_atom,
+    )
+
+  outputs = _precompute_atom(
+    positions, g_lg_list, r_g_list, dr_g_list, lmax_list, nct_g_list,
+    vbar_g_list
+  )
+  if outputs:
+    ghat_list, phase_list, nct_terms, vbar_terms, e_zero_terms = zip(
+      *outputs
+    )
+  else:
+    ghat_list = []
+    phase_list = []
+    nct_terms = []
+    vbar_terms = []
+    e_zero_terms = []
+
+  ghat_LG = dict(
+    (atom, jnp.array(ghat)) for atom, ghat in zip(atoms_list, ghat_list)
+  )
+  phase_G = dict(
+    (atom, jnp.array(phase)) for atom, phase in zip(atoms_list, phase_list)
+  )
+  nct_G = sum(nct_terms) if nct_terms else 0.0
+  vbar_G = sum(vbar_terms) if vbar_terms else 0.0
+  e_zero0 = sum(e_zero_terms) if e_zero_terms else 0.0
+
+  nct_G = jnp.array(nct_G)
+  vbar_G = jnp.array(vbar_G)
+  e_zero0 = jnp.array(e_zero0)
+
+  nct_g = jnp.fft.ifftn(nct_G, axes=range(-3, 0)).real
+
+  # NOTE: test the total charge of the core electrons
+  atom = paw.atoms_list[-1]
+  _ = _beta_sbt_single_atom(
+    np.asarray(paw.r_g[atom]),
+    np.asarray(paw.dr_g[atom]),
+    np.asarray(paw.nc_g[atom])[None, :],
+    np.array([0]),
+    g_vec_np,
+    None,
+  )[0, 0] * 4 * np.pi * num_grids / crystal.vol
+  nc = np.sum(
+    np.asarray(paw.nc_g[atom]) * 4 * np.pi
+    * np.asarray(paw.r_g[atom])**2 * np.asarray(paw.dr_g[atom])
+  )
+  print(f"Core charge from real space integration: {nc:.6f}")
+  return ghat_LG, phase_G, nct_G, vbar_G, e_zero0, nct_g
+
+
 def build_paw_precompute(paw, crystal, g_vec):
   """Precompute PAW compensation charge terms on the PW grid.
 
@@ -211,7 +338,6 @@ def build_paw_precompute(paw, crystal, g_vec):
     num_grids = np.prod(g_vec_grid.shape[:-1])
     ghat_LG *= num_grids / crystal.vol
     ghat_LG = jnp.array(ghat_LG)
-
     return ghat_LG
 
   num_grids = np.prod(g_vec.shape[:-1])
