@@ -288,7 +288,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
     density = pw.density_grid(coeff, crystal.vol, occ)
     density = density.at[0].add(nct_g_)
-    density = density.at[0].set(jnp.where(density[0] > 0, density[0], 0))
     exc = energy.xc_energy(
       density, g_vec, crystal.vol, config.xc, kohn_sham=False
     )
@@ -310,6 +309,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol) + e_zero0
     e_zero_pseudo = e_zero
     density_reciprocal = density_reciprocal.at[0].add(rho_comp_G + nct_G)
+    # TODO: consider have a PAW module
     hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
     hartree_pseudo = hartree
 

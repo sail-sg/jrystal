@@ -5,7 +5,7 @@
 # Code will load the "$CRYSTAL.xyz" file in the geometry directory if
 # crystal name is provided, otherwise the code will read the from the path
 # specified by "crystal_file_path".
-crystal: "diamond"
+crystal: "mg"
 crystal_file_path: null
 spin: 0  # number of unpaired electrons
 gpaw_coeff_path: "log/gpaw_coeff_diamond.npz"
@@ -48,8 +48,7 @@ cutoff_energy: 40
 # grid sizes for the FFT grid
 grid_sizes: 32
 # k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
-# k_grid_sizes: [2, 2, 2]
-k_grid_sizes: [1, 1, 1]
+k_grid_sizes: [2, 2, 2]
 # Occupation method
 occupation: "simplex-projector"
 # occupation support {"gamma", "uniform", "simplex-projector", "idempotent"}
