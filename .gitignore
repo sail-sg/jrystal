@@ -51,6 +51,7 @@ coverage.xml
 .pytest_cache/
 cover/
 log/
+pseudopotential/
 
 # Translations
 *.mo
