@@ -35,7 +35,12 @@ from ..config import JrystalConfigDict
 from ..pseudopotential import normcons
 from ..pseudopotential.utils import map_over_atoms, pack
 from .convergence import create_convergence_checker
-from ..pseudopotential.paw_setup import build_paw_precompute, build_paw_setup
+from ..pseudopotential.paw_setup import (
+  build_paw_precompute,
+  build_paw_setup,
+  compare_gpaw_coefficients,
+  load_gpaw_coeff_metadata,
+)
 from ..pseudopotential.paw_calc import (
   build_paw_xc_correction,
   compute_proj_pw_overlap,
@@ -71,7 +76,7 @@ class GroundStateEnergyOutput:
   total_energy_history: List[float]
 
 
-def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
+def calc(config: JrystalConfigDict) -> None:
   """Calculate the ground state energy of a crystal with norm-conserving
   pseudopotential.
 
@@ -85,22 +90,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   set_env_params(config)
   key = jax.random.PRNGKey(config.seed)
   temp = config.smearing
-  gpaw_coeff_data = None
-  gpaw_kpts_frac = None
-  gpaw_coeff_path = getattr(config, "gpaw_coeff_path", None)
-  # if gpaw_coeff_path:
-  #   gpaw_coeff_data = np.load(gpaw_coeff_path, allow_pickle=True)
-  #   if "grid_sizes" in gpaw_coeff_data:
-  #     grid_sizes = [int(x) for x in gpaw_coeff_data["grid_sizes"]]
-  #     if len(set(grid_sizes)) != 1:
-  #       raise ValueError(
-  #         f"GPAW grid_sizes {grid_sizes} are not cubic; set config.grid_sizes "
-  #         "accordingly before importing coefficients."
-  #       )
-  #     config.grid_sizes = int(grid_sizes[0])
-  #   kpts_frac = gpaw_coeff_data.get("kpts_frac", None)
-  #   if kpts_frac is not None:
-  #     gpaw_kpts_frac = np.asarray(kpts_frac)
+  paw_debug = config.paw_debug
 
   crystal = create_crystal(config)
   xc_name = "LDA" if "lda" in config.xc.lower() else "PBE"
@@ -121,7 +111,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   sharding = NamedSharding(mesh, P('s', 'k'))  # shard by the kpt dimension.
 
   g_vec, r_vec, k_vec = create_grids(config)
-  if gpaw_kpts_frac is not None:
+  if paw_debug:
+    gpaw_coeff_data, gpaw_kpts_frac = load_gpaw_coeff_metadata(config)
     bvec = 2 * jnp.pi * jnp.linalg.inv(crystal.cell_vectors).T
     k_vec = jnp.array(gpaw_kpts_frac) @ bvec
   num_kpts = k_vec.shape[0]
@@ -164,6 +155,13 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   )
   logging.info("Initializing pseudopotential (nonlocal)...")
   start = time.time()
+  # NOTE: we have checked that the overlap matrix we obtained is correct
+  # tmp = beta_gk[0].reshape(5, -1).T
+  # overlap2 = compute_proj_pw_overlap(g_vec.reshape(-1, 3), crystal.positions[0])
+  # idx = index_map[atoms_list[0]]
+  # overlap1 = proj_pw_overlap[0, idx[0], idx[1], ...].reshape(13, config.grid_sizes**3).T
+  # print(jnp.abs(overlap1 - overlap2).max())
+  # but the alignment with gpaw is still of numerical accuracy, causing remaining misalignment
   proj_pw_overlap = normcons.potential_nonlocal_psi_reciprocal(
     crystal.positions,
     g_vec,
@@ -174,12 +172,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     [jnp.eye(q.shape[0]) for q in pseudopot.nonlocal_d_matrix],
     beta_gk
   )
-  # NOTE: we have checked that the overlap matrix we obtained is correct
-  # tmp = beta_gk[0].reshape(5, -1).T
-  # overlap2 = compute_proj_pw_overlap(g_vec.reshape(-1, 3), crystal.positions[0])
-  # idx = index_map[atoms_list[0]]
-  # overlap1 = proj_pw_overlap[0, idx[0], idx[1], ...].reshape(13, config.grid_sizes**3).T
-  # print(jnp.abs(overlap1 - overlap2).max())
 
   end = time.time()
   logging.info(f"Nonlocal potential done. Times: {end - start:.2f} seconds")
@@ -276,22 +268,25 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     paw, g_vec, config.xc
   )
 
-  def total_energy(params_pw, params_occ, g_vec, pseudopot=pseudopot, return_components: bool = False):
+  def total_energy(
+    params_pw,
+    params_occ,
+    g_vec,
+    pseudopot=pseudopot,
+    coeff_occ_override=None,
+  ):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
     coeff = get_ultrasoft_coeff(coeff)
     occ = get_occupation(params_occ)
-    if gpaw_coeff_data is not None:
-      coeff = coeff_cmp
-      occ = occ_cmp
-    kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
-    kinetic_pseudo = kinetic
+    if coeff_occ_override is not None:
+      coeff, occ = coeff_occ_override
 
+    kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
     density = pw.density_grid(coeff, crystal.vol, occ)
     density = density.at[0].add(nct_g_)
     exc = energy.xc_energy(
       density, g_vec, crystal.vol, config.xc, kohn_sham=False
     )
-    exc_pseudo = exc
     d_p_list = calc_atomic_density_matrix(coeff, occ)
 
     @map_over_atoms
@@ -307,11 +302,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     rho_comp_G = sum(rho_terms) if rho_terms else 0.0
     density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
     e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol) + e_zero0
-    e_zero_pseudo = e_zero
     density_reciprocal = density_reciprocal.at[0].add(rho_comp_G + nct_G)
-    # TODO: consider have a PAW module
     hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
-    hartree_pseudo = hartree
 
     @map_over_atoms
     def _atomic_terms(
@@ -339,18 +331,6 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       exc += sum(exc_terms)
 
     total = kinetic + hartree + e_zero + exc
-    if return_components:
-      comps = {
-        "kinetic_pseudo": kinetic_pseudo,
-        "kinetic_atomic": kinetic - kinetic_pseudo,
-        "coulomb_pseudo": hartree_pseudo,
-        "coulomb_atomic": hartree - hartree_pseudo,
-        "zero_pseudo": e_zero_pseudo,
-        "zero_atomic": e_zero - e_zero_pseudo,
-        "xc_pseudo": exc_pseudo,
-        "xc_atomic": exc - exc_pseudo,
-      }
-      return total, kinetic, hartree, exc, e_zero, comps
     return total, kinetic, hartree, exc
 
   def get_entropy(params_occ):
@@ -393,96 +373,17 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   params = {"pw": params_pw, "occ": params_occ}
   opt_state = optimizer.init(params)
 
-  if gpaw_coeff_data is not None:
-    coeff = gpaw_coeff_data["coeff"]
-    occ = gpaw_coeff_data["occupation"]
-    coeff_cmp = jnp.array(np.asarray(coeff))
-    occ_cmp = jnp.array(occ)
-    if coeff_cmp.ndim == 4:
-      coeff_cmp = coeff_cmp[None, ...]
-    if occ_cmp.ndim == 2:
-      occ_cmp = occ_cmp[None, ...]
-    ngrid = np.prod(coeff_cmp.shape[-3:])
-    coeff_cmp = coeff_cmp * (jnp.sqrt(crystal.vol) / ngrid)
-    d_p_cmp_list, f_matrix_cmp = calc_atomic_density_matrix(
-      coeff_cmp, occ_cmp, return_f_matrix=True
+  if paw_debug:
+    compare_gpaw_coefficients(
+      gpaw_coeff_data=gpaw_coeff_data,
+      crystal=crystal,
+      paw=paw,
+      params_pw=params_pw,
+      params_occ=params_occ,
+      g_vec=g_vec,
+      calc_atomic_density_matrix=calc_atomic_density_matrix,
+      total_energy=total_energy,
     )
-    # Compare P_ni via exported f_GI from GPAW
-    for s in range(coeff_cmp.shape[0]):
-      for k in range(coeff_cmp.shape[1]):
-        key_f = f"proj_f_GI_k{k}"
-        key_q = f"proj_Q_G_k{k}"
-        key_idx = f"proj_indices_k{k}"
-        if key_f not in gpaw_coeff_data.files:
-          continue
-        f_GI = np.asarray(gpaw_coeff_data[key_f])
-        Q_G = np.asarray(gpaw_coeff_data[key_q])
-        indices = np.asarray(gpaw_coeff_data[key_idx])
-        flat = coeff_cmp[s, k].reshape(coeff_cmp.shape[2], -1)
-        psit_nG = flat[:, Q_G]
-        P_alt = psit_nG @ f_GI.conj()
-        for a, I1, I2 in indices:
-          key = f"P_ani_{a}_s{s}_k{k}"
-          if key not in gpaw_coeff_data.files:
-            continue
-          gpaw_P = np.asarray(gpaw_coeff_data[key])
-          diff = float(np.max(np.abs(P_alt[:, I1:I2] - gpaw_P)))
-          print(f"P_ni (from f_GI) compare atom {a} s{s} k{k}: max|Δ| = {diff:.6e}")
-    atoms_list = paw.atoms_list
-    idx_list = [paw.atom_index_map[atom] for atom in atoms_list]
-    l_m_list = [paw.index_map[atom] for atom in atoms_list]
-
-    @map_over_atoms
-    def _compare_p_ni(atom, idx, l_m):
-      l_idx, m_idx = l_m
-      P_cmp = f_matrix_cmp[..., l_idx, m_idx]
-      for s in range(P_cmp.shape[0]):
-        for k in range(P_cmp.shape[1]):
-          key = f"P_ani_{idx}_s{s}_k{k}"
-          if key not in gpaw_coeff_data.files:
-            continue
-          gpaw_P = np.asarray(gpaw_coeff_data[key])
-          diff = float(jnp.max(jnp.abs(P_cmp[s, k].conj() - gpaw_P)))
-          print(
-            f"P_ni compare atom {atom} s{s} k{k}: max|Δ| = {diff:.6e}"
-          )
-
-    @map_over_atoms
-    def _compare_d_asp(atom, idx, D_p_atom):
-      key = f"D_asp_{idx}"
-      if key not in gpaw_coeff_data.files:
-        return
-      gpaw_packed = np.asarray(gpaw_coeff_data[key])[0]
-      diff = float(jnp.max(jnp.abs(gpaw_packed - pack(D_p_atom))))
-      print(f"D_asp compare atom {atom}: max|Δ| = {diff:.6e}")
-
-    _compare_p_ni(atoms_list, idx_list, l_m_list)
-    _compare_d_asp(atoms_list, idx_list, d_p_cmp_list)
-    total, kinetic, hartree, exc, e_zero, comps = total_energy(
-      params_pw, params_occ, g_vec, return_components=True
-    )
-    total = jax.block_until_ready(total)
-    if "gpaw_e_total_free" in gpaw_coeff_data.files:
-      if "gpaw_e_kinetic_pseudo" in gpaw_coeff_data.files:
-        gpaw_k_p = float(gpaw_coeff_data["gpaw_e_kinetic_pseudo"])
-        gpaw_k_a = float(gpaw_coeff_data["gpaw_e_kinetic_atomic"])
-        gpaw_c_p = float(gpaw_coeff_data["gpaw_e_coulomb_pseudo"])
-        gpaw_c_a = float(gpaw_coeff_data["gpaw_e_coulomb_atomic"])
-        gpaw_z_p = float(gpaw_coeff_data["gpaw_e_zero_pseudo"])
-        gpaw_z_a = float(gpaw_coeff_data["gpaw_e_zero_atomic"])
-        gpaw_x_p = float(gpaw_coeff_data["gpaw_e_xc_pseudo"])
-        gpaw_x_a = float(gpaw_coeff_data["gpaw_e_xc_atomic"])
-        logging.info("GPAW vs Jrystal split (pseudo / atomic) (Ha):")
-        logging.info(f"  Kinetic: {comps['kinetic_pseudo']:.6f}/{comps['kinetic_atomic']:.6f} vs {gpaw_k_p:.6f}/{gpaw_k_a:.6f}")
-        logging.info(f"  Coulomb: {comps['coulomb_pseudo']:.6f}/{comps['coulomb_atomic']:.6f} vs {gpaw_c_p:.6f}/{gpaw_c_a:.6f}")
-        logging.info(f"  E_zero: {comps['zero_pseudo']:.6f}/{comps['zero_atomic']:.6f} vs {gpaw_z_p:.6f}/{gpaw_z_a:.6f}")
-        logging.info(f"  XC: {comps['xc_pseudo']:.6f}/{comps['xc_atomic']:.6f} vs {gpaw_x_p:.6f}/{gpaw_x_a:.6f}")
-        logging.info("GPAW vs Jrystal split deltas (Ha):")
-        logging.info(f"  ΔKinetic (pseudo/atomic): {(comps['kinetic_pseudo']-gpaw_k_p):.6e} / {(comps['kinetic_atomic']-gpaw_k_a):.6e}")
-        logging.info(f"  ΔCoulomb (pseudo/atomic): {(comps['coulomb_pseudo']-gpaw_c_p):.6e} / {(comps['coulomb_atomic']-gpaw_c_a):.6e}")
-        logging.info(f"  ΔE_zero (pseudo/atomic): {(comps['zero_pseudo']-gpaw_z_p):.6e} / {(comps['zero_atomic']-gpaw_z_a):.6e}")
-        logging.info(f"  ΔXC (pseudo/atomic): {(comps['xc_pseudo']-gpaw_x_p):.6e} / {(comps['xc_atomic']-gpaw_x_a):.6e}")
-      breakpoint()
     return
 
   # Define update function.
@@ -545,34 +446,16 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   #####################################
   #        END OF OPTIMIZATION        #
   #####################################
-  coeff = pw.coeff(params["pw"], freq_mask)
-  coeff = get_ultrasoft_coeff(coeff)
-  occ = get_occupation(params["occ"])
-  density = pw.density_grid(coeff, crystal.vol, occ)
-  density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-  # kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
-  # hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
-  e_zero = normcons.energy_local(density_reciprocal, vbar_G, crystal.vol)
-  d_p_list = calc_atomic_density_matrix(coeff, occ)
-  atoms_list = paw.atoms_list
-  mb_list = [paw.MB[atom] for atom in atoms_list]
-  mb_p_list = [paw.MB_p[atom] for atom in atoms_list]
+  total, kinetic, hartree, exc = total_energy(
+    params["pw"],
+    params["occ"],
+    g_vec,
+    pseudopot=pseudopot,
+  )
 
-  @map_over_atoms
-  def _e_zero_term(D_p_atom, MB, MB_p):
-    return MB + jnp.sum(MB_p * pack(D_p_atom))
+  logging.info(f"Hartree Energy: {hartree:.4f} Ha")
+  logging.info(f"XC Energy: {exc:.4f} Ha")
+  logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
+  logging.info(f"Total Energy: {total:.4f} Ha")
 
-  e_zero_terms = _e_zero_term(d_p_list, mb_list, mb_p_list)
-  if e_zero_terms:
-    e_zero += sum(e_zero_terms)
-
-  exc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)
-
-  # logging.info(f"Hartree Energy: {hartree:.4f} Ha")
-  # # logging.info(f"External (local) Energy: {external_local:.4f} Ha")
-  # # logging.info(f"External (nonlocal) Energy: {external_nonlocal:.4f} Ha")
-  # logging.info(f"XC Energy: {exc:.4f} Ha")
-  # logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
-  # logging.info(f"Total Energy: {etot:.4f} Ha")
-
-  return density
+  return

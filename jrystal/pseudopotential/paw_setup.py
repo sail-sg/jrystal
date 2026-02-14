@@ -16,13 +16,15 @@ import jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 import numpy as np
+from absl import logging
+from typing import Optional, Tuple
 
 from .paw_calc import calc_paw
 from .dataclass import PawPseudopotential, PawSetupBundle
 from .load_gpaw import parse_paw_setup
 from .load_qe import parse_upf
 from .beta import _beta_sbt_single_atom
-from .utils import map_over_atoms
+from .utils import map_over_atoms, pack
 
 
 def _expand_paw_matrix(data: list, n_proj, l_j) -> jnp.ndarray:
@@ -428,6 +430,155 @@ def build_paw_precompute(paw, crystal, g_vec):
   )
   print(f"Core charge from real space integration: {nc:.6f}")
   return ghat_LG, phase_G, nct_G, vbar_G, e_zero0, nct_g
+
+
+def load_gpaw_coeff_metadata(config) -> Tuple[Optional[np.lib.npyio.NpzFile], Optional[np.ndarray]]:
+  """Load GPAW exported coefficients metadata from config if provided.
+
+  Returns:
+    Tuple of (gpaw_coeff_data, gpaw_kpts_frac).
+    `gpaw_coeff_data` is None when no path is provided.
+  """
+  gpaw_coeff_data = None
+  gpaw_kpts_frac = None
+  gpaw_coeff_path = getattr(config, "gpaw_coeff_path", None)
+  if gpaw_coeff_path:
+    gpaw_coeff_data = np.load(gpaw_coeff_path, allow_pickle=True)
+    if "grid_sizes" in gpaw_coeff_data:
+      grid_sizes = [int(x) for x in gpaw_coeff_data["grid_sizes"]]
+      if len(set(grid_sizes)) != 1:
+        raise ValueError(
+          f"GPAW grid_sizes {grid_sizes} are not cubic; set config.grid_sizes "
+          "accordingly before importing coefficients."
+        )
+      config.grid_sizes = int(grid_sizes[0])
+    kpts_frac = gpaw_coeff_data.get("kpts_frac", None)
+    if kpts_frac is not None:
+      gpaw_kpts_frac = np.asarray(kpts_frac)
+  return gpaw_coeff_data, gpaw_kpts_frac
+
+
+def compare_gpaw_coefficients(
+  gpaw_coeff_data,
+  crystal,
+  paw,
+  params_pw,
+  params_occ,
+  g_vec,
+  calc_atomic_density_matrix,
+  total_energy,
+):
+  """Run GPAW-vs-Jrystal projector and energy split comparisons."""
+  coeff = gpaw_coeff_data["coeff"]
+  occ = gpaw_coeff_data["occupation"]
+  coeff_cmp = jnp.array(np.asarray(coeff))
+  occ_cmp = jnp.array(occ)
+  if coeff_cmp.ndim == 4:
+    coeff_cmp = coeff_cmp[None, ...]
+  if occ_cmp.ndim == 2:
+    occ_cmp = occ_cmp[None, ...]
+  ngrid = np.prod(coeff_cmp.shape[-3:])
+  coeff_cmp = coeff_cmp * (jnp.sqrt(crystal.vol) / ngrid)
+  d_p_cmp_list, f_matrix_cmp = calc_atomic_density_matrix(
+    coeff_cmp, occ_cmp, return_f_matrix=True
+  )
+
+  # Compare P_ni via exported f_GI from GPAW
+  for s in range(coeff_cmp.shape[0]):
+    for k in range(coeff_cmp.shape[1]):
+      key_f = f"proj_f_GI_k{k}"
+      key_q = f"proj_Q_G_k{k}"
+      key_idx = f"proj_indices_k{k}"
+      if key_f not in gpaw_coeff_data.files:
+        continue
+      f_GI = np.asarray(gpaw_coeff_data[key_f])
+      Q_G = np.asarray(gpaw_coeff_data[key_q])
+      indices = np.asarray(gpaw_coeff_data[key_idx])
+      flat = coeff_cmp[s, k].reshape(coeff_cmp.shape[2], -1)
+      psit_nG = flat[:, Q_G]
+      P_alt = psit_nG @ f_GI.conj()
+      for a, I1, I2 in indices:
+        key = f"P_ani_{a}_s{s}_k{k}"
+        if key not in gpaw_coeff_data.files:
+          continue
+        gpaw_P = np.asarray(gpaw_coeff_data[key])
+        diff = float(np.max(np.abs(P_alt[:, I1:I2] - gpaw_P)))
+        print(f"P_ni (from f_GI) compare atom {a} s{s} k{k}: max|Δ| = {diff:.6e}")
+
+  atoms_list = paw.atoms_list
+  idx_list = [paw.atom_index_map[atom] for atom in atoms_list]
+  l_m_list = [paw.index_map[atom] for atom in atoms_list]
+
+  @map_over_atoms
+  def _compare_p_ni(atom, idx, l_m):
+    l_idx, m_idx = l_m
+    P_cmp = f_matrix_cmp[..., l_idx, m_idx]
+    for s in range(P_cmp.shape[0]):
+      for k in range(P_cmp.shape[1]):
+        key = f"P_ani_{idx}_s{s}_k{k}"
+        if key not in gpaw_coeff_data.files:
+          continue
+        gpaw_P = np.asarray(gpaw_coeff_data[key])
+        diff = float(jnp.max(jnp.abs(P_cmp[s, k].conj() - gpaw_P)))
+        print(
+          f"P_ni compare atom {atom} s{s} k{k}: max|Δ| = {diff:.6e}"
+        )
+
+  @map_over_atoms
+  def _compare_d_asp(atom, idx, D_p_atom):
+    key = f"D_asp_{idx}"
+    if key not in gpaw_coeff_data.files:
+      return
+    gpaw_packed = np.asarray(gpaw_coeff_data[key])[0]
+    diff = float(jnp.max(jnp.abs(gpaw_packed - pack(D_p_atom))))
+    print(f"D_asp compare atom {atom}: max|Δ| = {diff:.6e}")
+
+  _compare_p_ni(atoms_list, idx_list, l_m_list)
+  _compare_d_asp(atoms_list, idx_list, d_p_cmp_list)
+
+  total, kinetic, hartree, exc = total_energy(
+    params_pw,
+    params_occ,
+    g_vec,
+    coeff_occ_override=(coeff_cmp, occ_cmp),
+  )
+  total = jax.block_until_ready(total)
+  kinetic = jax.block_until_ready(kinetic)
+  hartree = jax.block_until_ready(hartree)
+  exc = jax.block_until_ready(exc)
+  e_zero = total - kinetic - hartree - exc
+
+  required_keys = (
+    "gpaw_e_kinetic",
+    "gpaw_e_coulomb",
+    "gpaw_e_zero",
+    "gpaw_e_xc",
+  )
+  if all(key in gpaw_coeff_data.files for key in required_keys):
+    gpaw_kinetic = float(gpaw_coeff_data["gpaw_e_kinetic"])
+    gpaw_coulomb = float(gpaw_coeff_data["gpaw_e_coulomb"])
+    gpaw_zero = float(gpaw_coeff_data["gpaw_e_zero"])
+    gpaw_xc = float(gpaw_coeff_data["gpaw_e_xc"])
+    jr_kinetic = float(jnp.real(kinetic))
+    jr_coulomb = float(jnp.real(hartree))
+    jr_zero = float(jnp.real(e_zero))
+    jr_xc = float(jnp.real(exc))
+    logging.info("GPAW vs Jrystal four energy components (Ha):")
+    logging.info(f"  Kinetic: {jr_kinetic:.6f} vs {gpaw_kinetic:.6f}")
+    logging.info(f"  Coulomb: {jr_coulomb:.6f} vs {gpaw_coulomb:.6f}")
+    logging.info(f"  E_zero: {jr_zero:.6f} vs {gpaw_zero:.6f}")
+    logging.info(f"  XC: {jr_xc:.6f} vs {gpaw_xc:.6f}")
+    logging.info("GPAW vs Jrystal four-component deltas (Ha):")
+    logging.info(f"  ΔKinetic: {(jr_kinetic-gpaw_kinetic):.6e}")
+    logging.info(f"  ΔCoulomb: {(jr_coulomb-gpaw_coulomb):.6e}")
+    logging.info(f"  ΔE_zero: {(jr_zero-gpaw_zero):.6e}")
+    logging.info(f"  ΔXC: {(jr_xc-gpaw_xc):.6e}")
+  else:
+    logging.info(
+      "Skip four-component energy comparison: missing keys %s",
+      required_keys,
+    )
+  return
 
 
 def setup_gpaw(atom_type: str, xc_name: str = "PBE"):

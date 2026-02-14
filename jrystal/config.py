@@ -57,6 +57,7 @@ class JrystalConfigDict(ConfigDict):
   jax_debug_nans: bool
   verbose: bool
   eps: float
+  paw_debug: bool
   gpaw_coeff_path: Optional[str]
 
 
@@ -105,6 +106,7 @@ default_config = {
   "jax_debug_nans": False,
   "verbose": True,
   "eps": 1e-8,
+  "paw_debug": False,
   "gpaw_coeff_path": None,
 }
 
