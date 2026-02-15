@@ -92,9 +92,9 @@ def build_paw_setup(crystal, xc_name: str) -> PawSetupBundle:
     tmp_mat = np.zeros((n_proj, n_proj))
     tmp_mat[np.triu_indices(n_proj)] = results['Delta_lq'][0]
     tmp_mat = tmp_mat + tmp_mat.T - np.diag(np.diag(tmp_mat))
-    nonlocal_d_matrix.append(tmp_mat / jnp.sqrt(4 * jnp.pi))
+    nonlocal_d_matrix.append(tmp_mat / np.sqrt(4 * np.pi))
 
-    n_proj_m = int(jnp.sum(2 * setup_data['l_j'] + 1))
+    n_proj_m = int(np.sum(2 * setup_data['l_j'] + 1))
     K_p[a] = _expand_paw_matrix(setup_data['K_p'], n_proj_m, setup_data['l_j'])
     K_c[a] = setup_data['K_c']
     M[a] = results["M"]
@@ -613,13 +613,13 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   grid_info = pp_data['radial_grid']
   a = grid_info['a']
   n = grid_info['n']
-  i = jnp.arange(n)
+  i = np.arange(n, dtype=np.float64)
   r_g = a * i / (n - i)  # Keep original grid for g_lg calculation
   dr_g = a * n / (n - i) ** 2
   
   # Angular momentum information from valence states
-  l_j = jnp.array([state['l'] for state in pp_data['valence_states']])
-  lcut = max(l_j)
+  l_j = np.array([state['l'] for state in pp_data['valence_states']], dtype=int)
+  lcut = int(np.max(l_j))
   rc_values = [
     state.get('rc') for state in pp_data.get('valence_states', [])
     if state.get('rc') is not None
@@ -639,15 +639,31 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   r_g = r_g[:gcut2]
   dr_g = dr_g[:gcut2]
 
-  phi_jg = jnp.array([wave['values'][:gcut2] for wave in pp_data['ae_partial_waves']])
-  phit_jg = jnp.array([wave['values'][:gcut2] for wave in pp_data['pseudo_partial_waves']])
-  pt_jg = jnp.array([proj['values'][:gcut2] for proj in pp_data['projector_functions']])
+  phi_jg = np.array(
+    [wave['values'][:gcut2] for wave in pp_data['ae_partial_waves']],
+    dtype=np.float64
+  )
+  phit_jg = np.array(
+    [wave['values'][:gcut2] for wave in pp_data['pseudo_partial_waves']],
+    dtype=np.float64
+  )
+  pt_jg = np.array(
+    [proj['values'][:gcut2] for proj in pp_data['projector_functions']],
+    dtype=np.float64
+  )
   # Integration: \sqrt{4π} * ∫ n_c(r) * r² dr = N_core, n_c is the radial component
-  nc_g = jnp.array(pp_data['ae_core_density'][:gcut2]) / jnp.sqrt(4 * jnp.pi)
-  nct_g = jnp.array(pp_data['pseudo_core_density'][:gcut2]) / jnp.sqrt(4 * jnp.pi)
+  nc_g = np.array(pp_data['ae_core_density'][:gcut2], dtype=np.float64) / np.sqrt(
+    4 * np.pi
+  )
+  nct_g = np.array(
+    pp_data['pseudo_core_density'][:gcut2], dtype=np.float64
+  ) / np.sqrt(4 * np.pi)
   
   # Local potential, skip r=0 point and apply cutoff
-  vbar_g = jnp.array(pp_data.get('zero_potential', jnp.zeros(n))[:gcut2])
+  vbar_g = np.array(
+    pp_data.get('zero_potential', np.zeros(n, dtype=np.float64))[:gcut2],
+    dtype=np.float64
+  )
   
   lmax = lcut  # Maximum l for augmentation should equal lcut for GPAW compatibility
   
@@ -656,17 +672,15 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   sf_type = shape_params.get('type', 'gauss')
   
   # Initialize g_lg for all l values up to lmax
-  g_lg = jnp.zeros((lmax + 1, gcut2))
+  g_lg = np.zeros((lmax + 1, gcut2), dtype=np.float64)
   if sf_type == 'gauss':
       # Gaussian shape functions following GPAW's convention
       # g_lg[0] = 4 / rc^3 / sqrt(pi) * exp(-(r/rc)^2)
-      g_lg = g_lg.at[0].set(4 / rc**3 / jnp.sqrt(jnp.pi) * jnp.exp(-(r_g / rc)**2))
+      g_lg[0] = 4 / rc**3 / np.sqrt(np.pi) * np.exp(-(r_g / rc)**2)
       
       # Higher l components: g_lg[l] = 2/(2l+1)/rc^2 * r * g_lg[l-1]
       for ell in range(1, lmax + 1):
-          g_lg = g_lg.at[ell].set(
-            2.0 / (2 * ell + 1) / rc**2 * r_g * g_lg[ell - 1]
-          )
+          g_lg[ell] = 2.0 / (2 * ell + 1) / rc**2 * r_g * g_lg[ell - 1]
       
       # Normalize each l-component according to GPAW convention
       # GPAW normalizes so that rgd.integrate(g_lg[l], l) = 4π
@@ -674,23 +688,19 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
       for ell in range(lmax + 1):
           # Calculate integral with 4π factor (like rgd.integrate does)
           # Skip r=0 point in integration like GPAW does
-          integral_with_4pi = (
-            jnp.sum(g_lg[ell, 1:] * r_g[1:]**(ell + 2) * dr_g[1:])
-            * 4 * jnp.pi
+          integral_with_4pi = float(
+            np.sum(g_lg[ell, 1:] * r_g[1:]**(ell + 2) * dr_g[1:])
+            * 4 * np.pi
           )
           if integral_with_4pi > 1e-10:
               # Divide by integral and multiply by 4π to get correct normalization
-              g_lg = g_lg.at[ell].set(
-                g_lg[ell] / integral_with_4pi * (4 * jnp.pi)
-              )
+              g_lg[ell] = g_lg[ell] / integral_with_4pi * (4 * np.pi)
   else:
       # For other shape function types, use simple fallback
       print(f"Warning: Shape function type '{sf_type}' not fully implemented, using simplified version")
-      g_lg = g_lg.at[0].set(4 / rc**3 / jnp.sqrt(jnp.pi) * jnp.exp(-(r_g / rc)**2))
+      g_lg[0] = 4 / rc**3 / np.sqrt(np.pi) * np.exp(-(r_g / rc)**2)
       for ell in range(1, lmax + 1):
-          g_lg = g_lg.at[ell].set(
-            2.0 / (2 * ell + 1) / rc**2 * r_g * g_lg[ell - 1]
-          )
+          g_lg[ell] = 2.0 / (2 * ell + 1) / rc**2 * r_g * g_lg[ell - 1]
 
   return {
     'r_g': r_g,

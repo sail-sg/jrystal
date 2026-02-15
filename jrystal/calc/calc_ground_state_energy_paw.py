@@ -272,7 +272,6 @@ def calc(config: JrystalConfigDict) -> None:
     params_pw,
     params_occ,
     g_vec,
-    pseudopot=pseudopot,
     coeff_occ_override=None,
   ):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
@@ -367,7 +366,13 @@ def calc(config: JrystalConfigDict) -> None:
     pseudopot=pseudopot
   )
   params_occ = occupation.param_init(
-    key, num_bands, paw.valence_charges, num_kpts, crystal.spin, config.occupation
+    key,
+    num_bands,
+    paw.valence_charges, 
+    num_kpts, 
+    crystal.spin, 
+    config.occupation, 
+    spin_restricted=config.spin_restricted,
   )
   params_occ = jax.device_put(params_occ, sharding)
   params = {"pw": params_pw, "occ": params_occ}
@@ -450,7 +455,6 @@ def calc(config: JrystalConfigDict) -> None:
     params["pw"],
     params["occ"],
     g_vec,
-    pseudopot=pseudopot,
   )
 
   logging.info(f"Hartree Energy: {hartree:.4f} Ha")

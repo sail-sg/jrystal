@@ -253,7 +253,7 @@ def param_init(
   elif method == "gamma":
     return gamma(num_kpts, num_electrons, spin, num_bands, spin_restricted)
   elif method == "simplex-projector":
-    return simplex_projector_init(num_bands, num_kpts)
+    return simplex_projector_init(num_kpts, num_bands)
   else:
     raise ValueError(f"Invalid method: {method}")
 
@@ -279,15 +279,17 @@ def occupation(
 
 
 def simplex_projector_init(
-  num_bands: int,
-  num_kpts: int,
+  num_kpts, num_bands
 ) -> dict:
+  # TODO: should we use param_up, param_down for occupation or concat using
+  # spin dimension. Also, the interfaces of different occupation schemes are
+  # not consistent.
   n = num_bands * num_kpts
   params_up = (jnp.arange(n) - n//2)*0.1
-  params_up = params_up.reshape([num_kpts, num_bands])
+  params_up = params_up.reshape([1, num_kpts, num_bands])
 
   params_down =(jnp.arange(n) - n//2)*0.1
-  params_down = params_down.reshape([num_kpts, num_bands])
+  params_down = params_down.reshape([1, num_kpts, num_bands])
 
   return {"param_up": params_up, "param_down": params_down}
 
@@ -306,13 +308,14 @@ def proj(x: jnp.array, sum: jnp.array):
       jnp.array: an 1-D array, the sum of which is ``sum``.
   """
   n = x.shape[0]
+  idx = jnp.arange(n, dtype=jnp.int32)
 
   def pushdown(x):
     x_sorted = jnp.sort(x)
     x_sum = jnp.sum(x)
     x_cumsum = jnp.cumsum(x_sorted)
-    _rho = (x_sum - sum - x_cumsum) / (n - jnp.arange(n) - 1)
-    k = jnp.argmax(x_sorted > _rho)
+    _rho = (x_sum - sum - x_cumsum) / (n - idx - 1)
+    k = jnp.asarray(jnp.argmax(x_sorted > _rho), dtype=jnp.int32)
     _lambda = jax.lax.select(
       k == 0,
       (x_sum - sum) / n,
@@ -325,8 +328,8 @@ def proj(x: jnp.array, sum: jnp.array):
     x_sum = jnp.sum(x)
     x_sorted = x_sorted.at[::-1].get()
     x_cumsum = jnp.cumsum(x_sorted)
-    _rho = (x_sum - sum + (jnp.arange(n) + 1 - x_cumsum)) / (n-jnp.arange(n)-1)
-    k = jnp.argmax(x_sorted - _rho < 1.)
+    _rho = (x_sum - sum + (idx + 1 - x_cumsum)) / (n - idx - 1)
+    k = jnp.asarray(jnp.argmax(x_sorted - _rho < 1.), dtype=jnp.int32)
     _lambda = jax.lax.select(
       k == 0,
       (sum-x_sum) / n,
@@ -344,17 +347,17 @@ def simplex_projector(
   spin: int = 0,
   spin_restricted: bool = True,
 ) -> Float[Array, 'spin kpt band']:
-  num_kpts = params["param_up"].shape[0]
-  num_bands = params["param_up"].shape[1]
+  num_kpts = params["param_up"].shape[1]
+  num_bands = params["param_up"].shape[2]
 
-  params_up = jax.nn.sigmoid(params["param_up"])
+  params_up = jax.nn.sigmoid(params["param_up"][0])
   params_up = jnp.ravel(params_up)
   m_up = (num_electrons + spin) // 2 * num_kpts
   m_down = (num_electrons - spin) // 2 * num_kpts
   occ_up = proj(params_up, m_up) / num_kpts
   occ_up = occ_up.reshape([num_kpts, num_bands])
 
-  params_down = jax.nn.sigmoid(params["param_down"])
+  params_down = jax.nn.sigmoid(params["param_down"][0])
   params_down = jnp.ravel(params_down)
   occ_down = proj(params_down, m_down) / num_kpts
   occ_down = occ_down.reshape([num_kpts, num_bands])
