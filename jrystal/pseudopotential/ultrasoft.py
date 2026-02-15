@@ -114,35 +114,35 @@ def get_ultrasoft_coeff_fun(
     q_mat += [
       scipy.linalg.block_diag(np.kron(q, np.eye(_m))) 
     ]
-  q_mat = scipy.linalg.block_diag(*q_mat)
+  q_mat = jnp.asarray(scipy.linalg.block_diag(*q_mat))
+  # Precompute overlap decomposition once: B is fixed for the whole run.
+  U, R = jnp.linalg.qr(psi_G)
+  Sigma, V = jnp.linalg.eigh(
+    einsum(R, q_mat, R.conj(), "k i j, j l, k m l -> k i m")
+  )
 
-  def _get_s_sqrt(B, x):
-    # print(jnp.linalg.eigvals(jnp.eye(B.shape[0]) + (B @ q_mat @ B.T.conj()).real).min())
-    U, R = jnp.linalg.qr(B)
-    Sigma, V = jnp.linalg.eigh(R @ q_mat @ R.T.conj())
-    # assert jnp.min(Sigma) >= -1, "The operator is not positive semi-definite."
+  def _get_s_sqrt(U, V, Sigma, x):
     y = U.conj().T @ x
     y = V.conj().T @ y
-    y = ((Sigma+1)**(-0.5)-1) * y
+    y = ((Sigma + 1) ** (-0.5) - 1) * y
     y = V @ y
     y = U @ y
     y = y + x
     return y
 
+  _s_sqrt = jax.vmap(_get_s_sqrt, in_axes=(0, 0, 0, 0))  # map over kpt
+  _s_sqrt = jax.vmap(
+    jax.vmap(_s_sqrt, in_axes=(None, None, None, 0)),
+    in_axes=(None, None, None, 0)
+  )  # map over spin and band
+
   def f(
     coeff: Complex[Array, "s k band x y z"],
   ) -> Complex[Array, "s k band x y z"]:
     coeff = coeff.at[..., freq_mask].get()
-    # coeff = jnp.reshape(coeff, (coeff.shape[:3], -1))  # [s k b G]
     coeff = einsum(coeff, "s k b g -> s b k g")  # [s band k g]
 
-    # _get_s_sqrt requires the input to be [g, atom_m] and [g], but what we have
-    # is psi_G as B [k g atom_m] and coeff as x [s b k g]
-    _s_sqrt = jax.vmap(_get_s_sqrt, in_axes=(0, 0))  # map over kpt
-    _s_sqrt = jax.vmap(
-      jax.vmap(_s_sqrt, in_axes=(None, 0)), in_axes=(None, 0)
-    )  # map over s and band
-    output = _s_sqrt(psi_G, coeff.conj())  # shape = [s b k g]
+    output = _s_sqrt(U, V, Sigma, coeff.conj())  # [s b k g]
 
     output = einsum(output, "s b k g -> s k g b")
     output = expand_coefficient(output, freq_mask)
