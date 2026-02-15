@@ -4,9 +4,9 @@
 
 # Code will load the "$CRYSTAL.xyz" file in the geometry directory if
 # crystal name is provided, otherwise the code will read the from the path
-# specified by "crystal_file_path_path".
+# specified by "crystal_file_path".
 crystal: "si"
-crystal_file_path_path: null
+crystal_file_path: null
 
 ################################################
 #         Exchange-Correlation Setting         #
@@ -20,9 +20,6 @@ xc: "lda_x"
 ################################################
 
 use_pseudopotential: False
-pseudopotential_file_dir: null
-# The pseudopotential file directory. If None, the code will use the default
-# pseudopotential file directory.
 
 ################################################
 #       Planewave Hyper-parameters             #

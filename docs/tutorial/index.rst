@@ -11,6 +11,7 @@ Tutorials
    crystallography
    array_shape
    total_energy
+   paw_algorithm
    differentiation
    equivalence
    occupation

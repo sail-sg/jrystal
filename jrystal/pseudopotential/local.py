@@ -80,6 +80,8 @@ def potential_local_reciprocal(
     def g(r, v_r, z):
       v_r_prime = v_r + z / r
       v_r_prime = jnp.expand_dims(v_r_prime, axis=0)
+      # NOTE: sbt_numerical API is changing (delta_r required soon); this path
+      # will be updated when local SBT usage is revisited.
       # kk, f_k = sbt(r, v_r_prime, l=0, kmax=np.max(g_radius), norm=False)
       kk, f_k = sbt_numerical(r, v_r_prime, l=0, kmax=np.max(g_radius))
       f_k = CubicSpline(kk, f_k[0], axis=1)(g_radius)

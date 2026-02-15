@@ -20,11 +20,12 @@ from ml_collections import ConfigDict
 
 class JrystalConfigDict(ConfigDict):
   crystal: Optional[str]
-  crystal_file_path_path: Optional[str]
+  crystal_file_path: Optional[str]
   spin: int
   save_dir: Optional[str]
   xc: str
   use_pseudopotential: bool
+  pseudopotential_type: Optional[str]
   pseudopotential_file_dir: Optional[str]
   freq_mask_method: str
   cutoff_energy: float
@@ -56,15 +57,18 @@ class JrystalConfigDict(ConfigDict):
   jax_debug_nans: bool
   verbose: bool
   eps: float
+  paw_debug: bool
+  gpaw_coeff_path: Optional[str]
 
 
 default_config = {
   "crystal": "diamond",
-  "crystal_file_path_path": None,
+  "crystal_file_path": None,
   "save_dir": None,
   "spin": 0,
   "xc": "lda_x",
   "use_pseudopotential": False,
+  "pseudopotential_type": "nc",
   "pseudopotential_file_dir": None,
   "freq_mask_method": "spherical",
   "cutoff_energy": 100,
@@ -102,14 +106,22 @@ default_config = {
   "jax_debug_nans": False,
   "verbose": True,
   "eps": 1e-8,
+  "paw_debug": False,
+  "gpaw_coeff_path": None,
 }
 
 
 def get_config(config_file: Optional[str] = None) -> JrystalConfigDict:
   if config_file is not None:
     with open(config_file, 'r') as file:
-      config = yaml.safe_load(file)
-    config = JrystalConfigDict(config)
+      raw_config = yaml.safe_load(file) or {}
+    unknown = set(raw_config.keys()) - set(default_config.keys())
+    if unknown:
+      raise ValueError(
+        f"Unknown config keys: {sorted(unknown)}. "
+        f"Allowed keys: {sorted(default_config.keys())}"
+      )
+    config = JrystalConfigDict(raw_config)
 
   else:
     config = JrystalConfigDict(default_config)

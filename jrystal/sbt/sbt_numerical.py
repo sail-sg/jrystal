@@ -3,7 +3,7 @@
   S(f) = int_0^\infty f(r) j_l(r) r^2 dr
 
 """
-from typing import Union, Optional, Sequence, Tuple
+from typing import Union, Sequence, Tuple
 import numpy as np
 from scipy.special import spherical_jn as jn
 from jaxtyping import Array, Float
@@ -14,8 +14,8 @@ def sbt(
   r_grid: Float[Array, "r"],
   f_grid: Float[Array, "f r"],
   l: Union[int, Sequence[int]],
+  dr_grid: Float[Array, "r"],
   kmax: float = None,
-  delta_r: Optional[Float[Array, "r"]] = None,
 ) -> Tuple[Float[Array, "g"], Float[Array, "f g"]]:
   """Numerical Sherical Bessel Transform.
 
@@ -35,18 +35,14 @@ def sbt(
     l (int): The angular momentum. l can be a list of ints, only if the length
     of batch dimension of f_grid is the same as the length of l. For example,
     if f_grid.shape[0] == 2, l can be [0, 1] or 0.
-    delta_r (Optional[Float[Array, "r"]]): The grid spacing of the radial
-    coordinate. If None, the grid spacing is calculated from the grid r_grid.
+    dr_grid (Float[Array, "r"]): The grid spacing of the radial coordinate.
 
   Returns:
     Float[Array, "g"]: The sherical bessel transform of the function f.
   """
-  if delta_r is None:
-    delta_r = np.zeros_like(r_grid)
-    delta_r[:-1] = r_grid[1:] - r_grid[:-1]
 
   g_max = kmax
-  g_min = 0.0001
+  g_min = 0.000
   g_grid = np.linspace(g_min, g_max, len(r_grid)*2)
   gr = einsum(g_grid, r_grid, "g, r -> g r")   # shape [g_batch* r]
 
@@ -61,7 +57,7 @@ def sbt(
       jn_gr[i] = jn(l[i], gr)   # [l g r]
 
     output = einsum(
-      f_grid, r_grid**2, jn_gr, delta_r, "l r, r, l g r, r -> l g"
+      f_grid, r_grid**2, jn_gr, dr_grid, "l r, r, l g r, r -> l g"
     )
 
   elif isinstance(l, int):
@@ -71,7 +67,7 @@ def sbt(
     jn_gr = jn(l, gr)  # shape: [g r]
 
     output = einsum(
-      f_grid, r_grid**2, jn_gr, delta_r,
+      f_grid, r_grid**2, jn_gr, dr_grid,
       "f r, r, g r, r -> f g"
     )
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Energy functions. """
-from typing import Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 import jax.numpy as jnp
 import numpy as np
@@ -363,3 +363,119 @@ def band_energy(
   e_kin = kinetic(g_vector_grid, kpts, coefficient)
   assert np.array_equal(e_kin.shape, e_eff.shape)
   return safe_real(e_eff + e_kin)
+
+
+def total_energy_paw(
+  state: dict,
+  params_pw,
+  params_occ,
+  coeff_cmp=None,
+  occ_cmp=None,
+  return_components: bool = False,
+):
+  """Compute total PAW energy and optional components."""
+  atoms_list = state["atoms_list"]
+  g_vec = state["g_vec"]
+  k_vec = state["k_vec"]
+  freq_mask = state["freq_mask"]
+  sharding = state["sharding"]
+  crystal_vol = state["crystal_vol"]
+  xc_type = state["xc_type"]
+  get_ultrasoft_coeff = state["get_ultrasoft_coeff"]
+  get_occupation = state["get_occupation"]
+  calc_atomic_density_matrix = state["calc_atomic_density_matrix"]
+  nct_g = state["nct_g"]
+  nct_G = state["nct_G"]
+  vbar_G = state["vbar_G"]
+  e_zero0 = state["e_zero0"]
+  delta_pL_list = state["delta_pL_list"]
+  delta0_list = state["delta0_list"]
+  phase_list = state["phase_list"]
+  ghat_list = state["ghat_list"]
+  k_p_list = state["k_p_list"]
+  k_c_list = state["k_c_list"]
+  mb_p_list = state["mb_p_list"]
+  mb_list = state["mb_list"]
+  m_list = state["m_list"]
+  m_p_list = state["m_p_list"]
+  m_pp_list = state["m_pp_list"]
+  calc_paw_xc_correction = state["calc_paw_xc_correction"]
+  pack = state["pack"]
+  map_over_atoms = state["map_over_atoms"]
+  energy_local = state["energy_local"]
+
+  coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
+  coeff = get_ultrasoft_coeff(coeff)
+  occ = get_occupation(params_occ)
+  coeff_override = coeff_cmp or state.get("coeff_cmp")
+  occ_override = occ_cmp or state.get("occ_cmp")
+  if coeff_override is not None and occ_override is not None:
+    coeff = coeff_override
+    occ = occ_override
+  kinetic_val = kinetic(g_vec, k_vec, coeff, occ)
+  kinetic_pseudo = kinetic_val
+
+  density = pw.density_grid(coeff, crystal_vol, occ)
+  density = density.at[0].add(nct_g)
+  density = density.at[0].set(jnp.where(density[0] > 0, density[0], 0))
+  exc = xc_energy(density, g_vec, crystal_vol, xc_type, kohn_sham=False)
+  exc_pseudo = exc
+  d_p_list = calc_atomic_density_matrix(coeff, occ)
+
+  @map_over_atoms
+  def _rho_comp_term(D_p_atom, Delta_pL, Delta0, phase, ghat):
+    D_p_packed = pack(D_p_atom)
+    Q_L = jnp.dot(D_p_packed, Delta_pL)
+    Q_L = Q_L.at[0].add(Delta0)
+    return phase * jnp.tensordot(Q_L, ghat, axes=[0, 0])
+
+  rho_terms = _rho_comp_term(
+    d_p_list, delta_pL_list, delta0_list, phase_list, ghat_list
+  )
+  rho_comp_G = sum(rho_terms) if rho_terms else 0.0
+  density_reciprocal = pw.density_grid_reciprocal(coeff, crystal_vol, occ)
+  e_zero = energy_local(density_reciprocal, vbar_G, crystal_vol) + e_zero0
+  e_zero_pseudo = e_zero
+  density_reciprocal = density_reciprocal.at[0].add(rho_comp_G + nct_G)
+  hartree_val = hartree(density_reciprocal, g_vec, crystal_vol)
+  hartree_pseudo = hartree_val
+
+  @map_over_atoms
+  def _atomic_terms(
+    atom, D_p_atom, K_p, K_c, MB_p, MB, M, M_p, M_pp
+  ):
+    D_p_packed = pack(D_p_atom)
+    kin_add = jnp.sum(K_p * D_p_atom).real + K_c
+    # nct contribution to e_zero is canceled out with MB
+    e_zero_add = jnp.sum(MB_p * D_p_packed) + MB
+    hartree_add = M + jnp.dot(
+      D_p_packed, (M_p + jnp.dot(M_pp, D_p_packed))
+    )
+    exc_add = calc_paw_xc_correction(atom, D_p_packed)
+    return kin_add, e_zero_add, hartree_add, exc_add
+
+  atom_terms = _atomic_terms(
+    atoms_list, d_p_list, k_p_list, k_c_list, mb_p_list, mb_list,
+    m_list, m_p_list, m_pp_list
+  )
+  if atom_terms:
+    kin_terms, e_zero_terms, hartree_terms, exc_terms = zip(*atom_terms)
+    kinetic_val += sum(kin_terms)
+    e_zero += sum(e_zero_terms)
+    hartree_val += sum(hartree_terms)
+    exc += sum(exc_terms)
+
+  total = kinetic_val + hartree_val + e_zero + exc
+  if return_components:
+    comps = {
+      "kinetic_pseudo": kinetic_pseudo,
+      "kinetic_atomic": kinetic_val - kinetic_pseudo,
+      "coulomb_pseudo": hartree_pseudo,
+      "coulomb_atomic": hartree_val - hartree_pseudo,
+      "zero_pseudo": e_zero_pseudo,
+      "zero_atomic": e_zero - e_zero_pseudo,
+      "xc_pseudo": exc_pseudo,
+      "xc_atomic": exc - exc_pseudo,
+    }
+    return total, kinetic_val, hartree_val, exc, e_zero, comps
+  return total, kinetic_val, hartree_val, exc

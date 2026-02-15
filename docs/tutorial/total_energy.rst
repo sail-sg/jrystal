@@ -46,6 +46,9 @@ To this point, we have introduced DFT as an optimization problem with constraint
 
 To make the problem computable, we just need to parameterize :math:`u_{ik}` and :math:`f` in a way that satisfy the constraints, plugging them back into the objective function and then perform the optimization in the parameter space. This is what we will do in the rest of this document.
 
+For PAW calculations, the user workflow is the same except for specifying a PAW dataset
+file in the configuration; currently we use PAW data provided by GPAW.
+
 
 Parameterizing :math:`u_{ik}(r)` and :math:`f`
 ---------------------------------------------

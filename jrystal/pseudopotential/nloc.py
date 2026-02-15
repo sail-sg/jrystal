@@ -34,7 +34,7 @@ def _compute_spherical_harmonics(
 
     y_lm = jnp.zeros((l_max + 1, *ndims, 2 * l_max + 1)) + 0.j
     for i in range(l_max + 1):
-      y_lm = y_lm.at[i, ..., :(2 * i + 1)].set(
+      y_lm = y_lm.at[i, ..., l_max - i:l_max + i + 1].set(
         batch_sph_harm_real(i, r_theta, r_phi)
       )
     return y_lm
@@ -124,7 +124,7 @@ def potential_nonlocal_psi_reciprocal(
       "kpt beta m x y z, kpt x y z -> kpt beta m x y z"
     )
 
-    imag_factor = (1.j) ** nonlocal_angular_momentum
+    imag_factor = (-1.j) ** nonlocal_angular_momentum
     output = einsum(
       output, imag_factor, "kpt beta m x y z, beta -> kpt beta m x y z"
     )

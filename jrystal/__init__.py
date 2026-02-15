@@ -27,11 +27,11 @@ from . import (
   grid,
   hamiltonian,
   occupation,
-  potential,
   pseudopotential,
+  potential,
   pw,
   sbt,
-  utils
+  utils,
 )
 from .crystal import Crystal
 
@@ -44,8 +44,6 @@ __all__ = [
   "_src",
   "crystal",
   "Crystal",
-  "calc",
-  "pseudopotential",
   "utils",
   "sbt",
   "pw",
@@ -58,4 +56,6 @@ __all__ = [
   "get_pkg_path",
   "config",
   "ewald",
+  "calc",
+  "pseudopotential",
 ]

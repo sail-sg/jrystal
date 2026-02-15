@@ -21,15 +21,37 @@ norm-conserving pseudopotentials. Please note that many functions in this module
 are not yet fully differentiable.
 
 """
-from . import beta, dataclass, load, local, nloc, normcons, spherical, utils
-from .dataclass import NormConservingPseudopotential, Pseudopotential
+from . import (
+  beta,
+  dataclass,
+  load_gpaw,
+  load_qe,
+  local,
+  nloc,
+  normcons,
+  paw_calc,
+  paw_setup,
+  spherical,
+  utils,
+)
+from .dataclass import (
+  NormConservingPseudopotential,
+  Pseudopotential,
+  PawPseudopotential,
+  PawSetupBundle,
+)
 
 __all__ = [
   "dataclass",
   "Pseudopotential",
   "NormConservingPseudopotential",
+  "PawPseudopotential",
+  "PawSetupBundle",
   'local',
-  'load',
+  'load_qe',
+  'load_gpaw',
+  'paw_calc',
+  'paw_setup',
   'spherical',
   'beta',
   'utils',

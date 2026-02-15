@@ -46,7 +46,7 @@ Calculate the total energy:
 
 .. code-block:: python
   
-  total_energy_output = jr.calc.energy(config)
+  total_energy_output = jr.calc.energy_all_electrons(config)
   
 
 Now compute the ground state electron density:

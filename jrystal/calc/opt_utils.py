@@ -108,7 +108,7 @@ def create_crystal(config: JrystalConfigDict) -> Crystal:
   if config.crystal is not None:
     path = _pkg_path + '/geometry/' + config.crystal + '.xyz'
   else:
-    path = config.crystal_file_path_path
+    path = config.crystal_file_path
   crystal = Crystal.create_from_file(file_path=path, spin=config.spin)
   check_spin_number(crystal.num_electron, crystal.spin)
   return crystal
@@ -118,17 +118,17 @@ def create_pseudopotential(config: JrystalConfigDict):
   assert config.use_pseudopotential
   crystal = create_crystal(config)
   _pkg_path = jr.get_pkg_path()
-  if config.pseudopotential_type in ["normcons", "normconserving", "nc"]:
-    if config.pseudopotential_file_dir is None:
-      path = _pkg_path + '/pseudopotential/normconserving/'
-    else:
-      path = config.pseudopotential_file_dir
+  pp_type = (config.pseudopotential_type or "nc").lower()
+  if getattr(config, "pseudopotential_file_dir", None) is not None:
+    logging.warning(
+      "config.pseudopotential_file_dir is ignored. "
+      "Using built-in relative path by pseudopotential_type."
+    )
+  if pp_type == "nc":
+    path = _pkg_path + '/pseudopotential/normconserving/'
     pp = jr.pseudopotential.NormConservingPseudopotential.create(crystal, path)
-  elif config.pseudopotential_type in ["ultrasoft", "us"]:
-    if config.pseudopotential_file_dir is None:
-      path = _pkg_path + '/pseudopotential/ultrasoft/'
-    else:
-      path = config.pseudopotential_file_dir
+  elif pp_type == "us":
+    path = _pkg_path + '/pseudopotential/ultrasoft/'
     pp = jr.pseudopotential.UltrasoftPseudopotential.create(crystal, path)
   else:
     raise ValueError(

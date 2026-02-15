@@ -4,9 +4,9 @@
 
 # Code will load the "$CRYSTAL.xyz" file in the geometry directory if
 # crystal name is provided, otherwise the code will read the from the path
-# specified by "crystal_file_path_path".
+# specified by "crystal_file_path".
 crystal: "al_bcc"
-crystal_file_path_path: null
+crystal_file_path: null
 spin: 0   # number of unpaired electrons
 
 # The directory to save the results. If None, the code will not save the results under the current directory.
@@ -24,10 +24,6 @@ xc: "lda_x"
 # if false, the code will use the all-electron calculation
 use_pseudopotential: true
 pseudopotential_type: "nc"
-pseudopotential_file_dir: "/home/aiops/litb/projects/jrystal/pseudopotential/normconserving/"
-
-# The pseudopotential file directory. If None, the code will use the default
-# pseudopotential file directory.
 
 ################################################
 #       Planewave Hyper-parameters             #
