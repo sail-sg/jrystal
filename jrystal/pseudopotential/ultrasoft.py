@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -56,7 +56,7 @@ def get_ultrasoft_coeff_fun(
   nonlocal_q_matrix: List[Float[Array, "beta beta"]],
   beta_gk: Float[Array, "kpt beta x y z"],
   k_sharding: Optional[Sharding] = None,
-) -> Callable[[Float[Array, "band x y z"]], Float[Array, "kpt beta x y z"]]:
+):
   """
 
     S^{-1/2} | G + k > · C = S^{-1/2} psi(C)
@@ -126,6 +126,7 @@ def get_ultrasoft_coeff_fun(
     U = jax.device_put(U, k_sharding)
     V = jax.device_put(V, k_sharding)
     Sigma = jax.device_put(Sigma, k_sharding)
+  factor = (U, V, Sigma)
 
   def _get_s_sqrt(U, V, Sigma, x):
     y = U.conj().T @ x
@@ -144,17 +145,19 @@ def get_ultrasoft_coeff_fun(
 
   def f(
     coeff: Complex[Array, "s k band x y z"],
+    factor: Tuple[Array, Array, Array],
   ) -> Complex[Array, "s k band x y z"]:
+    U_fac, V_fac, Sigma_fac = factor
     coeff = coeff.at[..., freq_mask].get()
     coeff = einsum(coeff, "s k b g -> s b k g")  # [s band k g]
 
-    output = _s_sqrt(U, V, Sigma, coeff.conj())  # [s b k g]
+    output = _s_sqrt(U_fac, V_fac, Sigma_fac, coeff.conj())  # [s b k g]
 
     output = einsum(output, "s b k g -> s k g b")
     output = expand_coefficient(output, freq_mask)
     return output
 
-  return f
+  return f, factor
 
 
 def check_uspp_overlap(
@@ -163,13 +166,14 @@ def check_uspp_overlap(
   freq_mask,
   sharding,
   get_ultrasoft_coeff,
+  factor,
   proj_pw_overlap,
   crystal_vol,
   pseudopot
 ):
   """Check C^H S C = I for USPP transform using current coeffs."""
   coeff_raw = pw.coeff(params_pw, freq_mask, sharding=sharding)
-  coeff_us = get_ultrasoft_coeff(coeff_raw)
+  coeff_us = get_ultrasoft_coeff(coeff_raw, factor)
 
   coeff_mask = coeff_us.at[..., freq_mask].get()
   coeff_mask = coeff_mask.reshape(coeff_mask.shape[:3] + (-1,))

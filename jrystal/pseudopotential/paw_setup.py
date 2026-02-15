@@ -468,6 +468,7 @@ def compare_gpaw_coefficients(
   g_vec,
   calc_atomic_density_matrix,
   total_energy,
+  factor,
 ):
   """Run GPAW-vs-Jrystal projector and energy split comparisons."""
   coeff = gpaw_coeff_data["coeff"]
@@ -541,6 +542,7 @@ def compare_gpaw_coefficients(
     params_pw,
     params_occ,
     g_vec,
+    factor,
     coeff_occ_override=(coeff_cmp, occ_cmp),
   )
   total = jax.block_until_ready(total)

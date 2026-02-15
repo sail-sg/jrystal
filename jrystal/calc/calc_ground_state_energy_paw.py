@@ -188,7 +188,7 @@ def calc(config: JrystalConfigDict) -> None:
     check_uspp_overlap,
     get_ultrasoft_coeff_fun,
   )
-  get_ultrasoft_coeff = get_ultrasoft_coeff_fun(
+  get_ultrasoft_coeff, factor = get_ultrasoft_coeff_fun(
     crystal.positions,
     k_vec,
     g_vec,
@@ -198,7 +198,8 @@ def calc(config: JrystalConfigDict) -> None:
     pseudopot.nonlocal_beta_grid,
     pseudopot.nonlocal_angular_momentum,
     pseudopot.nonlocal_d_matrix,
-    beta_gk
+    beta_gk,
+    k_sharding=NamedSharding(mesh, P('k'))
   )
   del beta_gk
 
@@ -272,10 +273,11 @@ def calc(config: JrystalConfigDict) -> None:
     params_pw,
     params_occ,
     g_vec,
+    factor,
     coeff_occ_override=None,
   ):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
-    coeff = get_ultrasoft_coeff(coeff)
+    coeff = get_ultrasoft_coeff(coeff, factor)
     occ = get_occupation(params_occ)
     if coeff_occ_override is not None:
       coeff, occ = coeff_occ_override
@@ -337,10 +339,10 @@ def calc(config: JrystalConfigDict) -> None:
     return entropy.fermi_dirac(occ, eps=EPS)
 
   def free_energy(
-    params_pw, params_occ, temp, g_vec
+    params_pw, params_occ, temp, g_vec, factor
   ):
     total, kinetic, hartree, exc = total_energy(
-      params_pw, params_occ, g_vec
+      params_pw, params_occ, g_vec, factor
     )
     etro = get_entropy(params_occ)
     free = total - temp * etro
@@ -361,6 +363,7 @@ def calc(config: JrystalConfigDict) -> None:
     freq_mask=freq_mask,
     sharding=sharding,
     get_ultrasoft_coeff=get_ultrasoft_coeff,
+    factor=factor,
     proj_pw_overlap=proj_pw_overlap,
     crystal_vol=crystal.vol,
     pseudopot=pseudopot
@@ -388,6 +391,7 @@ def calc(config: JrystalConfigDict) -> None:
       g_vec=g_vec,
       calc_atomic_density_matrix=calc_atomic_density_matrix,
       total_energy=total_energy,
+      factor=factor,
     )
     return
 
@@ -395,9 +399,9 @@ def calc(config: JrystalConfigDict) -> None:
   with mesh:
 
     @jax.jit
-    def update(params, opt_state, temp, g_vec):
+    def update(params, opt_state, temp, g_vec, factor):
       loss = lambda x: free_energy(
-        x["pw"], x["occ"], temp, g_vec
+        x["pw"], x["occ"], temp, g_vec, factor
       )
       (loss_val, es), grad = jax.value_and_grad(loss, has_aux=True)(params)
       updates, opt_state = optimizer.update(grad, opt_state)
@@ -430,11 +434,12 @@ def calc(config: JrystalConfigDict) -> None:
       temp = temperature_scheduler(i)
       start = time.time()
       params, opt_state, loss_val, es = update(
-        params, opt_state, temp, g_vec
+        params, opt_state, temp, g_vec, factor
       )
       etot, entro, kinetic, hartree, exc = es
       etot = jax.block_until_ready(etot)
       train_time += time.time() - start
+
       converged = convergence_checker.check(etot)
       if converged:
         logging.info("Converged.")
@@ -455,6 +460,7 @@ def calc(config: JrystalConfigDict) -> None:
     params["pw"],
     params["occ"],
     g_vec,
+    factor,
   )
 
   logging.info(f"Hartree Energy: {hartree:.4f} Ha")
