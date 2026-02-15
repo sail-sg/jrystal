@@ -161,10 +161,14 @@ def _compute_proj_pw_overlap():
     if str(devs_dir) not in sys.path:
         sys.path.insert(0, str(devs_dir))
 
-    from jrystal.pseudopotential.load_gpaw import parse_paw_setup
+    from jrystal.pseudopotential.load_gpaw import (
+        find_gpaw_setup,
+        parse_paw_setup,
+    )
   
     # Load GPAW setup file
-    pp_data = parse_paw_setup(f'/home/aiops/zhaojx/paw-minimal/pseudopotential/C.LDA')
+    setup_path = find_gpaw_setup(None, "C", xc="LDA")
+    pp_data = parse_paw_setup(setup_path)
 
     from scipy.special import spherical_jn
 
@@ -298,7 +302,9 @@ def align_wavefunction():
         print("\n✓ WAVEFUNCTION ALIGNED PERFECTLY!")
     else:
         print("\n✗ WAVEFUNCTION MISMATCH - debugging needed")
-        breakpoint()
+        raise AssertionError(
+            f"Wavefunction mismatch too large: max_diff={max_diff:.2e}"
+        )
 
     # breakpoint()
     return psi_gpaw, psi_direct

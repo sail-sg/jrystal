@@ -10,7 +10,6 @@ import jax.numpy as jnp
 import numpy as np
 import scipy.linalg
 
-from jrystal.calc.calc_paw import calc_paw, setup_gpaw
 from jrystal.calc.opt_utils import (
   create_crystal,
   create_freq_mask,
@@ -20,6 +19,8 @@ from jrystal.calc.opt_utils import (
 from jrystal.config import get_config
 from jrystal.pseudopotential.beta import beta_sbt_grid
 from jrystal.pseudopotential.nloc import potential_nonlocal_psi_reciprocal
+from jrystal.pseudopotential.paw_calc import calc_paw
+from jrystal.pseudopotential.paw_setup import setup_gpaw
 
 
 def _build_paw_pseudopotential(crystal, xc_name: str):
@@ -178,12 +179,10 @@ def main():
     concat=False,
   )
 
-  breakpoint()
   psi_G = jnp.concatenate(
     [_process_psi_g(p, freq_mask) for p in psi_G], axis=-1
   )
   psi_G = psi_G / jnp.sqrt(crystal.vol)
-  breakpoint()
 
   q_mat = _assemble_q_matrix(
     nonlocal_q_matrix,

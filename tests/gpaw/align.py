@@ -1,20 +1,19 @@
 #!/usr/bin/env python
 """Compare PAW implementation between jrystal and GPAW.
 
-This script uses jrystal.calc.calc_paw (jrystal-side) and GPAW's Setup
-(gpaw-side) to compute the same PAW quantities and compare them.
+This script uses jrystal's PAW parser/calculator (jrystal-side) and
+GPAW's Setup (gpaw-side) to compute comparable PAW quantities.
 """
 
 import sys
 from pathlib import Path
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-# GPAW source (editable install)
-sys.path.insert(0, "/home/aiops/zhaojx/jrystal/gpaw")
 
-from jrystal.calc.calc_paw import setup_gpaw, calc_paw
+from jrystal.pseudopotential.paw_calc import calc_paw
+from jrystal.pseudopotential.paw_setup import setup_gpaw
 
 
 def run_jrystal(atom: str, xc: str):

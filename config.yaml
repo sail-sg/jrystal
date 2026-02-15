@@ -134,7 +134,7 @@ seed: 123
 
 # Whether to distribute the calculation across multiple devices
 # Total Energy Minimization
-parallel_over_k_mesh: False
+parallel_over_k_mesh: True
 # Band Structure Calculation
 # If True, the code will parallelize the calculation over the k-path.
 parallel_over_k_path: True

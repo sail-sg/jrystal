@@ -124,10 +124,10 @@ def create_pseudopotential(config: JrystalConfigDict):
       "config.pseudopotential_file_dir is ignored. "
       "Using built-in relative path by pseudopotential_type."
     )
-  if pp_type in ["normcons", "normconserving", "nc"]:
+  if pp_type == "nc":
     path = _pkg_path + '/pseudopotential/normconserving/'
     pp = jr.pseudopotential.NormConservingPseudopotential.create(crystal, path)
-  elif pp_type in ["ultrasoft", "us"]:
+  elif pp_type == "us":
     path = _pkg_path + '/pseudopotential/ultrasoft/'
     pp = jr.pseudopotential.UltrasoftPseudopotential.create(crystal, path)
   else:
