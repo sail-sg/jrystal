@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 import jax
 import jax.numpy as jnp
@@ -6,6 +6,7 @@ import numpy as np
 import scipy
 from einops import einsum
 from interpax import CubicSpline
+from jax.sharding import Sharding
 
 # from scipy.interpolate import CubicSpline
 from jaxtyping import Array, Complex, Float
@@ -54,6 +55,7 @@ def get_ultrasoft_coeff_fun(
   nonlocal_angular_momentum: List[List[int]],
   nonlocal_q_matrix: List[Float[Array, "beta beta"]],
   beta_gk: Float[Array, "kpt beta x y z"],
+  k_sharding: Optional[Sharding] = None,
 ) -> Callable[[Float[Array, "band x y z"]], Float[Array, "kpt beta x y z"]]:
   """
 
@@ -120,6 +122,10 @@ def get_ultrasoft_coeff_fun(
   Sigma, V = jnp.linalg.eigh(
     einsum(R, q_mat, R.conj(), "k i j, j l, k m l -> k i m")
   )
+  if k_sharding is not None:
+    U = jax.device_put(U, k_sharding)
+    V = jax.device_put(V, k_sharding)
+    Sigma = jax.device_put(Sigma, k_sharding)
 
   def _get_s_sqrt(U, V, Sigma, x):
     y = U.conj().T @ x
