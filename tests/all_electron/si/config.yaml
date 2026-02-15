@@ -20,9 +20,6 @@ xc: "lda_x"
 ################################################
 
 use_pseudopotential: False
-pseudopotential_file_dir: null
-# The pseudopotential file directory. If None, the code will use the default
-# pseudopotential file directory.
 
 ################################################
 #       Planewave Hyper-parameters             #

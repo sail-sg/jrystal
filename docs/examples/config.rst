@@ -47,7 +47,11 @@ The configuration file must be in YAML format and contain the following sections
 **Pseudopotential Configuration**
 
 - ``use_pseudopotential``: Enables or disables pseudopotential calculations (``True``/``False``)
-- ``pseudopotential_file_dir``: Path to pseudopotential files directory (uses system default if unspecified)
+- ``pseudopotential_type``: Selects pseudopotential family (e.g. ``nc`` or ``paw``)
+  and the program resolves built-in relative paths automatically:
+  - ``nc``/``normconserving`` -> ``pseudopotential/normconserving``
+  - ``us``/``ultrasoft`` -> ``pseudopotential/ultrasoft``
+  - ``paw`` -> ``pseudopotential/paw``
 
 **Planewave Basis Settings**
 

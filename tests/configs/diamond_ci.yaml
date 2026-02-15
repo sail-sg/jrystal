@@ -17,7 +17,6 @@ xc: "lda_x+lda_c_pw"
 ################################################
 use_pseudopotential: true
 pseudopotential_type: "nc"
-pseudopotential_file_dir: null
 
 ################################################
 #       Planewave Hyper-parameters             #

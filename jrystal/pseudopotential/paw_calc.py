@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from .gaunt import gaunt
 
 from .._src import xc
-from .load_gpaw import parse_paw_setup
+from .load_gpaw import find_gpaw_setup, parse_paw_setup
 
 
 def calc_paw(setup_data: dict):
@@ -429,11 +429,13 @@ def compute_proj_pw_overlap(
   pos: jnp.ndarray,
 ):
     """
+    # TODO: modify this function to be able to handle arbitrary atom type
     This is the customized function to compute the projector-plane wave overlap matrix:
     We perform the radial integration in real space and compare the results with f_GI
     """
 
-    pp_data = parse_paw_setup(f'/home/aiops/zhaojx/paw-minimal/pseudopotential/C.LDA')
+    setup_path = find_gpaw_setup(None, "C", xc="LDA")
+    pp_data = parse_paw_setup(setup_path)
     from scipy.special import spherical_jn
 
     gcut2 = 258

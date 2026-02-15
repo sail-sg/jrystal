@@ -10,8 +10,8 @@ Date: 2025-09-03
 import gzip
 import os
 import xml.etree.ElementTree as ET
-import numpy as np
 from pathlib import Path
+from typing import Optional
 
 
 def parse_radial_grid(radial_grid_element):
@@ -261,7 +261,16 @@ def parse_paw_setup(filepath):
     return result
 
 
-def find_gpaw_setup(dir_path, atom, xc='PBE'):
+def get_default_gpaw_setup_dir() -> str:
+    """Return the default repository-relative GPAW setup directory."""
+    base_dir = Path(__file__).resolve().parents[2] / "pseudopotential"
+    paw_dir = base_dir / "paw"
+    if paw_dir.is_dir():
+        return str(paw_dir)
+    return str(base_dir)
+
+
+def find_gpaw_setup(dir_path: Optional[str], atom, xc='PBE'):
     """Find the GPAW setup file for an atom in the directory path.
     
     The setup file must follow the pattern:
@@ -278,6 +287,9 @@ def find_gpaw_setup(dir_path, atom, xc='PBE'):
     Raises:
         ValueError: If the setup file is not found.
     """
+    if dir_path is None:
+        dir_path = get_default_gpaw_setup_dir()
+
     # Ensure directory path ends with separator
     if not dir_path.endswith(os.sep):
         dir_path += os.sep

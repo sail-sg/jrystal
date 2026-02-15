@@ -43,8 +43,10 @@ def main():
 
   if args.mode == "energy":
     if config.use_pseudopotential:
-      # jr.calc.energy_normcons(config)
-      jr.calc.energy_paw(config)
+      if config.pseudopotential_type == "nc":
+        jr.calc.energy_normcons(config)
+      elif config.pseudopotential_type == "paw":
+        jr.calc.energy_paw(config)
     else:
       jr.calc.energy_all_electrons(config)
 

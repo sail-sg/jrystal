@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import jax
-jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 import numpy as np
 from absl import logging
@@ -21,7 +20,7 @@ from typing import Optional, Tuple
 
 from .paw_calc import calc_paw
 from .dataclass import PawPseudopotential, PawSetupBundle
-from .load_gpaw import parse_paw_setup
+from .load_gpaw import find_gpaw_setup, parse_paw_setup
 from .load_qe import parse_upf
 from .beta import _beta_sbt_single_atom
 from .utils import map_over_atoms, pack
@@ -136,12 +135,14 @@ def build_paw_setup(crystal, xc_name: str) -> PawSetupBundle:
   beta_counts = [len(l_list) for l_list in nonlocal_angular_momentum]
   beta_offsets = np.cumsum([0] + beta_counts[:-1])
   index_map = {}
-  for a, offset, l_list in zip(atoms_list, beta_offsets, nonlocal_angular_momentum):
+  for a, offset, l_list in zip(
+    atoms_list, beta_offsets, nonlocal_angular_momentum
+  ):
     beta_idx = []
     phi_idx = []
-    for b, l in enumerate(l_list):
-      l = int(l)
-      for m in range(-l, l + 1):
+    for b, ell in enumerate(l_list):
+      ell = int(ell)
+      for m in range(-ell, ell + 1):
         beta_idx.append(offset + b)
         phi_idx.append(l_max_global + m)
     index_map[a] = (jnp.array(beta_idx), jnp.array(phi_idx))
@@ -217,8 +218,8 @@ def _build_paw_precompute(paw, crystal, g_vec):
 
     ghat_LG = np.zeros((Lmax_val, *g_norm.shape), dtype=np.complex128)
     for L in range(Lmax_val):
-      l = int(np.floor(np.sqrt(L)))
-      ghat_LG[L] = 4 * np.pi * (-1j) ** l * radial_int_lG[l] * Y_LG[L]
+      ell = int(np.floor(np.sqrt(L)))
+      ghat_LG[L] = 4 * np.pi * (-1j) ** ell * radial_int_lG[ell] * Y_LG[L]
     # Match FFT normalization used by density_grid_reciprocal
     ghat_LG *= num_grids / crystal.vol
     return ghat_LG
@@ -334,8 +335,8 @@ def build_paw_precompute(paw, crystal, g_vec):
 
     ghat_LG = np.zeros((Lmax_val, *g_norm.shape), dtype=np.complex128)
     for L in range(Lmax_val):
-      l = int(np.floor(np.sqrt(L)))
-      ghat_LG[L] = 4 * np.pi * (-1j) ** l * radial_int_lG[l] * Y_LG[L]
+      ell = int(np.floor(np.sqrt(L)))
+      ghat_LG[L] = 4 * np.pi * (-1j) ** ell * radial_int_lG[ell] * Y_LG[L]
     # Match FFT normalization used by density_grid_reciprocal
     num_grids = np.prod(g_vec_grid.shape[:-1])
     ghat_LG *= num_grids / crystal.vol
@@ -594,9 +595,8 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   """
   
   # Load GPAW setup file
-  pp_data = parse_paw_setup(
-    f'/home/aiops/zhaojx/paw-minimal/pseudopotential/{atom_type}.{xc_name}'
-  )
+  setup_path = find_gpaw_setup(None, atom_type, xc=xc_name)
+  pp_data = parse_paw_setup(setup_path)
   
   # Extract basic properties
   Z = int(pp_data['atom']['Z'])  # Total atomic number
@@ -663,25 +663,34 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
       g_lg = g_lg.at[0].set(4 / rc**3 / jnp.sqrt(jnp.pi) * jnp.exp(-(r_g / rc)**2))
       
       # Higher l components: g_lg[l] = 2/(2l+1)/rc^2 * r * g_lg[l-1]
-      for l in range(1, lmax + 1):
-          g_lg = g_lg.at[l].set(2.0 / (2 * l + 1) / rc**2 * r_g * g_lg[l - 1])
+      for ell in range(1, lmax + 1):
+          g_lg = g_lg.at[ell].set(
+            2.0 / (2 * ell + 1) / rc**2 * r_g * g_lg[ell - 1]
+          )
       
       # Normalize each l-component according to GPAW convention
       # GPAW normalizes so that rgd.integrate(g_lg[l], l) = 4π
       # Since integrate multiplies by 4π, the raw integral should be 1.0
-      for l in range(lmax + 1):
+      for ell in range(lmax + 1):
           # Calculate integral with 4π factor (like rgd.integrate does)
           # Skip r=0 point in integration like GPAW does
-          integral_with_4pi = jnp.sum(g_lg[l, 1:] * r_g[1:]**(l + 2) * dr_g[1:]) * 4 * jnp.pi
+          integral_with_4pi = (
+            jnp.sum(g_lg[ell, 1:] * r_g[1:]**(ell + 2) * dr_g[1:])
+            * 4 * jnp.pi
+          )
           if integral_with_4pi > 1e-10:
               # Divide by integral and multiply by 4π to get correct normalization
-              g_lg = g_lg.at[l].set(g_lg[l] / integral_with_4pi * (4 * jnp.pi))
+              g_lg = g_lg.at[ell].set(
+                g_lg[ell] / integral_with_4pi * (4 * jnp.pi)
+              )
   else:
       # For other shape function types, use simple fallback
       print(f"Warning: Shape function type '{sf_type}' not fully implemented, using simplified version")
       g_lg = g_lg.at[0].set(4 / rc**3 / jnp.sqrt(jnp.pi) * jnp.exp(-(r_g / rc)**2))
-      for l in range(1, lmax + 1):
-          g_lg = g_lg.at[l].set(2.0 / (2 * l + 1) / rc**2 * r_g * g_lg[l - 1])
+      for ell in range(1, lmax + 1):
+          g_lg = g_lg.at[ell].set(
+            2.0 / (2 * ell + 1) / rc**2 * r_g * g_lg[ell - 1]
+          )
 
   return {
     'r_g': r_g,
@@ -705,7 +714,7 @@ def setup_gpaw(atom_type: str, xc_name: str = "PBE"):
   }
 
 
-def setup_qe():
+def setup_qe(upf_path: Optional[str] = None):
   """Load and parse QE UPF pseudopotential file.
   
   WARNING NOTE: this function is deprecated and jrystal currently only supports PAW
@@ -718,14 +727,19 @@ def setup_qe():
   Returns:
     Tuple of arrays containing PAW data in QE native convention
   """
-  
+
+  if upf_path is None:
+    raise ValueError(
+      "setup_qe is deprecated and no default UPF path is configured. "
+      "Provide an explicit `upf_path` if you still need this code path."
+    )
+
   # load the pseudopotential
-  pp_dict = parse_upf('/home/aiops/zhaojx/jrystal/pseudopotential/C.pbe-n-kjpaw_psl.1.0.0.UPF')
+  pp_dict = parse_upf(upf_path)
   Z = 6  # Atomic number for Carbon
   lmax = int(pp_dict['PP_NONLOCAL']['PP_AUGMENTATION']['l_max_aug'])  # Max l for augmentation
   l_j = jnp.array([int(proj['angular_momentum']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # l for each projector
   lcut = max(l_j)  # Maximum l among projectors
-  rcut_j = jnp.array([float(proj['cutoff_radius']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # Rcut for projectors
   gcut_j = jnp.array([int(proj['cutoff_radius_index']) for proj in pp_dict['PP_NONLOCAL']['PP_BETA']])  # Grid indices
   gcut = jnp.max(gcut_j)  # Use maximum grid index for uniform cutoff
   

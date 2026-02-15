@@ -28,10 +28,10 @@ xc: "lda_x+lda_c_pw"
 
 # if false, the code will use the all-electron calculation
 use_pseudopotential: true
-pseudopotential_type: "nc"
-pseudopotential_file_dir: "/home/aiops/zhaojx/jrystal/pseudopotential/normconserving/"
-# The pseudopotential file directory. If None, the code will use the default
-# pseudopotential file directory.
+pseudopotential_type: "paw"
+# Pseudopotential data path is selected automatically by type:
+#   nc/us -> pseudopotential/normconserving or pseudopotential/ultrasoft
+#   paw   -> pseudopotential/paw
 # Used for PAW debug, load GPAW coeff and check energy componentwise
 paw_debug: False
 gpaw_coeff_path: "log/gpaw_coeff_diamond.npz"
@@ -104,7 +104,6 @@ convergence_condition: 1.e-6
 # NOTE: The following configs are only valid for band structure calculation.
 # Need to either indicate the k_path or the k_path file.
 band_structure_empty_bands: null
-k_path_special_points: null
 # If `k_path_special_points` is None, the code will use the default
 # special points for the given unit cell, as defined in ASE.
 # For more details, refer to:
