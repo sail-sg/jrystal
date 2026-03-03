@@ -63,7 +63,9 @@ class _TestModules(parameterized.TestCase):
     np.testing.assert_almost_equal(crystal.charges, self.charges)
     np.testing.assert_almost_equal(crystal.cell_vectors, self.cell_vectors)
     np.testing.assert_almost_equal(crystal.vol, self.vol)
-    np.testing.assert_almost_equal(crystal.scaled_positions, self.scaled_positions)
+    np.testing.assert_almost_equal(
+      crystal.scaled_positions, self.scaled_positions
+    )
     np.testing.assert_almost_equal(
       crystal.reciprocal_vectors, self.reciprocal_vectors
     )
