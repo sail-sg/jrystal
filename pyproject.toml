@@ -55,6 +55,8 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = ["mypy>=1.5.0", "yapf", "pylint", "isort", "flake8"]
+format = ["yapf"]
+lint = ["pylint"]
 docs = ["sphinx>=7.0.0", "sphinx-rtd-theme>=1.0.0"]
 
 
@@ -88,11 +90,12 @@ disable = [
   "R0903", # Too few public methods
   "R0913", # Too many arguments
   "R0914", # Too many local variables
-  "W0311", # Bad indentation
+  # "W0311", # Bad indentation
 ]
 
 
 [tool.pylint.format]
+indent-string = "  "
 max-line-length = 80
 
 
