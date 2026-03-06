@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Energy functions. """
+"""Energy terms for plane-wave electronic-structure calculations."""
 from typing import Optional, Tuple, Union
 
 import jax.numpy as jnp
@@ -22,7 +22,10 @@ from . import braket, potential, pw, xc
 from .ewald import ewald_coulomb_repulsion
 from .grid import translation_vectors
 from .utils import (
-  absolute_square, safe_real, wave_to_density, wave_to_density_reciprocal
+  absolute_square,
+  safe_real,
+  wave_to_density,
+  wave_to_density_reciprocal,
 )
 
 
@@ -32,35 +35,14 @@ def hartree(
   vol: Float,
   kohn_sham: bool = False
 ) -> Float:
-  r"""Calculate the Hartree energy.
-
-  The Hartree energy represents the classical electrostatic interaction between
-  electrons. The calculation is performed in reciprocal space for efficiency.
-  The Hartree potential in reciprocal space is given by:
-
-  .. math::
-
-      \hat{V}_H(\mathbf{G}) = 4\pi \frac{\hat{\rho}(\mathbf{G})}{|\mathbf{G}|^2},
-      \quad \hat{V}_H(\mathbf{0}) = 0
-
-  The Hartree energy is computed as:
-
-  .. math::
-
-      E_H = \frac{1}{2}\sum_{\mathbf{G}} \hat{\rho}(\mathbf{G})\hat{V}_{H}(\mathbf{G})
-      = 2\pi \sum_{\mathbf{G}} \frac{|\hat{\rho}(\mathbf{G})|^2}{|\mathbf{G}|^2}
-
-  Please also refer to the tutorial :doc:`Total Energy Minimization <../tutorial/total_energy>`
-  for more details.
+  r"""Compute the Hartree energy from reciprocal-space density.
 
   Args:
-    density_grid_reciprocal (Complex[Array, 'spin x y z']): Electron density in
-      reciprocal space. The input density must contains spin axis.
-    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal
-      space.
-    vol (Float): Unit cell volume.
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to
-      False.
+    density_grid_reciprocal (Complex[Array, 'spin x y z']): Spin-resolved
+      reciprocal-space density.
+    g_vector_grid (Float[Array, 'x y z 3']): Reciprocal-space G-vector grid.
+    vol (Float): Unit-cell volume.
+    kohn_sham (bool): Whether to use the Kohn-Sham potential convention.
 
   Returns:
     Float: Hartree energy.
@@ -85,35 +67,19 @@ def hartree(
 def external(
   density_grid_reciprocal: Complex[Array, 'spin x y z'],
   position: Float[Array, 'atom 3'],
-  charge: Float[Array, 'atom'],
+  charge: Float[Array, ' atom'],
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float
 ) -> Float:
-  r"""Calculate the external potential energy.
-
-  The external potential energy is computed using Parseval's identity,
-  expressing the real-space integral as a sum over reciprocal lattice vectors:
-
-  .. math::
-      E = \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G})\hat{V}_{\text{ext}}(\mathbf{G}) =
-      \sum_{\mathbf{G}} \hat{\rho}(\mathbf{G}) \sum_{\alpha} Z_{\alpha}
-      \exp(-i\mathbf{G}\cdot\mathbf{R}_{\alpha}) v(\mathbf{G})
-
-  where:
-
-  - :math:`\hat{\rho}(\mathbf{G})` is the Fourier transform of the electron density, i.e. the density in reciprocal space.
-  - :math:`\hat{V}_{\text{ext}}(\mathbf{G})` is the external potential in reciprocal space
-  - :math:`Z_{\alpha}` is the nuclear charge of atom :math:`\alpha`
-  - :math:`\mathbf{R}_{\alpha}` is the position of atom :math:`\alpha`
-  - :math:`v(\mathbf{G})` is the Fourier transform of the Coulomb potential
+  r"""Compute the electron-ion external potential energy.
 
   Args:
-    density_grid_reciprocal (Complex[Array, 'spin x y z']): Electron density in
-      reciprocal space. The input density must contains spin axis.
-    position (Float[Array, 'atom 3']): Atomic positions in the unit cell.
-    charge (Float[Array, 'atom']): Nuclear charges.
-    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
-    vol (Float): Unit cell volume.
+    density_grid_reciprocal (Complex[Array, 'spin x y z']): Spin-resolved
+      reciprocal-space density.
+    position (Float[Array, 'atom 3']): Atomic positions.
+    charge (Float[Array, 'atom']): Atomic charges.
+    g_vector_grid (Float[Array, 'x y z 3']): Reciprocal-space G-vector grid.
+    vol (Float): Unit-cell volume.
 
   Returns:
     Float: External potential energy.
@@ -136,35 +102,24 @@ def external(
 
 
 def kinetic(
+  coeff_grid: Complex[Array, 'spin kpt band x y z'],
   g_vector_grid: Float[Array, 'x y z 3'],
   kpts: Float[Array, 'kpt 3'],
-  coeff_grid: Complex[Array, 'spin kpt band x y z'],
-  occupation: Optional[Float[Array, 'spin kpt band']] = None
+  kpts_weights: Float[Array, ' kpt'],
+  occupation: Optional[Float[Array, 'spin kpt band']] = None,
 ) -> Union[Float, Float[Array, "spin kpt band"]]:
-  r"""Calculate the kinetic energy.
-
-  For plane wave basis, the kinetic energy operator is diagonal in
-  reciprocal space. The kinetic energy is computed as:
-
-  .. math::
-      E_{\text{kin}} = \frac{1}{2} \sum_{\mathbf{G}}
-      |\mathbf{k} + \mathbf{G}|^2 |c_{n\mathbf{k}}(\mathbf{G})|^2
-
-  where:
-
-  - :math:`\mathbf{k}` is the k-point vector
-  - :math:`\mathbf{G}` is the reciprocal lattice vector
-  - :math:`c_{n\mathbf{k}}(\mathbf{G})` are the plane wave coefficients
-  - :math:`n` is the band index
+  r"""Compute kinetic energy from plane-wave coefficients.
 
   Args:
-    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
-    kpts (Float[Array, 'kpt 3']): k-points in reciprocal space.
-    coeff_grid (Complex[Array, 'spin kpt band x y z']): Plane wave coefficients.
-    occupation (Float[Array, 'spin kpt band'], optional): Occupation numbers. If provided, returns the total kinetic energy weighted by occupations.
+    coeff_grid (Complex[Array, 'spin kpt band x y z']): Plane-wave coefficients.
+    g_vector_grid (Float[Array, 'x y z 3']): Reciprocal-space G-vector grid.
+    kpts (Float[Array, 'kpt 3']): :math:`k`-point coordinates.
+    kpts_weights (Float[Array, ' kpt']): :math:`k`-point weights.
+    occupation (Optional[Float[Array, 'spin kpt band']]): Occupation numbers.
 
   Returns:
-    Union[Float, Float[Array, "spin kpt band"]]: If occupation is provided, returns the total kinetic energy. Otherwise, returns the kinetic energy for each state.
+    Union[Float, Float[Array, "spin kpt band"]]: Total kinetic energy when
+    ``occupation`` is provided; otherwise per-state kinetic energies.
   """
 
   dim = g_vector_grid.shape[-1]
@@ -175,7 +130,7 @@ def kinetic(
   e_kin = jnp.sum(e_kin * absolute_square(coeff_grid), axis=range(3, dim + 3))
 
   if occupation is not None:
-    e_kin = jnp.sum(e_kin * occupation) / 2
+    e_kin = jnp.sum(e_kin * occupation * kpts_weights[None, :, None]) / 2
   else:
     e_kin /= 2
 
@@ -189,16 +144,18 @@ def xc_energy(
   xc_type: str,
   kohn_sham: bool = False
 ) -> Float:
-  r"""Calculate the exchange-correlation energy of the input density.
+  r"""Compute exchange-correlation energy for a real-space density.
 
   Args:
-    density_grid (Float[Array, 'spin x y z']): Real-space electron density.
-      The input density must contains spin axis.
-    vol (Float): Unit cell volume.
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
+    density_grid (Float[Array, 'spin x y z']): Spin-resolved real-space
+      density.
+    g_vector_grid (Float[Array, 'x y z 3']): Reciprocal-space G-vector grid.
+    vol (Float): Unit-cell volume.
+    xc_type (str): XC functional specification.
+    kohn_sham (bool): Whether to compute the Kohn-Sham XC potential form.
 
   Returns:
-    Float: exchange-correlation energy.
+    Float: Exchange-correlation energy.
   """
 
   assert density_grid.ndim == 4, ('density_grid must contains spin axis')
@@ -213,29 +170,26 @@ def xc_energy(
 
 def nuclear_repulsion(
   position: Float[Array, 'atom 3'],
-  charge: Float[Array, 'atom'],
+  charge: Float[Array, ' atom'],
   cell_vectors: Float[Array, '3 3'],
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
   ewald_eta: float,
   ewald_cutoff: float,
 ) -> Float:
-  r"""Compute the nuclear repulsion energy using Ewald summation.
-
-  This function calculates the nuclear-nuclear repulsion energy in periodic systems
-  using the Ewald summation technique.
+  r"""Compute ion-ion repulsion energy with Ewald summation.
 
   Args:
-    position (Float[Array, 'atom 3']): Coordinates of atoms in a unit cell.
-    charge (Float[Array, 'atom']): Nuclear charges of atoms.
-    cell_vectors (Float[Array, '3 3']): Unit cell vectors.
-    g_vector_grid (Float[Array, 'x y z 3']): Grid of G-vectors in reciprocal space.
-    vol (Float): Volume of the unit cell.
+    position (Float[Array, 'atom 3']): Atomic positions.
+    charge (Float[Array, 'atom']): Atomic charges.
+    cell_vectors (Float[Array, '3 3']): Real-space cell vectors.
+    g_vector_grid (Float[Array, 'x y z 3']): Reciprocal-space G-vector grid.
+    vol (Float): Unit-cell volume.
     ewald_eta (float): Ewald splitting parameter.
-    ewald_cutoff (float): Real-space cutoff for Ewald summation.
+    ewald_cutoff (float): Real-space cutoff.
 
   Returns:
-    Float: Nuclear-nuclear repulsion energy.
+    Float: Nuclear repulsion energy.
   """
   ewald_grid = translation_vectors(cell_vectors, ewald_cutoff)
   return ewald_coulomb_repulsion(
@@ -246,45 +200,40 @@ def nuclear_repulsion(
 def total_energy(
   coefficient: Complex[Array, "spin kpts band x y z"],
   position: Float[Array, "atom 3"],
-  charge: Int[Array, "atom"],
+  charge: Int[Array, " atom"],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Float[Array, "kpt 3"],
+  kpts_weights: Float[Array, " kpt"],
   vol: Float,
   occupation: Optional[Float[Array, "spin kpt band"]] = None,
   kohn_sham: bool = False,
   xc: str = 'lda_x',
   split: bool = False,
 ) -> Union[Float, Tuple[Float, Float, Float, Float]]:
-  r"""Calculate the total electronic energy of the system.
+  r"""Compute total electronic energy.
 
-  Computes the total energy as the sum of kinetic, external potential,
-  Hartree, and exchange-correlation terms:
-
-  .. math::
-
-    E_{\text{tot}} = E_{\text{kin}} + E_{\text{ext}} + E_H + E_{xc}
-
-  .. warning::
-
-    This function does not include the nuclear-nuclear repulsion (Ewald) energy. For the complete total energy, the Ewald term must be added separately.
+  The returned total includes kinetic, external, Hartree, and XC terms.
 
   Args:
-    coefficient (Complex[Array, "spin kpts band x y z"]): Plane wave coefficients.
-    position (Float[Array, "atom 3"]): Atomic positions in the unit cell.
-    charge (Int[Array, "atom"]): Nuclear charges.
-    g_vector_grid (Float[Array, "x y z 3"]): Grid of G-vectors in reciprocal space.
-    kpts (Float[Array, "kpt 3"]): k-points in reciprocal space.
-    vol (Float): Unit cell volume.
-    occupation (Float[Array, "spin kpt band"], optional): Occupation numbers.
-      If not provided, all states are considered fully occupied.
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
-    xc (str, optional): Exchange-correlation functional type. Defaults to 'lda'.
-    split (bool, optional): If True, return individual energy components. Defaults to False.
+    coefficient (Complex[Array, "spin kpts band x y z"]): Plane-wave
+      coefficients.
+    position (Float[Array, "atom 3"]): Atomic positions.
+    charge (Int[Array, "atom"]): Atomic charges.
+    g_vector_grid (Float[Array, "x y z 3"]): Reciprocal-space G-vector grid.
+    kpts (Float[Array, "kpt 3"]): :math:`k` points.
+    kpts_weights (Float[Array, " kpt"]): :math:`k`-point weights.
+    vol (Float): Unit-cell volume.
+    occupation (Optional[Float[Array, "spin kpt band"]]): Occupation numbers.
+    kohn_sham (bool): Whether to use Kohn-Sham formalism.
+    xc (str): XC functional specification.
+    split (bool): If ``True``, return component energies.
 
   Returns:
-    Union[Float, Tuple[Float, Float, Float, Float]]: If split is False, returns
-      the total electronic energy. If split is True, returns the individual
-      components (kinetic, external, Hartree, exchange-correlation).
+    Union[Float, Tuple[Float, Float, Float, Float]]: Total energy or
+    ``(E_kin, E_ext, E_har, E_xc)``.
+
+  .. warning::
+    This function does not include ion-ion Ewald energy.
   """
 
   wave_grid_arr = pw.wave_grid(coefficient, vol)
@@ -296,7 +245,7 @@ def total_energy(
   density_grid = wave_to_density(wave_grid_arr, occupation)
   density_grid_rec = wave_to_density_reciprocal(wave_grid_arr, occupation)
 
-  e_kin = kinetic(g_vector_grid, kpts, coefficient, occupation)
+  e_kin = kinetic(coefficient, g_vector_grid, kpts, kpts_weights, occupation)
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
   e_xc = xc_energy(density_grid, g_vector_grid, vol, xc, kohn_sham)
@@ -310,40 +259,32 @@ def total_energy(
 def band_energy(
   coefficient: Complex[Array, "spin kpt band x y z"],
   position: Float[Array, "atom 3"],
-  charge: Int[Array, "atom"],
+  charge: Int[Array, " atom"],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Float[Array, "kpt 3"],
+  kpts_weights: Float[Array, " kpt"],
   vol: Float,
   occupation: Float[Array, "spin kpt band"],
   kohn_sham: bool = False,
   xc_type: str = "lda_x"
 ):
-  r"""Calculate the energy eigenvalues for each electronic state.
-
-  Computes the energy eigenvalues by evaluating the expectation value of the
-  single-particle Hamiltonian for each state:
-
-  .. math::
-
-      \varepsilon_{n\mathbf{k}} = \langle \psi_{n\mathbf{k}} |
-      \hat{T} + \hat{V}_{\text{eff}} | \psi_{n\mathbf{k}} \rangle
-
-  where :math:`\hat{T}` is the kinetic energy operator and
-  :math:`\hat{V}_{\text{eff}}` is the effective potential operator.
+  r"""Compute single-particle band energies for each state.
 
   Args:
-    coefficient (Complex[Array, "spin kpt band x y z"]): Plane wave coefficients.
-    position (Float[Array, "atom 3"]): Atomic positions in the unit cell.
-    charge (Int[Array, "atom"]): Nuclear charges.
-    g_vector_grid (Float[Array, "x y z 3"]): Grid of G-vectors in reciprocal space.
-    kpts (Float[Array, "kpt 3"]): k-points in reciprocal space.
-    vol (Float): Unit cell volume.
+    coefficient (Complex[Array, "spin kpt band x y z"]): Plane-wave
+      coefficients.
+    position (Float[Array, "atom 3"]): Atomic positions.
+    charge (Int[Array, "atom"]): Atomic charges.
+    g_vector_grid (Float[Array, "x y z 3"]): Reciprocal-space G-vector grid.
+    kpts (Float[Array, "kpt 3"]): :math:`k` points.
+    kpts_weights (Float[Array, " kpt"]): :math:`k`-point weights.
+    vol (Float): Unit-cell volume.
     occupation (Float[Array, "spin kpt band"]): Occupation numbers.
-    kohn_sham (bool, optional): If True, use Kohn-Sham formalism. Defaults to False.
-    xc_type (str, optional): Exchange-correlation functional type. Defaults to 'lda'.
+    kohn_sham (bool): Whether to use Kohn-Sham formalism.
+    xc_type (str): XC functional specification.
 
   Returns:
-    Float[Array, "spin kpt band"]: Energy eigenvalues for each electronic state.
+    Float[Array, "spin kpt band"]: Band energies.
   """
 
   density_grid_sum = pw.density_grid(coefficient, vol, occupation)
@@ -360,6 +301,6 @@ def band_energy(
   )
   e_eff = braket.real_braket(density_per_band, v_eff, vol)
 
-  e_kin = kinetic(g_vector_grid, kpts, coefficient)
+  e_kin = kinetic(coefficient, g_vector_grid, kpts, kpts_weights)
   assert np.array_equal(e_kin.shape, e_eff.shape)
   return safe_real(e_eff + e_kin)
