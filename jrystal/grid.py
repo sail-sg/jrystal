@@ -23,19 +23,19 @@ It includes utilities for:
 """
 
 from ._src.grid import (
-  g_vectors,
-  r_vectors,
-  k_vectors,
-  spherical_mask,
   cubic_mask,
-  proper_grid_size,
-  translation_vectors,
   estimate_max_cutoff_energy,
-  grid_vector_radius,
   g2cell_vectors,
+  g2r_vector_grid,
+  g_vectors,
+  grid_vector_radius,
+  k_vectors,
+  proper_grid_size,
   r2cell_vectors,
   r2g_vector_grid,
-  g2r_vector_grid,
+  r_vectors,
+  spherical_mask,
+  translation_vectors,
 )
 
 __all__ = [
