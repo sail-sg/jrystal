@@ -14,19 +14,11 @@
 """ Occupation functions. """
 
 from ._src.occupation import (
-  idempotent_param_init,
-  idempotent,
-  uniform,
-  gamma,
-  param_init,
-  occupation,
+  get_occupation_fn,
+  params_init,
 )
 
 __all__ = [
-  "idempotent_param_init",
-  "idempotent",
-  "uniform",
-  "gamma",
-  "param_init",
-  "occupation",
+  "get_occupation_fn",
+  "params_init",
 ]
