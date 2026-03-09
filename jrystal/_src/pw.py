@@ -14,12 +14,13 @@
 """Plane-wave parameterization and evaluation utilities."""
 from typing import Optional, Tuple, Union
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 from jax.sharding import Sharding
 from jaxtyping import Array, Bool, Complex, Float
 
-from .fft import ifftn
+from .fft import fftn, ifftn
 from .grid import g_vectors
 from .unitary_module import unitary_matrix, unitary_matrix_param_init
 from .utils import absolute_square, expand_coefficient, volume
@@ -34,6 +35,45 @@ def param_init(
   sharding: Optional[Sharding] = None
 ) -> dict:
   r"""Initialize raw plane-wave parameters.
+
+  This function generates a random tensor of shape
+  :code:`(num_spin, num_kpts, num_g, num_bands)`, where :code:`num_g` is the
+  number of :code:`True` items in the :code:`freq_mask`.
+
+  In planewave-based calculation, a wave function is represented as a
+  linear combination of the Fourier series in 3D. Therefore, to create one
+  wave function we need a 3D shaped tensor to represent the mixing
+  coefficients on each frequency component (denoted as :code:`G`).
+  :code:`freq_mask` provides a 3D mask to decide which frequency components
+  are selected, the number of selected components is denoted as :code:`num_g`.
+
+  The :code:`num_bands` & :code:`num_kpts` are a bit hard to explain.
+  Intuitively, the wave functions consist of high frequency components that
+  have a period smaller than the unit cell (denoted :math:`G`) and components
+  that have a period larger than the unit cell (denoted :math:`k`).
+
+  The form of wave function under solid state is:
+
+  .. math::
+
+    \psi(r) = e^{i\vb{k}^\top \vb{r}}\sum_G c_{kG} e^{i\vb{G}^\top \vb{r}}
+
+  This function generates a raw parameter, which after processing by
+  :py:func:`coeff` can be used as the :math:`c_{kG}` part of the above equation.
+
+  Extension reads:
+  1. Why and how to mask the frequency components.
+  2. Bloch theorem.
+
+  As far as this function is concerned, it simply returns a randomly
+  initialized parameter of shape :code:`(num_spin, num_kpts, num_g, num_bands)`.
+  The input arguments to this function are only used to determine the shape.
+
+  Note that this function returns the raw parameter that cannot be used
+  directly to weight the frequency components, as in quantum chemistry we
+  require the wave functions to be orthogonal to each other.
+  Check :py:func:`coeff` for converting the raw parameter into a unitary
+  tensor.
 
   Args:
     key (Array): Random key.
@@ -58,6 +98,32 @@ def coeff(
   sharding: Optional[Sharding] = None
 ) -> Complex[Array, 'spin kpt band x y z']:
   r"""Build orthonormal plane-wave coefficients on the full G grid.
+
+  This function takes a raw parameter of shape
+  :code:`(num_spin, num_kpts, num_gpts, num_bands)`, orthogonalizes for the last
+  two dimensions, so that the resulting tensor satisfies the unitary constraint
+  :code:`einsum('kabc,labc->kl', ret[i, j], ret[i, j]) == eye(num_bands)`.
+
+  The :code:`pw_param` should be created from :py:func:`param_init`, and the
+  same :code:`freq_mask` used in :py:func:`param_init` should be used here. As
+  mentioned in :py:func:`param_init`, we use linear combination over 3D Fourier
+  components for creating wave functions. Some extra requirements are:
+
+  1. The wave functions that have the same spin and same k component need
+     to be orthogonal to each other.
+  2. We only activate some of the frequency components with the
+  :code:`freq_mask`.
+
+  As the raw parameter returned from :py:func:`param_init` has the shape
+  :code:`(num_spin, num_kpts, num_g, num_bands)`, where :code:`num_g` is the
+  number of activated frequencies flattened from the activated entries in the
+  :code:`freq_mask`, this function first orthogonalizes over the last two
+  dimensions and reorganizes the orthogonalized parameter into a 3D grid the
+  same shape as the frequency mask.
+
+  Extension reads:
+  1. Why and how to mask the frequency components.
+  2. Bloch theorem.
 
   Args:
     pw_param (Union[dict, Array, Tuple]): Raw parameters.
@@ -95,6 +161,7 @@ def density_grid(
   coeff: Complex[Array, 'spin kpt band x y z'],
   vol: Float,
   occupation: Optional[Float[Array, 'spin kpt band']] = None,
+  k_weights: Optional[Float[Array, ' kpts']] = None,
 ) -> Union[
   Float[Array, 'spin kpt band x y z'],
   Float[Array, 'spin x y z'],
@@ -105,6 +172,7 @@ def density_grid(
     coeff (Complex[Array, 'spin kpt band x y z']): Plane-wave coefficients.
     vol (Float): Unit-cell volume.
     occupation (Optional[Float[Array, 'spin kpt band']]): Occupation numbers.
+    k_weights (Optional[Float[Array, ' kpts']]): Weights for each k-point.
 
   Returns:
     Union[Float[Array, 'spin kpt band x y z'], Float[Array, 'spin x y z']]:
@@ -115,6 +183,14 @@ def density_grid(
   dens = absolute_square(wave_grid_arr)
 
   if occupation is not None:
+
+    if k_weights is not None:
+      assert occupation.shape[1] == k_weights.shape[0], (
+        f"occupation.shape[1] ({occupation.shape[1]}) must be equal to "
+        f"k_weights.shape[0] ({k_weights.shape[0]})."
+      )
+      occupation = occupation * k_weights[None, :, None]
+
     try:
       dens = jnp.einsum('skb...,skb->s...', dens, occupation)
     except ValueError:
@@ -129,6 +205,7 @@ def density_grid_reciprocal(
   coeff: Complex[Array, 'spin kpt band x y z'],
   vol: Union[float, Array],
   occupation: Optional[Float[Array, 'spin kpt band']] = None,
+  k_weights: Optional[Float[Array, ' kpts']] = None,
 ) -> Union[Complex[Array, 'spin kpt band x y z'], Complex[Array, 'spin x y z']]:
   r"""Compute reciprocal-space density by FFT of :func:`density_grid`.
 
@@ -136,13 +213,14 @@ def density_grid_reciprocal(
     coeff (Complex[Array, 'spin kpt band x y z']): Plane-wave coefficients.
     vol (Union[float, Array]): Unit-cell volume.
     occupation (Optional[Float[Array, 'spin kpt band']]): Occupation numbers.
+    k_weights (Optional[Float[Array, ' kpts']]): Weights for each k-point.
 
   Returns:
     Union[Complex[Array, 'spin kpt band x y z'], Complex[Array, 'spin x y z']]:
     Reciprocal-space density.
   """
-  dens = density_grid(coeff, vol, occupation)
-  return jnp.fft.fftn(dens, axes=range(-3, 0))
+  dens = density_grid(coeff, vol, occupation, k_weights)
+  return fftn(dens, axes=range(-3, 0))
 
 
 def wave_r(
@@ -185,6 +263,7 @@ def density_r(
   cell_vectors: Float[Array, '3 3'],
   g_vector_grid: Optional[Float[Array, 'x y z 3']] = None,
   occupation: Optional[Float[Array, 'spin kpt band']] = None,
+  k_weights: Optional[Float[Array, ' kpts']] = None,
 ) -> Union[Float[Array, 'spin kpt band'], Float]:
   r"""Evaluate electron density at one real-space point.
 
@@ -194,6 +273,7 @@ def density_r(
     cell_vectors (Float[Array, '3 3']): Real-space cell vectors.
     g_vector_grid (Optional[Float[Array, 'x y z 3']]): Optional G-vector grid.
     occupation (Optional[Float[Array, 'spin kpt band']]): Occupation numbers.
+    k_weights (Optional[Float[Array, ' kpts']]): Weights for each k-point.
 
   Returns:
     Union[Float[Array, 'spin kpt band'], Float]:
@@ -202,6 +282,12 @@ def density_r(
   """
   density = absolute_square(wave_r(r, coeff, cell_vectors, g_vector_grid))
   if occupation is not None:
+    if k_weights is not None:
+      assert occupation.shape[1] == k_weights.shape[0], (
+        f"occupation.shape[1] ({occupation.shape[1]}) must be equal to "
+        f"k_weights.shape[0] ({k_weights.shape[0]})."
+      )
+      occupation = occupation * k_weights[None, :, None]
     density = jnp.sum(density * occupation)
   return density
 
@@ -212,6 +298,7 @@ def nabla_density_r(
   cell_vectors: Float[Array, '3 3'],
   g_vector_grid: Optional[Float[Array, 'x y z 3']] = None,
   occupation: Optional[Float[Array, 'spin kpt band']] = None,
+  k_weights: Optional[Float[Array, ' kpts']] = None,
 ) -> Union[Float[Array, 'spin kpt band 3'], Float[Array, '3']]:
   r"""Compute :math:`\nabla \rho(r)` at a single point.
 
@@ -221,13 +308,19 @@ def nabla_density_r(
     cell_vectors (Float[Array, '3 3']): Real-space cell vectors.
     g_vector_grid (Optional[Float[Array, 'x y z 3']]): Optional G-vector grid.
     occupation (Optional[Float[Array, 'spin kpt band']]): Occupation numbers.
+    k_weights (Optional[Float[Array, ' kpts']]): Weights for each k-point.
 
   Returns:
     Union[Float[Array, 'spin kpt band 3'], Float[Array, '3']]:
     Per-state density gradient if ``occupation`` is ``None``; otherwise
     occupation-weighted total density gradient at ``r``.
   """
-  return nabla_density_grid(r, coeff, cell_vectors, g_vector_grid, occupation)
+  def den(r):
+    return density_r(
+      r, coeff, cell_vectors, g_vector_grid, occupation, k_weights
+    )
+
+  return jax.grad(den)(r)
 
 
 def nabla_density_grid(
@@ -236,6 +329,7 @@ def nabla_density_grid(
   cell_vectors: Float[Array, '3 3'],
   g_vector_grid: Optional[Float[Array, 'x y z 3']] = None,
   occupation: Optional[Float[Array, 'spin kpt band']] = None,
+  k_weights: Optional[Float[Array, ' kpts']] = None,
 ) -> Union[Float[Array, "spin kpt band 3"], Float[Array, "3"]]:
   r"""Compute density-gradient at a point from g vector grid.
 
@@ -245,6 +339,7 @@ def nabla_density_grid(
     cell_vectors (Float[Array, '3 3']): Real-space cell vectors.
     g_vector_grid (Optional[Float[Array, 'x y z 3']]): Optional G-vector grid.
     occupation (Optional[Float[Array, 'spin kpt band']]): Occupation numbers.
+    k_weights (Optional[Float[Array, ' kpts']]): Weights for each k-point.
 
   Returns:
     Union[Float[Array, "spin kpt band 3"], Float[Array, "3"]]:
@@ -285,6 +380,14 @@ def nabla_density_grid(
         'Occupation should have shape [spin, kpt, band]. '
         f'Got occupation shape: {occupation.shape}, expected {leading_dims}.'
       )
+
+    if k_weights is not None:
+      assert occupation.shape[1] == k_weights.shape[0], (
+        f"occupation.shape[1] ({occupation.shape[1]}) must be equal to "
+        f"k_weights.shape[0] ({k_weights.shape[0]})."
+      )
+      occupation = occupation * k_weights[None, :, None]
+
     return jnp.einsum('skbq,skb->q', grad_density, occupation)
 
   return grad_density
