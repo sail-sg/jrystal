@@ -232,13 +232,23 @@ def get_occupation_fn(
 ):
   """Get a function that computes occupations from parameters.
 
+  Example:
+  >>> occ_fn = get_occupation_fn(num_electrons=20, spin=0, spin_restricted=True)
+  >>> params = params_init(num_bands=20, num_kpts=10)
+  >>> occ = occ_fn(params)
+  >>> print(occ)
+  >>> print(np.sum(occ)/10)  # should be 20
+
   Args:
-    num_electrons (int): Number of electrons.
+    num_electrons (int): Total number of electrons in the system.
     spin (int): Number of unpaired electrons.
     spin_restricted (bool): If ``True``, merge spin channels.
-    method (str): Occupation method.
+    method (str): Occupation method. "simplex-projector" is supported for now.
     **kwargs: Additional keyword arguments.
 
+  Returns:
+    Callable[[dict], Float[Array, 'spin kpt band']]: Function that computes
+    occupations from parameters.
   """
   check_spin_number(num_electrons, spin)
   if method == "simplex-projector":
@@ -261,6 +271,22 @@ def params_init(
   method: str = "simplex-projector",
   **kwargs: Any,
 ) -> dict:
+  """Initialize parameters for occupation computation.
+
+  Example:
+  >>> params = params_init(num_bands=20, num_kpts=10)
+  >>> print(params["param_up"].shape)
+  (1, 10, 20)
+
+  Args:
+    num_bands (int): Number of bands.
+    num_kpts (int): Number of :math:`k` points.
+    method (str): Occupation method. "simplex-projector" is supported for now.
+    **kwargs: Additional keyword arguments.
+
+  Returns:
+    dict: Parameters for occupation computation.
+  """
   if method == "simplex-projector":
     return _simplex_projector_init(num_bands, num_kpts)
   else:
