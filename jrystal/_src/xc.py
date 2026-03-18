@@ -1,253 +1,250 @@
+"""Exchange-correlation functional interface wrapping jxc."""
 import importlib
-from typing import Callable, Optional
 
-import jax
 import jax.numpy as jnp
-from jax.lax import stop_gradient
-from jax_xc.utils import get_p
-from jaxtyping import Array, Float
-
-from .utils import absolute_square, safe_real
+from jxc.get_params import get_params
 
 
-def get_xc_functional(xc: str = 'gga_x_pbe', polarized: bool = False):
-  """Dynamically import XC functional implementation.
-
-    Args:
-        functional_type: String like 'pbe', 'b3lyp', etc.
-        polarization: String, either 'unpol' or 'pol' for unpolarized/polarized
-
-    Returns:
-        The requested functional implementation
-    """
-  polarization = 'pol' if polarized else 'unpol'
-  try:
-    module_path = f"jax_xc.impl.{xc}"
-    module = importlib.import_module(module_path)
-    functional = getattr(module, polarization)
-    return functional
-  except (ImportError, AttributeError) as e:
-    raise ImportError(
-      f"Could not import {polarization} from {module_path}: {e}"
-    )
+def _xc_level(name):
+  """Detect functional level from name prefix."""
+  name = name.lower()
+  if name.startswith(('mgga', 'hyb_mgga')):
+    return 'mgga'
+  if name.startswith(('gga', 'hyb_gga')):
+    return 'gga'
+  return 'lda'
 
 
-# Constants in libxc
-XC_UNPOLARIZED = 0
-XC_POLARIZED = 1
-
-
-def _parse_xc_type(xc_type: str, rho_r: Float[Array, 's x y z']):
-  polarized = rho_r.ndim > 0 and rho_r.shape[0] == 2
-  is_exchange = '_x' in xc_type  # HACK
-  if is_exchange:  # NOTE: libxc's polarized exchange functionals might be problematic
-    p = get_p(xc_type, XC_UNPOLARIZED)
-    f = get_xc_functional(xc_type, polarized=False)
-  else:
-    p = get_p(xc_type, XC_POLARIZED if polarized else XC_UNPOLARIZED)
-    f = get_xc_functional(xc_type, polarized=polarized)
-  grid_shape = rho_r.shape[1:]
-  rho_r_flat = rho_r.reshape(2 if polarized else 1, -1)
-  return polarized, is_exchange, p, f, grid_shape, rho_r_flat
-
-
-def _lda(xc_type: str, rho_r: Float[Array, 's x y z']):
-  polarized, is_exchange, p, f, grid_shape, rho_r_flat = _parse_xc_type(xc_type, rho_r)
-  if polarized and is_exchange:  # NOTE: exact scaling relation
-    f_up = jax.vmap(f, (None, 0), 0)(p, 2 * rho_r_flat[0])
-    f_dn = jax.vmap(f, (None, 0), 0)(p, 2 * rho_r_flat[1])
-    f_val = 0.5 * (f_up + f_dn)
-  elif polarized:  # and is correlation
-    f_val = jax.vmap(f, (None, 1), 0)(p, rho_r_flat)
-  else:  # not polarized
-    f_val = jax.vmap(f, (None, 0), 0)(p, rho_r_flat[0])
-  return f_val.reshape(grid_shape)
-
-
-def _gga(
-  xc_type: str,
-  rho_r: Float[Array, 's x y z'],
-  sigma_r: Float[Array, 's x y z']
-):
-  polarized, is_exchange, p, f, grid_shape, rho_r_flat = _parse_xc_type(xc_type, rho_r)
-  sigma_r_flat = sigma_r.reshape(3 if polarized else 1, -1)
-  if polarized and is_exchange:  # NOTE: exact scaling relation
-    f_up = jax.vmap(f, (None, 0, 0),
-                    0)(p, 2 * rho_r_flat[0], 4 * sigma_r_flat[0])
-    # NOTE: sigma_r_flat[1] is the cross term
-    f_dn = jax.vmap(f, (None, 0, 0),
-                    0)(p, 2 * rho_r_flat[1], 4 * sigma_r_flat[2])
-    f_val = 0.5 * (f_up + f_dn)
-  elif polarized:  # and is correlation
-    f_val = jax.vmap(f, (None, 1, 1), 0)(p, rho_r_flat, sigma_r_flat)
-  else:  # not polarized
-    f_val = jax.vmap(f, (None, 0, 0), 0)(p, rho_r_flat[0], sigma_r_flat[0])
-  return f_val.reshape(grid_shape)
-
-
-def sigma_r_fn(
-  density_grid: Float[Array, 's x y z'], gs: Float[Array, 'x y z 3']
-) -> Float[Array, 's x y z']:
-  """Calculate the gradient norms of the density.
-  If polarized, s in the return shape is 3, else 1, as for polarized density
-  we compute the gradient norm of up and down spin, and the cross term."""
-  polarized = density_grid.shape[0] == 2
-  rho_G = jnp.fft.fftn(density_grid, axes=range(-3, 0))
-  grad_rho_G = rho_G[..., None] * 1j * gs
-  grad_rho_r = jnp.fft.ifftn(grad_rho_G, axes=range(-4, -1))
-  if polarized:
-    s_up, s_dn = grad_rho_r
-    return jnp.stack([
-      s_up.conj() * s_up,
-      s_up.conj() * s_dn,
-      s_dn.conj() * s_dn,
-    ]).sum(-1).real
-  else:
-    return absolute_square(grad_rho_r).sum(-1)
-
-
-def vxc_lda(exc: Callable, rho_r: Float[Array, 's x y z']):
-  polarized = rho_r.shape[0] == 2
-  grid_sizes = rho_r.shape[1:]
-
-  rho_r_flat = rho_r.reshape(rho_r.shape[0], -1)
-  if polarized:
-    dexc_drho_flat = jax.vmap(jax.jacfwd(exc), 1, 1)(rho_r_flat)
-    t1 = dexc_drho_flat.reshape(2, *grid_sizes) * rho_r
-  else:
-    dexc_drho_flat = jax.vmap(jax.grad(exc))(rho_r_flat[0])
-    t1 = dexc_drho_flat.reshape(1, *grid_sizes) * rho_r
-
-  t2 = exc(rho_r)
-  vxc_r = t1 + t2
-
-  return vxc_r
-
-
-def vxc_gga_recp(
-  exc: Callable,
-  rho_r: Float[Array, 's x y z'],
-  sigma_r: Float[Array, 's x y z'],
-  gs: Float[Array, 'x y z 3']
-):
-  """Calculate the function derivative of the XC functional in the
-  reciprocal space.
-
-  Note that the correlation part are treated differently
+def xc_level(xc_type):
+  """Return the highest functional level among compound components.
 
   Args:
-    sigma_r: gradient norm of the density, evaluated on the grid
+    xc_type (str): Functional name or compound ('+'–separated).
+
+  Returns:
+    str: One of ``'lda'``, ``'gga'``, or ``'mgga'``.
   """
-  polarized = rho_r.shape[0] == 2
-  grid_sizes = rho_r.shape[1:]
-
-  # local term
-  rho_r_flat = rho_r.reshape(rho_r.shape[0], -1)
-  sigma_r_flat = sigma_r.reshape(sigma_r.shape[0], -1)
-  if polarized:
-    dexc_drho_flat = jax.vmap(jax.jacfwd(exc), (1, 1),
-                              1)(rho_r_flat, sigma_r_flat)
-    t1 = dexc_drho_flat.reshape(2, *grid_sizes) * rho_r
-  else:
-    dexc_drho_flat = jax.vmap(jax.grad(exc))(rho_r_flat[0], sigma_r_flat[0])
-    t1 = dexc_drho_flat.reshape(1, *grid_sizes) * rho_r
-
-  t2 = exc(rho_r, sigma_r)
-  local_term = t1 + t2
-
-  # gradient correction
-  axes = list(range(-3, 0))
-  rho_G: Float[Array, 's x y z'] = jnp.fft.fftn(rho_r, axes=axes)
-  grad_rho_r = jnp.fft.ifftn(rho_G[..., None] * 1j * gs, axes=axes)
-  lapl_rho_G = -1 * (gs**2).sum(-1) * rho_G
-  lapl_rho_r: Float[Array, 's x y z'] = jnp.fft.ifftn(lapl_rho_G, axes=axes)
-
-  grad_fft = lambda x: jnp.fft.ifftn(1j * gs * jnp.fft.fft(x)[..., None], axes=axes)
-
-  if polarized:
-    dexc_dsigma_flat: Float[Array, '3 num_g']
-    dexc_dsigma_flat = jax.vmap(jax.jacfwd(exc, argnums=1), (1, 1),
-                                1)(rho_r_flat, sigma_r_flat)
-
-    t_up = dexc_dsigma_flat[0].reshape(grid_sizes) * rho_r[0]
-    t_up = jnp.where(sigma_r[0] > 0, t_up, 0)
-    t3_up = (grad_fft(t_up) * grad_rho_r[0]).sum(-1)
-    t4_up = t_up * lapl_rho_r[0]
-
-    t_cross_up = dexc_dsigma_flat[1].reshape(grid_sizes) * rho_r[1]
-    t5_up = (grad_fft(t_cross_up) * grad_rho_r[1]).sum(-1)
-    t6_up = t_cross_up * lapl_rho_r[1]
-
-    grad_correction_up = 2 * (t3_up + t4_up) + t5_up + t6_up
-
-    t_dn = dexc_dsigma_flat[2].reshape(grid_sizes) * rho_r[1]
-    t_dn = jnp.where(sigma_r[2] > 0, t_dn, 0)
-    t3_dn = (grad_fft(t_dn) * grad_rho_r[1]).sum(-1)
-    t4_dn = t_dn * lapl_rho_r[1]
-
-    t_cross_dn = dexc_dsigma_flat[1].reshape(grid_sizes) * rho_r[0]
-    t5_dn = (grad_fft(t_cross_dn) * grad_rho_r[0]).sum(-1)
-    t6_dn = t_cross_dn * lapl_rho_r[0]
-
-    grad_correction_dn = 2 * (t3_dn + t4_dn) + t5_dn + t6_dn
-
-    grad_correction = jnp.stack([grad_correction_up, grad_correction_dn])
-
-  else:
-    dexc_dsigma_flat: Float[Array, 'num_g']
-    dexc_dsigma_flat = jax.vmap(jax.grad(exc, argnums=1)
-                               )(rho_r_flat[0], sigma_r_flat[0])
-    t = dexc_dsigma_flat.reshape(grid_sizes) * rho_r[0]
-    t = jnp.where(sigma_r[0] > 0, t, 0)
-    t3 = (grad_fft(t) * grad_rho_r[0]).sum(-1)
-    t4 = t * lapl_rho_r
-    grad_correction = 2 * (t3 + t4)
-
-  integrand = local_term - grad_correction
-
-  vxc_G = jnp.fft.fftn(integrand, axes=axes)
-
-  return vxc_G
+  order = {'lda': 0, 'gga': 1, 'mgga': 2}
+  names = [s.strip() for s in xc_type.split('+')]
+  lvl = max(order[_xc_level(n)] for n in names)
+  return {v: k for k, v in order.items()}[lvl]
 
 
-def vxc_gga(
-  exc: Callable,
-  rho_r: Float[Array, 'x y z'],
-  sigma_r: Float[Array, 'x y z'],
-  gs: Float[Array, 'x y z 3']
-):
-  return jnp.fft.ifftn(vxc_gga_recp(exc, rho_r, sigma_r, gs), axes=list(range(-3, 0)))
+def _raw_exc(name, polarized, rho, sigma=None, tau=None, lapl=None):
+  """Compute exc using the raw jxc internal function.
 
+  The public ``jxc.get_xc_functional(..., order='exc')`` wrapper has bugs
+  for polarized and MGGA functionals (it passes ``None`` for optional grid
+  arguments that the generated Maple code then tries to do arithmetic on).
+  This helper calls the underlying generated function directly, providing
+  explicit zero arrays where needed.
+  """
+  params = get_params(name, polarized)
+  mod = importlib.import_module(f'jxc.functionals.{name}')
+  fn = mod.pol if polarized else mod.unpol
 
-def xc_density(
-  density_grid: Float[Array, 's x y z'],
-  g_vector_grid,
-  kohn_sham: bool = False,
-  xc_type: str = "lda_x"
-):
-  if "gga" in xc_type:
-    exc_fn = lambda density, grad: sum(
-      [_gga(xc_type_, density, grad) for xc_type_ in xc_type.split('+')]
+  level = _xc_level(name)
+  kwargs = {}
+  if level in ('gga', 'mgga') and sigma is not None:
+    kwargs['s'] = sigma
+  if level == 'mgga':
+    kwargs['l'] = (
+      lapl if lapl is not None
+      else jnp.zeros_like(rho if rho.ndim == 3 else rho[0])
     )
-    grad = sigma_r_fn(density_grid, g_vector_grid)
+    if tau is not None:
+      kwargs['tau'] = tau
 
-    if kohn_sham:
-      density_grid = stop_gradient(density_grid)
-      vxc_r = vxc_gga(exc_fn, density_grid, grad, g_vector_grid)
-      return vxc_r
+  return fn(params, rho, **kwargs)
 
-    else:
-      return exc_fn(density_grid, grad)
 
-  else:  # LDA
-    exc_fn = lambda density: sum(
-      [_lda(xc_type_, density) for xc_type_ in xc_type.split('+')]
+def compute_sigma(density_grid, g_vector_grid):
+  """Compute contracted density gradient for XC functionals.
+
+  Args:
+    density_grid (Array): ``(spin, x, y, z)`` real-space density.
+    g_vector_grid (Array): ``(x, y, z, 3)`` G-vector grid.
+
+  Returns:
+    Array: For spin=1: ``(x, y, z)``.
+    For spin=2: ``(3, x, y, z)`` with ``[sigma_uu, sigma_ud, sigma_dd]``.
+  """
+  density_recip = jnp.fft.fftn(density_grid, axes=range(-3, 0))
+  grads = []
+  for d in range(3):
+    grad_d = jnp.real(jnp.fft.ifftn(
+      1j * g_vector_grid[..., d] * density_recip,
+      axes=range(-3, 0)
+    ))
+    grads.append(grad_d)
+
+  num_spin = density_grid.shape[0]
+  if num_spin == 1:
+    return sum(g[0]**2 for g in grads)
+  else:
+    return jnp.stack([
+      sum(g[0]**2 for g in grads),
+      sum(g[0] * g[1] for g in grads),
+      sum(g[1]**2 for g in grads),
+    ], axis=0)
+
+
+def xc_energy_density(rho, xc_type, polarized, sigma=None, tau=None, lapl=None):
+  """Compute XC energy density per particle.
+
+  Supports compound functionals (e.g. ``'gga_x_pbe+gga_c_pbe'``).
+
+  Args:
+    rho (Array): Electron density.  Unpolarized: ``(x, y, z)``.
+      Polarized: ``(2, x, y, z)``.
+    xc_type (str): Functional name or compound.
+    polarized (bool): Whether spin-polarized.
+    sigma (Array): Contracted gradient (required for GGA/MGGA).
+    tau (Array): Kinetic energy density (required for MGGA).
+    lapl (Array): Density Laplacian (optional for MGGA, defaults to 0).
+
+  Returns:
+    Array: ``(x, y, z)`` energy density per particle.
+  """
+  names = [s.strip() for s in xc_type.split('+')]
+  spatial_shape = rho.shape if rho.ndim == 3 else rho.shape[1:]
+  exc_total = jnp.zeros(spatial_shape)
+
+  for name in names:
+    exc_total = exc_total + _raw_exc(name, polarized, rho, sigma, tau, lapl)
+
+  return exc_total
+
+
+def _raw_vxc(name, polarized, rho, sigma=None, tau=None, lapl=None):
+  """Compute vxc using the raw jxc internal derivative function.
+
+  The public ``jxc.get_xc_functional(..., order='vxc')`` wrapper fails
+  inside ``jax.jit + jax.grad`` because its Maple-backend availability
+  check converts traced values to numpy arrays, causing a fallback to the
+  AD backend which then fails on non-scalar outputs.  This helper calls
+  the underlying Maple-generated ``unpol_vxc`` / ``pol_vxc`` directly.
+  """
+  params = get_params(name, polarized)
+  mod = importlib.import_module(f'jxc.functionals.{name}')
+  fn = mod.pol_vxc if polarized else mod.unpol_vxc
+
+  level = _xc_level(name)
+  kwargs = {}
+  if level in ('gga', 'mgga') and sigma is not None:
+    kwargs['s'] = sigma
+  if level == 'mgga':
+    kwargs['l'] = (
+      lapl if lapl is not None
+      else jnp.zeros_like(rho if rho.ndim == 3 else rho[0])
     )
+    if tau is not None:
+      kwargs['tau'] = tau
 
-    if kohn_sham:
-      density_grid = stop_gradient(density_grid)
-      vxc_r = vxc_lda(exc_fn, density_grid)
-      return vxc_r
+  return fn(params, rho, **kwargs)
 
-    else:
-      return exc_fn(density_grid)
+
+def xc_potential(rho, xc_type, polarized, sigma=None, tau=None):
+  """Compute XC potential derivatives via ``jxc`` Maple-generated modules.
+
+  Supports compound functionals.
+
+  Args:
+    rho (Array): Electron density.
+    xc_type (str): Functional name or compound.
+    polarized (bool): Whether spin-polarized.
+    sigma (Array): Contracted gradient (required for GGA/MGGA).
+    tau (Array): Kinetic energy density (required for MGGA).
+
+  Returns:
+    dict: Keys depend on level — ``'vrho'`` (always), plus ``'vsigma'``
+    for GGA and ``'vsigma'``, ``'vlapl'``, ``'vtau'`` for MGGA.
+    For polarized, spin/component axis is **last**
+    (jxc convention): ``vrho`` has shape ``(…, 2)``, ``vsigma`` ``(…, 3)``.
+  """
+  names = [s.strip() for s in xc_type.split('+')]
+  result = {}
+
+  for name in names:
+    vxc = _raw_vxc(name, polarized, rho, sigma=sigma, tau=tau)
+    for key, val in vxc.items():
+      if key in result:
+        result[key] = result[key] + val
+      else:
+        result[key] = val
+
+  return result
+
+
+def gga_xc_potential(vrho, vsigma, density_grid, g_vector_grid):
+  r"""Compute the local GGA XC potential on the real-space grid.
+
+  .. math::
+
+    V_\mathrm{xc}^\sigma = v_\rho^\sigma
+    - \nabla\!\cdot\!\bigl(f_\sigma\, \nabla\rho\bigr)
+
+  For unpolarized calculations:
+
+  .. math::
+
+    V_\mathrm{xc} = v_\rho - 2\,\nabla\!\cdot\!(v_\sigma\,\nabla\rho)
+
+  Args:
+    vrho (Array): ``(x, y, z)`` for unpolarized, ``(x, y, z, 2)`` for
+      polarized (jxc convention, spin axis last).
+    vsigma (Array): ``(x, y, z)`` for unpolarized, ``(x, y, z, 3)`` for
+      polarized.
+    density_grid (Array): ``(spin, x, y, z)`` real-space density.
+    g_vector_grid (Array): ``(x, y, z, 3)`` G-vector grid.
+
+  Returns:
+    Array: ``(spin, x, y, z)`` local XC potential.
+  """
+  num_spin = density_grid.shape[0]
+  density_recip = jnp.fft.fftn(density_grid, axes=range(-3, 0))
+
+  # Compute per-spin density gradients: list of 3 arrays each (spin, x, y, z)
+  nabla_rho = []
+  for d in range(3):
+    grad_d = jnp.real(jnp.fft.ifftn(
+      1j * g_vector_grid[..., d] * density_recip,
+      axes=range(-3, 0)
+    ))
+    nabla_rho.append(grad_d)
+
+  def _div(field_components):
+    """Divergence in reciprocal space: sum_d IFFT(iG_d FFT(f_d))."""
+    div = jnp.zeros(field_components[0].shape)
+    for d in range(3):
+      f_recip = jnp.fft.fftn(field_components[d], axes=range(-3, 0))
+      div = div + jnp.real(jnp.fft.ifftn(
+        1j * g_vector_grid[..., d] * f_recip,
+        axes=range(-3, 0)
+      ))
+    return div
+
+  if num_spin == 1:
+    # Unpolarized: v_xc = vrho - 2 * div(vsigma * nabla_rho)
+    field = [vsigma * nabla_rho[d][0] for d in range(3)]
+    v_xc = vrho - 2 * _div(field)
+    return v_xc[None, ...]  # (1, x, y, z)
+  else:
+    # Polarized: vsigma has 3 components (uu, ud, dd) on last axis
+    vs_uu = vsigma[..., 0]
+    vs_ud = vsigma[..., 1]
+    vs_dd = vsigma[..., 2]
+    vrho_u = vrho[..., 0]
+    vrho_d = vrho[..., 1]
+
+    field_u = [
+      2 * vs_uu * nabla_rho[d][0] + vs_ud * nabla_rho[d][1]
+      for d in range(3)
+    ]
+    field_d = [
+      vs_ud * nabla_rho[d][0] + 2 * vs_dd * nabla_rho[d][1]
+      for d in range(3)
+    ]
+    v_xc_u = vrho_u - _div(field_u)
+    v_xc_d = vrho_d - _div(field_d)
+    return jnp.stack([v_xc_u, v_xc_d], axis=0)  # (2, x, y, z)

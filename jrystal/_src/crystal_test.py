@@ -11,40 +11,50 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Test for crystal.py"""
+"""Tests for crystal.py."""
 
-from absl.testing import absltest, parameterized
+from pathlib import Path
+
 import numpy as np
+from absl.testing import absltest, parameterized
+
+from .const import ANGSTROM2BOHR
 from .crystal import Crystal
 
 
 class _TestModules(parameterized.TestCase):
 
   def setUp(self):
-    self.file_path = "../geometry/diamond.xyz"
+    root = Path(__file__).resolve().parents[2]
+    self.file_path = str(root / "geometry" / "diamond.xyz")
     self.positions = np.array(
       [
         [-0.84251071, -0.84251071, -0.84251071],
-        [0.84251071, 0.84251071, 0.84251071]
-      ]
+        [0.84251071, 0.84251071, 0.84251071],
+      ],
+      dtype=np.float64,
     )
-    self.charges = np.array([6, 6])
+    self.charges = np.array([6, 6], dtype=np.int32)
     self.cell_vectors = np.array(
       [
-        [0., 3.37004284, 3.37004284], [3.37004284, 0., 3.37004284],
-        [3.37004284, 3.37004284, 0.]
-      ]
+        [0., 3.37004284, 3.37004284],
+        [3.37004284, 0., 3.37004284],
+        [3.37004284, 3.37004284, 0.],
+      ],
+      dtype=np.float64,
     )
     self.vol = 76.5484253352856
     self.scaled_positions = np.array(
-      [[-0.125, -0.125, -0.125], [0.125, 0.125, 0.125]]
+      [[-0.125, -0.125, -0.125], [0.125, 0.125, 0.125]],
+      dtype=np.float64,
     )
     self.reciprocal_vectors = np.array(
       [
-        [-0.93221149, 0.93221149,
-         0.93221149], [0.93221149, -0.93221149, 0.93221149],
-        [0.93221149, 0.93221149, -0.93221149]
-      ]
+        [-0.93221149, 0.93221149, 0.93221149],
+        [0.93221149, -0.93221149, 0.93221149],
+        [0.93221149, 0.93221149, -0.93221149],
+      ],
+      dtype=np.float64,
     )
 
   def test_create_from_file(self):
@@ -52,13 +62,33 @@ class _TestModules(parameterized.TestCase):
     np.testing.assert_almost_equal(crystal.positions, self.positions)
     np.testing.assert_almost_equal(crystal.charges, self.charges)
     np.testing.assert_almost_equal(crystal.cell_vectors, self.cell_vectors)
-    self.assertEqual(crystal.vol, self.vol)
+    np.testing.assert_almost_equal(crystal.vol, self.vol)
     np.testing.assert_almost_equal(
       crystal.scaled_positions, self.scaled_positions
     )
     np.testing.assert_almost_equal(
       crystal.reciprocal_vectors, self.reciprocal_vectors
     )
+    self.assertEqual(crystal.num_atom, 2)
+    self.assertEqual(int(crystal.num_electron), 12)
+    self.assertEqual(crystal.spin, 0)
+    np.testing.assert_array_equal(crystal.A, crystal.cell_vectors)
+    np.testing.assert_array_equal(crystal.B, crystal.reciprocal_vectors)
+
+  def test_create_from_symbols(self):
+    symbols = ["C", "C"]
+    positions_angstrom = self.positions / ANGSTROM2BOHR
+    cell_vectors_angstrom = self.cell_vectors / ANGSTROM2BOHR
+    crystal = Crystal.create_from_symbols(
+      symbols=symbols,
+      positions=positions_angstrom,
+      cell_vectors=cell_vectors_angstrom,
+    )
+    np.testing.assert_almost_equal(crystal.positions, self.positions)
+    np.testing.assert_array_equal(crystal.charges, self.charges)
+    np.testing.assert_almost_equal(crystal.cell_vectors, self.cell_vectors)
+    self.assertEqual(crystal.spin, 0)
+    self.assertListEqual(crystal.symbols, symbols)
 
 
 if __name__ == "__main__":

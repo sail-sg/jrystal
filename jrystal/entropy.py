@@ -13,6 +13,6 @@
 # limitations under the License.
 """ Entropy functions. """
 
-from ._src.entropy import fermi_dirac
+from ._src.entropy import renyi, von_neumann
 
-__all__ = ["fermi_dirac"]
+__all__ = ["von_neumann", "renyi"]

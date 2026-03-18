@@ -11,44 +11,60 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Entropy functions. """
+"""Entropy utilities."""
 import jax.numpy as jnp
-from jaxtyping import Float, Array
+from jaxtyping import Array, Float
 
 
-def fermi_dirac(
+def von_neumann(
   occupation: Float[Array, 'spin kpt band'], eps: float = 1e-8
 ) -> Float:
-  r"""Compute the entropy corresponding to Fermi-Dirac distribution.
+  r"""Compute the entropy term for Fermi-Dirac occupations.
 
-  The entropy is defined as:
-
+  The entropy term is given by:
   .. math::
-
-      -\sum_{\sigma, k, i} [o_{\sigma, k, i} \log(o_{\sigma, k, i} + \epsilon) + 
-      (1-o_{\sigma, k, i}) \log(1-o_{\sigma, k, i} + \epsilon)]
-
-  where 
-
-  - :math:`o_{\sigma, k, i}` is the occupation number
-  - :math:`\sigma` is the spin index
-  - :math:`k` is the :math:`k`-point index
-  - :math:`i` is the band index
-  - :math:`\epsilon` is the machine epsilon to prevent numerical instabilities.
+    S = - \sum_{i,j,\boldsymbol{k}} f_{i,j}(\boldsymbol{k})
+      \log(f_{i,j}(\boldsymbol{k})) +
+      + (1 - f_{i,j}(\boldsymbol{k})) \log((1 - f_{i,j}(\boldsymbol{k})))
 
   Args:
-      occupation(Float[Array, 'spin kpt band']): The occupation numbers with shape (spin, kpt, band).
-      eps(float): Machine epsilon to prevent numerical instabilities. Default: 1e-8
+    occupation (Float[Array, 'spin kpt band']): Occupation numbers.
+    eps (float): Numerical stability constant used in logarithms.
 
   Returns:
-      Float: The entropy value corresponding to the Fermi-Dirac distribution.
+    Float: Entropy contribution for the provided occupations.
   """
-  num_spin, num_k, _ = occupation.shape
+  num_spin = occupation.shape[0]
 
   entropy = -jnp.sum(
     occupation * jnp.log(eps + occupation) +
-    ((3 - num_spin) / num_k - occupation) *
-    jnp.log(eps + (3 - num_spin) / num_k - occupation)
+    ((3 - num_spin) - occupation) *
+    jnp.log(eps + (3 - num_spin) - occupation)
+  )
+
+  return entropy
+
+
+def renyi(
+  occupation: Float[Array, 'spin kpt band'],
+  alpha: float,
+) -> Float:
+  r"""Compute the entropy term for renyi occupations.
+
+  Args:
+    occupation (Float[Array, 'spin kpt band']): Occupation numbers.
+    alpha (float): Renyi index.
+
+  Returns:
+    Float: Entropy contribution for the provided occupations.
+  """
+  num_spin = occupation.shape[0]
+
+  assert alpha >= 0 and alpha <= 1, "alpha must be between 0 and 1"
+  entropy = -jnp.sum(
+    occupation * jnp.log(
+      occupation**alpha + ((3 - num_spin) - occupation)**alpha
+    ) / (1 - alpha)
   )
 
   return entropy

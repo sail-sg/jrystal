@@ -1,0 +1,113 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "jrystal"
+version = "0.0.2"
+description = "A JAX-based Differentiable DFT Framework for Materials"
+authors = [{ name = "Tianbo Li", email = "li_tianbo@live.com" }]
+license = { file = "LICENSE" }
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.11"
+dependencies = [
+  "jax[cuda]>=0.8.0",
+  "jaxlib>=0.8.0",
+  "optax>=0.2.0",
+  "jaxtyping",
+  "tqdm",
+  "ase",
+  "absl-py",
+  "einops",
+  "ml_collections",
+  "interpax",
+  "chex",
+  "jxc-python>=0.1.12",
+  "spglib>=2.0.0",
+]
+keywords = [
+  "jax",
+  "density functional theory",
+  "materials science",
+  "GPU",
+  "plane wave",
+]
+classifiers = [
+  'Environment :: Console',
+  'Intended Audience :: Science/Research',
+  'Intended Audience :: Developers',
+  'License :: OSI Approved :: Apache License 2.0',
+  'Programming Language :: Python',
+  'Programming Language :: Python :: 3',
+  'Topic :: Software Development :: Libraries :: Python Modules',
+  'Topic :: Scientific/Engineering',
+]
+
+
+[project.urls]
+"Homepage" = "https://github.com/sail-sg/jrystal"
+"Documentation" = "https://sail-sg.github.io/jrystal/"
+"Source" = "https://github.com/sail-sg/jrystal"
+"Tracker" = "https://github.com/sail-sg/jrystal/issues"
+"Repository" = "https://github.com/sail-sg/jrystal"
+
+
+[project.optional-dependencies]
+dev = ["mypy>=1.5.0", "yapf", "pylint", "isort", "flake8"]
+format = ["yapf"]
+lint = ["pylint"]
+docs = [
+  "sphinx>=7.0.0",
+  "sphinx-rtd-theme>=1.0.0",
+  "myst-parser",
+  "sphinx_book_theme",
+  "sphinx-autobuild",
+  "pydocstyle",
+  "doc8"
+]
+
+
+[project.scripts]
+jrystal = "main:main"
+
+
+[tool.setuptools.packages.find]
+include = ["jrystal*"]
+
+
+[tool.yapf]
+based_on_style = "google"
+indent_width = 2
+spaces_before_comment = 2
+dedent_closing_brackets = true
+column_limit = 80
+continuation_indent_width = 2
+split_all_top_level_comma_separated_values = true
+
+
+[tool.ruff]
+line-length = 80
+indent-width = 2
+
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "W",
+  "I",
+  "PL",
+  "N",
+]
+ignore = [
+  "F722",  # Syntax error in annotation.
+  "E501",
+  "N802",
+  "PLR0913",
+  "PLR0914",
+]
+
+
+[tool.ruff.format]
+indent-style = "space"
