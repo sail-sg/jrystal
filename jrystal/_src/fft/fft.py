@@ -197,47 +197,92 @@ _ifftn_partitioned.def_partition(
 
 
 @partial(jax.custom_jvp, nondiff_argnums=(1, 2, 3))
-def fftn(
-  x: jax.Array,
+def _fftn_with_jvp(
+  a: jax.Array,
   s: ShapeLike = None,
   axes: AxisLike = None,
   norm: Optional[str] = None,
 ) -> jax.Array:
-  """Compute an n-D FFT with custom sharding propagation."""
-  return _fftn_partitioned(x, s=s, axes=axes, norm=norm)
+  return _fftn_partitioned(a, s=s, axes=axes, norm=norm)
 
 
-@fftn.defjvp
-def _fftn_jvp(
+@_fftn_with_jvp.defjvp
+def _fftn_with_jvp_rule(
   s: ShapeLike, axes: AxisLike, norm: Optional[str], primals, tangents
 ):
-  x, = primals
-  tx, = tangents
-  y = _fftn_partitioned(x, s=s, axes=axes, norm=norm)
-  ty = jnp.fft.fftn(tx, s=s, axes=axes, norm=norm)
+  a, = primals
+  ta, = tangents
+  y = _fftn_partitioned(a, s=s, axes=axes, norm=norm)
+  ty = jnp.fft.fftn(ta, s=s, axes=axes, norm=norm)
   return y, ty
+
+
+def fftn(
+  a: jax.Array,
+  s: ShapeLike = None,
+  axes: AxisLike = None,
+  norm: Optional[str] = None,
+) -> jax.Array:
+  """Compute a multidimensional discrete Fourier transform along given axes.
+
+  Signature intentionally mirrors :func:`jax.numpy.fft.fftn`.
+
+  Args:
+    a (jax.Array): The input array to transform.
+    s (ShapeLike): The sharding specification for the input array.
+    axes (AxisLike): The axes over which to perform the FFT.
+    norm (Optional[str]): The normalization mode.
+
+  Returns:
+    jax.Array: An array containing the multidimensional discrete Fourier
+      transform of ``a``.
+  """
+  return _fftn_with_jvp(a, s=s, axes=axes, norm=norm)
 
 
 @partial(jax.custom_jvp, nondiff_argnums=(1, 2, 3))
-def ifftn(
-  x: jax.Array,
+def _ifftn_with_jvp(
+  a: jax.Array,
   s: ShapeLike = None,
   axes: AxisLike = None,
   norm: Optional[str] = None,
 ) -> jax.Array:
-  """Compute an inverse n-D FFT with custom sharding propagation."""
-  return _ifftn_partitioned(x, s=s, axes=axes, norm=norm)
+  return _ifftn_partitioned(a, s=s, axes=axes, norm=norm)
 
 
-@ifftn.defjvp
-def _ifftn_jvp(
+@_ifftn_with_jvp.defjvp
+def _ifftn_with_jvp_rule(
   s: ShapeLike, axes: AxisLike, norm: Optional[str], primals, tangents
 ):
-  x, = primals
-  tx, = tangents
-  y = _ifftn_partitioned(x, s=s, axes=axes, norm=norm)
-  ty = jnp.fft.ifftn(tx, s=s, axes=axes, norm=norm)
+  a, = primals
+  ta, = tangents
+  y = _ifftn_partitioned(a, s=s, axes=axes, norm=norm)
+  ty = jnp.fft.ifftn(ta, s=s, axes=axes, norm=norm)
   return y, ty
+
+
+def ifftn(
+  a: jax.Array,
+  s: ShapeLike = None,
+  axes: AxisLike = None,
+  norm: Optional[str] = None,
+) -> jax.Array:
+  """Compute a multidimensional inverse discrete Fourier transform along given
+  axes.
+
+  Signature intentionally mirrors :func:`jax.numpy.fft.ifftn`.
+  
+  Args:
+    a (jax.Array): The input array to transform.
+    s (ShapeLike): The sharding specification for the input array.
+    axes (AxisLike): The axes over which to perform the inverse FFT.
+    norm (Optional[str]): The normalization mode.
+
+  Returns:
+    jax.Array: An array containing the multidimensional inverse discrete Fourier
+      transform of ``a``.
+  """
+  return _ifftn_with_jvp(a, s=s, axes=axes, norm=norm)
 
 
 __all__ = ["fftn", "ifftn"]
