@@ -11,12 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Hamiltonian matrix operations for quantum mechanical calculations.
+"""Hamiltonian matrix construction in a plane-wave basis."""
 
-This module provides functions to compute Hamiltonian matrix elements and related quantities in a plane wave basis. The Hamiltonian includes both kinetic and effective potential terms, supporting both standard and Kohn-Sham DFT calculations.
-"""
-
-from typing import Union
+from typing import Union, Optional
 
 import jax
 import jax.numpy as jnp
@@ -30,7 +27,7 @@ from .kinetic import kinetic_operator
 def _hamiltonian_matrix(
   coefficient: Complex[Array, "spin kpt band x y z"],
   positions: Float[Array, "atom 3"],
-  charges: Int[Array, "atom"],
+  charges: Int[Array, " atom"],
   effictive_density_grid: Union[Float[Array, "x y z"],
                                 Float[Array, "spin x y z"]],
   g_vector_grid: Float[Array, "x y z 3"],
@@ -39,46 +36,25 @@ def _hamiltonian_matrix(
   xc: str = 'lda_x',
   kohn_sham: bool = False
 ) -> Float[Array, "spin kpt band band"]:
-  r"""Compute the Hamiltonian matrix elements between orbitals.
-
-  The Hamiltonian matrix (hamiltonian-orbital matrix) is defined as:
-
-  .. math::
-
-    H_{ij} = \langle \psi_i | \hat{H} | \psi_j \rangle
-
-  where :math:`\hat{H}` is the Hamiltonian operator composed of kinetic and effective potential terms:
-
-  .. math::
-
-    \hat{H} = \hat{T} + \hat{V}_{eff}
-
-  The kinetic term :math:`\hat{T}` is computed in reciprocal space, while the effective potential term :math:`\hat{V}_{eff}` includes both the external potential from ions and the electron-electron interaction terms.
+  r"""Compute Hamiltonian matrix elements :math:`H_{ij}`.
 
   Args:
-    coefficient (Complex[Array, "spin kpt band x y z"]): Plane wave
-      coefficients with shape [spin, kpt, band, x, y, z]. The last three
-      dimensions represent the spatial grid.
-    positions (Float[Array, "atom 3"]): Atomic positions in Bohr units with
-      shape [atom, 3].
-    charges (Int[Array, "atom"]): Atomic numbers for each atom with shape
-      [atom].
-    effictive_density_grid (Union[Float[Array, "x y z"],
-      Float[Array, "spin x y z"]]): Electron density for effective potential
-      evaluated on real space grid with shape [x, y, z]. It can contains spin
-      axis or not.
-    g_vector_grid (Float[Array, "x y z 3"]): G-vector grid in reciprocal space
-      with shape [x, y, z, 3].
-    kpts (Float[Array, "kpt 3"]): K-points in reciprocal space with shape
-      [kpt, 3].
-    vol (Float): Volume of the unit cell.
-    xc (str): Exchange-correlation functional name. Defaults to 'lda'.
-    kohn_sham: Whether to use Kohn-Sham potential. Defaults to False.
+    coefficient (Complex[Array, "spin kpt band x y z"]): Plane-wave
+      coefficients.
+    positions (Float[Array, "atom 3"]): Atomic positions.
+    charges (Int[Array, "atom"]): Atomic charges.
+    effictive_density_grid (Union[Float[Array, "x y z"], Float[Array, "spin x y z"]]):
+      Density used to build the effective potential.
+    g_vector_grid (Float[Array, "x y z 3"]): Reciprocal-space G-vector grid.
+    kpts (Float[Array, "kpt 3"]): :math:`k` points.
+    vol (Float): Unit-cell volume.
+    xc (str): XC functional specification.
+    kohn_sham (bool): Whether to use Kohn-Sham form.
 
   Returns:
-    Float[Array, "kpt band band"]: Float array of shape [kpt, band, band] containing the Hamiltonian matrix elements between all pairs of bands at each k-point.
+    Float[Array, "spin kpt band band"]: Hamiltonian matrices.
   """
-  if effictive_density_grid.ndim == 4:
+  if effictive_density_grid.ndim == 4:  # has spin axis, sum over spin axis
     effictive_density_grid = jnp.sum(effictive_density_grid, axis=0)
 
   v_eff = potential.effective(
@@ -88,7 +64,7 @@ def _hamiltonian_matrix(
     g_vector_grid,
     vol,
     split=False,
-    xc=xc,
+    xc_type=xc,
     kohn_sham=kohn_sham
   )  # [x y z]
   wave_grid = pw.wave_grid(coefficient, vol)  # [spin kpt band x y z]
@@ -105,44 +81,39 @@ def _hamiltonian_matrix(
 def hamiltonian_matrix_trace(
   band_coefficient: Complex[Array, "spin kpt band x y z"],
   positions: Float[Array, "atom 3"],
-  charges: Int[Array, "atom"],
+  charges: Int[Array, " atom"],
   effictive_density_grid: Union[Float[Array, "x y z"],
                                 Float[Array, "spin x y z"]],
+  vol: Float,
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Float[Array, "kpt 3"],
-  vol: Float,
+  kpts_weights: Optional[Float[Array, " kpt"]] = None,
   xc: str = 'lda_x',
+  *,
   kohn_sham: bool = True,
-  keep_kpts_axis: bool = False,
-) -> Union[Float[Array, "spin"], Float[Array, "spin kpt"]]:
-  r"""Calculate the trace of the Hamiltonian matrix.
-
-  The trace is computed as:
-
-  .. math::
-
-    \text{Tr}(\hat{H}) = \sum_i H_{ii} = \sum_i \langle \psi_i | \hat{H} | \psi_i \rangle
-
-  This quantity represents the sum of the diagonal elements of the Hamiltonian matrix,
-  which is useful for various physical quantities like total energy calculations.
+  keep_spin_axis: bool = False,
+) -> Union[Float[Array, " spin"], Float[Array, "spin kpt"]]:
+  r"""Compute the trace of the Hamiltonian matrix.
 
   Args:
-    band_coefficient (Complex[Array, "spin kpt band x y z"]): Plane wave coefficients with shape [spin, kpt, band, x, y, z]. The last three dimensions represent the spatial grid.
-    positions (Float[Array, "atom 3"]): Atomic positions in Bohr units with shape [atom, 3].
-    charges (Int[Array, "atom"]): Atomic numbers for each atom with shape [atom].
-    effictive_density_grid (Float[Array, "x y z"]): Electron density for effective potential evaluated  on real space grid with shape [x, y, z].
-    g_vector_grid (Float[Array, "x y z 3"]): G-vector grid in reciprocal space with shape [x, y, z, 3].
-    kpts (Float[Array, "kpt 3"]): K-points in reciprocal space with shape [kpt, 3].
-    vol (Float): Volume of the unit cell.
-    xc (str): Exchange-correlation functional name. Defaults to 'lda'.
-    kohn_sham (bool): Whether to use Kohn-Sham potential. Defaults to True.
-    keep_kpts_axis (bool): If True, retains the k-points axis in output. Defaults to False.
+    band_coefficient (Complex[Array, "spin kpt band x y z"]): Plane-wave
+      coefficients.
+    positions (Float[Array, "atom 3"]): Atomic positions.
+    charges (Int[Array, "atom"]): Atomic charges.
+    effictive_density_grid (Union[Float[Array, "x y z"], Float[Array, "spin x y z"]]):
+      Density used to build the effective potential.
+    g_vector_grid (Float[Array, "x y z 3"]): Reciprocal-space G-vector grid.
+    kpts (Float[Array, "kpt 3"]): :math:`k` points.
+    vol (Float): Unit-cell volume.
+    xc (str): XC functional specification.
+    kohn_sham (bool): Whether to use Kohn-Sham form.
+    keep_spin_axis (bool): If ``True``, return one value per spin channel.
 
   Returns:
-    Union[Float[Array, "spin"],  Float[Array, "spin kpt"]]: The trace of the
-    Hamiltonian matrix. The output has shape [spin, kpt] if keep_kpts_axis is
-    :code:`True`, otherwise [spin].
+    Union[Float[Array, "spin"], Float[Array, "spin kpt"]]: Trace values.
   """
+  if kohn_sham:
+    effictive_density_grid = jax.lax.stop_gradient(effictive_density_grid)
 
   v_eff = potential.effective(
     effictive_density_grid,
@@ -150,9 +121,9 @@ def hamiltonian_matrix_trace(
     charges,
     g_vector_grid,
     vol,
-    False,
-    xc,
-    kohn_sham,
+    split=False,
+    xc_type=xc,
+    kohn_sham=kohn_sham,
   )
   wave_grid = pw.wave_grid(band_coefficient, vol)
   f_eff = braket.expectation(wave_grid, v_eff, vol, diagonal=True, mode="real")
@@ -162,7 +133,10 @@ def hamiltonian_matrix_trace(
     band_coefficient, t_kin, vol, diagonal=True, mode='kinetic'
   )  # [spin, kpt, band]
   hamil_trace = (f_eff + f_kin).real
-  if keep_kpts_axis:
+  if kpts_weights is not None:
+    hamil_trace = hamil_trace * kpts_weights[None, :, None]
+
+  if keep_spin_axis:
     return jnp.sum(hamil_trace, axis=(1, 2))
   else:
     return jnp.sum(hamil_trace, axis=(0, 1, 2))
@@ -171,7 +145,7 @@ def hamiltonian_matrix_trace(
 def hamiltonian_matrix(
   band_coefficient: Complex[Array, "spin kpt band x y z"],
   positions: Float[Array, "atom 3"],
-  charges: Int[Array, "atom"],
+  charges: Int[Array, " atom"],
   effictive_density_grid: Union[Float[Array, "x y z"],
                                 Float[Array, "spin x y z"]],
   g_vector_grid: Float[Array, "x y z 3"],
@@ -182,30 +156,24 @@ def hamiltonian_matrix(
 ) -> Complex[Array, "spin kpt band band"]:
   r"""Compute the full Hamiltonian matrix in the orbital basis.
 
-  This function computes the complete Hamiltonian matrix including both diagonal
-  and off-diagonal elements. The matrix elements are defined as:
-
-  .. math::
-
-    H_{ij} = \langle \psi_i | \hat{H} | \psi_j \rangle
-
-  where :math:`\hat{H} = \hat{T} + \hat{V}_{eff}` is the total Hamiltonian operator.
-
   Args:
-    band_coefficient (Complex[Array, "spin kpt band x y z"]): Plane wave coefficients with shape [spin, kpt, band, x, y, z]. The last three dimensions represent the spatial grid.
-    positions (Float[Array, "atom 3"]): Atomic positions in Bohr units with shape [atom, 3].
-    charges (Int[Array, "atom"]): Atomic numbers for each atom with shape [atom].
-    effictive_density_grid (Union[Float[Array, "x y z"], Float[Array, "spin x y z"]]): Electron density for effective potential evaluated on real space grid with shape [x, y, z]. It can contains spin axis or not.
-    g_vector_grid (Float[Array, "x y z 3"]): G-vector grid in reciprocal space with shape [x, y, z, 3].
-    kpts (Float[Array, "kpt 3"]): K-points in reciprocal space with shape [kpt, 3]. Currently, only spin-restricted
-    calculation enable parallel calculation for multiple K-points.
-    vol (Float): Volume of the unit cell.
-    xc (str): Exchange-correlation functional name. Defaults to 'lda'.
-    kohn_sham (bool): Whether to use Kohn-Sham potential. Defaults to True.
+    band_coefficient (Complex[Array, "spin kpt band x y z"]): Plane-wave
+      coefficients.
+    positions (Float[Array, "atom 3"]): Atomic positions.
+    charges (Int[Array, "atom"]): Atomic charges.
+    effictive_density_grid (Union[Float[Array, "x y z"], Float[Array, "spin x y z"]]):
+      Density used to build the effective potential.
+    g_vector_grid (Float[Array, "x y z 3"]): Reciprocal-space G-vector grid.
+    kpts (Float[Array, "kpt 3"]): :math:`k` points.
+    vol (Float): Unit-cell volume.
+    xc (str): XC functional specification.
+    kohn_sham (bool): Whether to use Kohn-Sham form.
 
   Returns:
-    Complex[Array, "spin kpt band band"]: Complex array of shape [spin, kpt, band, band] containing the complete Hamiltonian matrix elements between all pairs of bands at each k-point.
+    Complex[Array, "spin kpt band band"]: Hamiltonian matrices for each spin
+    and :math:`k` point.
   """
+  assert band_coefficient.ndim == 6, "band_coefficient must have 6 dimensions"
   num_bands = band_coefficient.shape[-4]
 
   def hamil_k(k, coeff_k):
@@ -224,7 +192,8 @@ def hamiltonian_matrix(
         k,
         vol,
         xc,
-        kohn_sham,
+        kohn_sham=kohn_sham,
+        keep_spin_axis=False,
       )
       return 0.5 * jnp.sum(band_energies).astype(band_coefficient.dtype)
 
@@ -251,23 +220,22 @@ def _hamiltonian_matrix_basis(
   xc: str = 'lda_x',
   kohn_sham: bool = True,
 ) -> Complex[Array, "kpt band band"]:
-  r"""Compute the Hamiltonian matrix in the plane wave basis.
-
-  This internal function computes the Hamiltonian matrix elements in the plane wave basis set defined by the frequency mask. It uses complex hessian calculations to efficiently compute the matrix elements.
+  r"""Compute Hamiltonian matrices in the masked plane-wave basis.
 
   Args:
-    freq_mask (Int[Array, "x y z"]): Integer mask of shape [x, y, z] indicating which plane waves to include in the basis (1 for included, 0 for excluded).
-    positions (Float[Array, "atom 3"]): Atomic positions in Bohr units with shape [atom, 3].
-    charges (Int[Array, "atom"]): Atomic numbers for each atom with shape [atom].
-    effictive_density_grid (Float[Array, "x y z"]): Electron density for effective potential evaluated on real space grid with shape [x, y, z].
-    g_vector_grid (Float[Array, "x y z 3"]): G-vector grid in reciprocal space with shape [x, y, z, 3].
-    kpts (Float[Array, "kpt 3"]): K-points in reciprocal space with shape [kpt, 3].
-    vol (Float): Volume of the unit cell.
-    xc (str): Exchange-correlation functional name. Defaults to 'lda'.
-    kohn_sham (bool): Whether to use Kohn-Sham potential. Defaults to True.
+    freq_mask (Int[Array, "x y z"]): Basis mask for selected G vectors.
+    positions (Float[Array, "atom 3"]): Atomic positions.
+    charges (Int[Array, "atom"]): Atomic charges.
+    effictive_density_grid (Float[Array, "x y z"]): Density used for the
+      effective potential.
+    g_vector_grid (Float[Array, "x y z 3"]): Reciprocal-space G-vector grid.
+    kpts (Float[Array, "kpt 3"]): :math:`k` points.
+    vol (Float): Unit-cell volume.
+    xc (str): XC functional specification.
+    kohn_sham (bool): Whether to use Kohn-Sham form.
 
   Returns:
-    Complex[Array, "kpt band band"]: Complex array of shape [kpt, band, band] containing the Hamiltonian matrix elements in the plane wave basis at each k-point.
+    Complex[Array, "kpt band band"]: Hamiltonian matrices per :math:`k` point.
   """
 
   num_basis = jnp.sum(freq_mask)

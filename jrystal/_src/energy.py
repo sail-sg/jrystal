@@ -18,7 +18,8 @@ import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, Complex, Float, Int
 
-from . import braket, potential, pw, xc
+from . import braket, potential, pw
+from . import xc as _xc
 from .ewald import ewald_coulomb_repulsion
 from .grid import translation_vectors
 from .utils import (
@@ -105,7 +106,7 @@ def kinetic(
   coeff_grid: Complex[Array, 'spin kpt band x y z'],
   g_vector_grid: Float[Array, 'x y z 3'],
   kpts: Float[Array, 'kpt 3'],
-  kpts_weights: Float[Array, ' kpt'],
+  kpts_weights: Optional[Float[Array, ' kpt']] = None,
   occupation: Optional[Float[Array, 'spin kpt band']] = None,
 ) -> Union[Float, Float[Array, "spin kpt band"]]:
   r"""Compute kinetic energy from plane-wave coefficients.
@@ -130,7 +131,13 @@ def kinetic(
   e_kin = jnp.sum(e_kin * absolute_square(coeff_grid), axis=range(3, dim + 3))
 
   if occupation is not None:
-    e_kin = jnp.sum(e_kin * occupation * kpts_weights[None, :, None]) / 2
+    if kpts_weights is not None:
+      assert occupation.shape[1] == kpts_weights.shape[0], (
+        f"occupation.shape[1] ({occupation.shape[1]}) must be equal to "
+        f"kpts_weights.shape[0] ({kpts_weights.shape[0]})."
+      )
+      occupation = occupation * kpts_weights[None, :, None]
+    e_kin = jnp.sum(e_kin * occupation) / 2
   else:
     e_kin /= 2
 
@@ -142,9 +149,13 @@ def xc_energy(
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
   xc_type: str,
-  kohn_sham: bool = False
+  kohn_sham: bool = False,
+  tau: Optional[Float[Array, 'spin x y z']] = None,
 ) -> Float:
   r"""Compute exchange-correlation energy for a real-space density.
+
+  Supports LDA, GGA, and MGGA functionals, including compound specifications
+  such as ``'gga_x_pbe+gga_c_pbe'``.
 
   Args:
     density_grid (Float[Array, 'spin x y z']): Spin-resolved real-space
@@ -153,6 +164,8 @@ def xc_energy(
     vol (Float): Unit-cell volume.
     xc_type (str): XC functional specification.
     kohn_sham (bool): Whether to compute the Kohn-Sham XC potential form.
+    tau (Optional[Float[Array, 'spin x y z']]): Kinetic energy density.
+      Required for MGGA functionals.
 
   Returns:
     Float: Exchange-correlation energy.
@@ -161,10 +174,33 @@ def xc_energy(
   assert density_grid.ndim == 4, ('density_grid must contains spin axis')
 
   num_grid = jnp.prod(jnp.array(density_grid.shape[-3:]))
-  exc_density = xc.xc_density(density_grid, g_vector_grid, kohn_sham, xc_type)
-  e_xc = jnp.sum(exc_density * density_grid)
-  e_xc = safe_real(e_xc)
+  polarized = density_grid.shape[0] == 2
 
+  if kohn_sham:
+    raise NotImplementedError
+
+  level = _xc.xc_level(xc_type)
+
+  # Prepare jxc inputs: strip the spin axis for unpolarized
+  rho = density_grid if polarized else density_grid[0]
+
+  sigma = None
+  if level in ('gga', 'mgga'):
+    sigma = _xc.compute_sigma(density_grid, g_vector_grid)
+
+  tau_arg = None
+  if level == 'mgga':
+    if tau is None:
+      raise ValueError(
+        f"MGGA functional '{xc_type}' requires tau (kinetic energy density)."
+      )
+    tau_arg = tau if polarized else tau[0]
+
+  exc = _xc.xc_energy_density(rho, xc_type, polarized, sigma, tau_arg)
+  # exc shape: (x, y, z); density_grid shape: (spin, x, y, z)
+  # Broadcasting gives sum over spins automatically.
+  e_xc = jnp.sum(exc * density_grid)
+  e_xc = safe_real(e_xc)
   return e_xc * vol / num_grid
 
 
@@ -203,11 +239,12 @@ def total_energy(
   charge: Int[Array, " atom"],
   g_vector_grid: Float[Array, "x y z 3"],
   kpts: Float[Array, "kpt 3"],
-  kpts_weights: Float[Array, " kpt"],
   vol: Float,
+  kpts_weights: Optional[Float[Array, " kpt"]] = None,
   occupation: Optional[Float[Array, "spin kpt band"]] = None,
-  kohn_sham: bool = False,
   xc: str = 'lda_x',
+  *,
+  kohn_sham: bool = False,
   split: bool = False,
 ) -> Union[Float, Tuple[Float, Float, Float, Float]]:
   r"""Compute total electronic energy.
@@ -245,10 +282,15 @@ def total_energy(
   density_grid = wave_to_density(wave_grid_arr, occupation)
   density_grid_rec = wave_to_density_reciprocal(wave_grid_arr, occupation)
 
+  # Compute tau for MGGA functionals
+  tau = None
+  if _xc.xc_level(xc) == 'mgga':
+    tau = pw.tau_grid(coefficient, vol, g_vector_grid, kpts, occupation)
+
   e_kin = kinetic(coefficient, g_vector_grid, kpts, kpts_weights, occupation)
   e_ext = external(density_grid_rec, position, charge, g_vector_grid, vol)
   e_har = hartree(density_grid_rec, g_vector_grid, vol, kohn_sham)
-  e_xc = xc_energy(density_grid, g_vector_grid, vol, xc, kohn_sham)
+  e_xc = xc_energy(density_grid, g_vector_grid, vol, xc, kohn_sham, tau)
 
   if split:
     return e_kin, e_ext, e_har, e_xc
@@ -256,19 +298,25 @@ def total_energy(
   return e_kin + e_ext + e_har + e_xc
 
 
-def band_energy(
+def band_energy(*args, **kwargs):
+  raise DeprecationWarning(
+    "band_energy is deprecated. Use `hamiltonian_matrix_diagonal(...)` instead."
+  )
+
+
+def hamiltonian_matrix_diagonal(
   coefficient: Complex[Array, "spin kpt band x y z"],
   position: Float[Array, "atom 3"],
   charge: Int[Array, " atom"],
-  g_vector_grid: Float[Array, "x y z 3"],
-  kpts: Float[Array, "kpt 3"],
-  kpts_weights: Float[Array, " kpt"],
   vol: Float,
+  g_vector_grid: Float[Array, "x y z 3"],
   occupation: Float[Array, "spin kpt band"],
+  kpts: Float[Array, "kpt 3"],
+  kpts_weights: Optional[Float[Array, " kpt"]] = None,
   kohn_sham: bool = False,
   xc_type: str = "lda_x"
-):
-  r"""Compute single-particle band energies for each state.
+) -> Float[Array, "spin kpt band"]:
+  r"""Compute the diagonal elements of the Hamiltonian matrix.
 
   Args:
     coefficient (Complex[Array, "spin kpt band x y z"]): Plane-wave

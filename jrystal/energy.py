@@ -16,6 +16,7 @@
 from ._src.energy import (
   band_energy,
   external,
+  hamiltonian_matrix_diagonal,
   hartree,
   kinetic,
   nuclear_repulsion,
@@ -29,6 +30,7 @@ __all__ = [
   "kinetic",
   "total_energy",
   "band_energy",
+  "hamiltonian_matrix_diagonal",
   "nuclear_repulsion",
   "xc_energy",
 ]

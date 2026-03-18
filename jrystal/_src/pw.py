@@ -134,8 +134,8 @@ def coeff(
     Complex[Array, 'spin kpt band x y z']: Coefficients on the full reciprocal
     grid.
   """
-  coeff = unitary_matrix(pw_param, complex=True, sharding=sharding)
-  return expand_coefficient(coeff, freq_mask)
+  c = unitary_matrix(pw_param, complex=True, sharding=sharding)
+  return expand_coefficient(c, freq_mask)
 
 
 def wave_grid(
@@ -221,6 +221,143 @@ def density_grid_reciprocal(
   """
   dens = density_grid(coeff, vol, occupation, k_weights)
   return fftn(dens, axes=range(-3, 0))
+
+
+def grad_density_grid(
+  coeff: Complex[Array, 'spin kpt band x y z'],
+  vol: Float,
+  g_vector_grid: Float[Array, 'x y z 3'],
+  occupation: Optional[Float[Array, 'spin kpt band']] = None,
+  k_weights: Optional[Float[Array, ' kpts']] = None,
+) -> Union[Float[Array, 'spin x y z 3'], Float[Array, 'spin kpt band x y z 3']]:
+  r"""Compute density gradient :math:`\nabla\rho` on the real-space grid.
+
+  Uses the reciprocal-space relation
+  :math:`(\nabla\rho)_d(G) = i G_d \hat\rho(G)`.
+
+  Args:
+    coeff (Complex[Array, 'spin kpt band x y z']): Plane-wave coefficients.
+    vol (Float): Unit-cell volume.
+    g_vector_grid (Float[Array, 'x y z 3']): Reciprocal-space G-vector grid.
+    occupation (Optional[Float[Array, 'spin kpt band']]): Occupation numbers.
+    k_weights (Optional[Float[Array, ' kpts']]): Weights for each k-point.
+
+  Returns:
+    Union[Float[Array, 'spin x y z 3'], Float[Array, 'spin kpt band x y z 3']]:
+    Density gradient with a trailing direction axis of size 3.
+  """
+  dens_recip = density_grid_reciprocal(coeff, vol, occupation, k_weights)
+  grads = []
+  for d in range(3):
+    grad_recip_d = 1j * g_vector_grid[..., d] * dens_recip
+    grads.append(jnp.real(ifftn(grad_recip_d, axes=range(-3, 0))))
+  return jnp.stack(grads, axis=-1)
+
+
+def sigma_grid(
+  coeff: Complex[Array, 'spin kpt band x y z'],
+  vol: Float,
+  g_vector_grid: Float[Array, 'x y z 3'],
+  occupation: Optional[Float[Array, 'spin kpt band']] = None,
+  k_weights: Optional[Float[Array, ' kpts']] = None,
+) -> Union[Float[Array, 'spin x y z'], Float[Array, 'spin kpt band x y z']]:
+  r"""Compute contracted density gradient :math:`\sigma = |\nabla\rho|^2`.
+
+  Args:
+    coeff (Complex[Array, 'spin kpt band x y z']): Plane-wave coefficients.
+    vol (Float): Unit-cell volume.
+    g_vector_grid (Float[Array, 'x y z 3']): Reciprocal-space G-vector grid.
+    occupation (Optional[Float[Array, 'spin kpt band']]): Occupation numbers.
+    k_weights (Optional[Float[Array, ' kpts']]): Weights for each k-point.
+
+  Returns:
+    Union[Float[Array, 'spin x y z'], Float[Array, 'spin kpt band x y z']]:
+    Contracted gradient squared on the real-space grid.
+  """
+  grad_dens = grad_density_grid(
+    coeff, vol, g_vector_grid, occupation, k_weights
+  )
+  return jnp.sum(grad_dens ** 2, axis=-1)
+
+
+def tau_grid(
+  coeff: Complex[Array, 'spin kpt band x y z'],
+  vol: Float,
+  g_vector_grid: Float[Array, 'x y z 3'],
+  kpts: Optional[Float[Array, 'kpt 3']] = None,
+  occupation: Optional[Float[Array, 'spin kpt band']] = None,
+  k_weights: Optional[Float[Array, ' kpts']] = None,
+) -> Union[Float[Array, 'spin x y z'], Float[Array, 'spin kpt band x y z']]:
+  r"""Compute kinetic energy density on the real-space grid.
+
+  .. math::
+
+    \tau(\mathbf{r}) = \frac{1}{2}\sum_i f_i\,|\nabla\psi_i(\mathbf{r})|^2
+
+  Args:
+    coeff (Complex[Array, 'spin kpt band x y z']): Plane-wave coefficients.
+    vol (Float): Unit-cell volume.
+    g_vector_grid (Float[Array, 'x y z 3']): Reciprocal-space G-vector grid.
+    kpts (Optional[Float[Array, 'kpt 3']]): k-point coordinates. Defaults to
+      Gamma point.
+    occupation (Optional[Float[Array, 'spin kpt band']]): Occupation numbers.
+    k_weights (Optional[Float[Array, ' kpts']]): Weights for each k-point.
+
+  Returns:
+    Union[Float[Array, 'spin x y z'], Float[Array, 'spin kpt band x y z']]:
+    Kinetic energy density on the real-space grid.
+  """
+  grid_sizes = coeff.shape[-3:]
+  num_grid_points = np.prod(grid_sizes)
+
+  nabla_psi_sq = jnp.zeros(coeff.shape)
+  for d in range(3):
+    gk_d = g_vector_grid[..., d]
+    if kpts is not None:
+      gk_d = gk_d + jnp.reshape(kpts[:, d], (1, -1, 1, 1, 1, 1))
+    nabla_coeff_d = coeff * (1j * gk_d)
+    nabla_psi_d = ifftn(
+      nabla_coeff_d, axes=range(-3, 0)
+    ) * num_grid_points / jnp.sqrt(vol)
+    nabla_psi_sq = nabla_psi_sq + absolute_square(nabla_psi_d)
+
+  tau = 0.5 * nabla_psi_sq
+
+  if occupation is not None:
+    if k_weights is not None:
+      occupation = occupation * k_weights[None, :, None]
+    tau = jnp.einsum('skb...,skb->s...', tau, occupation)
+
+  return tau
+
+
+def lapl_grid(
+  coeff: Complex[Array, 'spin kpt band x y z'],
+  vol: Float,
+  g_vector_grid: Float[Array, 'x y z 3'],
+  occupation: Optional[Float[Array, 'spin kpt band']] = None,
+  k_weights: Optional[Float[Array, ' kpts']] = None,
+) -> Union[Float[Array, 'spin x y z'], Float[Array, 'spin kpt band x y z']]:
+  r"""Compute Laplacian of density :math:`\nabla^2\rho` on the real-space grid.
+
+  Uses the reciprocal-space relation
+  :math:`\widehat{\nabla^2\rho}(G) = -|G|^2 \hat\rho(G)`.
+
+  Args:
+    coeff (Complex[Array, 'spin kpt band x y z']): Plane-wave coefficients.
+    vol (Float): Unit-cell volume.
+    g_vector_grid (Float[Array, 'x y z 3']): Reciprocal-space G-vector grid.
+    occupation (Optional[Float[Array, 'spin kpt band']]): Occupation numbers.
+    k_weights (Optional[Float[Array, ' kpts']]): Weights for each k-point.
+
+  Returns:
+    Union[Float[Array, 'spin x y z'], Float[Array, 'spin kpt band x y z']]:
+    Laplacian of density on the real-space grid.
+  """
+  dens_recip = density_grid_reciprocal(coeff, vol, occupation, k_weights)
+  g_sq = jnp.sum(g_vector_grid ** 2, axis=-1)
+  lapl_recip = -g_sq * dens_recip
+  return jnp.real(ifftn(lapl_recip, axes=range(-3, 0)))
 
 
 def wave_r(

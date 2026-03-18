@@ -11,10 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Integration operations for quantum mechanical calculations in real and reciprocal space.
-
-This module provides functions for calculating inner products (brakets) and expectation values in both real and reciprocal space, which are fundamental operations in quantum mechanics and density functional theory (DFT) calculations.
-"""
+"""Inner products and expectation values in real and reciprocal space."""
 
 from typing import Optional, Union
 
@@ -29,31 +26,21 @@ def reciprocal_braket(
   ket: Union[Complex[Array, '*n x y z'], Float[Array, '*n x y z']],
   vol: Float,
 ) -> Float:
-  r"""Calculate the inner product of two functions in reciprocal space.
-
-  Computes the inner product between two wavefunctions in reciprocal space using:
-
-  .. math::
-
-    \langle f|g \rangle \approx \sum_{\mathbf{G}} f^*(\mathbf{G})g(\mathbf{G}) \frac{vol}{N^2}
-
-  where :math:`f^*(\mathbf{G})` is the complex conjugate of :math:`f(\mathbf{G})`, :math:`N` is the number of grid points, and :math:`vol` is the real-space unit cell volume.
-
-  .. NOTE::
-    This formulation is particularly useful for calculating hartree and external energy integrals in reciprocal space, as they often have simpler forms than in real space.
+  r"""Compute :math:`\langle \mathrm{bra} | \mathrm{ket} \rangle` in
+    reciprocal space.
 
   Args:
-      bra (Complex[Array, '*n x y z'] | Float[Array, '*n x y z']): Wavefunction in reciprocal space (left side of braket).
-           Shape must match ket's shape.
-      ket (Complex[Array, '*n x y z'] | Float[Array, '*n x y z']): Wavefunction in reciprocal space (right side of braket).
-           Shape must match bra's shape.
-      vol (Float): Volume of the real-space unit cell.
+    bra (Union[Complex[Array, '*n x y z'], Float[Array, '*n x y z']]):
+      Left operand in reciprocal space.
+    ket (Union[Complex[Array, '*n x y z'], Float[Array, '*n x y z']]):
+      Right operand in reciprocal space.
+    vol (Float): Unit-cell volume.
 
   Returns:
-      Float: The real-valued inner product result.
+    Float: Real-valued reciprocal-space inner product.
 
   Raises:
-      ValueError: If bra and ket shapes do not match.
+    ValueError: If ``bra`` and ``ket`` grid shapes do not match.
   """
   if bra.shape[-3:] != ket.shape[-3:]:
     raise ValueError(
@@ -77,30 +64,20 @@ def real_braket(
   ket: Union[Complex[Array, '*n x y z'], Float[Array, '*n x y z']],
   vol: Float,
 ) -> Float:
-  r"""Calculate the inner product of two functions in real space.
-
-  Computes the inner product between two wavefunctions in real space using:
-
-  .. math::
-
-    \langle f|g \rangle \approx \sum_{\mathbf{r}} f^*(\mathbf{r})g(\mathbf{r}) \frac{vol}{N}
-
-  where :math:`f^*(\mathbf{r})` is the complex conjugate of :math:`f(\mathbf{r})`, :math:`N` is the number of grid points, and :math:`vol` is the unit cell volume.
-
-  .. NOTE::
-
-    This formulation is commonly used in planewave DFT for calculating exchange-correlation energy integrals, which are typically evaluated in real space for efficiency.
+  r"""Compute :math:`\langle \mathrm{bra} | \mathrm{ket} \rangle` in real space.
 
   Args:
-      bra (Complex[Array, '*n x y z'] | Float[Array, '*n x y z']): Wavefunction in real space (left side of braket). Shape must match ket's shape.
-      ket (Complex[Array, '*n x y z'] | Float[Array, '*n x y z']): Wavefunction in real space (right side of braket). Shape must match bra's shape.
-      vol (Float): Volume of the unit cell.
+    bra (Union[Complex[Array, '*n x y z'], Float[Array, '*n x y z']]):
+      Left operand in real space.
+    ket (Union[Complex[Array, '*n x y z'], Float[Array, '*n x y z']]):
+      Right operand in real space.
+    vol (Float): Unit-cell volume.
 
   Returns:
-      Float: The real-valued inner product result.
+    Float: Real-space inner product.
 
   Raises:
-      ValueError: If bra and ket shapes do not match.
+    ValueError: If ``bra`` and ``ket`` shapes do not match.
   """
   if bra.shape != ket.shape:
     raise ValueError(
@@ -125,44 +102,27 @@ def expectation(
   diagonal: bool = False,
   mode: str = 'real'
 ) -> Array:
-  r"""Calculate the expectation value of a Hamiltonian operator.
-
-  Computes matrix elements of the form:
-
-  .. math::
-
-    E_{ij} = \langle \psi_i | \hat{H} | \psi_j \rangle \approx \sum_{\mathbf{q}} \psi_i^*(\mathbf{q}) \hat{H}(\mathbf{q}) \psi_j(\mathbf{q}) \frac{vol}{N^p}
-
-  where :math:`\psi_i` and :math:`\psi_j` are wavefunctions, :math:`\hat{H}` is the Hamiltonian operator, :math:`\mathbf{q}` represents either real (:math:`\mathbf{r}`) or reciprocal (:math:`\mathbf{G}`) space coordinates, and :math:`p` depends on the mode:
-
-  - For real space: :math:`p = 1`
-  - For reciprocal space: :math:`p = 2` (includes Parseval factor)
-  - For kinetic terms: :math:`p = 0`
-
-  For more details on expectation values in quantum mechanics, see:
-  https://en.wikipedia.org/wiki/Expectation_value_(quantum_mechanics)
+  r"""Compute expectation values
+    :math:`\langle \psi_i | \hat{H} | \psi_j \rangle`.
 
   Args:
-      bra (Complex[Array, 'spin kpt band x y z'] | Float[Array, 'spin kpt band x y z']): Left wavefunction in the expectation value calculation.
-           Must have shape (spin, kpt, band, x, y, z).
-      hamiltonian (Complex[Array, 'spin kpt band x y z'] | Float[Array, 'spin kpt band x y z']): Hamiltonian operator matrix.
-           Must have shape (spin, kpt, band, x, y, z).
-      vol (Float): Volume of the unit cell.
-      ket (Complex[Array, 'spin kpt band x y z'] | Float[Array, 'spin kpt band x y z']): Right wavefunction. If None, uses the bra wavefunction (for diagonal elements).
-           Must have same shape as bra if provided.
-      diagonal (bool): If True, only compute diagonal elements :math:`E_{ii}`.
-           If False, compute full matrix :math:`E_{ij}`.
-      mode (str): Integration mode determining the normalization factors:
-          - 'real': Real space integration (:math:`vol/N`)
-          - 'reciprocal': Reciprocal space (includes :math:`1/N` Parseval factor)
-          - 'kinetic': Special case with unit factor
+    bra (Union[Complex[Array, 'spin kpt band x y z'],
+      Float[Array, 'spin kpt band x y z']]): Left wavefunctions.
+    hamiltonian (Union[Complex[Array, 'spin kpt band x y z'],
+      Float[Array, 'spin kpt band x y z']]): Hamiltonian values on the same
+      grid. A :math:`k`-dependent tensor with shape ``(kpt, x, y, z)`` is also
+      supported.
+    vol (Float): Unit-cell volume.
+    ket (Optional[Union[Complex[Array, 'spin kpt band x y z'],
+      Float[Array, 'spin kpt band x y z']]]): Right wavefunctions.
+      If ``None``, ``bra`` is used.
+    diagonal (bool): If ``True``, compute only diagonal elements.
+    mode (str): Normalization mode. Must be ``'real'``, ``'reciprocal'``, or
+      ``'kinetic'``.
 
   Returns:
-      Array: Array of expectation values. Shape depends on diagonal parameter:
-
-      - If diagonal=True: shape (spin, kpt, band)
-      - If diagonal=False: shape (spin, kpt, band, band)
-
+    Array: Expectation values. Shape is ``(spin, kpt, band)`` when
+    ``diagonal=True`` and ``(spin, kpt, band, band)`` otherwise.
   """
   ket = bra if ket is None else ket
   assert bra.ndim == 6

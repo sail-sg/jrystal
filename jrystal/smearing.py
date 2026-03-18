@@ -4,6 +4,7 @@ from jrystal._src.smearing import (
   gaussian,
   marzari_vanderbilt,
   methfessel_paxton,
+  occupations_from_eigenvalues,
 )
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
   "marzari_vanderbilt",
   "methfessel_paxton",
   "find_chemical_potential",
+  "occupations_from_eigenvalues",
 ]

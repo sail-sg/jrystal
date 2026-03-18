@@ -321,6 +321,36 @@ def k_vectors(
   return k_mesh, k_weights
 
 
+def k_vectors_irreducible(
+  cell_vectors: Float[Array, '3 3'],
+  grid_sizes: Union[Tuple, List, Int[Array, '3']],
+  scaled_positions: Float[Array, 'atom 3'],
+  charges: Int[Array, ' atom'],
+  *,
+  k_shift: Optional[Tuple[bool, bool, bool]] = None,
+  return_frac_coords: bool = False,
+) -> Tuple[Float[Array, 'kpts 3'], Float[Array, ' kpts']]:
+  '''Generate irreducible k-vectors for Brillouin-zone sampling.
+
+  This function uses the Monkhorst-Pack scheme to construct a uniform
+  reciprocal-space k-point grid for Brillouin-zone integration.
+
+  Args:
+    cell_vectors (Float[Array, '3 3']): Real-space lattice vectors of the unit
+    grid_sizes (Union[Tuple, List, Int[Array, '3']]): Number of k-points along
+    each reciprocal-lattice direction.
+
+  '''
+  return k_vectors(
+    cell_vectors=cell_vectors,
+    grid_sizes=grid_sizes,
+    scaled_positions=scaled_positions,
+    charges=charges,
+    k_shift=k_shift,
+    return_frac_coords=return_frac_coords,
+  )
+
+
 def spherical_mask(
   cell_vectors: Float[Array, '3 3'],
   grid_sizes: Union[List, jax.Array],
