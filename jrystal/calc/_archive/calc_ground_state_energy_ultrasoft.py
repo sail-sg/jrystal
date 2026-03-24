@@ -17,19 +17,20 @@ from dataclasses import dataclass
 from math import ceil
 from typing import List, Union
 
-import jax
 import numpy as np
+import jax
+import jax.numpy as jnp
 import optax
 from absl import logging
 from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
 from tqdm import tqdm
 
-from .._src import energy, occupation, pw
+from .._src import energy, entropy, occupation, pw
 from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
-from ..pseudopotential import normcons
+from ..pseudopotential import ultrasoft as us
 from .convergence import create_convergence_checker
 from .opt_utils import (
   create_crystal,
@@ -37,8 +38,8 @@ from .opt_utils import (
   create_grids,
   create_optimizer,
   create_pseudopotential,
-  get_ewald_coulomb_repulsion,
   set_env_params,
+  get_ewald_coulomb_repulsion,
 )
 from .pre_calc import pre_calc_beta_sbt
 
@@ -83,6 +84,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   pseudopot = create_pseudopotential(config)
   valence_charges = np.sum(pseudopot.valence_charges)
   logging.info(f"Crystal: {crystal.symbols}")
+  EPS = config.eps
 
   # Initialize the mesh and sharding for the parallelization.
   num_devices = len(jax.devices())
@@ -111,7 +113,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   # initialize pseudopotential
   logging.info("Initializing pseudopotential (local)...")
   start = time.time()
-  potential_loc = normcons.potential_local_reciprocal(
+  potential_loc = us.potential_local_reciprocal(
     crystal.positions,
     g_vec,
     pseudopot.r_grid,
@@ -132,13 +134,20 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     np.array(k_vec)
   )
   beta_gk = jax.device_put(beta_gk, NamedSharding(mesh, P('k')))
+  _q_ij_real_grid = us._Q_ij_real_grid(
+    r_vec,
+    crystal.positions,
+    pseudopot.r_grid,
+    pseudopot.nonlocal_augmentation_qij
+  )
+
   end = time.time()
   logging.info(
     f"Spherical Bessel Transform done. Times: {end - start:.2f} seconds"
   )
   logging.info("Initializing pseudopotential (nonlocal)...")
   start = time.time()
-  potential_nl = normcons.potential_nonlocal_psi_reciprocal(
+  potential_nl = us.potential_nonlocal_psi_reciprocal(
     crystal.positions,
     g_vec,
     k_vec,
@@ -148,7 +157,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     pseudopot.nonlocal_d_matrix,
     beta_gk
   )  # shape "kpt beta phi x y z"
-  del beta_gk
+
   end = time.time()
   logging.info(f"Nonlocal potential done. Times: {end - start:.2f} seconds")
   logging.info("Deploying pseudopotential (nonlocal)...")
@@ -160,24 +169,53 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     f"Times: {end - start:.2f} seconds"
   )
 
-  # Define functions for energy calculation.
-  occ_fn = occupation.get_occupation_fn(
-    int(valence_charges), spin=crystal.spin,
-    spin_restricted=config.spin_restricted,
+  get_us_coeff = us.get_ultrasoft_coeff_fun(
+    crystal.positions,
+    k_vec,
+    g_vec,
+    freq_mask,
+    pseudopot.r_grid,
+    pseudopot.nonlocal_beta_grid,
+    pseudopot.nonlocal_angular_momentum,
+    pseudopot.nonlocal_augmentation_q_matrix,
+    beta_gk,
   )
 
+  # Define functions for energy calculation.
+  def get_occupation(params):
+    return occupation.occupation(
+      params,
+      num_kpts,
+      num_electrons=np.sum(pseudopot.valence_charges),
+      spin=crystal.spin,
+      method=config.occupation,
+      spin_restricted=config.spin_restricted
+    )
+
+  def get_density_grid(us_coeff, occ):
+    return us.density_grid(
+      us_coeff, freq_mask, occ, k_vec, r_vec, crystal.positions,
+      crystal.vol, pseudopot.r_grid, pseudopot.nonlocal_beta_grid,
+      pseudopot.nonlocal_angular_momentum,
+      pseudopot.nonlocal_augmentation_qij,
+      pseudopot.nonlocal_augmentation_q_with_l,
+      beta_gk,
+      _q_ij_real_grid
+    )
+
   def total_energy(params_pw, params_occ, g_vec, potential_loc, potential_nl):
-    coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
-    occ = occ_fn(params_occ)
-    density = pw.density_grid(coeff, crystal.vol, occ)
-    density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-    kinetic = energy.kinetic(coeff, g_vec, k_vec, occupation=occ)
+    pw_coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
+    us_coeff = get_us_coeff(pw_coeff)
+    occ = get_occupation(params_occ)
+    density = get_density_grid(us_coeff, occ)
+    density_reciprocal = jnp.fft.fftn(density, axes=(1, 2, 3))
+    kinetic = energy.kinetic(g_vec, k_vec, us_coeff, occ)
     hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
-    external_local = normcons.energy_local(
+    external_local = us.energy_local(
       density_reciprocal, potential_loc, vol=crystal.vol
     )
-    external_nonlocal = normcons.energy_nonlocal(
-      coeff, potential_nl, vol=crystal.vol, occupation=occ
+    external_nonlocal = us.energy_nonlocal(
+      us_coeff, potential_nl, vol=crystal.vol, occupation=occ
     )
 
     xc = energy.xc_energy(
@@ -185,11 +223,19 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     )
     return kinetic + hartree + external_local + external_nonlocal + xc
 
-  def free_energy(params_pw, params_occ, g_vec, potential_loc, potential_nl):
+  def get_entropy(params_occ):
+    occ = get_occupation(params_occ)
+    return entropy.fermi_dirac(occ, eps=EPS)
+
+  def free_energy(
+    params_pw, params_occ, temp, g_vec, potential_loc, potential_nl
+  ):
     total = total_energy(
       params_pw, params_occ, g_vec, potential_loc, potential_nl
     )
-    return total, (total, 0.0)
+    etro = get_entropy(params_occ)
+    free = total - temp * etro
+    return free, (total, etro)
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
@@ -201,7 +247,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     spin_restricted=config.spin_restricted,
     sharding=sharding
   )
-  params_occ = occupation.params_init(num_bands, num_kpts)
+  params_occ = occupation.param_init(
+    key, num_bands, valence_charges, num_kpts, crystal.spin, config.occupation
+  )
+  params_occ = jax.device_put(params_occ, sharding)
   params = {"pw": params_pw, "occ": params_occ}
   opt_state = optimizer.init(params)
 
@@ -209,14 +258,28 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   with mesh:
 
     @jax.jit
-    def update(params, opt_state, g_vec, potential_nl):
+    def update(params, opt_state, temp, g_vec, potential_nl):
       loss = lambda x: free_energy(
-        x["pw"], x["occ"], g_vec, potential_loc, potential_nl
+        x["pw"], x["occ"], temp, g_vec, potential_loc, potential_nl
       )
       (loss_val, es), grad = jax.value_and_grad(loss, has_aux=True)(params)
       updates, opt_state = optimizer.update(grad, opt_state)
       params = optax.apply_updates(params, updates)
       return params, opt_state, loss_val, es
+
+    # Define scheduler for temperature annealing.
+    if config.smearing > 0.:
+      temperature_scheduler = optax.exponential_decay(
+        init_value=100.,
+        transition_steps=config.epoch // 2,
+        decay_rate=config.smearing / 100,
+        end_value=config.smearing
+      )
+    else:
+      def temperature_scheduler(i):
+        return 0.
+
+    logging.info(f"smearing: {config.smearing}")
 
     # The main loop for optimization.
     if config.verbose:
@@ -226,9 +289,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
     train_time = 0
     for i in iters:
+      temp = temperature_scheduler(i)
       start = time.time()
       params, opt_state, loss_val, es = update(
-        params, opt_state, g_vec, potential_nl
+        params, opt_state, temp, g_vec, potential_nl
       )
       etot, entro = es
       etot = jax.block_until_ready(etot)
@@ -249,17 +313,19 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   #####################################
   #        END OF OPTIMIZATION        #
   #####################################
-  coeff = pw.coeff(params["pw"], freq_mask)
-  occ = occ_fn(params["occ"])
-  density = pw.density_grid(coeff, crystal.vol, occ)
-  density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-  kinetic = energy.kinetic(coeff, g_vec, k_vec, occupation=occ)
+  pw_coeff = pw.coeff(params["pw"], freq_mask)
+  us_coeff = get_us_coeff(pw_coeff)
+
+  occ = get_occupation(params["occ"])
+  density = get_density_grid(us_coeff, occ)
+  density_reciprocal = jnp.fft.fftn(density, axes=(1, 2, 3))
+  kinetic = energy.kinetic(g_vec, k_vec, us_coeff, occ)
   hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
-  external_local = normcons.energy_local(
+  external_local = us.energy_local(
     density_reciprocal, potential_loc, vol=crystal.vol
   )
-  external_nonlocal = normcons.energy_nonlocal(
-    coeff, potential_nl, vol=crystal.vol, occupation=occ
+  external_nonlocal = us.energy_nonlocal(
+    us_coeff, potential_nl, vol=crystal.vol, occupation=occ
   )
 
   xc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)

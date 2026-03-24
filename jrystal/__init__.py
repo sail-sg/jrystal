@@ -31,7 +31,8 @@ from . import (
   pseudopotential,
   pw,
   sbt,
-  utils
+  smearing,
+  utils,
 )
 from .crystal import Crystal
 
@@ -42,20 +43,21 @@ def get_pkg_path():
 
 __all__ = [
   "_src",
+  "calc",
+  "config",
   "crystal",
   "Crystal",
-  "calc",
-  "pseudopotential",
-  "utils",
-  "sbt",
-  "pw",
-  "occupation",
+  "energy",
+  "entropy",
+  "ewald",
+  "get_pkg_path",
   "grid",
   "hamiltonian",
-  "energy",
+  "occupation",
   "potential",
-  "entropy",
-  "get_pkg_path",
-  "config",
-  "ewald",
+  "pseudopotential",
+  "pw",
+  "sbt",
+  "smearing",
+  "utils",
 ]

@@ -1,31 +1,14 @@
-# Copyright 2025 Garena Online Private Limited
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import time
 from dataclasses import dataclass
 from math import ceil
 from typing import List, Union
 
-import numpy as np
 import jax
 import optax
 from absl import logging
-from jax.sharding import Mesh, NamedSharding
-from jax.sharding import PartitionSpec as P
 from tqdm import tqdm
 
-from .._src import energy, occupation, pw
+from .._src import energy, entropy, occupation, pw, hartree_fock
 from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
@@ -72,22 +55,11 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   # Initialize and Prepare variables.
   set_env_params(config)
   key = jax.random.PRNGKey(config.seed)
-  temp = config.smearing
 
   crystal = create_crystal(config)
   num_electrons = crystal.num_electron
   logging.info(f"Crystal: {crystal.symbols}")
-
-  # Initialize the mesh and sharding for the parallelization.
-  num_devices = len(jax.devices())
-  util_devices = num_devices if config.parallel_over_k_mesh else 1
-  logging.info(f"Parallel over k-mesh: {config.parallel_over_k_mesh}.")
-  logging.info(f"Number of devices (used): {num_devices} ({util_devices}).")
-
-  mesh = Mesh(
-    np.array(jax.devices()[:util_devices]).reshape([1, -1]), ('s', 'k')
-  )
-  sharding = NamedSharding(mesh, P('s', 'k'))  # shard by the kpt dimension.
+  EPS = config.eps
 
   g_vec, r_vec, k_vec = create_grids(config)
   num_kpts = k_vec.shape[0]
@@ -102,20 +74,20 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
 
   convergence_checker = create_convergence_checker(config)
   converged = False
-  k_vec = jax.device_put(k_vec, NamedSharding(mesh, P('k')))
 
   # Define functions for energy calculation.
-  occ_fn = occupation.get_occupation_fn(
-    int(num_electrons), spin=crystal.spin,
-    spin_restricted=config.spin_restricted,
-  )
+  def get_occupation(params):
+    return occupation.simplex_projector(
+      params, num_electrons, spin_restricted=config.spin_restricted
+    )
 
   def total_energy(params_pw, params_occ, g_vec):
-    coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
-    occ = occ_fn(params_occ)
-    density = pw.density_grid(coeff, crystal.vol, occ)
+    coeff = pw.coeff(params_pw, freq_mask)
+    occ = get_occupation(params_occ)
+    # density = pw.density_grid(coeff, crystal.vol, occ)
     density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-    kinetic = energy.kinetic(coeff, g_vec, k_vec, occupation=occ)
+
+    kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
     hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
     external = energy.external(
       density_reciprocal,
@@ -124,15 +96,26 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       g_vec,
       crystal.vol
     )
-
-    xc = energy.xc_energy(
-      density, g_vec, crystal.vol, config.xc, kohn_sham=False
+    paired_den_rcprl = hartree_fock.paired_density_grid_reciprocal(
+      coeff, crystal.vol
     )
-    return kinetic + hartree + external + xc
+    exchange = hartree_fock.exchange_energy(
+      paired_den_rcprl, g_vec, occ, crystal.vol
+    )
+    gb = hartree_fock.gygi_baldereschi(
+      density_reciprocal, g_vec, crystal.vol
+    )
+    return kinetic + hartree + external + exchange + gb
 
-  def free_energy(params_pw, params_occ, g_vec):
+  def get_entropy(params_occ):
+    occ = get_occupation(params_occ)
+    return entropy.fermi_dirac(occ, eps=EPS)
+
+  def free_energy(params_pw, params_occ, temp, g_vec):
     total = total_energy(params_pw, params_occ, g_vec)
-    return total, (total, 0.0)
+    etro = get_entropy(params_occ)
+    free = total - temp * etro
+    return free, (total, etro)
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
@@ -142,45 +125,66 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     num_kpts,
     freq_mask,
     spin_restricted=config.spin_restricted,
-    sharding=sharding
   )
-  params_occ = occupation.params_init(num_bands, num_kpts)
+  params_occ = occupation.param_init(
+    key,
+    num_bands,
+    num_electrons,
+    num_kpts,
+    crystal.spin,
+    config.occupation,
+    spin_restricted=config.spin_restricted
+  )
+  # params_occ = jax.device_put(params_occ, sharding)
   params = {"pw": params_pw, "occ": params_occ}
   opt_state = optimizer.init(params)
 
-  # Define update function.
-  with mesh:
+  @jax.jit
+  def update(params, opt_state, temp, g_vec):
+    loss = lambda x: free_energy(x["pw"], x["occ"], temp, g_vec)
+    (loss_val, es), grad = jax.value_and_grad(loss, has_aux=True)(params)
+    updates, opt_state = optimizer.update(grad, opt_state)
+    params = optax.apply_updates(params, updates)
+    return params, opt_state, loss_val, es
 
-    @jax.jit
-    def update(params, opt_state, g_vec):
-      loss = lambda x: free_energy(x["pw"], x["occ"], g_vec)
-      (loss_val, es), grad = jax.value_and_grad(loss, has_aux=True)(params)
-      updates, opt_state = optimizer.update(grad, opt_state)
-      params = optax.apply_updates(params, updates)
-      return params, opt_state, loss_val, es
+  # Define scheduler for temperature annealing.
+  if config.smearing > 0.:
+    temperature_scheduler = optax.exponential_decay(
+      init_value=100.,
+      transition_steps=config.epoch // 2,
+      decay_rate=config.smearing / 100,
+      end_value=config.smearing
+    )
+  else:
 
-    # The main loop for optimization.
-    if config.verbose:
-      iters = tqdm(range(config.epoch))
-    else:
-      iters = tqdm(range(config.epoch), disable=True)
+    def temperature_scheduler(i):
+      return 0.
 
-    train_time = 0
-    for i in iters:
-      start = time.time()
-      params, opt_state, loss_val, es = update(params, opt_state, g_vec)
-      etot, entro = es
-      etot = jax.block_until_ready(etot)
-      train_time += time.time() - start
-      converged = convergence_checker.check(etot)
-      if converged:
-        logging.info("Converged.")
-        break
+  logging.info(f"smearing: {config.smearing}")
 
-      iters.set_description(
-        f"Loss: {loss_val:.4f}|Energy: {etot+ew:.4f}|"
-        f"Entropy: {entro:.4f}|T: {temp:.2E}"
-      )
+  # The main loop for optimization.
+  if config.verbose:
+    iters = tqdm(range(config.epoch))
+  else:
+    iters = tqdm(range(config.epoch), disable=True)
+
+  train_time = 0
+  for i in iters:
+    temp = temperature_scheduler(i)
+    start = time.time()
+    params, opt_state, loss_val, es = update(params, opt_state, temp, g_vec)
+    etot, entro = es
+    etot = jax.block_until_ready(etot)
+    train_time += time.time() - start
+    converged = convergence_checker.check(etot)
+    if converged:
+      logging.info("Converged.")
+      break
+
+    iters.set_description(
+      f"Loss: {loss_val:.4f}|Energy: {etot+ew:.4f}|"
+      f"Entropy: {entro:.4f}|T: {temp:.2E}"
+    )
 
   if not converged:
     logging.warning("Did not converge.")
@@ -189,21 +193,29 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   #        END OF OPTIMIZATION        #
   #####################################
   coeff = pw.coeff(params["pw"], freq_mask)
-  occ = occ_fn(params["occ"])
+  occ = get_occupation(params["occ"])
   density = pw.density_grid(coeff, crystal.vol, occ)
   density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-  kinetic = energy.kinetic(coeff, g_vec, k_vec, occupation=occ)
+  kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
   hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
   external = energy.external(
     density_reciprocal, crystal.positions, crystal.charges, g_vec, crystal.vol
   )
-
-  xc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)
+  gb = hartree_fock.gygi_baldereschi(
+    density_reciprocal, g_vec, crystal.vol
+  )
+  paired_den_rcprl = hartree_fock.paired_density_grid_reciprocal(
+    coeff, crystal.vol
+  )
+  exchange = hartree_fock.exchange_energy(
+    paired_den_rcprl, g_vec, occ, crystal.vol
+  )
 
   logging.info(f"Hartree Energy: {hartree:.4f} Ha")
   logging.info(f"External Energy: {external:.4f} Ha")
-  logging.info(f"XC Energy: {xc:.4f} Ha")
+  logging.info(f"exchange Energy: {exchange:.4f} Ha")
   logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
+  logging.info(f"GB Correction Energy: {gb:.4f} Ha")
   logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
   logging.info(f"Total Energy: {etot+ew:.4f} Ha")
 

@@ -1,0 +1,32 @@
+system: diamond (C2)
+method: norm-conserving pseudopotential
+xc: lda_x
+grid_sizes:
+- 24
+- 24
+- 24
+cutoff_energy_ha: 50
+k_grid:
+- 1
+- 1
+- 1
+num_kpts: 1
+num_bands: 12
+optimizer: adam
+learning_rate: 0.01
+smearing: 0.001
+epochs: 2000
+seed: 123
+pseudopotential: C.pz-vbc.UPF
+energy_ha:
+  kinetic: 11.52737345
+  hartree: 1.33446418
+  external_local: -6.92026407
+  external_nonlocal: 0.4973286
+  xc: -3.21306395
+  ewald: -28.7718493
+  electronic_total: 3.22605284
+  total: -25.54579647
+wall_time_seconds: 33.0
+notes: Gamma-only, spin-restricted, simplex-projector occupation, no k-weights (single
+  kpt so irrelevant)

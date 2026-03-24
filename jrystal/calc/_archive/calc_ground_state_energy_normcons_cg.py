@@ -20,12 +20,13 @@ from typing import List, Union
 import jax
 import numpy as np
 import optax
+import jaxopt
 from absl import logging
 from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
 from tqdm import tqdm
 
-from .._src import energy, occupation, pw
+from .._src import energy, entropy, occupation, pw
 from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
@@ -83,6 +84,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   pseudopot = create_pseudopotential(config)
   valence_charges = np.sum(pseudopot.valence_charges)
   logging.info(f"Crystal: {crystal.symbols}")
+  EPS = config.eps
 
   # Initialize the mesh and sharding for the parallelization.
   num_devices = len(jax.devices())
@@ -95,6 +97,11 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   )
   sharding = NamedSharding(mesh, P('s', 'k'))  # shard by the kpt dimension.
 
+  if config.occupation in ["uniform", "gamma"]:
+    occ_sharding = NamedSharding(mesh, P('s', 'k'))
+  elif config.occupation == "simplex-projector":
+    occ_sharding = NamedSharding(mesh, P('k', 'i'))
+
   g_vec, r_vec, k_vec = create_grids(config)
   num_kpts = k_vec.shape[0]
   logging.info(f"Number of G-vectors: {proper_grid_size(config.grid_sizes)}")
@@ -106,8 +113,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   ew = get_ewald_coulomb_repulsion(config)
   valence_charges = np.sum(pseudopot.valence_charges)
 
-  convergence_checker = create_convergence_checker(config)
-  converged = False
+  # convergence_checker = create_convergence_checker(config)
+  # converged = False
   # initialize pseudopotential
   logging.info("Initializing pseudopotential (local)...")
   start = time.time()
@@ -134,7 +141,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   beta_gk = jax.device_put(beta_gk, NamedSharding(mesh, P('k')))
   end = time.time()
   logging.info(
-    f"Spherical Bessel Transform done. Times: {end - start:.2f} seconds"
+    f"Spherical Bessel Transform done. Time: {end - start:.2f} seconds"
   )
   logging.info("Initializing pseudopotential (nonlocal)...")
   start = time.time()
@@ -150,28 +157,33 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   )  # shape "kpt beta phi x y z"
   del beta_gk
   end = time.time()
-  logging.info(f"Nonlocal potential done. Times: {end - start:.2f} seconds")
+  logging.info(f"Nonlocal potential done. Time: {end - start:.2f} seconds")
   logging.info("Deploying pseudopotential (nonlocal)...")
   start = time.time()
   potential_nl = jax.device_put(potential_nl, NamedSharding(mesh, P('k')))
   end = time.time()
   logging.info(
     f"Deploying pseudopotential (nonlocal) done. "
-    f"Times: {end - start:.2f} seconds"
+    f"Time: {end - start:.2f} seconds"
   )
 
   # Define functions for energy calculation.
-  occ_fn = occupation.get_occupation_fn(
-    int(valence_charges), spin=crystal.spin,
-    spin_restricted=config.spin_restricted,
-  )
+  def get_occupation(params):
+    return occupation.occupation(
+      params,
+      num_kpts,
+      num_electrons=np.sum(pseudopot.valence_charges),
+      spin=crystal.spin,
+      method=config.occupation,
+      spin_restricted=config.spin_restricted
+    )
 
   def total_energy(params_pw, params_occ, g_vec, potential_loc, potential_nl):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
-    occ = occ_fn(params_occ)
+    occ = get_occupation(params_occ)
     density = pw.density_grid(coeff, crystal.vol, occ)
     density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-    kinetic = energy.kinetic(coeff, g_vec, k_vec, occupation=occ)
+    kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
     hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
     external_local = normcons.energy_local(
       density_reciprocal, potential_loc, vol=crystal.vol
@@ -185,14 +197,22 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     )
     return kinetic + hartree + external_local + external_nonlocal + xc
 
-  def free_energy(params_pw, params_occ, g_vec, potential_loc, potential_nl):
+  def get_entropy(params_occ):
+    occ = get_occupation(params_occ)
+    return entropy.fermi_dirac(occ, eps=EPS)
+
+  def free_energy(
+    params_pw, params_occ, temp, g_vec, potential_loc, potential_nl
+  ):
     total = total_energy(
       params_pw, params_occ, g_vec, potential_loc, potential_nl
     )
-    return total, (total, 0.0)
+    etro = get_entropy(params_occ)
+    free = total - temp * etro
+    return free, (total, etro)
 
   # Initialize parameters and optimizer.
-  optimizer = create_optimizer(config)
+  # optimizer = create_optimizer(config)
   params_pw = pw.param_init(
     key,
     num_bands,
@@ -201,59 +221,101 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     spin_restricted=config.spin_restricted,
     sharding=sharding
   )
-  params_occ = occupation.params_init(num_bands, num_kpts)
+  params_occ = occupation.param_init(
+    key, num_bands, valence_charges, num_kpts, crystal.spin, config.occupation
+  )
+  params_occ = jax.device_put(params_occ, occ_sharding)
   params = {"pw": params_pw, "occ": params_occ}
-  opt_state = optimizer.init(params)
+  # opt_state = optimizer.init(params)
 
   # Define update function.
   with mesh:
 
-    @jax.jit
-    def update(params, opt_state, g_vec, potential_nl):
-      loss = lambda x: free_energy(
-        x["pw"], x["occ"], g_vec, potential_loc, potential_nl
-      )
-      (loss_val, es), grad = jax.value_and_grad(loss, has_aux=True)(params)
-      updates, opt_state = optimizer.update(grad, opt_state)
-      params = optax.apply_updates(params, updates)
-      return params, opt_state, loss_val, es
+    # @jax.jit
+    # def update(params, opt_state, temp, g_vec, potential_nl):
+    #   loss = lambda x: free_energy(
+    #     x["pw"], x["occ"], temp, g_vec, potential_loc, potential_nl
+    #   )
+    #   (loss_val, es), grad = jax.value_and_grad(loss, has_aux=True)(params)
+    #   updates, opt_state = optimizer.update(grad, opt_state)
+    #   params = optax.apply_updates(params, updates)
+    #   return params, opt_state, loss_val, es
 
-    # The main loop for optimization.
-    if config.verbose:
-      iters = tqdm(range(config.epoch))
-    else:
-      iters = tqdm(range(config.epoch), disable=True)
+    solver = jaxopt.LBFGS(
+      lambda x: free_energy(
+        x["pw"], x["occ"], temp, g_vec, potential_loc, potential_nl
+      )[0],
+      maxiter=config.epoch,
+      # “polak-ribiere”, “fletcher-reeves”, “hestenes-stiefel”
+      # method="hestenes-stiefel",
+      tol=config.convergence_condition,
+      maxls=20,   # maximum number of line search steps
+    )
+    logging.info("Optimizing with Nonlinear CG solver...")
+    time_start = time.time()
+    res = solver.run(params)
+    logging.info(
+      f"Nonlinear CG done. Time: {time.time() - time_start:.2f} seconds"
+    )
 
-    train_time = 0
-    for i in iters:
-      start = time.time()
-      params, opt_state, loss_val, es = update(
-        params, opt_state, g_vec, potential_nl
-      )
-      etot, entro = es
-      etot = jax.block_until_ready(etot)
-      train_time += time.time() - start
-      converged = convergence_checker.check(etot)
-      if converged:
-        logging.info("Converged.")
-        break
+    params, state = res
+    converged = state.error < config.convergence_condition
+    logging.info(f"Nonlinear CG done. Iterations: {state.iter_num}")
+    logging.info(f"Error: {state.error:.4e}. Converged: {converged}")
+    logging.info(f"Value: {state.value:.4f}")
 
-      iters.set_description(
-        f"Loss: {loss_val:.4f}|Energy: {etot+ew:.4f}|"
-        f"Entropy: {entro:.4f}|T: {temp:.2E}"
-      )
+  #   # Define scheduler for temperature annealing.
+  #   if config.smearing > 0.:
+  #     temperature_scheduler = optax.exponential_decay(
+  #       init_value=100.,
+  #       transition_steps=config.epoch // 4,
+  #       decay_rate=config.smearing / 100,
+  #       end_value=config.smearing
+  #     )
+  #   else:
 
-  if not converged:
-    logging.warning("Did not converge.")
+  #     def temperature_scheduler(i):
+  #       return 0.
+
+  #   logging.info(f"smearing: {config.smearing}")
+
+  #   # The main loop for optimization.
+  #   if config.verbose:
+  #     iters = tqdm(range(config.epoch))
+  #   else:
+  #     iters = tqdm(range(config.epoch), disable=True)
+
+  #   train_time = 0
+  #   for i in iters:
+  #     temp = temperature_scheduler(i)
+  #     start = time.time()
+  #     params, opt_state, loss_val, es = update(
+  #       params, opt_state, temp, g_vec, potential_nl
+  #     )
+  #     etot, entro = es
+  #     etot = jax.block_until_ready(etot)
+  #     train_time += time.time() - start
+  #     converged = convergence_checker.check(etot)
+  #     if converged:
+  #       logging.info("Converged.")
+  #       break
+
+  #     iters.set_description(
+  #       f"Loss: {loss_val:.4f}|Energy: {etot+ew:.4f}|"
+  #       f"Entropy: {entro:.4f}|T: {temp:.2E}"
+  #     )
+
+  # if not converged:
+  #   logging.warning("Did not converge.")
 
   #####################################
   #        END OF OPTIMIZATION        #
   #####################################
   coeff = pw.coeff(params["pw"], freq_mask)
-  occ = occ_fn(params["occ"])
+  occ = get_occupation(params["occ"])
   density = pw.density_grid(coeff, crystal.vol, occ)
   density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-  kinetic = energy.kinetic(coeff, g_vec, k_vec, occupation=occ)
+  kinetic = energy.kinetic(g_vec, k_vec, coeff, occ)
   hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
   external_local = normcons.energy_local(
     density_reciprocal, potential_loc, vol=crystal.vol
@@ -261,8 +323,8 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   external_nonlocal = normcons.energy_nonlocal(
     coeff, potential_nl, vol=crystal.vol, occupation=occ
   )
-
   xc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)
+  etot = kinetic + hartree + external_local + external_nonlocal + xc
 
   logging.info(f"Hartree Energy: {hartree:.4f} Ha")
   logging.info(f"External (local) Energy: {external_local:.4f} Ha")

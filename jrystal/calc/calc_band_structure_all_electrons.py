@@ -79,11 +79,11 @@ def calc(config: JrystalConfigDict):
       crystal.positions,
       crystal.charges,
       ground_state_density_grid,
+      crystal.vol,
       g_vector_grid,
       kpts,
-      crystal.vol,
-      xc,
-      kohn_sham=True
+      xc=xc,
+      kohn_sham=True,
     )
     return jnp.sum(output)
 
@@ -163,8 +163,8 @@ def calc(config: JrystalConfigDict):
         g_vector_grid,
         kpts,
         crystal.vol,
-        xc,
-        kohn_sham=True
+        xc=xc,
+        kohn_sham=True,
       )
       return jax.vmap(jnp.linalg.eigvalsh)(hamil_matrix)
 
