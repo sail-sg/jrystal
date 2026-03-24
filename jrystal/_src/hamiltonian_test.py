@@ -42,7 +42,7 @@ class _TestHamiltonian(parameterized.TestCase):
     )
     self.coeff = jr.pw.coeff(self.params, self.freq_mask)
 
-    self.occ = jr.occupation.gamma(
+    self.occ = jr.occupation.get_occupation_fn(
       self.kpts.shape[0], self.crystal.num_electron
     )
     self.occ = jnp.ones(self.occ.shape)

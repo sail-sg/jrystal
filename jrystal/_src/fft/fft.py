@@ -271,7 +271,7 @@ def ifftn(
   axes.
 
   Signature intentionally mirrors :func:`jax.numpy.fft.ifftn`.
-  
+
   Args:
     a (jax.Array): The input array to transform.
     s (ShapeLike): The sharding specification for the input array.

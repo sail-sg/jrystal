@@ -13,6 +13,8 @@
 # limitations under the License.
 """Tests for fftn.py."""
 
+import inspect
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -52,6 +54,23 @@ class _TestModules(parameterized.TestCase):
       _normalize_axes(3, (3,), None)
     with self.assertRaisesRegex(ValueError, "len\\(s\\) must be <="):
       _normalize_axes(2, None, (2, 2, 2))
+
+  def test_public_signatures_match_jax_fft(self):
+    sig = inspect.signature(fftn)
+    sig_ref = inspect.signature(jnp.fft.fftn)
+    self.assertEqual(tuple(sig.parameters.keys()), tuple(sig_ref.parameters.keys()))
+    for name in sig.parameters:
+      self.assertEqual(sig.parameters[name].default, sig_ref.parameters[name].default)
+
+    isig = inspect.signature(ifftn)
+    isig_ref = inspect.signature(jnp.fft.ifftn)
+    self.assertEqual(
+      tuple(isig.parameters.keys()), tuple(isig_ref.parameters.keys())
+    )
+    for name in isig.parameters:
+      self.assertEqual(
+        isig.parameters[name].default, isig_ref.parameters[name].default
+      )
 
   def test_fftn_matches_jnp(self):
     y = fftn(self.x_complex, axes=(-2, -1), norm="backward")

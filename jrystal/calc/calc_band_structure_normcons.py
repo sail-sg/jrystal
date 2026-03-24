@@ -13,7 +13,6 @@
 # limitations under the License.
 """Band Structure Calculator. """
 import time
-from dataclasses import dataclass
 from functools import partial
 from math import ceil
 from typing import Optional
@@ -25,110 +24,63 @@ import optax
 from absl import logging
 
 from .._src import pw
-from .._src.band import get_k_path
-from .._src.crystal import Crystal
 from ..config import JrystalConfigDict
 from ..pseudopotential import normcons
-from .calc_ground_state_energy_normcons import GroundStateEnergyOutput
 from .calc_ground_state_energy_normcons import calc as energy_calc
 from .opt_utils import (
-    create_crystal,
-    create_freq_mask,
-    create_grids,
-    create_optimizer,
-    create_pseudopotential,
-    set_env_params,
+  create_optimizer,
+  set_env_params,
 )
-from .pre_calc import pre_calc_beta_sbt
-
-
-@dataclass
-class BandStructureOutput:
-  """Output of the band structure calculation.
-
-  Args:
-    config (JrystalConfigDict): The configuration for the calculation.
-    crystal (Crystal): The crystal object.
-    params_pw (dict): Parameters for the plane wave basis.
-    ground_state_energy_output (GroundStateEnergyOutput): The output of the
-    ground state energy calculation.
-    k_path (jax.Array): The K-path.
-    band_structure (jax.Array): The band structure.
-  """
-  config: JrystalConfigDict
-  crystal: Crystal
-  params_pw: dict
-  ground_state_energy_output: GroundStateEnergyOutput
-  k_path: jax.Array
-  band_structure: jax.Array
+from .runtime import build_runtime_context
+from .types import BandStructureResult, GroundStateResult
 
 
 def calc(
   config: JrystalConfigDict,
-  ground_state_energy_output: Optional[GroundStateEnergyOutput] = None
-) -> BandStructureOutput:
+  ground_state_result: Optional[GroundStateResult] = None
+) -> BandStructureResult:
   """Calculate the band structure of a crystal with norm-conserving
   pseudopotential.
 
   Args:
       config (JrystalConfigDict): The configuration for the calculation.
-      ground_state_energy_output (Optional[GroundStateEnergyOutput], optional):
+      ground_state_result (Optional[GroundStateResult], optional):
       The output of the ground state energy calculation. Defaults to None.
 
   Returns:
-      BandStructureOutput: The band structure output of the crystal.
+      BandStructureResult: The band structure output of the crystal.
   """
   set_env_params(config)
-  key = jax.random.PRNGKey(config.seed)
-  crystal = create_crystal(config)
-  pseudopot = create_pseudopotential(config)
+  key = jax.random.PRNGKey(config.execution.seed)
+  ctx = build_runtime_context(config, mode="path")
+  crystal = ctx.crystal
+  pseudopot = ctx.pseudopotential
+  g_vec = ctx.g_vec
+  freq_mask = ctx.freq_mask
+  potential_loc = ctx.potential_local
+  beta_gk = ctx.potential_nonlocal
+  path_ksampling = ctx.ksampling
   valence_charges = np.sum(pseudopot.valence_charges)
-  g_vec, r_vec, k_vec = create_grids(config)
-  freq_mask = create_freq_mask(config)
-  xc = config.xc
-  logging.info(f"XC functional: {config.xc}")
+  xc = config.method.xc
+  logging.info(f"XC functional: {config.method.xc}")
 
   # generate K-path.
   logging.info("===> Generating K-path...")
-  k_path = get_k_path(
-    crystal.cell_vectors,
-    path=config.k_path_special_points,
-    num=config.num_kpoints,
-    fractional=False
-  )
-  logging.info(f"{k_path.shape[0]} k-points generated.")
+  logging.info(f"{path_ksampling.kpts.shape[0]} k-points generated.")
 
   # Initialize the mesh and sharding for the parallelization.
   num_devices = len(jax.devices())
-  util_devices = num_devices if config.parallel_over_k_path else 1
-  logging.info(f"Parallel over k-path: {config.parallel_over_k_path}.")
-  logging.info(f"Number of GPU devices {num_devices}, used: {util_devices}.")
-  logging.info("Initializing pseudopotential (local)...")
-  potential_loc = normcons.potential_local_reciprocal(
-    crystal.positions,
-    g_vec,
-    pseudopot.r_grid,
-    pseudopot.local_potential_grid,
-    pseudopot.local_potential_charge,
-    crystal.vol
-  )
-  logging.info("Initializing pseudopotential (Spherical Bessel Transform)...")
-  start = time.time()
-  beta_gk = pre_calc_beta_sbt(
-    pseudopot,
-    np.array(g_vec),
-    np.array(k_path),
-  )  # shape: [kpt beta x y z]
-  end = time.time()
+  util_devices = num_devices if config.execution.parallel_over_k_path else 1
   logging.info(
-    f"Spherical Bessel Transform done. Times: {end - start:.2f} seconds"
+    f"Parallel over k-path: {config.execution.parallel_over_k_path}."
   )
+  logging.info(f"Number of GPU devices {num_devices}, used: {util_devices}.")
 
   # optimitimize ground state energy if not provided.
-  if ground_state_energy_output is None:
+  if ground_state_result is None:
     logging.info("===> Starting total energy minimization...")
-    start = time.time()
-    ground_state_density_grid = energy_calc(config)
+    ground_state_result = energy_calc(config)
+  ground_state_density_grid = ground_state_result.density
   jax.clear_caches()
 
   def select_beta_gk(beta_gk, k_idx):
@@ -162,7 +114,7 @@ def calc(
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
-  num_bands = ceil(valence_charges / 2) + config.band_structure_empty_bands
+  num_bands = ceil(valence_charges / 2) + config.band.empty_bands
   params_pw_band = pw.param_init(key, num_bands, 1, freq_mask)
   opt_state = optimizer.init(params_pw_band)
 
@@ -201,7 +153,7 @@ def calc(
     potential_nl_k = get_potential_nl(kpts[0:1], select_beta_gk(beta_gk, 0))
     carry, _ = jax.lax.scan(
       update_scan, (params_pw_band, opt_state, potential_nl_k, kpts[0:1]),
-      length=config.band_structure_epoch, unroll=1
+      length=config.band.epoch, unroll=1
     )
     params_first_kpt, opt_state, _, _ = carry
 
@@ -216,7 +168,7 @@ def calc(
 
       carry, _ = jax.lax.scan(
         update_scan, (params_pw_band, opt_state, potential_nl_k, kpts),
-        length=config.k_path_fine_tuning_epoch, unroll=1
+        length=config.band.fine_tuning_epoch, unroll=1
       )
       params_pw_band, opt_state, _, _ = carry
 
@@ -270,7 +222,7 @@ def calc(
     return eigen_values
 
   # reshape the k-path, beta_gk, and params_pw_band for parallelization.
-  k_path = jnp.reshape(k_path, (util_devices, -1, 3))
+  k_path = jnp.reshape(path_ksampling.kpts, (util_devices, -1, 3))
   beta_gk = [jnp.reshape(b, (util_devices, -1, *b.shape[1:])) for b in beta_gk]
   params_pw_band = jax.tree.map(
     lambda x: jnp.stack([x] * util_devices, axis=0), params_pw_band
@@ -297,3 +249,10 @@ def calc(
   save_file = ''.join(crystal.symbols) + "_band_structure.npy"
   logging.info(f"Results saved in {save_file}")
   jnp.save(save_file, eigen_values)
+  return BandStructureResult(
+    config=config,
+    crystal=crystal,
+    kpath=path_ksampling,
+    eigenvalues=eigen_values,
+    ground_state_energy=ground_state_result.total_energy,
+  )

@@ -13,9 +13,7 @@
 # limitations under the License.
 
 import time
-from dataclasses import dataclass
 from math import ceil
-from typing import List, Union
 
 import numpy as np
 import jax
@@ -26,62 +24,47 @@ from jax.sharding import PartitionSpec as P
 from tqdm import tqdm
 
 from .._src import energy, occupation, pw
-from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
 from .convergence import create_convergence_checker
 from .opt_utils import (
-  create_crystal,
-  create_freq_mask,
-  create_grids,
   create_optimizer,
   set_env_params,
-  get_ewald_coulomb_repulsion
 )
+from .runtime import build_runtime_context
+from .types import EnergyDecomposition, GroundStateResult
 
 
-@dataclass
-class GroundStateEnergyOutput:
-  """Output of the ground state energy calculation.
-
-  Args:
-    config (JrystalConfigDict): The configuration for the calculation.
-    crystal (Crystal): The crystal object.
-    params_pw (dict): Parameters for the plane wave basis.
-    params_occ (dict): Parameters for the occupation.
-    total_energy (Union[float, jax.Array]): The total energy of the crystal.
-    total_energy_history (List[float]): The optimization history of the total energy.
-  """
-  config: JrystalConfigDict
-  crystal: Crystal
-  params_pw: dict
-  params_occ: dict
-  total_energy: Union[float, jax.Array]
-  total_energy_history: List[float]
-
-
-def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
+def calc(config: JrystalConfigDict) -> GroundStateResult:
   """Calculate the ground state energy of a crystal with norm-conserving pseudopotential.
 
   Args:
       config (JrystalConfigDict): The configuration for the calculation.
 
   Returns:
-      GroundStateEnergyOutput: The ground state energy output of the crystal.
+      GroundStateResult: The ground state energy output of the crystal.
   """
   # Initialize and Prepare variables.
   set_env_params(config)
-  key = jax.random.PRNGKey(config.seed)
-  temp = config.smearing
+  key = jax.random.PRNGKey(config.execution.seed)
+  temp = config.occupation.smearing
 
-  crystal = create_crystal(config)
+  ctx = build_runtime_context(config)
+  crystal = ctx.crystal
+  g_vec = ctx.g_vec
+  freq_mask = ctx.freq_mask
+  ew = ctx.ewald_energy
+  k_vec = ctx.ksampling.kpts
+  k_weights = ctx.ksampling.weights
   num_electrons = crystal.num_electron
   logging.info(f"Crystal: {crystal.symbols}")
 
   # Initialize the mesh and sharding for the parallelization.
   num_devices = len(jax.devices())
-  util_devices = num_devices if config.parallel_over_k_mesh else 1
-  logging.info(f"Parallel over k-mesh: {config.parallel_over_k_mesh}.")
+  util_devices = num_devices if config.execution.parallel_over_k_mesh else 1
+  logging.info(
+    f"Parallel over k-mesh: {config.execution.parallel_over_k_mesh}."
+  )
   logging.info(f"Number of devices (used): {num_devices} ({util_devices}).")
 
   mesh = Mesh(
@@ -89,33 +72,39 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   )
   sharding = NamedSharding(mesh, P('s', 'k'))  # shard by the kpt dimension.
 
-  g_vec, r_vec, k_vec = create_grids(config)
   num_kpts = k_vec.shape[0]
-  logging.info(f"Number of G-vectors: {proper_grid_size(config.grid_sizes)}")
-  logging.info(f"Number of k-vectors: {proper_grid_size(config.k_grid_sizes)}")
-  num_bands = ceil(num_electrons / 2) + config.empty_bands
+  logging.info(
+    f"Number of G-vectors: {proper_grid_size(config.basis.grid_sizes)}"
+  )
+  logging.info(
+    f"Number of k-vectors: {proper_grid_size(config.ksampling.k_grid_sizes)}"
+  )
+  num_bands = ceil(num_electrons / 2) + config.occupation.empty_bands
   logging.info(f"num_bands: {num_bands}")
-  logging.info(f"XC functional: {config.xc}")
-  logging.info(f"Occupation method: {config.occupation}")
-  freq_mask = create_freq_mask(config)
-  ew = get_ewald_coulomb_repulsion(config)
-
+  logging.info(f"XC functional: {config.method.xc}")
+  logging.info(f"Occupation method: {config.occupation.method}")
   convergence_checker = create_convergence_checker(config)
   converged = False
+  total_energy_history = []
   k_vec = jax.device_put(k_vec, NamedSharding(mesh, P('k')))
+  k_weights = jax.device_put(k_weights, NamedSharding(mesh, P('k')))
 
   # Define functions for energy calculation.
   occ_fn = occupation.get_occupation_fn(
     int(num_electrons), spin=crystal.spin,
-    spin_restricted=config.spin_restricted,
+    spin_restricted=config.system.spin_restricted,
   )
 
   def total_energy(params_pw, params_occ, g_vec):
     coeff = pw.coeff(params_pw, freq_mask, sharding=sharding)
     occ = occ_fn(params_occ)
-    density = pw.density_grid(coeff, crystal.vol, occ)
-    density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-    kinetic = energy.kinetic(coeff, g_vec, k_vec, occupation=occ)
+    density = pw.density_grid(coeff, crystal.vol, occ, k_weights=k_weights)
+    density_reciprocal = pw.density_grid_reciprocal(
+      coeff, crystal.vol, occ, k_weights=k_weights
+    )
+    kinetic = energy.kinetic(
+      coeff, g_vec, k_vec, kpts_weights=k_weights, occupation=occ
+    )
     hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
     external = energy.external(
       density_reciprocal,
@@ -126,7 +115,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     )
 
     xc = energy.xc_energy(
-      density, g_vec, crystal.vol, config.xc, kohn_sham=False
+      density, g_vec, crystal.vol, config.method.xc, kohn_sham=False
     )
     return kinetic + hartree + external + xc
 
@@ -141,7 +130,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
     num_bands,
     num_kpts,
     freq_mask,
-    spin_restricted=config.spin_restricted,
+    spin_restricted=config.system.spin_restricted,
     sharding=sharding
   )
   params_occ = occupation.params_init(num_bands, num_kpts)
@@ -160,10 +149,10 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       return params, opt_state, loss_val, es
 
     # The main loop for optimization.
-    if config.verbose:
-      iters = tqdm(range(config.epoch))
+    if config.execution.verbose:
+      iters = tqdm(range(config.solver.epoch))
     else:
-      iters = tqdm(range(config.epoch), disable=True)
+      iters = tqdm(range(config.solver.epoch), disable=True)
 
     train_time = 0
     for i in iters:
@@ -171,6 +160,7 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
       params, opt_state, loss_val, es = update(params, opt_state, g_vec)
       etot, entro = es
       etot = jax.block_until_ready(etot)
+      total_energy_history.append(float(etot + ew))
       train_time += time.time() - start
       converged = convergence_checker.check(etot)
       if converged:
@@ -190,21 +180,44 @@ def calc(config: JrystalConfigDict) -> GroundStateEnergyOutput:
   #####################################
   coeff = pw.coeff(params["pw"], freq_mask)
   occ = occ_fn(params["occ"])
-  density = pw.density_grid(coeff, crystal.vol, occ)
-  density_reciprocal = pw.density_grid_reciprocal(coeff, crystal.vol, occ)
-  kinetic = energy.kinetic(coeff, g_vec, k_vec, occupation=occ)
+  density = pw.density_grid(coeff, crystal.vol, occ, k_weights=k_weights)
+  density_reciprocal = pw.density_grid_reciprocal(
+    coeff, crystal.vol, occ, k_weights=k_weights
+  )
+  kinetic = energy.kinetic(
+    coeff, g_vec, k_vec, kpts_weights=k_weights, occupation=occ
+  )
   hartree = energy.hartree(density_reciprocal, g_vec, crystal.vol)
   external = energy.external(
     density_reciprocal, crystal.positions, crystal.charges, g_vec, crystal.vol
   )
 
-  xc = energy.xc_energy(density, g_vec, crystal.vol, config.xc, kohn_sham=False)
+  xc = energy.xc_energy(
+    density, g_vec, crystal.vol, config.method.xc, kohn_sham=False
+  )
+  total_energy = float(kinetic + hartree + external + xc + ew)
 
   logging.info(f"Hartree Energy: {hartree:.4f} Ha")
   logging.info(f"External Energy: {external:.4f} Ha")
   logging.info(f"XC Energy: {xc:.4f} Ha")
   logging.info(f"Kinetic Energy: {kinetic:.4f} Ha")
   logging.info(f"Nuclear repulsion Energy: {ew:.4f} Ha")
-  logging.info(f"Total Energy: {etot+ew:.4f} Ha")
+  logging.info(f"Total Energy: {total_energy:.4f} Ha")
 
-  return density
+  return GroundStateResult(
+    config=config,
+    crystal=crystal,
+    params_pw=params["pw"],
+    params_occ=params["occ"],
+    total_energy=total_energy,
+    energy_terms=EnergyDecomposition(
+      kinetic=float(kinetic),
+      hartree=float(hartree),
+      xc=float(xc),
+      external=float(external),
+      ewald=float(ew),
+    ),
+    converged=converged,
+    density=density,
+    total_energy_history=total_energy_history,
+  )

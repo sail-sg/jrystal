@@ -15,6 +15,7 @@
 import time
 from functools import partial
 from math import ceil
+from typing import Optional
 
 import jax
 import jax.numpy as jnp
@@ -22,54 +23,55 @@ import optax
 from absl import logging
 
 from .._src import pw, hamiltonian
-from .._src.band import get_k_path
 from ..config import JrystalConfigDict
 from .calc_ground_state_energy_all_electrons import calc as energy_calc
 from .opt_utils import (
-  create_crystal,
-  create_freq_mask,
-  create_grids,
   create_optimizer,
   set_env_params,
 )
+from .runtime import build_runtime_context
+from .types import BandStructureResult, GroundStateResult
 
 
-def calc(config: JrystalConfigDict):
+def calc(
+  config: JrystalConfigDict,
+  ground_state_result: Optional[GroundStateResult] = None,
+) -> BandStructureResult:
   """Calculate the band structure of a crystal with norm-conserving pseudopotential.
 
   Args:
       config (JrystalConfigDict): The configuration for the calculation.
 
   Returns:
-      BandStructureOutput: The band structure output of the crystal.
+      BandStructureResult: The band structure output of the crystal.
   """
   set_env_params(config)
-  key = jax.random.PRNGKey(config.seed)
-  crystal = create_crystal(config)
+  key = jax.random.PRNGKey(config.execution.seed)
+  ctx = build_runtime_context(config, mode="path")
+  crystal = ctx.crystal
+  g_vec = ctx.g_vec
+  freq_mask = ctx.freq_mask
+  path_ksampling = ctx.ksampling
   num_electrons = crystal.num_electron
-  g_vec, r_vec, k_vec = create_grids(config)
-  freq_mask = create_freq_mask(config)
-  xc = config.xc
+  xc = config.method.xc
 
   # generate K-path.
   logging.info("===> Generating K-path...")
-  k_path = get_k_path(
-    crystal.cell_vectors,
-    path=config.k_path_special_points,
-    num=config.num_kpoints,
-    fractional=False
-  )
-  logging.info(f"{k_path.shape[0]} k-points generated.")
+  logging.info(f"{path_ksampling.kpts.shape[0]} k-points generated.")
 
   # Initialize the mesh and sharding for the parallelization.
   num_devices = len(jax.devices())
-  util_devices = num_devices if config.parallel_over_k_path else 1
-  logging.info(f"Parallel over k-path: {config.parallel_over_k_path}.")
+  util_devices = num_devices if config.execution.parallel_over_k_path else 1
+  logging.info(
+    f"Parallel over k-path: {config.execution.parallel_over_k_path}."
+  )
   logging.info(f"Number of devices (used): {num_devices} ({util_devices}).")
 
   # optimitimize ground state energy if not provided.
-  logging.info("===> Starting total energy minimization...")
-  ground_state_density_grid = energy_calc(config)
+  if ground_state_result is None:
+    logging.info("===> Starting total energy minimization...")
+    ground_state_result = energy_calc(config)
+  ground_state_density_grid = ground_state_result.density
   jax.clear_caches()
 
   def hamiltonian_trace(params_pw_band, kpts, g_vector_grid):
@@ -89,9 +91,13 @@ def calc(config: JrystalConfigDict):
 
   # Initialize parameters and optimizer.
   optimizer = create_optimizer(config)
-  num_bands = ceil(num_electrons / 2) + config.band_structure_empty_bands
+  num_bands = ceil(num_electrons / 2) + config.band.empty_bands
   params_pw_band = pw.param_init(
-    key, num_bands, 1, freq_mask, spin_restricted=config.spin_restricted
+    key,
+    num_bands,
+    1,
+    freq_mask,
+    spin_restricted=config.system.spin_restricted,
   )
   opt_state = optimizer.init(params_pw_band)
 
@@ -126,7 +132,7 @@ def calc(config: JrystalConfigDict):
 
     carry, _ = jax.lax.scan(
       update_scan, (params_pw_band, opt_state, kpts[0:1]),
-      length=config.band_structure_epoch, unroll = 1
+      length=config.band.epoch, unroll = 1
     )
     params_first_kpt, opt_state, _ = carry
 
@@ -140,7 +146,7 @@ def calc(config: JrystalConfigDict):
 
       carry, _ = jax.lax.scan(
         update_scan, (params_pw_band, opt_state, kpts),
-        length=config.k_path_fine_tuning_epoch, unroll = 1
+        length=config.band.fine_tuning_epoch, unroll = 1
       )
       params_pw_band, opt_state, _ = carry
 
@@ -181,13 +187,12 @@ def calc(config: JrystalConfigDict):
 
     return eigen_values
 
-  num_devices = jax.device_count()
-  k_path = jnp.reshape(k_path, (num_devices, -1, 3))
+  k_path = jnp.reshape(path_ksampling.kpts, (util_devices, -1, 3))
   params_pw_band = jax.tree.map(
-    lambda x: jnp.stack([x] * num_devices, axis=0), params_pw_band
+    lambda x: jnp.stack([x] * util_devices, axis=0), params_pw_band
   )
   opt_state = jax.tree.map(
-    lambda x: jnp.stack([x] * num_devices, axis=0), opt_state
+    lambda x: jnp.stack([x] * util_devices, axis=0), opt_state
   )
   time_start = time.time()
   eigen_values = optimize_eigenvalues(k_path, params_pw_band, opt_state)
@@ -199,7 +204,7 @@ def calc(config: JrystalConfigDict):
   eigen_values = jnp.stack(eigen_values)
   num_spin = eigen_values.shape[2]
   eigen_values = jnp.reshape(
-    eigen_values, (config.num_kpoints, num_spin, num_bands), order="F"
+    eigen_values, (config.band.num_kpoints, num_spin, num_bands), order="F"
   )
   eigen_values = jnp.transpose(eigen_values, (1, 0, 2))
 
@@ -207,3 +212,10 @@ def calc(config: JrystalConfigDict):
   save_file = ''.join(crystal.symbols) + "_band_structure.npy"
   logging.info(f"Results saved in {save_file}")
   jnp.save(save_file, eigen_values)
+  return BandStructureResult(
+    config=config,
+    crystal=crystal,
+    kpath=path_ksampling,
+    eigenvalues=eigen_values,
+    ground_state_energy=ground_state_result.total_energy,
+  )

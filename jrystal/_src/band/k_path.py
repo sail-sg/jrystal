@@ -11,16 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Module for operations related to band structure optimization.
+"""Utilities for Brillouin-zone :math:`k`-path generation.
 
-This module is a wrapper of ASE.BandPath modules.
-See: https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
-
+This module wraps ASE band-path utilities.
 """
 
 import numpy as np
 from ase import cell
 from jaxtyping import Array, Float
+
 from jrystal._src.const import BOHR2ANGSTROM
 
 
@@ -30,20 +29,18 @@ def get_k_path(
   num: int,
   fractional: bool = False
 ) -> np.array:
-  """Get k path vectors.
-
-  See: https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
+  """Return points along a high-symmetry :math:`k` path.
 
   Args:
-      cell_vectors (Array): the cell vectors.
-      path (str): a string of the special points in the Brillouin zone.
-      num (int): the number of kpoints to be sampled.
-      fractional (bool) Default: False. If True, the function will return
-          fractional coordinates. If false, it returns absolute coordinate
-          in 1/Bohr unit.
+    cell_vectors (Float[Array, 'd d']): Real-space cell vectors in Bohr.
+    path (str): Path string of special points (ASE notation).
+    num (int): Number of sampled points along the path.
+    fractional (bool): If ``True``, return fractional coordinates. If
+      ``False``, return absolute coordinates in reciprocal-space units
+      (:math:`1 / \mathrm{Bohr}`).
 
   Returns:
-      np.array: the absolute coordinates of the k points in Bhor.
+    np.ndarray: Array of sampled :math:`k` points.
   """
   _cell = cell.Cell(cell_vectors * BOHR2ANGSTROM)
   kpts = _cell.bandpath(path, npoints=num).cartesian_kpts() * BOHR2ANGSTROM

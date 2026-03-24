@@ -42,13 +42,13 @@ def main():
   config = jr.config.get_config(args.config)
 
   if args.mode == "energy":
-    if config.use_pseudopotential:
+    if config.method.use_pseudopotential:
       jr.calc.energy_normcons(config)
     else:
       jr.calc.energy_all_electrons(config)
 
   elif args.mode == "band":
-    if config.use_pseudopotential:
+    if config.method.use_pseudopotential:
       jr.calc.band_normcons(config)
     else:
       jr.calc.band_all_electrons(config)

@@ -14,9 +14,10 @@
 
 import jax
 import jax.numpy as jnp
-import jrystal as jr
 import numpy as np
 from absl.testing import absltest, parameterized
+
+import jrystal as jr
 from jrystal._src import braket
 
 jax.config.update("jax_enable_x64", True)
@@ -63,7 +64,8 @@ class _TestEnergy(parameterized.TestCase):
     kohn_sham = False
 
     v_h, v_e, v_xc = jr.potential.effective(
-      self.density_grid, self.crystal.positions, self.crystal.charges, self.g_vecs, self.crystal.vol, split=True, kohn_sham=kohn_sham
+      self.density_grid, self.crystal.positions, self.crystal.charges,
+      self.g_vecs, self.crystal.vol, split=True, kohn_sham=kohn_sham
     )
 
     # e_h1 = jnp.sum(v_h * self.density_grid) * self.crystal.vol / jnp.prod(jnp.array([7, 8, 9]))

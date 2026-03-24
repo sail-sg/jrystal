@@ -14,12 +14,14 @@
 """Utility functions for optimization. """
 import argparse
 import os
-from typing import Callable
+from typing import Callable, Optional
 
 import jax
 import numpy as np
 import optax
+import yaml
 from absl import logging
+from ml_collections import ConfigDict
 from optax._src import alias
 
 import jrystal as jr
@@ -39,18 +41,22 @@ from .._src.grid import (
 )
 from .._src.utils import check_spin_number
 from ..config import JrystalConfigDict
+from .types import KSampling
 
 
 def set_env_params(config: JrystalConfigDict):
   os.environ["OPENBLAS_NUM_THREADS"] = "4"
   os.environ["MKL_NUM_THREADS"] = "4"
   os.environ["OMP_NUM_THREADS"] = "4"
-  jax.config.update("jax_debug_nans", config.jax_debug_nans)
+  os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = str(
+    config.execution.xla_preallocate
+  ).lower()
+  jax.config.update("jax_debug_nans", config.execution.jax_debug_nans)
 
-  if config.verbose:
+  if config.execution.verbose:
     logging.set_verbosity(logging.INFO)
     logging.info('Versbose mode is on.')
-    if config.jax_enable_x64:
+    if config.execution.jax_enable_x64:
       logging.info("Precision: Double (64 bit).")
     else:
       logging.info("Precision: Single (32 bit).")
@@ -58,27 +64,56 @@ def set_env_params(config: JrystalConfigDict):
     logging.set_verbosity(logging.WARNING)
     logging.warning('Versbose mode is off.')
 
-  jax.config.update("jax_enable_x64", config.jax_enable_x64)
+  jax.config.update("jax_enable_x64", config.execution.jax_enable_x64)
+
+
+def _iter_config_leaf_items(config: ConfigDict, prefix: str = ""):
+  for key, value in config.items():
+    path = f"{prefix}.{key}" if prefix else key
+    if isinstance(value, ConfigDict):
+      yield from _iter_config_leaf_items(value, prefix=path)
+    else:
+      yield path, value
+
+
+def _parse_arg_value(value):
+  if isinstance(value, bool):
+    return lambda raw: yaml.safe_load(raw)
+  if value is None:
+    return yaml.safe_load
+  if isinstance(value, (list, tuple, dict)):
+    return yaml.safe_load
+  return type(value)
+
+
+def _set_config_value(config: ConfigDict, path: list[str], value):
+  target = config
+  for key in path[:-1]:
+    target = target[key]
+  target[path[-1]] = value
 
 
 def parse_args(config: JrystalConfigDict) -> JrystalConfigDict:
   """Parse command-line arguments."""
   parser = argparse.ArgumentParser(description='Jrystal energy optimization.')
-  for key, value in config.items():
-    parser.add_argument(f"--{key}", type=type(value), default=value)
+  for key, value in _iter_config_leaf_items(config):
+    parser.add_argument(f"--{key}", type=_parse_arg_value(value), default=value)
   args = parser.parse_args()
 
   for key, value in vars(args).items():
-    config[key] = value
+    _set_config_value(config, key.split("."), value)
   return config
 
 
-def create_freq_mask(config: JrystalConfigDict):
-  crystal = create_crystal(config)
-  grid_sizes = proper_grid_size(config.grid_sizes)
-  logging.info(f"freq_mask_method: {config.freq_mask_method}")
+def create_freq_mask(
+  config: JrystalConfigDict,
+  crystal: Optional[Crystal] = None,
+):
+  crystal = create_crystal(config) if crystal is None else crystal
+  grid_sizes = proper_grid_size(config.basis.grid_sizes)
+  logging.info(f"freq_mask_method: {config.basis.freq_mask_method}")
 
-  if config.freq_mask_method == "cubic":
+  if config.basis.freq_mask_method == "cubic":
     mask = np.array(cubic_mask(grid_sizes))
     max_cutoff = estimate_max_cutoff_energy(crystal.cell_vectors, mask)
     logging.info(
@@ -86,14 +121,14 @@ def create_freq_mask(config: JrystalConfigDict):
     )
     logging.info(f"Number of g points: {np.sum(mask)}")
 
-  elif config.freq_mask_method == "spherical":
+  elif config.basis.freq_mask_method == "spherical":
     mask = spherical_mask(
-      crystal.cell_vectors, grid_sizes, config.cutoff_energy
+      crystal.cell_vectors, grid_sizes, config.basis.cutoff_energy
     )
     logging.info(f"Mask percentage: {np.mean(mask)*100:.2f}%")
     logging.info(
-      f"Maxmum cutoff: {config.cutoff_energy:.0f} Ha "
-      f"({config.cutoff_energy*27.2114:.0f} eV)"
+      f"Maxmum cutoff: {config.basis.cutoff_energy:.0f} Ha "
+      f"({config.basis.cutoff_energy*27.2114:.0f} eV)"
     )
     logging.info(f"Number of g points: {np.sum(mask)}")
 
@@ -102,37 +137,39 @@ def create_freq_mask(config: JrystalConfigDict):
 
   return mask
 
-
 def create_crystal(config: JrystalConfigDict) -> Crystal:
   _pkg_path = jr.get_pkg_path()
-  if config.crystal is not None:
-    path = _pkg_path + '/geometry/' + config.crystal + '.xyz'
+  if config.system.crystal is not None:
+    path = _pkg_path + '/geometry/' + config.system.crystal + '.xyz'
   else:
-    path = config.crystal_file_path_path
-  crystal = Crystal.create_from_file(file_path=path, spin=config.spin)
+    path = config.system.crystal_file_path
+  crystal = Crystal.create_from_file(file_path=path, spin=config.system.spin)
   check_spin_number(crystal.num_electron, crystal.spin)
   return crystal
 
 
-def create_pseudopotential(config: JrystalConfigDict):
-  assert config.use_pseudopotential
-  crystal = create_crystal(config)
+def create_pseudopotential(
+  config: JrystalConfigDict,
+  crystal: Optional[Crystal] = None,
+):
+  assert config.method.use_pseudopotential
+  crystal = create_crystal(config) if crystal is None else crystal
   _pkg_path = jr.get_pkg_path()
-  if config.pseudopotential_type in ["normcons", "normconserving", "nc"]:
-    if config.pseudopotential_file_dir is None:
+  if config.method.pseudopotential_type in ["normcons", "normconserving", "nc"]:
+    if config.method.pseudopotential_file_dir is None:
       path = _pkg_path + '/pseudopotential/normconserving/'
     else:
-      path = config.pseudopotential_file_dir
+      path = config.method.pseudopotential_file_dir
     pp = jr.pseudopotential.NormConservingPseudopotential.create(crystal, path)
-  elif config.pseudopotential_type in ["ultrasoft", "us"]:
-    if config.pseudopotential_file_dir is None:
+  elif config.method.pseudopotential_type in ["ultrasoft", "us"]:
+    if config.method.pseudopotential_file_dir is None:
       path = _pkg_path + '/pseudopotential/ultrasoft/'
     else:
-      path = config.pseudopotential_file_dir
+      path = config.method.pseudopotential_file_dir
     pp = jr.pseudopotential.UltrasoftPseudopotential.create(crystal, path)
   else:
     raise ValueError(
-      f"Pseudopotential type {config.pseudopotential_type} is not supported."
+      f"Pseudopotential type {config.method.pseudopotential_type} is not supported."
     )
 
   logging.info(f"Pseudopotential path: {path}")
@@ -140,23 +177,35 @@ def create_pseudopotential(config: JrystalConfigDict):
   return pp
 
 
-def create_grids(config: JrystalConfigDict):
-  crystal = create_crystal(config)
-  grid_sizes = proper_grid_size(config.grid_sizes)
-  k_grid_sizes = proper_grid_size(config.k_grid_sizes)
+def create_grids(
+  config: JrystalConfigDict,
+  crystal: Optional[Crystal] = None,
+  ksampling: Optional[KSampling] = None,
+):
+  crystal = create_crystal(config) if crystal is None else crystal
+  grid_sizes = proper_grid_size(config.basis.grid_sizes)
   g_vector_grid = g_vectors(crystal.cell_vectors, grid_sizes)
   r_vector_grid = r_vectors(crystal.cell_vectors, grid_sizes)
-  kpts = k_vectors(crystal.cell_vectors, k_grid_sizes)
-  return g_vector_grid, r_vector_grid, kpts
+  if ksampling is None:
+    k_grid_sizes = proper_grid_size(config.ksampling.k_grid_sizes)
+    kpts, k_weights = k_vectors(
+      crystal.cell_vectors,
+      k_grid_sizes,
+      symmetry_reduction=config.ksampling.symmetry_reduction,
+      scaled_positions=crystal.scaled_positions,
+      charges=crystal.charges,
+    )
+    ksampling = KSampling(mode="mesh", kpts=kpts, weights=k_weights)
+  return g_vector_grid, r_vector_grid, ksampling
 
 
 def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
-  logging.info(f"optimization method: {config.optimizer}")
-  config_dict = dict(config.optimizer_args)
-  opt = getattr(alias, config.optimizer, None)
+  logging.info(f"optimization method: {config.solver.optimizer}")
+  config_dict = dict(config.solver.optimizer_args)
+  opt = getattr(alias, config.solver.optimizer, None)
   lr = config_dict.pop("learning_rate")
   logging.info(f"learning rate: {lr}")
-  if config.scheduler:
+  if config.solver.scheduler:
     raise NotImplementedError("Scheduler is not implemented yet.")
 
   # TODO: Add scheduler
@@ -164,12 +213,14 @@ def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
   if opt:
     optimizer = opt(learning_rate=lr, **config_dict)
   else:
-    raise NotImplementedError(f'"{config.optimizer}" is not found in optax.')
+    raise NotImplementedError(
+      f'"{config.solver.optimizer}" is not found in optax.'
+    )
   return optimizer
 
 
 def create_occupation(config: JrystalConfigDict) -> Callable:
-  occupation_method = config.occupation
+  occupation_method = config.occupation.method
   if occupation_method == "idempotent":
     return jr.occupation.idempotent
   elif occupation_method == "simplex-projector":
@@ -184,18 +235,23 @@ def create_occupation(config: JrystalConfigDict) -> Callable:
     )
 
 
-def get_ewald_coulomb_repulsion(config: JrystalConfigDict):
-  crystal = create_crystal(config)
+def get_ewald_coulomb_repulsion(
+  config: JrystalConfigDict,
+  crystal: Optional[Crystal] = None,
+  g_vector_grid=None,
+):
+  crystal = create_crystal(config) if crystal is None else crystal
   ewald_grid = translation_vectors(
-    crystal.cell_vectors, config.ewald_args['ewald_cutoff']
+    crystal.cell_vectors, config.ewald.cutoff
   )
-  g_vector_grid, _, _ = create_grids(config)
+  if g_vector_grid is None:
+    g_vector_grid, _, _ = create_grids(config, crystal=crystal)
   ew = ewald_coulomb_repulsion(
     crystal.positions,
     crystal.charges,
     g_vector_grid,
     crystal.vol,
-    ewald_eta=config.ewald_args['ewald_eta'],
+    ewald_eta=config.ewald.eta,
     ewald_grid=ewald_grid
   )
   return ew

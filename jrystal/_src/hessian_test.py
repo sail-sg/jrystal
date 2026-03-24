@@ -27,10 +27,10 @@ class _TestHessian(parameterized.TestCase):
     self.key = jax.random.PRNGKey(123)
 
   def test_quadratic_form(self):
-    dim = 10
+    dim = 100
     key1, key2 = jax.random.split(self.key, 2)
-    a = jax.random.normal(key1, shape=(10, 10))
-    b = jax.random.normal(key2, shape=(10, 10))
+    a = jax.random.normal(key1, shape=(dim, dim))
+    b = jax.random.normal(key2, shape=(dim, dim))
 
     A = a + b * 1.j
     H = A + A.conj().T

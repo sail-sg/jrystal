@@ -90,7 +90,7 @@ def compute_sigma(density_grid, g_vector_grid):
 
 
 def xc_energy_density(rho, xc_type, polarized, sigma=None, tau=None, lapl=None):
-  """Compute XC energy density per particle.
+  """Compute XC energy density (exc) per particle.
 
   Supports compound functionals (e.g. ``'gga_x_pbe+gga_c_pbe'``).
 
@@ -176,8 +176,8 @@ def xc_potential(rho, xc_type, polarized, sigma=None, tau=None):
   return result
 
 
-def gga_xc_potential(vrho, vsigma, density_grid, g_vector_grid):
-  r"""Compute the local GGA XC potential on the real-space grid.
+def _gga_xc_potential(vrho, vsigma, density_grid, g_vector_grid):
+  r"""Compute the local GGA XC potential (vxc) on the real-space grid.
 
   .. math::
 
@@ -248,3 +248,66 @@ def gga_xc_potential(vrho, vsigma, density_grid, g_vector_grid):
     v_xc_u = vrho_u - _div(field_u)
     v_xc_d = vrho_d - _div(field_d)
     return jnp.stack([v_xc_u, v_xc_d], axis=0)  # (2, x, y, z)
+
+
+def _mgga_xc_potential(vrho, vsigma, vtau, vlapl, density_grid, g_vector_grid):
+  r"""Compute the local MGGA XC potential and return vtau for the non-local part.
+
+  The local potential extends the GGA form with a Laplacian correction:
+
+  .. math::
+
+    V_\mathrm{xc,local}^\sigma = v_\rho^\sigma
+    - \nabla\!\cdot\!\bigl(f_\sigma\,\nabla\rho\bigr)
+    + \nabla^2 v_{\nabla^2\!\rho}^\sigma
+
+  The tau-dependent non-local operator
+  :math:`-\tfrac{1}{2}\nabla\!\cdot\!(v_\tau\,\nabla\psi_i)` must be applied
+  per orbital by the caller; ``vtau`` is returned for this purpose.
+
+  Args:
+    vrho (Array): ``(x, y, z)`` for unpolarized, ``(x, y, z, 2)`` for
+      polarized (jxc convention, spin axis last).
+    vsigma (Array): ``(x, y, z)`` for unpolarized, ``(x, y, z, 3)`` for
+      polarized.
+    vtau (Array): ``(x, y, z)`` for unpolarized, ``(x, y, z, 2)`` for
+      polarized.
+    vlapl (Array | None): ``(x, y, z)`` for unpolarized, ``(x, y, z, 2)``
+      for polarized.  If ``None``, the Laplacian correction is skipped
+      (some MGGA functionals do not depend on the Laplacian).
+    density_grid (Array): ``(spin, x, y, z)`` real-space density.
+    g_vector_grid (Array): ``(x, y, z, 3)`` G-vector grid.
+
+  Returns:
+    tuple[Array, Array]:
+      - ``v_xc_local``: ``(spin, x, y, z)`` local XC potential.
+      - ``vtau_grid``: ``(spin, x, y, z)`` tau derivative for the non-local
+        orbital operator.
+  """
+  # GGA part: vrho − ∇·(f_σ ∇ρ)
+  v_xc_local = _gga_xc_potential(vrho, vsigma, density_grid, g_vector_grid)
+
+  num_spin = density_grid.shape[0]
+
+  # Laplacian correction: ∇²(vlapl)
+  # In reciprocal space: ∇²f = IFFT(-|G|² · FFT(f))
+  if vlapl is not None:
+    if num_spin == 1:
+      vl = vlapl[None, ...]          # (1, x, y, z)
+    else:
+      vl = jnp.moveaxis(vlapl, -1, 0)  # (2, x, y, z)
+
+    g_sq = jnp.sum(g_vector_grid**2, axis=-1)  # (x, y, z)
+    vl_recip = jnp.fft.fftn(vl, axes=range(-3, 0))
+    lapl_vl = jnp.real(jnp.fft.ifftn(
+      -g_sq[None, ...] * vl_recip, axes=range(-3, 0)
+    ))
+    v_xc_local = v_xc_local + lapl_vl
+
+  # Reshape vtau to (spin, x, y, z) for the caller
+  if num_spin == 1:
+    vtau_grid = vtau[None, ...]          # (1, x, y, z)
+  else:
+    vtau_grid = jnp.moveaxis(vtau, -1, 0)  # (2, x, y, z)
+
+  return v_xc_local, vtau_grid

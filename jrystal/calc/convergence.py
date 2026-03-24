@@ -5,8 +5,8 @@ from ..config import JrystalConfigDict
 
 def create_convergence_checker(config: JrystalConfigDict):
   return ConvergenceChecker(
-    window_size=config.convergence_window_size,
-    threshold=config.convergence_condition,
+    window_size=config.solver.convergence_window_size,
+    threshold=config.solver.convergence_condition,
   )
 
 

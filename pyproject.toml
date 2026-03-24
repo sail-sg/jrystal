@@ -23,7 +23,7 @@ dependencies = [
   "ml_collections",
   "interpax",
   "chex",
-  "jxc-python>=0.1.12",
+  "jxc-python>=0.1.17",
   "spglib>=2.0.0",
 ]
 keywords = [
@@ -106,8 +106,12 @@ ignore = [
   "N802",
   "PLR0913",
   "PLR0914",
+  "PLR2004",
 ]
 
 
 [tool.ruff.format]
 indent-style = "space"
+
+[tool.uv.sources]
+jxc-python = { path = "../jxc" }

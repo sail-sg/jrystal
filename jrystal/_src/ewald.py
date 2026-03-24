@@ -11,41 +11,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Ewald summation for periodic systems. """
+"""Ewald summation utilities for periodic systems."""
 
 import jax
 import jax.numpy as jnp
-from jaxtyping import Float, Array
+from jaxtyping import Array, Float
 
 
 def ewald_coulomb_repulsion(
   positions: Float[Array, 'atom d'],
-  charges: Float[Array, 'atom'],
+  charges: Float[Array, ' atom'],
   g_vector_grid: Float[Array, 'x y z 3'],
   vol: Float,
   ewald_eta: Float,
   ewald_grid: Float[Array, 'x y z 3'],
 ) -> Float:
-  """ Calculate the nuclei repulsion energy using Ewald summation method.
-
-  This function computes the nuclei repulsion energy for a periodic system using the Ewald summation technique, which splits the calculation into real and reciprocal space contributions. The method provides an efficient way to handle long-range Coulomb interactions in periodic systems.
-
-  .. note::
-    Further reading:
-
-    - Textbook: Martin, R. M. (2020). Electronic structure: basic theory and practical methods. Cambridge university press. (Appendix F.2)
-    - Our tutorial: :doc:`Ewald Summation </tutorial/ewald>`
+  """Compute ion-ion Coulomb energy with Ewald summation.
 
   Args:
-    positions (Float[Array, 'atom d']): Array of shape (atom, d) containing atomic positions in d-dimensional space.
-    charges (Float[Array, 'atom']): Array of shape (atom,) containing the charges of each atom.
-    g_vector_grid (Float[Array, 'x y z 3']): Array of shape (x, y, z, 3) containing the reciprocal lattice vectors.
-    vol (Float): Float representing the volume of the unit cell.
-    ewald_eta (Float): Float controlling the split between real and reciprocal space contributions. Also known as the Ewald convergence parameter.
-    ewald_grid (Float[Array, 'x y z 3']): Array of shape (x, y, z, 3) containing real-space translation vectors for the Ewald sum. Can be generated using :func:`jrystal.grid.translation_vectors`.
+    positions (Float[Array, 'atom d']): Atomic positions.
+    charges (Float[Array, 'atom']): Atomic charges.
+    g_vector_grid (Float[Array, 'x y z 3']): Reciprocal-space G-vector grid.
+    vol (Float): Unit-cell volume.
+    ewald_eta (Float): Ewald splitting parameter.
+    ewald_grid (Float[Array, 'x y z 3']): Real-space translation vectors used
+      in the Ewald sum.
 
   Returns:
-    Float: The total Coulomb repulsion energy computed using Ewald summation. Includes both real-space and reciprocal-space contributions, as well as self-interaction corrections.
+    Float: Total Ewald Coulomb repulsion energy.
   """
   dim = positions.shape[-1]
 

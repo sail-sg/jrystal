@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Hessian for Complex-Valued Functions. """
+"""Hessian utilities for complex-valued functions."""
 from typing import Callable
 
 import jax
@@ -22,18 +22,17 @@ def complex_hessian(
   f: Callable[[jnp.ndarray], jnp.ndarray],
   primal: jnp.ndarray,
 ) -> jnp.ndarray:
-  """Compute the Hessian of a complex-valued function at a point.
-
-  .. warning::
-
-    Only for :math:`x` being a vector is tested.
+  """Compute the Hessian of a complex-valued function at ``primal``.
 
   Args:
-    f: A function that takes a complex-valued array and returns a complex-valued array.
-    primal: The point at which to compute the Hessian.
+    f (Callable[[jnp.ndarray], jnp.ndarray]): Differentiable function.
+    primal (jnp.ndarray): Evaluation point.
 
   Returns:
-    The Hessian of the function at the point.
+    jnp.ndarray: Hessian matrix at ``primal``.
+
+  .. warning::
+    This implementation is tested for vector inputs.
   """
   dtype = primal.dtype
   dim = primal.shape[-1]
