@@ -162,8 +162,4 @@ cython_debug/
 
 
 # backup files
-*.backup
-
-# local docs / notes
-chatdocs/
-.claude/
+*.backupchatdocs/
