@@ -15,7 +15,10 @@ class RuntimeContextTest(absltest.TestCase):
     self.assertIsNotNone(ctx.crystal)
     self.assertEqual(ctx.ksampling.mode, "mesh")
     self.assertIsNone(ctx.pseudopotential)
-    self.assertIsNotNone(ctx.freq_mask)
+    self.assertIsNotNone(ctx.basis)
+    self.assertIsNotNone(ctx.basis.freq_mask)
+    self.assertGreater(ctx.basis.num_g, 0)
+    self.assertIsNotNone(ctx.execution)
 
   def test_build_runtime_context_path(self):
     config = get_config()

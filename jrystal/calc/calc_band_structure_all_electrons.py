@@ -50,7 +50,7 @@ def calc(
   ctx = build_runtime_context(config, mode="path")
   crystal = ctx.crystal
   g_vec = ctx.g_vec
-  freq_mask = ctx.freq_mask
+  freq_mask = ctx.basis.freq_mask
   path_ksampling = ctx.ksampling
   num_electrons = crystal.num_electron
   xc = config.method.xc

@@ -55,7 +55,7 @@ def calc(config: JrystalConfigDict) -> GroundStateResult:
   crystal = ctx.crystal
   pseudopot = ctx.pseudopotential
   g_vec = ctx.g_vec
-  freq_mask = ctx.freq_mask
+  freq_mask = ctx.basis.freq_mask
   ew = ctx.ewald_energy
   potential_loc = ctx.potential_local
   potential_nl = ctx.potential_nonlocal

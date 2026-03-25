@@ -52,7 +52,7 @@ def calc(config: JrystalConfigDict) -> GroundStateResult:
   ctx = build_runtime_context(config)
   crystal = ctx.crystal
   g_vec = ctx.g_vec
-  freq_mask = ctx.freq_mask
+  freq_mask = ctx.basis.freq_mask
   ew = ctx.ewald_energy
   k_vec = ctx.ksampling.kpts
   k_weights = ctx.ksampling.weights

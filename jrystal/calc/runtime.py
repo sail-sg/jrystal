@@ -15,25 +15,22 @@
 
 from typing import Literal, Optional
 
+import jax
 import jax.numpy as jnp
 import numpy as np
-from absl import logging
 from chex import dataclass
 from jaxtyping import Array, Bool, Float
 
 from .._src.band import get_k_path
 from .._src.crystal import Crystal
 from ..config import JrystalConfigDict
-from ..pseudopotential import normcons
 from .opt_utils import (
   create_crystal,
   create_freq_mask,
   create_grids,
-  create_pseudopotential,
   get_ewald_coulomb_repulsion,
 )
-from .pre_calc import pre_calc_beta_sbt
-from .types import KSampling
+from .types import ExecutionPlan, KSampling, PlaneWaveBasis
 
 
 @dataclass
@@ -44,8 +41,9 @@ class RuntimeContext:
   g_vec: Float[Array, "x y z 3"]
   r_vec: Float[Array, "x y z 3"]
   ksampling: KSampling
-  freq_mask: Bool[Array, "x y z"]
+  basis: PlaneWaveBasis
   ewald_energy: float
+  execution: ExecutionPlan
   pseudopotential: Optional[object] = None
   potential_local: Optional[object] = None
   potential_nonlocal: Optional[object] = None
@@ -78,56 +76,24 @@ def build_kpath_sampling(
   )
 
 
-def _build_normcons_potentials(
-  config: JrystalConfigDict,
-  crystal: Crystal,
-  g_vec,
-  ksampling: KSampling,
-):
-  pseudopot = create_pseudopotential(config, crystal=crystal)
-  logging.info("Initializing pseudopotential (local)...")
-  potential_loc = normcons.potential_local_reciprocal(
-    crystal.positions,
-    g_vec,
-    pseudopot.r_grid,
-    pseudopot.local_potential_grid,
-    pseudopot.local_potential_charge,
-    crystal.vol,
-  )
-
-  logging.info("Initializing pseudopotential (Spherical Bessel Transform)...")
-  beta_gk = pre_calc_beta_sbt(
-    pseudopot,
-    np.array(g_vec),
-    np.array(ksampling.kpts),
-  )
-
-  if ksampling.mode == "mesh":
-    logging.info("Initializing pseudopotential (nonlocal)...")
-    potential_nl = normcons.potential_nonlocal_psi_reciprocal(
-      crystal.positions,
-      g_vec,
-      ksampling.kpts,
-      pseudopot.r_grid,
-      pseudopot.nonlocal_beta_grid,
-      pseudopot.nonlocal_angular_momentum,
-      pseudopot.nonlocal_d_matrix,
-      beta_gk,
-    )
-  else:
-    # For band-path workflows, keep the SBT cache and assemble one k-point
-    # nonlocal operator at a time inside the band solver.
-    potential_nl = beta_gk
-
-  return pseudopot, potential_loc, potential_nl
-
-
 def build_runtime_context(
   config: JrystalConfigDict,
   *,
   mode: Literal["mesh", "path"] = "mesh",
+  backend=None,
 ) -> RuntimeContext:
-  """One-shot initialization of all workflow runtime data."""
+  """One-shot initialization of all workflow runtime data.
+
+  Args:
+    config: Jrystal configuration.
+    mode: ``"mesh"`` for ground-state k-mesh, ``"path"`` for band k-path.
+    backend: An :class:`ElectronicBackend` instance.  When provided,
+      ``backend.build_potentials(ctx)`` is called to attach
+      backend-specific potentials to the context.
+
+  Returns:
+    Fully initialised :class:`RuntimeContext`.
+  """
   crystal = create_crystal(config)
 
   if mode == "mesh":
@@ -143,39 +109,42 @@ def build_runtime_context(
     raise ValueError(f"Unsupported runtime mode: {mode}")
 
   freq_mask = create_freq_mask(config, crystal=crystal)
+  from .._src.grid import proper_grid_size
+  grid_sizes = tuple(int(x) for x in proper_grid_size(config.basis.grid_sizes))
+
+  basis = PlaneWaveBasis(
+    freq_mask=freq_mask,
+    grid_sizes=grid_sizes,
+    num_g=int(np.sum(np.asarray(freq_mask))),
+  )
+
+  execution = ExecutionPlan(
+    num_devices=len(jax.devices()),
+    parallel_over_k=config.execution.parallel_over_k_mesh
+    if mode == "mesh"
+    else config.execution.parallel_over_k_path,
+  )
+
   ew = get_ewald_coulomb_repulsion(
     config,
     crystal=crystal,
     g_vector_grid=g_vec,
   )
 
-  pseudopot = None
-  potential_loc = None
-  potential_nl = None
-  if config.method.use_pseudopotential:
-    if config.method.pseudopotential_type not in ["normcons", "normconserving", "nc"]:
-      raise NotImplementedError(
-        "RuntimeContext currently supports only norm-conserving "
-        "pseudopotentials in step 1."
-      )
-    pseudopot, potential_loc, potential_nl = _build_normcons_potentials(
-      config,
-      crystal,
-      g_vec,
-      ksampling,
-    )
-
-  return RuntimeContext(
+  ctx = RuntimeContext(
     crystal=crystal,
     g_vec=g_vec,
     r_vec=r_vec,
     ksampling=ksampling,
-    freq_mask=freq_mask,
+    basis=basis,
     ewald_energy=ew,
-    pseudopotential=pseudopot,
-    potential_local=potential_loc,
-    potential_nonlocal=potential_nl,
+    execution=execution,
   )
+
+  if backend is not None:
+    ctx = backend.build_potentials(ctx)
+
+  return ctx
 
 
 __all__ = ["RuntimeContext", "build_kpath_sampling", "build_runtime_context"]

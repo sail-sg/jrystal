@@ -56,7 +56,7 @@ def calc(
   crystal = ctx.crystal
   pseudopot = ctx.pseudopotential
   g_vec = ctx.g_vec
-  freq_mask = ctx.freq_mask
+  freq_mask = ctx.basis.freq_mask
   potential_loc = ctx.potential_local
   beta_gk = ctx.potential_nonlocal
   path_ksampling = ctx.ksampling
