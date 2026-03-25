@@ -192,18 +192,19 @@ def expand_coefficient(
 
 def squeeze_coefficient(
   coeff: Complex[Array, "spin kpt band x y z"],
-  mask: Bool[Array, "spin kpt band x y z"],
+  mask: Bool[Array, "x y z"],
 ) -> Complex[Array, "spin kpt gpt band"]:
   """Extract compact coefficients from a full reciprocal grid.
 
   Args:
     coeff (Complex[Array, "spin kpt band x y z"]): Full coefficient tensor.
-    mask (Bool[Array, "spin kpt band x y z"]): Mask indicating selected entries.
+    mask (Bool[Array, "x y z"]): Mask indicating selected reciprocal-grid
+      entries.
 
   Returns:
     Complex[Array, "spin kpt gpt band"]: Compact coefficient tensor.
   """
-  coeff_compact = coeff[..., mask].get()
+  coeff_compact = coeff[..., mask]
   return jnp.swapaxes(coeff_compact, -1, -2)
 
 

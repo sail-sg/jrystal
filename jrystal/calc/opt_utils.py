@@ -161,12 +161,14 @@ def create_grids(
 
 
 def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
-  logging.info(f"optimization method: {config.solver.optimizer}")
-  config_dict = dict(config.solver.optimizer_args)
-  opt = getattr(alias, config.solver.optimizer, None)
+  optimizer_config = dict(config.solver.direct_opt.optimizer)
+  optimizer_name = optimizer_config.pop("name")
+  logging.info(f"optimization method: {optimizer_name}")
+  opt = getattr(alias, optimizer_name, None)
+  config_dict = dict(optimizer_config)
   lr = config_dict.pop("learning_rate")
   logging.info(f"learning rate: {lr}")
-  if config.solver.scheduler:
+  if config.solver.direct_opt.scheduler:
     raise NotImplementedError("Scheduler is not implemented yet.")
 
   # TODO: Add scheduler
@@ -175,7 +177,7 @@ def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
     optimizer = opt(learning_rate=lr, **config_dict)
   else:
     raise NotImplementedError(
-      f'"{config.solver.optimizer}" is not found in optax.'
+      f'"{optimizer_name}" is not found in optax.'
     )
   return optimizer
 

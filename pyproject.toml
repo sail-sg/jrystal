@@ -69,7 +69,7 @@ docs = [
 
 
 [project.scripts]
-jrystal = "main:main"
+jrystal = "jrystal.cli:main"
 
 
 [tool.setuptools.packages.find]
@@ -107,6 +107,7 @@ ignore = [
   "PLR0913",
   "PLR0914",
   "PLR2004",
+  "PLR0915",
 ]
 
 

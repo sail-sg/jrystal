@@ -38,6 +38,12 @@ from .._src import pw as _pw
 from .convergence import create_convergence_checker
 from .opt_utils import create_optimizer
 from .types import EnergyDecomposition, GroundStateResult
+from .workflow_logging import (
+  format_ground_state_iteration,
+  log_energy_breakdown,
+  log_ground_state_finish,
+  log_ground_state_start,
+)
 
 if TYPE_CHECKING:
   from ..config import JrystalConfigDict
@@ -64,6 +70,7 @@ def run_direct_opt(
   Returns:
     Ground-state result with converged energy, density, and parameters.
   """
+  overall_start = time.time()
   key = jax.random.PRNGKey(config.execution.seed)
 
   crystal = ctx.crystal
@@ -78,8 +85,20 @@ def run_direct_opt(
   num_bands = ceil(num_electrons / 2) + config.occupation.empty_bands
 
   logging.info(f"Crystal: {crystal.symbols}")
-  logging.info(f"num_bands: {num_bands}")
-  logging.info(f"XC functional: {config.method.xc}")
+  log_ground_state_start(
+    "DirectOpt",
+    max_steps=config.solver.direct_opt.max_steps,
+    num_bands=num_bands,
+    smearing=config.occupation.smearing,
+    xc=config.method.xc,
+    controls=(
+      f"optimizer={config.solver.direct_opt.optimizer.name} "
+      f"(lr={config.solver.direct_opt.optimizer.learning_rate:g}) | "
+      f"window={config.solver.direct_opt.convergence.window_size} | "
+      f"energy_std_tol="
+      f"{config.solver.direct_opt.convergence.energy_std_tol:.2e}"
+    ),
+  )
 
   # --- Sharding / device setup ---
   num_devices = ctx.execution.num_devices
@@ -152,22 +171,35 @@ def run_direct_opt(
       return new_params, new_opt_state, loss_val, etot
 
     iters = tqdm(
-      range(config.solver.epoch),
+      range(config.solver.direct_opt.max_steps),
       disable=not config.execution.verbose,
     )
     for i in iters:
       start = time.time()
       params, opt_state, loss_val, etot = update(params, opt_state)
       etot = jax.block_until_ready(etot)
-      total_energy_history.append(float(etot + ew))
-      converged = convergence_checker.check(etot)
+      total_energy = float(etot + ew)
+      delta_energy = None
+      if total_energy_history:
+        delta_energy = abs(total_energy - total_energy_history[-1])
+      total_energy_history.append(total_energy)
+      converged = convergence_checker.check(float(etot))
+      energy_std = convergence_checker.current_std()
+      dt = time.time() - start
+      iters.set_description(
+        format_ground_state_iteration(
+          "DirectOpt",
+          step=i + 1,
+          max_steps=config.solver.direct_opt.max_steps,
+          total_energy=total_energy,
+          delta_energy=delta_energy,
+          step_time=dt,
+          energy_std=energy_std,
+        ),
+        refresh=False,
+      )
       if converged:
-        logging.info("Converged.")
         break
-      iters.set_description(f"Energy: {float(etot + ew):.6f}")
-
-  if not converged:
-    logging.warning("Did not converge.")
 
   # --- Final energy decomposition ---
   coeff = _pw.coeff(params["pw"], freq_mask)
@@ -177,11 +209,22 @@ def run_direct_opt(
   )
   decomp = backend.energy_decomposition(coeff, occ, ctx)
   total_e = float(sum(decomp.values()) + ew)
+  wall_time = time.time() - overall_start
 
-  for name, val in decomp.items():
-    logging.info(f"{name}: {float(val):.4f} Ha")
-  logging.info(f"Ewald: {float(ew):.4f} Ha")
-  logging.info(f"Total Energy: {total_e:.4f} Ha")
+  log_ground_state_finish(
+    "DirectOpt",
+    converged=converged,
+    steps_completed=len(total_energy_history),
+    max_steps=config.solver.direct_opt.max_steps,
+    total_energy=total_e,
+    wall_time=wall_time,
+  )
+  log_energy_breakdown(
+    "DirectOpt",
+    decomp,
+    ewald=ew,
+    total_energy=total_e,
+  )
 
   return GroundStateResult(
     config=config,

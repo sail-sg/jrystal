@@ -6,9 +6,9 @@ Usage:
 
 from __future__ import annotations
 
+import time
 from dataclasses import asdict
 from pathlib import Path
-import time
 
 import jax
 import yaml
@@ -41,14 +41,16 @@ def _make_config(use_pseudopotential: bool) -> JrystalConfigDict:
       "k_grid_sizes": [1, 1, 1],
     },
     "solver": {
-      "type": "direct_opt",
-      "optimizer": "adam",
-      "optimizer_args": {
-        "learning_rate": 0.01,
-        "b1": 0.9,
-        "b2": 0.99,
+      "mode": "direct_opt",
+      "direct_opt": {
+        "max_steps": 2000,
+        "optimizer": {
+          "name": "adam",
+          "learning_rate": 0.01,
+          "b1": 0.9,
+          "b2": 0.99,
+        },
       },
-      "epoch": 2000,
     },
     "occupation": {
       "smearing": 0.001,
@@ -108,10 +110,10 @@ def run_energy_baseline(use_pseudopotential: bool) -> dict:
     "k_grid": list(config.ksampling.k_grid_sizes),
     "num_kpts": 1,
     "num_bands": _num_bands(result),
-    "optimizer": config.solver.optimizer,
-    "learning_rate": config.solver.optimizer_args.learning_rate,
+    "optimizer": config.solver.direct_opt.optimizer.name,
+    "learning_rate": config.solver.direct_opt.optimizer.learning_rate,
     "smearing": config.occupation.smearing,
-    "epochs": config.solver.epoch,
+    "epochs": config.solver.direct_opt.max_steps,
     "seed": config.execution.seed,
     "energy_ha": _serialize_energy_terms(result),
     "wall_time_seconds": round(elapsed, 1),

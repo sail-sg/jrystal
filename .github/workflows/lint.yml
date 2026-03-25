@@ -1,0 +1,43 @@
+name: Lint and Format
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install lint and format tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install flake8 flake8-bugbear isort yapf pylint
+
+      - name: Run flake8
+        run: |
+          PYTHON_FILES=$(find . -type f -name "*.py" -not -path "*/.venv/*")
+          flake8 ${PYTHON_FILES} --count --show-source --statistics
+
+      - name: Run format checks
+        run: |
+          PYTHON_FILES=$(find . -type f -name "*.py" -not -path "*/.venv/*")
+          isort --check ${PYTHON_FILES}
+          yapf -r -d ${PYTHON_FILES}
+
+      - name: Run pylint
+        run: |
+          pylint jrystal

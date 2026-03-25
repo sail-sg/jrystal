@@ -18,23 +18,42 @@ basis:
   grid_sizes: 48
 
 ksampling:
-  k_grid_sizes: [4, 4, 4]
+  k_grid_sizes: [1, 1, 1]
   symmetry_reduction: true
 
 solver:
-  type: "direct_opt"
-  optimizer: "adam"
-  optimizer_args:
-    learning_rate: 0.01
-    b1: 0.9
-    b2: 0.99
-  scheduler: null
-  epoch: 10000
-  convergence_window_size: 20
-  convergence_condition: 1.0e-6
+  mode: "auto"
+  auto:
+    primary: "scf"
+    fallback: "direct_opt"
+    fallback_on_nonconverged: true
+    fallback_on_error: true
+  scf:
+    max_iter: 100
+    eigensolver:
+      method: "lobpcg"
+      max_iter: 6
+    mixing:
+      method: "diis"
+      beta: 0.8
+      history_size: 8
+    convergence:
+      density_tol: 1.0e-3
+      energy_tol: 1.0e-6
+  direct_opt:
+    max_steps: 10000
+    optimizer:
+      name: "adam"
+      learning_rate: 0.01
+      b1: 0.9
+      b2: 0.99
+    scheduler: null
+    convergence:
+      window_size: 20
+      energy_std_tol: 1.0e-6
 
 occupation:
-  method: "uniform"
+  method: "fixed"
   smearing: 0.0
   empty_bands: 20
 

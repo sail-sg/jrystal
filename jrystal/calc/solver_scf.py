@@ -28,14 +28,20 @@ from typing import TYPE_CHECKING
 
 import jax
 import jax.numpy as jnp
-import numpy as np
 from absl import logging
+from tqdm import tqdm
 
 from .._src import pw as _pw
 from .._src.linalg import batched_lobpcg
-from .._src.utils import expand_coefficient
+from .._src.utils import expand_coefficient, squeeze_coefficient
 from ..smearing import fermi_dirac, find_chemical_potential
 from .types import EnergyDecomposition, GroundStateResult
+from .workflow_logging import (
+  format_ground_state_iteration,
+  log_energy_breakdown,
+  log_ground_state_finish,
+  log_ground_state_start,
+)
 
 if TYPE_CHECKING:
   from ..config import JrystalConfigDict
@@ -94,6 +100,7 @@ def run_scf(
   Returns:
     Ground-state result with converged energy, density, eigenvalues.
   """
+  overall_start = time.time()
   key = jax.random.PRNGKey(config.execution.seed)
   crystal = ctx.crystal
 
@@ -113,16 +120,37 @@ def run_scf(
   num_bands = ceil(num_electrons / 2) + config.occupation.empty_bands
   smearing = config.occupation.smearing
 
-  scf_max_iter = config.solver.get("scf_max_iter", config.solver.epoch)
-  lobpcg_max_iter = config.solver.get("lobpcg_max_iter", 6)
-  mixing_beta = config.solver.get("mixing_beta", 0.8)
-  diis_max_hist = config.solver.get("diis_max_hist", 8)
-  convergence_tol = config.solver.convergence_condition
+  scf_config = config.solver.scf
+  if scf_config.eigensolver.method != "lobpcg":
+    raise NotImplementedError(
+      "SCF currently supports only solver.scf.eigensolver.method='lobpcg'."
+    )
+  if scf_config.mixing.method != "diis":
+    raise NotImplementedError(
+      "SCF currently supports only solver.scf.mixing.method='diis'."
+    )
+
+  scf_max_iter = scf_config.max_iter
+  lobpcg_max_iter = scf_config.eigensolver.max_iter
+  mixing_beta = scf_config.mixing.beta
+  diis_max_hist = scf_config.mixing.history_size
+  density_tol = scf_config.convergence.density_tol
+  energy_tol = scf_config.convergence.energy_tol
 
   occ_max = 2.0  # spin-restricted
   logging.info(f"Crystal: {crystal.symbols}")
-  logging.info(f"SCF: max_iter={scf_max_iter}, lobpcg_iter={lobpcg_max_iter}")
-  logging.info(f"num_bands: {num_bands}, smearing: {smearing}")
+  log_ground_state_start(
+    "SCF",
+    max_steps=scf_max_iter,
+    num_bands=num_bands,
+    smearing=smearing,
+    xc=config.method.xc,
+    controls=(
+      f"eigensolver=lobpcg(max_iter={lobpcg_max_iter}) | "
+      f"mixing=diis(beta={mixing_beta:.3f}, hist={diis_max_hist}) | "
+      f"density_tol={density_tol:.2e} | energy_tol={energy_tol:.2e}"
+    ),
+  )
 
   # --- Init wavefunctions (compact, in masked G-space) ---
   pw_params = _pw.param_init(
@@ -135,6 +163,7 @@ def run_scf(
   # --- Init eigenvalues, occupation, density ---
   evals = jax.random.normal(key, [1, num_kpts, num_bands])
   evals = jnp.sort(evals, axis=-1)
+  evals_new = evals
   occ = _fixed_occupation(evals, num_electrons, occ_max)
 
   def _density_from_compact(c, occ):
@@ -156,17 +185,19 @@ def run_scf(
   # --- Hvp via backend ---
   def _hvp(coeff_compact_conj, dens):
     coeff_full = expand_coefficient(coeff_compact_conj.conj(), freq_mask)
-    return backend.hamiltonian_apply(coeff_full, dens, ctx)
-
-  def _lobpcg_matmul(c, dens):
-    """Wraps Hvp for batched LOBPCG input shape (s*k, g, band)."""
-    return _hvp(jnp.expand_dims(c, axis=0), dens)
+    hpsi_full = backend.hamiltonian_apply(coeff_full, dens, ctx)
+    return squeeze_coefficient(hpsi_full, freq_mask)
 
   @jax.jit
   def _diagonalise(coeff_compact, dens):
     s, k, g, b = coeff_compact.shape
+
+    def _lobpcg_matmul(c):
+      coeff_batch = c.reshape(s, k, g, -1)
+      return _hvp(coeff_batch, dens).reshape(s * k, g, -1)
+
     eigval, evec = batched_lobpcg(
-      matmul=lambda c: _lobpcg_matmul(c, dens).reshape(s * k, g, -1),
+      matmul=_lobpcg_matmul,
       k=b,
       v0=coeff_compact.reshape(s * k, g, b),
       which="smallest",
@@ -181,7 +212,11 @@ def run_scf(
   total_energy_history = []
   band_energy = jnp.sum(evals * occ * k_weights[None, :, None])
 
-  for i in range(scf_max_iter):
+  iters = tqdm(
+    range(scf_max_iter),
+    disable=not config.execution.verbose,
+  )
+  for i in iters:
     t0 = time.time()
 
     # 1. Diagonalise
@@ -194,22 +229,37 @@ def run_scf(
     )
 
     # 3. New density
-    density_new = _density_from_compact(coeff_new, occ)
+    coeff_full_new = expand_coefficient(coeff_new, freq_mask)
+    density_new = _pw.density_grid(
+      coeff_full_new, crystal.vol, occ, k_weights=k_weights,
+    )
 
     # 4. Check convergence
     band_energy_new = jnp.sum(evals_new * occ * k_weights[None, :, None])
+    total_energy_new = float(backend.total_energy(coeff_full_new, occ, ctx) + ew)
+    delta_total_energy = None
+    if total_energy_history:
+      delta_total_energy = abs(total_energy_new - total_energy_history[-1])
+    total_energy_history.append(total_energy_new)
     d_density = float(jnp.mean(jnp.abs(density_new - density)))
     d_energy = float(jnp.abs(band_energy_new - band_energy))
     dt = time.time() - t0
 
-    logging.info(
-      f"SCF iter {i + 1}: d_density={d_density:.2e} "
-      f"d_energy={d_energy:.2e} ({dt:.2f}s)"
+    iters.set_description(
+      format_ground_state_iteration(
+        "SCF",
+        step=i + 1,
+        max_steps=scf_max_iter,
+        total_energy=total_energy_new,
+        delta_energy=delta_total_energy,
+        step_time=dt,
+        density_delta=d_density,
+      ),
+      refresh=False,
     )
 
-    if d_density < 1e-3 and d_energy < convergence_tol:
+    if d_density < density_tol and d_energy < energy_tol:
       converged = True
-      logging.info(f"SCF converged in {i + 1} iterations.")
       coeff_compact = coeff_new
       density = density_new
       band_energy = band_energy_new
@@ -224,21 +274,27 @@ def run_scf(
     band_energy = band_energy_new
     coeff_compact = coeff_new
 
-    total_energy_history.append(float(band_energy))
-
-  if not converged:
-    logging.warning("SCF did not converge.")
-
   # --- Final energy decomposition via backend ---
   coeff_full = expand_coefficient(coeff_compact, freq_mask)
   decomp = backend.energy_decomposition(coeff_full, occ, ctx)
   total_e = float(sum(decomp.values()) + ew)
   density = _density_from_compact(coeff_compact, occ)
+  wall_time = time.time() - overall_start
 
-  for name, val in decomp.items():
-    logging.info(f"{name}: {float(val):.4f} Ha")
-  logging.info(f"Ewald: {float(ew):.4f} Ha")
-  logging.info(f"Total Energy: {total_e:.4f} Ha")
+  log_ground_state_finish(
+    "SCF",
+    converged=converged,
+    steps_completed=len(total_energy_history),
+    max_steps=scf_max_iter,
+    total_energy=total_e,
+    wall_time=wall_time,
+  )
+  log_energy_breakdown(
+    "SCF",
+    decomp,
+    ewald=ew,
+    total_energy=total_e,
+  )
 
   return GroundStateResult(
     config=config,

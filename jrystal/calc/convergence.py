@@ -5,8 +5,8 @@ from ..config import JrystalConfigDict
 
 def create_convergence_checker(config: JrystalConfigDict):
   return ConvergenceChecker(
-    window_size=config.solver.convergence_window_size,
-    threshold=config.solver.convergence_condition,
+    window_size=config.solver.direct_opt.convergence.window_size,
+    threshold=config.solver.direct_opt.convergence.energy_std_tol,
   )
 
 
@@ -30,6 +30,11 @@ class ConvergenceChecker:
       return True
 
     return False
+
+  def current_std(self) -> float | None:
+    if len(self.history) < 2:
+      return None
+    return float(np.std(self.history))
 
   def reset(self):
     self.history = []

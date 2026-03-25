@@ -23,7 +23,10 @@ Usage::
 """
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import TYPE_CHECKING, Optional
+
+from absl import logging
 
 from .backend import get_backend
 from .opt_utils import set_env_params
@@ -37,11 +40,26 @@ if TYPE_CHECKING:
   from ..config import JrystalConfigDict
 
 
+def _run_with_mode(
+  config: JrystalConfigDict,
+  backend,
+  ctx,
+  mode: str,
+) -> GroundStateResult:
+  if mode == "scf":
+    return run_scf(config, ctx, backend)
+  if mode == "direct_opt":
+    return run_direct_opt(config, ctx, backend)
+  raise ValueError(
+    f"Unknown solver mode '{mode}'. Use 'auto', 'direct_opt', or 'scf'."
+  )
+
+
 def energy(config: JrystalConfigDict) -> GroundStateResult:
   """Run a ground-state energy calculation.
 
   Automatically selects the electronic backend (all-electron or
-  norm-conserving) and solver (``direct_opt`` or ``scf``) based on
+  norm-conserving) and solver (``auto``, ``direct_opt``, or ``scf``) based on
   *config*.
 
   Args:
@@ -54,16 +72,48 @@ def energy(config: JrystalConfigDict) -> GroundStateResult:
   backend = get_backend(config)
   ctx = build_runtime_context(config, mode="mesh", backend=backend)
 
-  solver_type = config.solver.type
-  if solver_type == "scf":
-    return run_scf(config, ctx, backend)
-  elif solver_type in ("direct_opt", "direct"):
-    return run_direct_opt(config, ctx, backend)
-  else:
+  solver_mode = config.solver.mode
+  if solver_mode in ("scf", "direct_opt"):
+    return _run_with_mode(config, backend, ctx, solver_mode)
+
+  if solver_mode != "auto":
     raise ValueError(
-      f"Unknown solver type '{solver_type}'. "
-      "Use 'direct_opt' or 'scf'."
+      f"Unknown solver mode '{solver_mode}'. "
+      "Use 'auto', 'direct_opt', or 'scf'."
     )
+
+  primary = config.solver.auto.primary
+  fallback = config.solver.auto.fallback
+  fallback_on_nonconverged = config.solver.auto.fallback_on_nonconverged
+  fallback_on_error = config.solver.auto.fallback_on_error
+
+  try:
+    result = _run_with_mode(config, backend, ctx, primary)
+  except Exception as exc:
+    if not fallback_on_error:
+      raise
+    logging.warning(
+      "Primary solver '%s' failed with %s: %s. Falling back to '%s'.",
+      primary,
+      exc.__class__.__name__,
+      exc,
+      fallback,
+    )
+    fallback_config = deepcopy(config)
+    fallback_config.solver.mode = fallback
+    return _run_with_mode(fallback_config, backend, ctx, fallback)
+
+  if result.converged or not fallback_on_nonconverged:
+    return result
+
+  logging.warning(
+    "Primary solver '%s' did not converge. Falling back to '%s'.",
+    primary,
+    fallback,
+  )
+  fallback_config = deepcopy(config)
+  fallback_config.solver.mode = fallback
+  return _run_with_mode(fallback_config, backend, ctx, fallback)
 
 
 def band(

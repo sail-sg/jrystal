@@ -50,17 +50,43 @@ default_config = {
     "symmetry_reduction": True,
   },
   "solver": {
-    "type": "direct_opt",
-    "optimizer": "adam",
-    "optimizer_args": {
-      "learning_rate": 0.01,
-      "b1": 0.9,
-      "b2": 0.99,
+    "mode": "auto",
+    "auto": {
+      "primary": "scf",
+      "fallback": "direct_opt",
+      "fallback_on_nonconverged": True,
+      "fallback_on_error": True,
     },
-    "scheduler": None,
-    "epoch": 10000,
-    "convergence_window_size": 20,
-    "convergence_condition": 1e-6,
+    "scf": {
+      "max_iter": 100,
+      "eigensolver": {
+        "method": "lobpcg",
+        "max_iter": 6,
+      },
+      "mixing": {
+        "method": "diis",
+        "beta": 0.8,
+        "history_size": 8,
+      },
+      "convergence": {
+        "density_tol": 1e-3,
+        "energy_tol": 1e-6,
+      },
+    },
+    "direct_opt": {
+      "max_steps": 10000,
+      "optimizer": {
+        "name": "adam",
+        "learning_rate": 0.01,
+        "b1": 0.9,
+        "b2": 0.99,
+      },
+      "scheduler": None,
+      "convergence": {
+        "window_size": 20,
+        "energy_std_tol": 1e-6,
+      },
+    },
   },
   "occupation": {
     "method": "uniform",
@@ -118,11 +144,20 @@ _GROUP_FIELDS = {
     "symmetry_reduction",
   },
   "solver": {
+    "mode",
+    "auto",
+    "scf",
+    "direct_opt",
     "type",
     "optimizer",
     "optimizer_args",
     "scheduler",
     "epoch",
+    "scf_max_iter",
+    "scf_max_iteration",
+    "lobpcg_max_iter",
+    "mixing_beta",
+    "diis_max_hist",
     "convergence_window_size",
     "convergence_condition",
   },
@@ -156,8 +191,66 @@ _GROUP_FIELDS = {
     "eps",
   },
   "io": {
-    "save_dir",
+  "save_dir",
   },
+}
+
+_SOLVER_AUTO_FIELDS = {
+  "primary",
+  "fallback",
+  "fallback_on_nonconverged",
+  "fallback_on_error",
+}
+
+_SOLVER_SCF_FIELDS = {
+  "max_iter",
+  "scf_max_iter",
+  "scf_max_iteration",
+  "lobpcg_max_iter",
+  "mixing_beta",
+  "diis_max_hist",
+  "convergence_condition",
+  "eigensolver",
+  "mixing",
+  "convergence",
+}
+
+_SOLVER_SCF_EIGENSOLVER_FIELDS = {
+  "method",
+  "max_iter",
+  "lobpcg_max_iter",
+}
+
+_SOLVER_SCF_MIXING_FIELDS = {
+  "method",
+  "beta",
+  "mixing_beta",
+  "history_size",
+  "diis_max_hist",
+}
+
+_SOLVER_SCF_CONVERGENCE_FIELDS = {
+  "density_tol",
+  "energy_tol",
+  "convergence_condition",
+}
+
+_SOLVER_DIRECT_OPT_FIELDS = {
+  "max_steps",
+  "epoch",
+  "optimizer",
+  "optimizer_args",
+  "scheduler",
+  "convergence",
+  "convergence_window_size",
+  "convergence_condition",
+}
+
+_SOLVER_DIRECT_OPT_CONVERGENCE_FIELDS = {
+  "window_size",
+  "energy_std_tol",
+  "convergence_window_size",
+  "convergence_condition",
 }
 
 _LEGACY_FIELD_MAP = {
@@ -175,12 +268,28 @@ _LEGACY_FIELD_MAP = {
   "grid_sizes": ("basis", "grid_sizes"),
   "k_grid_sizes": ("ksampling", "k_grid_sizes"),
   "symmetry_reduction": ("ksampling", "symmetry_reduction"),
-  "epoch": ("solver", "epoch"),
-  "optimizer": ("solver", "optimizer"),
-  "optimizer_args": ("solver", "optimizer_args"),
-  "scheduler": ("solver", "scheduler"),
-  "convergence_window_size": ("solver", "convergence_window_size"),
-  "convergence_condition": ("solver", "convergence_condition"),
+  "type": ("solver", "mode"),
+  "epoch": ("solver", "direct_opt", "max_steps"),
+  "scf_max_iter": ("solver", "scf", "max_iter"),
+  "scf_max_iteration": ("solver", "scf", "max_iter"),
+  "lobpcg_max_iter": ("solver", "scf", "eigensolver", "max_iter"),
+  "mixing_beta": ("solver", "scf", "mixing", "beta"),
+  "diis_max_hist": ("solver", "scf", "mixing", "history_size"),
+  "optimizer": ("solver", "direct_opt", "optimizer", "name"),
+  "optimizer_args": ("solver", "direct_opt", "optimizer"),
+  "scheduler": ("solver", "direct_opt", "scheduler"),
+  "convergence_window_size": (
+    "solver",
+    "direct_opt",
+    "convergence",
+    "window_size",
+  ),
+  "convergence_condition": (
+    "solver",
+    "direct_opt",
+    "convergence",
+    "energy_std_tol",
+  ),
   "occupation": ("occupation", "method"),
   "smearing": ("occupation", "smearing"),
   "empty_bands": ("occupation", "empty_bands"),
@@ -205,9 +314,12 @@ _LEGACY_FIELD_MAP = {
 
 
 def _set_nested_value(
-  config: dict[str, Any], path: tuple[str, str], value: Any
+  config: dict[str, Any], path: tuple[str, ...], value: Any
 ):
-  config[path[0]][path[1]] = copy.deepcopy(value)
+  target = config
+  for part in path[:-1]:
+    target = target[part]
+  target[path[-1]] = copy.deepcopy(value)
 
 
 def _deep_merge(target: dict[str, Any], updates: Mapping[str, Any]) -> None:
@@ -224,6 +336,9 @@ def _warn_unknown_fields(config: Mapping[str, Any]) -> None:
       continue
 
     if key in _GROUP_FIELDS and isinstance(value, Mapping):
+      if key == "solver":
+        _warn_unknown_solver_fields(value)
+        continue
       unknown_fields = sorted(set(value) - _GROUP_FIELDS[key])
       for unknown_field in unknown_fields:
         warnings.warn(
@@ -234,6 +349,75 @@ def _warn_unknown_fields(config: Mapping[str, Any]) -> None:
 
     if key not in _LEGACY_FIELD_MAP and key != "ewald_args":
       warnings.warn(f"Unknown config field: {key}", stacklevel=3)
+
+
+def _warn_unknown_solver_fields(solver_config: Mapping[str, Any]) -> None:
+  unknown_fields = sorted(set(solver_config) - _GROUP_FIELDS["solver"])
+  for unknown_field in unknown_fields:
+    warnings.warn(
+      f"Unknown config field: solver.{unknown_field}",
+      stacklevel=4,
+    )
+
+  auto_config = solver_config.get("auto")
+  if isinstance(auto_config, Mapping):
+    for unknown_field in sorted(set(auto_config) - _SOLVER_AUTO_FIELDS):
+      warnings.warn(
+        f"Unknown config field: solver.auto.{unknown_field}",
+        stacklevel=4,
+      )
+
+  scf_config = solver_config.get("scf")
+  if isinstance(scf_config, Mapping):
+    for unknown_field in sorted(set(scf_config) - _SOLVER_SCF_FIELDS):
+      warnings.warn(
+        f"Unknown config field: solver.scf.{unknown_field}",
+        stacklevel=4,
+      )
+    eigensolver = scf_config.get("eigensolver")
+    if isinstance(eigensolver, Mapping):
+      for unknown_field in sorted(
+        set(eigensolver) - _SOLVER_SCF_EIGENSOLVER_FIELDS,
+      ):
+        warnings.warn(
+          f"Unknown config field: solver.scf.eigensolver.{unknown_field}",
+          stacklevel=4,
+        )
+    mixing = scf_config.get("mixing")
+    if isinstance(mixing, Mapping):
+      for unknown_field in sorted(set(mixing) - _SOLVER_SCF_MIXING_FIELDS):
+        warnings.warn(
+          f"Unknown config field: solver.scf.mixing.{unknown_field}",
+          stacklevel=4,
+        )
+    convergence = scf_config.get("convergence")
+    if isinstance(convergence, Mapping):
+      for unknown_field in sorted(
+        set(convergence) - _SOLVER_SCF_CONVERGENCE_FIELDS,
+      ):
+        warnings.warn(
+          f"Unknown config field: solver.scf.convergence.{unknown_field}",
+          stacklevel=4,
+        )
+
+  direct_opt_config = solver_config.get("direct_opt")
+  if isinstance(direct_opt_config, Mapping):
+    for unknown_field in sorted(
+      set(direct_opt_config) - _SOLVER_DIRECT_OPT_FIELDS,
+    ):
+      warnings.warn(
+        f"Unknown config field: solver.direct_opt.{unknown_field}",
+        stacklevel=4,
+      )
+    convergence = direct_opt_config.get("convergence")
+    if isinstance(convergence, Mapping):
+      for unknown_field in sorted(
+        set(convergence) - _SOLVER_DIRECT_OPT_CONVERGENCE_FIELDS,
+      ):
+        warnings.warn(
+          f"Unknown config field: solver.direct_opt.convergence.{unknown_field}",
+          stacklevel=4,
+        )
 
 
 def _apply_legacy_field(
@@ -261,7 +445,212 @@ def _apply_legacy_field(
     config["execution"]["parallel_over_k_path"] = copy.deepcopy(value)
     return
 
+  if key == "optimizer_args":
+    if not isinstance(value, Mapping):
+      raise TypeError("Config field `optimizer_args` must be a mapping.")
+    _deep_merge(config["solver"]["direct_opt"]["optimizer"], value)
+    return
+
+  if key == "convergence_condition":
+    config["solver"]["direct_opt"]["convergence"]["energy_std_tol"] = (
+      copy.deepcopy(value)
+    )
+    config["solver"]["scf"]["convergence"]["energy_tol"] = copy.deepcopy(
+      value,
+    )
+    return
+
   _set_nested_value(config, _LEGACY_FIELD_MAP[key], value)
+
+
+def _normalize_solver_mode(value: Any) -> Any:
+  if value == "direct":
+    return "direct_opt"
+  return value
+
+
+def _normalize_solver_scf_group(
+  target: dict[str, Any],
+  group_value: Mapping[str, Any],
+) -> None:
+  scf_value = copy.deepcopy(dict(group_value))
+  scf_max_iteration = scf_value.pop("scf_max_iteration", None)
+  if scf_max_iteration is not None and "max_iter" not in scf_value:
+    scf_value["max_iter"] = scf_max_iteration
+  scf_max_iter = scf_value.pop("scf_max_iter", None)
+  if scf_max_iter is not None and "max_iter" not in scf_value:
+    scf_value["max_iter"] = scf_max_iter
+
+  eigensolver = scf_value.pop("eigensolver", None)
+  if eigensolver is not None:
+    if not isinstance(eigensolver, Mapping):
+      raise TypeError("Config group `solver.scf.eigensolver` must be a mapping.")
+    eigensolver_value = copy.deepcopy(dict(eigensolver))
+    lobpcg_max_iter = eigensolver_value.pop("lobpcg_max_iter", None)
+    if lobpcg_max_iter is not None and "max_iter" not in eigensolver_value:
+      eigensolver_value["max_iter"] = lobpcg_max_iter
+    _deep_merge(target["eigensolver"], eigensolver_value)
+
+  mixing = scf_value.pop("mixing", None)
+  if mixing is not None:
+    if not isinstance(mixing, Mapping):
+      raise TypeError("Config group `solver.scf.mixing` must be a mapping.")
+    mixing_value = copy.deepcopy(dict(mixing))
+    mixing_beta = mixing_value.pop("mixing_beta", None)
+    if mixing_beta is not None and "beta" not in mixing_value:
+      mixing_value["beta"] = mixing_beta
+    diis_max_hist = mixing_value.pop("diis_max_hist", None)
+    if diis_max_hist is not None and "history_size" not in mixing_value:
+      mixing_value["history_size"] = diis_max_hist
+    _deep_merge(target["mixing"], mixing_value)
+
+  convergence = scf_value.pop("convergence", None)
+  if convergence is not None:
+    if not isinstance(convergence, Mapping):
+      raise TypeError("Config group `solver.scf.convergence` must be a mapping.")
+    convergence_value = copy.deepcopy(dict(convergence))
+    convergence_condition = convergence_value.pop("convergence_condition", None)
+    if convergence_condition is not None and "energy_tol" not in convergence_value:
+      convergence_value["energy_tol"] = convergence_condition
+    _deep_merge(target["convergence"], convergence_value)
+
+  if "lobpcg_max_iter" in scf_value:
+    target["eigensolver"]["max_iter"] = copy.deepcopy(
+      scf_value.pop("lobpcg_max_iter"),
+    )
+  if "mixing_beta" in scf_value:
+    target["mixing"]["beta"] = copy.deepcopy(scf_value.pop("mixing_beta"))
+  if "diis_max_hist" in scf_value:
+    target["mixing"]["history_size"] = copy.deepcopy(
+      scf_value.pop("diis_max_hist"),
+    )
+  if "convergence_condition" in scf_value:
+    target["convergence"]["energy_tol"] = copy.deepcopy(
+      scf_value.pop("convergence_condition"),
+    )
+
+  _deep_merge(target, scf_value)
+
+
+def _normalize_solver_direct_opt_group(
+  target: dict[str, Any],
+  group_value: Mapping[str, Any],
+) -> None:
+  direct_opt_value = copy.deepcopy(dict(group_value))
+  epoch = direct_opt_value.pop("epoch", None)
+  if epoch is not None and "max_steps" not in direct_opt_value:
+    direct_opt_value["max_steps"] = epoch
+
+  optimizer = direct_opt_value.pop("optimizer", None)
+  if optimizer is not None:
+    if isinstance(optimizer, Mapping):
+      _deep_merge(target["optimizer"], copy.deepcopy(dict(optimizer)))
+    else:
+      target["optimizer"]["name"] = copy.deepcopy(optimizer)
+
+  optimizer_args = direct_opt_value.pop("optimizer_args", None)
+  if optimizer_args is not None:
+    if not isinstance(optimizer_args, Mapping):
+      raise TypeError("Config field `solver.direct_opt.optimizer_args` must be a mapping.")
+    _deep_merge(target["optimizer"], copy.deepcopy(dict(optimizer_args)))
+
+  convergence = direct_opt_value.pop("convergence", None)
+  if convergence is not None:
+    if not isinstance(convergence, Mapping):
+      raise TypeError(
+        "Config group `solver.direct_opt.convergence` must be a mapping."
+      )
+    convergence_value = copy.deepcopy(dict(convergence))
+    convergence_window_size = convergence_value.pop(
+      "convergence_window_size",
+      None,
+    )
+    if convergence_window_size is not None and "window_size" not in convergence_value:
+      convergence_value["window_size"] = convergence_window_size
+    convergence_condition = convergence_value.pop(
+      "convergence_condition",
+      None,
+    )
+    if convergence_condition is not None and "energy_std_tol" not in convergence_value:
+      convergence_value["energy_std_tol"] = convergence_condition
+    _deep_merge(target["convergence"], convergence_value)
+
+  if "convergence_window_size" in direct_opt_value:
+    target["convergence"]["window_size"] = copy.deepcopy(
+      direct_opt_value.pop("convergence_window_size"),
+    )
+  if "convergence_condition" in direct_opt_value:
+    target["convergence"]["energy_std_tol"] = copy.deepcopy(
+      direct_opt_value.pop("convergence_condition"),
+    )
+
+  _deep_merge(target, direct_opt_value)
+
+
+def _normalize_solver_group(
+  target: dict[str, Any],
+  group_value: Mapping[str, Any],
+) -> None:
+  solver_value = copy.deepcopy(dict(group_value))
+  solver_type = solver_value.pop("type", None)
+  if solver_type is not None and "mode" not in solver_value:
+    solver_value["mode"] = solver_type
+
+  if "mode" in solver_value:
+    target["mode"] = _normalize_solver_mode(solver_value.pop("mode"))
+
+  auto = solver_value.pop("auto", None)
+  if auto is not None:
+    if not isinstance(auto, Mapping):
+      raise TypeError("Config group `solver.auto` must be a mapping.")
+    auto_value = copy.deepcopy(dict(auto))
+    for field in ("primary", "fallback"):
+      if field in auto_value:
+        auto_value[field] = _normalize_solver_mode(auto_value[field])
+    _deep_merge(target["auto"], auto_value)
+
+  scf = solver_value.pop("scf", None)
+  if scf is not None:
+    if not isinstance(scf, Mapping):
+      raise TypeError("Config group `solver.scf` must be a mapping.")
+    _normalize_solver_scf_group(target["scf"], scf)
+
+  direct_opt = solver_value.pop("direct_opt", None)
+  if direct_opt is not None:
+    if not isinstance(direct_opt, Mapping):
+      raise TypeError("Config group `solver.direct_opt` must be a mapping.")
+    _normalize_solver_direct_opt_group(target["direct_opt"], direct_opt)
+
+  for key in (
+    "optimizer",
+    "optimizer_args",
+    "scheduler",
+    "epoch",
+    "convergence_window_size",
+    "convergence_condition",
+  ):
+    if key in solver_value:
+      _apply_legacy_field(
+        config={"solver": target},
+        key=key,
+        value=solver_value.pop(key),
+      )
+
+  for key in (
+    "scf_max_iter",
+    "scf_max_iteration",
+    "lobpcg_max_iter",
+    "mixing_beta",
+    "diis_max_hist",
+  ):
+    if key in solver_value:
+      _apply_legacy_field(
+        config={"solver": target},
+        key=key,
+        value=solver_value.pop(key),
+      )
+
+  _deep_merge(target, solver_value)
 
 
 def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
@@ -284,7 +673,10 @@ def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
         parallel_over_k = group_value.pop("parallel_over_k")
         group_value.setdefault("parallel_over_k_mesh", parallel_over_k)
         group_value.setdefault("parallel_over_k_path", parallel_over_k)
-      _deep_merge(normalized[key], group_value)
+      if key == "solver":
+        _normalize_solver_group(normalized["solver"], group_value)
+      else:
+        _deep_merge(normalized[key], group_value)
       continue
 
     if key == "ewald_args" or key in _LEGACY_FIELD_MAP:
@@ -395,21 +787,105 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
     "ksampling.symmetry_reduction",
   )
 
-  if not isinstance(config["solver"]["type"], str):
-    raise TypeError("Config field `solver.type` must be a string.")
-  if not isinstance(config["solver"]["optimizer"], str):
-    raise TypeError("Config field `solver.optimizer` must be a string.")
-  if not isinstance(config["solver"]["optimizer_args"], Mapping):
-    raise TypeError("Config field `solver.optimizer_args` must be a mapping.")
-  _validate_optional_string(config["solver"]["scheduler"], "solver.scheduler")
-  _validate_int(config["solver"]["epoch"], "solver.epoch")
+  if not isinstance(config["solver"]["mode"], str):
+    raise TypeError("Config field `solver.mode` must be a string.")
+  if config["solver"]["mode"] not in {"auto", "scf", "direct_opt"}:
+    raise ValueError(
+      "Config field `solver.mode` must be one of "
+      "'auto', 'scf', or 'direct_opt'."
+    )
+
+  if not isinstance(config["solver"]["auto"]["primary"], str):
+    raise TypeError("Config field `solver.auto.primary` must be a string.")
+  if not isinstance(config["solver"]["auto"]["fallback"], str):
+    raise TypeError("Config field `solver.auto.fallback` must be a string.")
+  if config["solver"]["auto"]["primary"] not in {"scf", "direct_opt"}:
+    raise ValueError(
+      "Config field `solver.auto.primary` must be 'scf' or 'direct_opt'."
+    )
+  if config["solver"]["auto"]["fallback"] not in {"scf", "direct_opt"}:
+    raise ValueError(
+      "Config field `solver.auto.fallback` must be 'scf' or 'direct_opt'."
+    )
+  if config["solver"]["auto"]["primary"] == config["solver"]["auto"]["fallback"]:
+    raise ValueError(
+      "Config fields `solver.auto.primary` and `solver.auto.fallback` "
+      "must be different."
+    )
+  _validate_bool(
+    config["solver"]["auto"]["fallback_on_nonconverged"],
+    "solver.auto.fallback_on_nonconverged",
+  )
+  _validate_bool(
+    config["solver"]["auto"]["fallback_on_error"],
+    "solver.auto.fallback_on_error",
+  )
+
+  _validate_int(config["solver"]["scf"]["max_iter"], "solver.scf.max_iter")
+  if not isinstance(config["solver"]["scf"]["eigensolver"]["method"], str):
+    raise TypeError(
+      "Config field `solver.scf.eigensolver.method` must be a string."
+    )
+  if config["solver"]["scf"]["eigensolver"]["method"] != "lobpcg":
+    raise ValueError(
+      "Config field `solver.scf.eigensolver.method` must be 'lobpcg'."
+    )
   _validate_int(
-    config["solver"]["convergence_window_size"],
-    "solver.convergence_window_size",
+    config["solver"]["scf"]["eigensolver"]["max_iter"],
+    "solver.scf.eigensolver.max_iter",
+  )
+  if not isinstance(config["solver"]["scf"]["mixing"]["method"], str):
+    raise TypeError(
+      "Config field `solver.scf.mixing.method` must be a string."
+    )
+  if config["solver"]["scf"]["mixing"]["method"] != "diis":
+    raise ValueError(
+      "Config field `solver.scf.mixing.method` must be 'diis'."
+    )
+  _validate_number(
+    config["solver"]["scf"]["mixing"]["beta"],
+    "solver.scf.mixing.beta",
+  )
+  _validate_int(
+    config["solver"]["scf"]["mixing"]["history_size"],
+    "solver.scf.mixing.history_size",
   )
   _validate_number(
-    config["solver"]["convergence_condition"],
-    "solver.convergence_condition",
+    config["solver"]["scf"]["convergence"]["density_tol"],
+    "solver.scf.convergence.density_tol",
+  )
+  _validate_number(
+    config["solver"]["scf"]["convergence"]["energy_tol"],
+    "solver.scf.convergence.energy_tol",
+  )
+
+  _validate_int(
+    config["solver"]["direct_opt"]["max_steps"],
+    "solver.direct_opt.max_steps",
+  )
+  if not isinstance(config["solver"]["direct_opt"]["optimizer"], Mapping):
+    raise TypeError(
+      "Config field `solver.direct_opt.optimizer` must be a mapping."
+    )
+  if not isinstance(config["solver"]["direct_opt"]["optimizer"]["name"], str):
+    raise TypeError(
+      "Config field `solver.direct_opt.optimizer.name` must be a string."
+    )
+  _validate_number(
+    config["solver"]["direct_opt"]["optimizer"]["learning_rate"],
+    "solver.direct_opt.optimizer.learning_rate",
+  )
+  _validate_optional_string(
+    config["solver"]["direct_opt"]["scheduler"],
+    "solver.direct_opt.scheduler",
+  )
+  _validate_int(
+    config["solver"]["direct_opt"]["convergence"]["window_size"],
+    "solver.direct_opt.convergence.window_size",
+  )
+  _validate_number(
+    config["solver"]["direct_opt"]["convergence"]["energy_std_tol"],
+    "solver.direct_opt.convergence.energy_std_tol",
   )
 
   if not isinstance(config["occupation"]["method"], str):
