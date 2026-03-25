@@ -246,7 +246,9 @@ class NormConservingBackend:
 # Factory
 # ---------------------------------------------------------------------------
 
-def get_backend(config: JrystalConfigDict) -> AllElectronBackend | NormConservingBackend:
+def get_backend(
+  config: JrystalConfigDict
+) -> AllElectronBackend | NormConservingBackend:
   """Select the appropriate backend from config."""
   if config.method.use_pseudopotential:
     pp_type = config.method.pseudopotential_type

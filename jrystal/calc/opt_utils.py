@@ -96,6 +96,7 @@ def create_freq_mask(
 
   return mask
 
+
 def create_crystal(config: JrystalConfigDict) -> Crystal:
   _pkg_path = jr.get_pkg_path()
   if config.system.crystal is not None:
@@ -128,7 +129,8 @@ def create_pseudopotential(
     pp = jr.pseudopotential.UltrasoftPseudopotential.create(crystal, path)
   else:
     raise ValueError(
-      f"Pseudopotential type {config.method.pseudopotential_type} is not supported."
+      f"Pseudopotential type {config.method.pseudopotential_type} is not "
+      f"supported."
     )
 
   logging.info(f"Pseudopotential path: {path}")
@@ -210,5 +212,3 @@ def save_beta_sbt(output, filename=None):
     filename,
     *output
   )
-
-

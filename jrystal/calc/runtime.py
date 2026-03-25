@@ -19,10 +19,11 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from chex import dataclass
-from jaxtyping import Array, Bool, Float
+from jaxtyping import Array, Float
 
 from .._src.band import get_k_path
 from .._src.crystal import Crystal
+from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
 from .opt_utils import (
   create_crystal,
@@ -109,7 +110,7 @@ def build_runtime_context(
     raise ValueError(f"Unsupported runtime mode: {mode}")
 
   freq_mask = create_freq_mask(config, crystal=crystal)
-  from .._src.grid import proper_grid_size
+
   grid_sizes = tuple(int(x) for x in proper_grid_size(config.basis.grid_sizes))
 
   basis = PlaneWaveBasis(

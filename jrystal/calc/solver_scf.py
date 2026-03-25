@@ -96,6 +96,13 @@ def run_scf(
   """
   key = jax.random.PRNGKey(config.execution.seed)
   crystal = ctx.crystal
+
+  if crystal.spin != 0 or not config.system.spin_restricted:
+    raise NotImplementedError(
+      "SCF currently supports only spin-restricted calculations "
+      "with system.spin == 0."
+    )
+
   g_vec = ctx.g_vec
   freq_mask = ctx.basis.freq_mask
   ew = ctx.ewald_energy

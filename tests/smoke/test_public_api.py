@@ -1,9 +1,13 @@
 """Smoke tests for the public jr.calc.energy() / jr.calc.band() API."""
+from pathlib import Path
+import tempfile
+
 import jax
+import numpy as np
 from absl.testing import absltest
 
 from jrystal.calc import energy, band
-from jrystal.calc.types import GroundStateResult
+from jrystal.calc.types import BandStructureResult, GroundStateResult
 from jrystal.config import JrystalConfigDict, _normalize_config
 
 jax.config.update("jax_enable_x64", True)
@@ -42,6 +46,54 @@ class EnergyDispatchTest(absltest.TestCase):
     config.solver.type = "bogus"
     with self.assertRaises(ValueError):
       energy(config)
+
+  def test_energy_scf_rejects_unrestricted_spin(self):
+    config = _tiny_ae_config()
+    config.solver.type = "scf"
+    config.system.spin_restricted = False
+    with self.assertRaises(NotImplementedError):
+      energy(config)
+
+  def test_band_returns_band_structure_result(self):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+      temp_path = Path(tmp_dir)
+      k_path_file = temp_path / "k_path.npy"
+      np.save(
+        k_path_file,
+        np.array([
+          [0.0, 0.0, 0.0],
+          [0.5, 0.0, 0.0],
+          [0.5, 0.5, 0.0],
+        ]),
+      )
+
+      raw = {
+        "system": {"crystal": "diamond"},
+        "basis": {"grid_sizes": 16, "cutoff_energy": 20},
+        "ksampling": {"k_grid_sizes": [1, 1, 1]},
+        "solver": {"epoch": 2, "type": "direct_opt"},
+        "occupation": {"empty_bands": 2},
+        "band": {
+          "k_path_file": str(k_path_file),
+          "num_kpoints": 99,
+          "epoch": 1,
+          "fine_tuning_epoch": 1,
+        },
+        "execution": {
+          "verbose": False,
+          "parallel_over_k_path": False,
+        },
+        "io": {"save_dir": tmp_dir},
+      }
+      config = JrystalConfigDict(_normalize_config(raw))
+
+      ground_state_result = energy(config)
+      result = band(config, ground_state_result=ground_state_result)
+
+      self.assertIsInstance(result, BandStructureResult)
+      self.assertEqual(result.kpath.kpts.shape[0], 3)
+      self.assertEqual(result.eigenvalues.shape[1], 3)
+      self.assertTrue((temp_path / "CC_band_structure.npy").exists())
 
 
 if __name__ == "__main__":

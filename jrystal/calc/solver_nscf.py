@@ -28,11 +28,13 @@ from __future__ import annotations
 
 import time
 from functools import partial
+from pathlib import Path
 from math import ceil
 from typing import TYPE_CHECKING
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 import optax
 from absl import logging
 
@@ -63,7 +65,11 @@ def _run_nscf_ae(config, ctx, density, num_bands):
   xc = config.method.xc
 
   num_devices = ctx.execution.num_devices
-  util_devices = num_devices if ctx.execution.parallel_over_k else 1
+  num_kpts = int(ksampling.kpts.shape[0])
+  util_devices = (
+    max(1, min(num_devices, num_kpts))
+    if ctx.execution.parallel_over_k else 1
+  )
 
   optimizer = create_optimizer(config)
   params_pw = _pw.param_init(
@@ -122,10 +128,26 @@ def _run_nscf_ae(config, ctx, density, num_bands):
 
     def eig_fn(param, kpt):
       coeff = _pw.coeff(param, freq_mask)
-      hmat = _hamiltonian.hamiltonian_matrix(
-        coeff, crystal.positions, crystal.charges,
-        density, g_vec, kpt, crystal.vol, xc=xc, kohn_sham=True,
-      )
+
+      def _trace(c):
+        return _hamiltonian.hamiltonian_matrix_trace(
+          c,
+          crystal.positions,
+          crystal.charges,
+          density,
+          crystal.vol,
+          g_vec,
+          kpt,
+          xc=xc,
+          kohn_sham=True,
+          keep_spin_axis=False,
+        )
+
+      hpsi = jax.grad(_trace)(coeff.conj()) / 2.0
+      num_grids = np.prod(coeff.shape[-3:])
+      hmat = jnp.einsum(
+        "skixyz,skjxyz->skij", jnp.conj(coeff), hpsi,
+      ) * (crystal.vol / (num_grids**2))
       return jax.vmap(jnp.linalg.eigvalsh)(hmat)
 
     eig_first = eig_fn(params_first, kpts[0:1])
@@ -139,7 +161,9 @@ def _run_nscf_ae(config, ctx, density, num_bands):
     )
     return [eig_first] + list(eig_rest)
 
-  k_path = jnp.reshape(ksampling.kpts, (util_devices, -1, 3))
+  k_path, num_kpts, util_devices = _chunk_kpoint_axis(
+    ksampling.kpts, util_devices,
+  )
   params_pw = jax.tree.map(
     lambda x: jnp.stack([x] * util_devices, axis=0), params_pw,
   )
@@ -152,7 +176,7 @@ def _run_nscf_ae(config, ctx, density, num_bands):
   dt = time.time() - t0
   logging.info(f"Band calculation done. ({dt:.2f}s)")
 
-  return _reshape_eigenvalues(eigen_values, config, num_bands)
+  return _reshape_eigenvalues(eigen_values, num_kpts, num_bands)
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +196,11 @@ def _run_nscf_nc(config, ctx, density, num_bands):
   xc = config.method.xc
 
   num_devices = ctx.execution.num_devices
-  util_devices = num_devices if ctx.execution.parallel_over_k else 1
+  num_kpts = int(ksampling.kpts.shape[0])
+  util_devices = (
+    max(1, min(num_devices, num_kpts))
+    if ctx.execution.parallel_over_k else 1
+  )
 
   optimizer = create_optimizer(config)
   params_pw = _pw.param_init(key, num_bands, 1, freq_mask)
@@ -266,10 +294,10 @@ def _run_nscf_nc(config, ctx, density, num_bands):
     )
     return [eig_first] + list(eig_rest)
 
-  k_path = jnp.reshape(ksampling.kpts, (util_devices, -1, 3))
-  beta_gk_reshaped = [
-    jnp.reshape(b, (util_devices, -1, *b.shape[1:])) for b in beta_gk
-  ]
+  k_path, num_kpts, util_devices = _chunk_kpoint_axis(
+    ksampling.kpts, util_devices,
+  )
+  beta_gk_reshaped, _, _ = _chunk_beta_sbt(beta_gk, util_devices)
   params_pw = jax.tree.map(
     lambda x: jnp.stack([x] * util_devices, axis=0), params_pw,
   )
@@ -284,20 +312,62 @@ def _run_nscf_nc(config, ctx, density, num_bands):
   dt = time.time() - t0
   logging.info(f"Band calculation done. ({dt:.2f}s)")
 
-  return _reshape_eigenvalues(eigen_values, config, num_bands)
+  return _reshape_eigenvalues(eigen_values, num_kpts, num_bands)
 
 
 # ---------------------------------------------------------------------------
 # Shared helper
 # ---------------------------------------------------------------------------
 
-def _reshape_eigenvalues(eigen_values, config, num_bands):
-  """Stack pmap outputs into (spin, kpt, band) array."""
+def _chunk_kpoint_axis(array, num_devices):
+  """Pad and reshape a leading k-point axis for device-parallel NSCF."""
+  num_kpts = int(array.shape[0])
+  util_devices = max(1, min(num_devices, num_kpts))
+  chunk_size = ceil(num_kpts / util_devices)
+  padded_kpts = chunk_size * util_devices
+  pad_count = padded_kpts - num_kpts
+
+  if pad_count > 0:
+    pad_block = jnp.repeat(array[-1:], pad_count, axis=0)
+    array = jnp.concatenate([array, pad_block], axis=0)
+
+  return (
+    jnp.reshape(array, (util_devices, chunk_size, *array.shape[1:])),
+    num_kpts,
+    util_devices,
+  )
+
+
+def _chunk_beta_sbt(beta_gk, num_devices):
+  """Pad and reshape SBT caches consistently with the k-path chunks."""
+  chunked_beta = []
+  num_kpts = None
+  util_devices = None
+  for beta in beta_gk:
+    chunked, valid_kpts, chunk_devices = _chunk_kpoint_axis(beta, num_devices)
+    chunked_beta.append(chunked)
+    if num_kpts is None:
+      num_kpts = valid_kpts
+      util_devices = chunk_devices
+  return chunked_beta, num_kpts, util_devices
+
+
+def _reshape_eigenvalues(eigen_values, num_kpts, num_bands):
+  """Stack pmap outputs into a trimmed ``(spin, kpt, band)`` array."""
   eigen_values = jnp.stack(eigen_values)
+  if eigen_values.ndim == 5:
+    eigen_values = jnp.squeeze(eigen_values, axis=3)
+  elif eigen_values.ndim != 4:
+    raise ValueError(
+      "Unexpected eigenvalue tensor rank. "
+      f"Expected 4 or 5, got {eigen_values.ndim}."
+    )
+
   num_spin = eigen_values.shape[2]
   eigen_values = jnp.reshape(
-    eigen_values, (config.band.num_kpoints, num_spin, num_bands), order="F",
+    eigen_values, (-1, num_spin, num_bands), order="F",
   )
+  eigen_values = eigen_values[:num_kpts]
   return jnp.transpose(eigen_values, (1, 0, 2))
 
 
@@ -340,8 +410,11 @@ def run_nscf(
     eigenvalues = _run_nscf_ae(config, ctx, density, num_bands)
 
   save_file = "".join(ctx.crystal.symbols) + "_band_structure.npy"
-  jnp.save(save_file, eigenvalues)
-  logging.info(f"Results saved in {save_file}")
+  save_dir = Path(config.io.save_dir) if config.io.save_dir else Path.cwd()
+  save_dir.mkdir(parents=True, exist_ok=True)
+  output_path = save_dir / save_file
+  np.save(output_path, np.asarray(eigenvalues))
+  logging.info(f"Results saved in {output_path}")
 
   return BandStructureResult(
     config=config,

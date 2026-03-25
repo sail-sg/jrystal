@@ -13,7 +13,7 @@
 # limitations under the License.
 """Hamiltonian matrix construction in a plane-wave basis."""
 
-from typing import Union, Optional
+from typing import Optional, Union
 
 import jax
 import jax.numpy as jnp
@@ -43,7 +43,8 @@ def _hamiltonian_matrix(
       coefficients.
     positions (Float[Array, "atom 3"]): Atomic positions.
     charges (Int[Array, "atom"]): Atomic charges.
-    effictive_density_grid (Union[Float[Array, "x y z"], Float[Array, "spin x y z"]]):
+    effictive_density_grid (Union[Float[Array, "x y z"],
+      Float[Array, "spin x y z"]]):
       Density used to build the effective potential.
     g_vector_grid (Float[Array, "x y z 3"]): Reciprocal-space G-vector grid.
     kpts (Float[Array, "kpt 3"]): :math:`k` points.
@@ -188,9 +189,9 @@ def hamiltonian_matrix(
         positions,
         charges,
         effictive_density_grid,
+        vol,
         g_vector_grid,
         k,
-        vol,
         xc,
         kohn_sham=kohn_sham,
         keep_spin_axis=False,
@@ -259,9 +260,9 @@ def _hamiltonian_matrix_basis(
         positions,
         charges,
         effictive_density_grid,
+        vol,
         g_vector_grid,
         k,
-        vol,
         xc,
         kohn_sham,
       )

@@ -204,7 +204,9 @@ _LEGACY_FIELD_MAP = {
 }
 
 
-def _set_nested_value(config: dict[str, Any], path: tuple[str, str], value: Any):
+def _set_nested_value(
+  config: dict[str, Any], path: tuple[str, str], value: Any
+):
   config[path[0]][path[1]] = copy.deepcopy(value)
 
 
@@ -348,7 +350,7 @@ def _validate_grid_sizes(value: Any, path: str) -> None:
   raise TypeError(f"Config field `{path}` must be an int or list/tuple of int.")
 
 
-def validate_config(config: Mapping[str, Any]) -> None:
+def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
   """Validate a nested schema v1 config."""
   _validate_int(config["schema_version"], "schema_version")
   if config["schema_version"] != 1:

@@ -62,11 +62,7 @@ Ground-state:
 import jrystal as jr
 
 config = jr.config.get_config("config.yaml")
-
-if config.method.use_pseudopotential:
-  result = jr.calc.energy_normcons(config)
-else:
-  result = jr.calc.energy_all_electrons(config)
+result = jr.calc.energy(config)
 
 print(f"Total energy: {result.total_energy:.6f} Ha")
 print(f"Converged: {result.converged}")
@@ -79,16 +75,12 @@ Band structure:
 import jrystal as jr
 
 config = jr.config.get_config("config.yaml")
-
-if config.method.use_pseudopotential:
-  ground_state = jr.calc.energy_normcons(config)
-  band_result = jr.calc.band_normcons(config, ground_state_result=ground_state)
-else:
-  ground_state = jr.calc.energy_all_electrons(config)
-  band_result = jr.calc.band_all_electrons(config, ground_state_result=ground_state)
+ground_state = jr.calc.energy(config)
+band_result = jr.calc.band(config, ground_state_result=ground_state)
 
 print(band_result.eigenvalues.shape)
 print(f"Ground-state energy: {band_result.ground_state_energy:.6f} Ha")
 ```
 
-The energy workflows return `GroundStateResult`. The band workflows return `BandStructureResult`.
+`jr.calc.energy()` automatically selects the configured backend and solver.
+`jr.calc.band()` reuses a provided ground-state result when available.
