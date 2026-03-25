@@ -10,21 +10,13 @@ class ImportTest(absltest.TestCase):
   def test_import_calc(self):
     import jrystal.calc  # noqa: F401
 
-  def test_calc_has_energy_normcons(self):
+  def test_calc_has_energy(self):
     import jrystal.calc as calc
-    self.assertTrue(hasattr(calc, 'energy_normcons'))
+    self.assertTrue(callable(calc.energy))
 
-  def test_calc_has_energy_all_electrons(self):
+  def test_calc_has_band(self):
     import jrystal.calc as calc
-    self.assertTrue(hasattr(calc, 'energy_all_electrons'))
-
-  def test_calc_has_band_normcons(self):
-    import jrystal.calc as calc
-    self.assertTrue(hasattr(calc, 'band_normcons'))
-
-  def test_calc_has_band_all_electrons(self):
-    import jrystal.calc as calc
-    self.assertTrue(hasattr(calc, 'band_all_electrons'))
+    self.assertTrue(callable(calc.band))
 
   def test_import_config(self):
     from jrystal.config import get_config
@@ -40,6 +32,18 @@ class ImportTest(absltest.TestCase):
 
   def test_import_pseudopotential(self):
     import jrystal.pseudopotential  # noqa: F401
+
+  def test_import_backend(self):
+    from jrystal.calc.backend import (  # noqa: F401
+      AllElectronBackend,
+      NormConservingBackend,
+      get_backend,
+    )
+
+  def test_import_solvers(self):
+    from jrystal.calc.solver_direct_opt import run_direct_opt  # noqa: F401
+    from jrystal.calc.solver_scf import run_scf  # noqa: F401
+    from jrystal.calc.solver_nscf import run_nscf  # noqa: F401
 
 
 if __name__ == '__main__':

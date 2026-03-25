@@ -28,30 +28,14 @@ def main():
     help="Set the configuration file path."
   )
 
-  parser.add_argument(
-    "-l",
-    "--load",
-    help=(
-      "Load pickled output from energy calculation for band structure "
-      "calculation."
-    )
-  )
-
   args = parser.parse_args()
 
   config = jr.config.get_config(args.config)
 
   if args.mode == "energy":
-    if config.method.use_pseudopotential:
-      jr.calc.energy_normcons(config)
-    else:
-      jr.calc.energy_all_electrons(config)
-
+    jr.calc.energy(config)
   elif args.mode == "band":
-    if config.method.use_pseudopotential:
-      jr.calc.band_normcons(config)
-    else:
-      jr.calc.band_all_electrons(config)
+    jr.calc.band(config)
 
 
 if __name__ == "__main__":
