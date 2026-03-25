@@ -162,4 +162,4 @@ cython_debug/
 
 
 # backup files
-*.backupchatdocs/
+*.backup
