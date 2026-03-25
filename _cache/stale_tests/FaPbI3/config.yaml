@@ -1,0 +1,147 @@
+################################################
+#             Crystal Setting                  #
+################################################
+
+# Code will load the "$CRYSTAL.xyz" file in the geometry directory if
+# crystal name is provided, otherwise the code will read the from the path
+# specified by "crystal_file_path_path".
+crystal: null
+crystal_file_path_path: "/home/aiops/litb/projects/jrystal/tests/FaPbI3/FaPbI3_primitive.cif"
+spin: 0  # number of unpaired electrons
+
+# The directory to save the results. If None, the code will not save the results under the current directory.
+save_dir: null
+################################################
+#         Exchange-Correlation Setting         #
+################################################
+# xc functional. currently only support lda_x and pbe_x functionals.
+# xc: "lda_x"
+xc: "gga_x_pbe"
+
+################################################
+#           Pseudopotential Setting            #
+################################################
+
+use_pseudopotential: true
+pseudopotential_file_dir: null
+# The pseudopotential file directory. If None, the code will use the default
+# pseudopotential file directory.
+
+################################################
+#       Planewave Hyper-parameters             #
+################################################
+
+freq_mask_method: "spherical"
+# freq_mask_method can be either "cubic" or "spherical".
+# For "cubic", the cutoff cannot be assigned, but will be estimated.
+# Only for "spherical" method, the cutoff_energy argument is valid.
+
+# cutoff energy in Hartree
+cutoff_energy: 30
+# grid sizes for the FFT grid
+grid_sizes: 48
+# k grid sizes for the Brillouin zone sampling using Monkhorst-Pack scheme
+k_grid_sizes: [4, 4, 4]
+# Occupation method
+# occupation: "fermi-dirac"
+# occupation: "projected-sigmoid"
+occupation: "uniform"
+# occupation support {"fermi-dirac", "gamma", "uniform", "projected-sigmoid"}
+
+# smearing factor for the Fermi-Dirac distribution
+smearing: 0
+# the total number of unoccupapied bands. The Total number of
+# potentially-occupied bands is ceil(num_electron / 2) + empty_bands
+empty_bands: 10
+spin_restricted: true
+# whether the calculation is spin_restricted or not, ie., spin-up and spin-down
+# electrons share the same spatial orbitals.
+
+# Hyperparameters for the Ewald sum. nm,m
+ewald_args:
+  ewald_eta: 0.1
+  ewald_cutoff: 2.0e+4
+
+################################################
+#           Optimizizer Setting                #
+################################################
+epoch: 10000
+optimizer: "adam"
+optimizer_args:
+  learning_rate: 0.001
+  b1: 0.9
+  b2: 0.99
+  # nesterov: false
+
+# arguments for the optimizer. Please refer to optax documentation.
+# https://optax.readthedocs.io/en/latest/api/optimizers.html
+# WARNING: the learning_rate is sensitve to the number of G vectors and
+# cutoff energy. It is suggested to tune the learning rate for different
+# systems.
+
+# "scheduler": "piecewise_constant_schedule",
+scheduler: null
+# optax scheduler. No scheduler is used if set to None.
+
+convergence_window_size: 20
+convergence_condition: 1.e-4
+# Convergence criterion for optimization.
+# The code monitors the standard deviation of the objective values (e.g.,energy)
+# over the last 50 steps (if available). If the computed standard deviation
+# meets the convergence condition, the calculation will terminate.
+
+################################################
+# Band Structure Calculation Hyper-parameters. #
+################################################
+
+# NOTE: The following configs are only valid for band structure calculation.
+# Need to either indicate the k_path or the k_path file.
+band_structure_empty_bands: 20
+# k_path_special_points: null
+# If `k_path_special_points` is None, the code will use the default
+# special points for the given unit cell, as defined in ASE.
+# For more details, refer to:
+# https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html
+k_path_special_points: "GXSRTZ"
+num_kpoints: 80
+
+# Alternatively, the user can provide a `k_path` file containing k-path
+# vectors. The file must be in `.npy` format and contain a 2D array,
+# where each row represents the relative coordinates of a k-point in
+# reciprocal space.
+k_path_file: null
+band_structure_epoch: 5000
+
+# Flag indicating whether fine-tuning is enabled.
+# If True, the optimization will start with the first k-point,
+# using its parameters as the initialization for subsequent k-points.
+# This approach is recommended for large crystal systems.
+k_path_fine_tuning: True
+k_path_fine_tuning_epoch: 300
+
+################################################
+#              System Setting                  #
+################################################
+
+# Random seed
+seed: 123
+
+# Jax Environment setting
+xla_preallocate: True
+# whether to use 64-bit precision for JAX operations
+jax_enable_x64: True
+
+# Enable the jax_debug_nans flag to automatically detect when NaNs are produced in jax.jit-compiled code
+jax_debug_nans: False
+
+# whether to print verbose output
+verbose: True
+
+# machine epsilon
+eps: 1.e-08
+
+# SPMD setting
+# whether to use SPMD parallelization for k-point parallelization over multiple devices(GPUs)
+k_point_parallel: True
+num_devices: null
+# number of devices to use for parallelization. If None, the code will use all available devices.

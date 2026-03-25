@@ -20,8 +20,6 @@ from .._src.utils import (
   wave_to_density,
   wave_to_density_reciprocal,
 )
-from .graph_visualizer import visualize_com_graph
-
 __all__ = [
   'safe_real',
   'vmapstack',
@@ -29,5 +27,4 @@ __all__ = [
   'wave_to_density_reciprocal',
   'expand_coefficient',
   'squeeze_coefficient',
-  'visualize_com_graph',
 ]
