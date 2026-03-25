@@ -42,19 +42,12 @@ if TYPE_CHECKING:
   from .backend import AllElectronBackend, NormConservingBackend
   from .runtime import RuntimeContext
 
-# Re-export DIIS from its current home so SCF solver can use it.
-from ..scf.diis import diis_init, diis_update  # noqa: E402
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _kerker_preconditioner(g_vec, freq_mask):
-  """Kerker preconditioner: damps long-wavelength density oscillations."""
-  eff_g = g_vec[freq_mask]
-  g2 = jnp.sum(eff_g ** 2, axis=-1)
-  return g2 / (1.0 + g2)
+from .density_mixing import (
+  diis_init,
+  diis_update,
+  kerker_preconditioner,
+  simple_mixing,
+)
 
 
 def _fixed_occupation(evals, num_electrons, occ_max=2.0):
@@ -146,7 +139,7 @@ def run_scf(
   density = _density_from_compact(coeff_compact, occ)
 
   # --- Preconditioner ---
-  precond = _kerker_preconditioner(g_vec, freq_mask)
+  precond = kerker_preconditioner(g_vec, freq_mask)
 
   # --- DIIS state ---
   diis_state = diis_init(
@@ -220,7 +213,7 @@ def run_scf(
     diis_state, density_mixed = diis_update(
       diis_state, density_new, dens_error,
     )
-    density = density_mixed * mixing_beta + density * (1.0 - mixing_beta)
+    density = simple_mixing(density_mixed, density, beta=mixing_beta)
     band_energy = band_energy_new
     coeff_compact = coeff_new
 

@@ -12,16 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Utility functions for optimization. """
-import argparse
 import os
-from typing import Callable, Optional
+from typing import Optional
 
 import jax
 import numpy as np
 import optax
-import yaml
 from absl import logging
-from ml_collections import ConfigDict
 from optax._src import alias
 
 import jrystal as jr
@@ -65,44 +62,6 @@ def set_env_params(config: JrystalConfigDict):
     logging.warning('Versbose mode is off.')
 
   jax.config.update("jax_enable_x64", config.execution.jax_enable_x64)
-
-
-def _iter_config_leaf_items(config: ConfigDict, prefix: str = ""):
-  for key, value in config.items():
-    path = f"{prefix}.{key}" if prefix else key
-    if isinstance(value, ConfigDict):
-      yield from _iter_config_leaf_items(value, prefix=path)
-    else:
-      yield path, value
-
-
-def _parse_arg_value(value):
-  if isinstance(value, bool):
-    return lambda raw: yaml.safe_load(raw)
-  if value is None:
-    return yaml.safe_load
-  if isinstance(value, (list, tuple, dict)):
-    return yaml.safe_load
-  return type(value)
-
-
-def _set_config_value(config: ConfigDict, path: list[str], value):
-  target = config
-  for key in path[:-1]:
-    target = target[key]
-  target[path[-1]] = value
-
-
-def parse_args(config: JrystalConfigDict) -> JrystalConfigDict:
-  """Parse command-line arguments."""
-  parser = argparse.ArgumentParser(description='Jrystal energy optimization.')
-  for key, value in _iter_config_leaf_items(config):
-    parser.add_argument(f"--{key}", type=_parse_arg_value(value), default=value)
-  args = parser.parse_args()
-
-  for key, value in vars(args).items():
-    _set_config_value(config, key.split("."), value)
-  return config
 
 
 def create_freq_mask(
@@ -219,22 +178,6 @@ def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
   return optimizer
 
 
-def create_occupation(config: JrystalConfigDict) -> Callable:
-  occupation_method = config.occupation.method
-  if occupation_method == "idempotent":
-    return jr.occupation.idempotent
-  elif occupation_method == "simplex-projector":
-    return jr.occupation.simplex_projector
-  elif occupation_method == "uniform":
-    return jr.occupation.uniform
-  elif occupation_method == "gamma":
-    return jr.occupation.gamma
-  else:
-    raise NotImplementedError(
-      f"Occupation method {occupation_method} is not implemented."
-    )
-
-
 def get_ewald_coulomb_repulsion(
   config: JrystalConfigDict,
   crystal: Optional[Crystal] = None,
@@ -269,11 +212,3 @@ def save_beta_sbt(output, filename=None):
   )
 
 
-def load_beta_sbt(filename=None):
-  if filename is None:
-    cache_dir = os.path.join(get_pkg_path(), "_cache")
-    filename = f"{cache_dir}/beta_sbt.npz"
-  if not os.path.exists(cache_dir):
-    os.makedirs(cache_dir)
-  output = np.load(filename)
-  return [output[f"arr_{i}"] for i in range(len(output))]
