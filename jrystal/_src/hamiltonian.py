@@ -174,40 +174,17 @@ def hamiltonian_matrix(
     Complex[Array, "spin kpt band band"]: Hamiltonian matrices for each spin
     and :math:`k` point.
   """
-  assert band_coefficient.ndim == 6, "band_coefficient must have 6 dimensions"
-  num_bands = band_coefficient.shape[-4]
-
-  def hamil_k(k, coeff_k):
-    k = jnp.reshape(k, [-1, 3])
-
-    def efun(u):
-      _coeff = jnp.einsum("i,ixyz->xyz", u, coeff_k)
-      _coeff = jnp.expand_dims(_coeff, axis=range(3))
-
-      band_energies = hamiltonian_matrix_trace(
-        _coeff,
-        positions,
-        charges,
-        effictive_density_grid,
-        vol,
-        g_vector_grid,
-        k,
-        xc,
-        kohn_sham=kohn_sham,
-        keep_spin_axis=False,
-      )
-      return 0.5 * jnp.sum(band_energies).astype(band_coefficient.dtype)
-
-    x = jnp.ones(num_bands, dtype=band_coefficient.dtype)
-    return complex_hessian(efun, x)
-
-  h = jax.vmap(
-    lambda coeff: jax.vmap(hamil_k, in_axes=(0, 0), out_axes=0)(kpts, coeff)
-  )(
-    band_coefficient
+  return _hamiltonian_matrix(
+    band_coefficient,
+    positions,
+    charges,
+    effictive_density_grid,
+    g_vector_grid,
+    kpts,
+    vol,
+    xc=xc,
+    kohn_sham=kohn_sham,
   )
-
-  return h
 
 
 def _hamiltonian_matrix_basis(

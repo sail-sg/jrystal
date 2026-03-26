@@ -20,7 +20,7 @@ from jaxtyping import Array, Float, Int
 # from interpax import CubicSpline
 from scipy.interpolate import CubicSpline
 
-from ..sbt import batch_sbt, sbt_numerical
+from ..sbt import sbt_numerical
 
 
 def _beta_sbt_single_atom(
@@ -36,7 +36,7 @@ def _beta_sbt_single_atom(
 
   .. math::
 
-    \beta_l(G) = \int_0^\infty  \beta(r) j_l(Gr) r^2 dr
+    \beta_l(G) = \\int_0^\\infty  \beta(r) j_l(Gr) r^2 dr
 
   Return the beta function value of angular momentum values :math:`l` at the
   reciprocal vectors :math:`G` per atom
@@ -93,7 +93,7 @@ def beta_sbt_grid(
 
   .. math::
 
-    \beta_l(G) = \int_0^\infty  \beta(r) j_l(Gr) r^2 dr
+    \beta_l(G) = \\int_0^\\infty  \beta(r) j_l(Gr) r^2 dr
 
   Return the beta function value of angular momentum values :math:`l` at the
   reciprocal vectors :math:`G` per atom

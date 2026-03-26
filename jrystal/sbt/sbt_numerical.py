@@ -1,13 +1,14 @@
-"""Numerical Sherical Bessel Transform.
+r"""Numerical Sherical Bessel Transform.
 
   S(f) = int_0^\infty f(r) j_l(r) r^2 dr
 
 """
-from typing import Union, Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple, Union
+
 import numpy as np
-from scipy.special import spherical_jn as jn
-from jaxtyping import Array, Float
 from einops import einsum
+from jaxtyping import Array, Float
+from scipy.special import spherical_jn as jn
 
 
 def sbt(
@@ -17,7 +18,7 @@ def sbt(
   kmax: float = None,
   delta_r: Optional[Float[Array, "r"]] = None,
 ) -> Tuple[Float[Array, "g"], Float[Array, "f g"]]:
-  """Numerical Sherical Bessel Transform.
+  r"""Numerical Sherical Bessel Transform.
 
   This function is used to compute the numerical sherical bessel transform of
   the function f(r) on the grid r_grid.

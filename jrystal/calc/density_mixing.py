@@ -26,7 +26,6 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Bool, Float
 
-
 # ---------------------------------------------------------------------------
 # DIIS  (copied from scf/diis.py to consolidate into calc/)
 # ---------------------------------------------------------------------------

@@ -52,4 +52,5 @@ __all__ = [
   "unitary_module",
   "braket",
   "fft",
+  "xc",
 ]

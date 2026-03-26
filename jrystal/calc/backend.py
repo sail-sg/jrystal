@@ -24,12 +24,12 @@ from typing import TYPE_CHECKING
 
 import jax
 import numpy as np
-from absl import logging
 
 from .._src import energy as _energy
 from .._src import hamiltonian as _hamiltonian
 from .._src import pw as _pw
 from ..pseudopotential import normcons as _normcons
+from ..terminal_ui import stage_line
 from .pre_calc import pre_calc_beta_sbt
 
 if TYPE_CHECKING:
@@ -139,22 +139,20 @@ class NormConservingBackend:
 
     pseudopot = create_pseudopotential(self._config, crystal=crystal)
 
-    logging.info("Initializing pseudopotential (local)...")
+    stage_line("Init", "Initializing pseudopotential (local)...")
     potential_loc = _normcons.potential_local_reciprocal(
       crystal.positions, g_vec,
       pseudopot.r_grid, pseudopot.local_potential_grid,
       pseudopot.local_potential_charge, crystal.vol,
     )
 
-    logging.info(
-      "Initializing pseudopotential (Spherical Bessel Transform)..."
-    )
+    stage_line("Init", "Initializing pseudopotential (Spherical Bessel Transform)...")
     beta_gk = pre_calc_beta_sbt(
       pseudopot, np.array(g_vec), np.array(ksampling.kpts),
     )
 
     if ksampling.mode == "mesh":
-      logging.info("Initializing pseudopotential (nonlocal)...")
+      stage_line("Init", "Initializing pseudopotential (nonlocal)...")
       potential_nl = _normcons.potential_nonlocal_psi_reciprocal(
         crystal.positions, g_vec, ksampling.kpts,
         pseudopot.r_grid, pseudopot.nonlocal_beta_grid,

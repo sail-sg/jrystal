@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, Optional, Protocol
 
 from chex import dataclass as chex_dataclass
-from jaxtyping import Array, Bool, Float
+from jaxtyping import Array, Float
 
 if TYPE_CHECKING:
   from .runtime import RuntimeContext

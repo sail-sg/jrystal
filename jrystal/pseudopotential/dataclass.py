@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Union
 from dataclasses import dataclass
+from typing import List, Union
+
 import numpy as np
-from jaxtyping import Float, Array, Int
+from jaxtyping import Array, Float, Int
 
 from .._src.crystal import Crystal
-from .load import parse_upf, find_upf
+from .load import find_upf, parse_upf
 
 
 @dataclass

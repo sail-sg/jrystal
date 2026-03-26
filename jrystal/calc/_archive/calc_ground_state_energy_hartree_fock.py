@@ -8,7 +8,7 @@ import optax
 from absl import logging
 from tqdm import tqdm
 
-from .._src import energy, entropy, occupation, pw, hartree_fock
+from .._src import energy, entropy, hartree_fock, occupation, pw
 from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
@@ -18,8 +18,8 @@ from .opt_utils import (
   create_freq_mask,
   create_grids,
   create_optimizer,
+  get_ewald_coulomb_repulsion,
   set_env_params,
-  get_ewald_coulomb_repulsion
 )
 
 

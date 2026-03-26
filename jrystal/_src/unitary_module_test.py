@@ -12,39 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import unittest
+
 import jax
 import jax.numpy as jnp
 import numpy as np
-from absl.testing import absltest, parameterized
-from .unitary_module import UnitaryMatrix
 
-from jrystal._src.grid import cubic_mask, k_vectors
+from .unitary_module import unitary_matrix, unitary_matrix_param_init
 
 jax.config.update("jax_enable_x64", True)
 
 
-class _TestModules(parameterized.TestCase):
+class _TestModules(unittest.TestCase):
 
   def setUp(self):
     self.key = jax.random.PRNGKey(123)
-
-    self.ni = 4
-    self.grid_sizes = [7, 8, 9]
-    self.k_grid_sizes = [2, 2, 2]
-    self.mask = cubic_mask(self.grid_sizes)
-    self.ng = int(jnp.sum(self.mask).item())
-    self.a = jnp.eye(3)
-    self.k_grid = k_vectors(np.eye(3), self.k_grid_sizes)
-    self.nk = self.k_grid.shape[0]
+    self.ng = 32
 
   def test_qr_shape(self):
     shape = [2, 1, self.ng, 4]
-    qr = UnitaryMatrix(shape, True)
-    params = qr.init(self.key)
+    params = unitary_matrix_param_init(self.key, shape, complex=True)
     np.testing.assert_array_equal(params['w_re'].shape, shape)
-    x = qr(params)
+    x = unitary_matrix(params, complex=True)
     np.testing.assert_array_equal(x.shape, shape)
-
-
-if __name__ == '__main__':
-  absltest.main()
+    gram = jnp.einsum("...gi,...gj->...ij", jnp.conj(x), x)
+    np.testing.assert_allclose(
+      gram,
+      jnp.broadcast_to(jnp.eye(shape[-1]), gram.shape),
+      atol=1e-10,
+      rtol=1e-10,
+    )

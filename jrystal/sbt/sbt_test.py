@@ -5,21 +5,22 @@ This module tests the consistency between different SBT implementations:
 - sbt from sbt_numerical.py (pure numerical implementation)
 """
 
+import unittest
+
 import numpy as np
-from absl.testing import absltest
+from scipy.interpolate import CubicSpline
 
 from jrystal import Crystal, get_pkg_path
 from jrystal.pseudopotential.dataclass import (
-  NormConservingPseudopotential as NCPP
+  NormConservingPseudopotential as NCPP,
 )
 
 # Import the functions to test
 from .sbt import batch_sbt
 from .sbt_numerical import sbt as numerical_sbt
-from scipy.interpolate import CubicSpline
 
 
-class TestSBTConsistency(absltest.TestCase):
+class TestSBTConsistency(unittest.TestCase):
   """Test consistency between different SBT implementations."""
 
   def setUp(self):
@@ -102,7 +103,3 @@ class TestSBTConsistency(absltest.TestCase):
       atol=5e-5,
       err_msg="SBT results should match between implementations"
     )
-
-
-if __name__ == "__main__":
-  absltest.main()

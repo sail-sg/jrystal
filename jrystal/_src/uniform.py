@@ -33,12 +33,9 @@ def uniform(
 
 
 if __name__ == "__main__":
-  from functools import partial
 
   import jax
-  import jax.numpy as jnp
   import numpy as np
-  from jax.experimental.pjit import pjit
   from jax.sharding import Mesh, NamedSharding
   from jax.sharding import PartitionSpec as P
 

@@ -125,7 +125,7 @@ def legendre_to_sph_harm(
   l: int = 0,
   l_max: int = 4
 ) -> Callable[[Float[Array, "*batch 3"]], Float[Array, "*batch m"]]:
-  """Convert Legendre polynomials to spherical harmonics decomposition.
+  r"""Convert Legendre polynomials to spherical harmonics decomposition.
 
   Implements the decomposition of Legendre polynomials into spherical harmonics
   according to the formula:
@@ -175,7 +175,7 @@ def legendre_to_sph_harm(
 
 
 def legendre_kernel_trick(l: int = 0) -> Callable:  # noqa
-  """Decompose legendre polynomials via kernel trick:
+  r"""Decompose legendre polynomials via kernel trick:
 
       (2l+1) P_l (x^Ty) = \phi(x)^T \phi(y)
 

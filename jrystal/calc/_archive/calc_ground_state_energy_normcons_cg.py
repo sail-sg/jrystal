@@ -18,25 +18,21 @@ from math import ceil
 from typing import List, Union
 
 import jax
-import numpy as np
-import optax
 import jaxopt
+import numpy as np
 from absl import logging
 from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
-from tqdm import tqdm
 
 from .._src import energy, entropy, occupation, pw
 from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
 from ..pseudopotential import normcons
-from .convergence import create_convergence_checker
 from .opt_utils import (
   create_crystal,
   create_freq_mask,
   create_grids,
-  create_optimizer,
   create_pseudopotential,
   get_ewald_coulomb_repulsion,
   set_env_params,

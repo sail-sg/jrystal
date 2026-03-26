@@ -14,7 +14,6 @@
 """Potential terms used in electronic-structure calculations."""
 from typing import Tuple, Union
 
-import jax
 import jax.numpy as jnp
 from jax.lax import stop_gradient
 from jaxtyping import Array, Complex, Float

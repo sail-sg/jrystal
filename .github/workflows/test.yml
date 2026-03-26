@@ -25,8 +25,9 @@ jobs:
       - name: Install package and test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .
-          python -m pip install pytest
+          python -m pip install jax jaxlib                                        # CPU-only (no CUDA on CI)
+          python -m pip install "jxc-python @ git+https://github.com/sail-sg/jxc.git"
+          python -m pip install -e ".[test]"
 
       - name: Run smoke tests
         run: |

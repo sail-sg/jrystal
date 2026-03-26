@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Optional
 
-from absl import logging
+from ..terminal_ui import console_line, metric, stage_prefix, stage_warning
 
 
 def _format_optional(value: Optional[float], fmt: str) -> str:
@@ -24,15 +24,12 @@ def log_ground_state_start(
   controls: str,
 ) -> None:
   """Log a solver-agnostic ground-state workflow header."""
-  logging.info(
-    "[%s] Start | max_steps=%d | num_bands=%d | smearing=%.4f | xc=%s",
-    solver_name,
-    max_steps,
-    num_bands,
-    smearing,
-    xc,
+  prefix = stage_prefix(solver_name)
+  console_line(
+    f"{prefix} Start | max_steps={max_steps} | num_bands={num_bands} | "
+    f"smearing={smearing:.4f} | xc={xc}"
   )
-  logging.info("[%s] Controls | %s", solver_name, controls)
+  console_line(f"{prefix} Controls | {controls}")
 
 
 def format_ground_state_iteration(
@@ -48,16 +45,16 @@ def format_ground_state_iteration(
 ) -> str:
   """Create a consistent iteration-progress string."""
   parts = [
-    f"[{solver_name}] iter {step}/{max_steps}",
-    f"E_total={total_energy:.6f} Ha",
-    f"dE={_format_optional(delta_energy, '{:.2e} Ha')}",
+    f"iter {step}/{max_steps}",
+    metric("E", f"{total_energy:.6f} Ha", color="green"),
+    metric("dE", _format_optional(delta_energy, "{:.2e} Ha"), color="yellow"),
   ]
   if density_delta is not None:
-    parts.append(f"dRho={density_delta:.2e}")
+    parts.append(metric("dRho", f"{density_delta:.2e}", color="magenta"))
   if energy_std is not None:
-    parts.append(f"E_std={energy_std:.2e} Ha")
+    parts.append(metric("Estd", f"{energy_std:.2e} Ha", color="red"))
   if step_time is not None:
-    parts.append(f"dt={step_time:.2f}s")
+    parts.append(metric("dt", f"{step_time:.2f}s", color="blue"))
   return " | ".join(parts)
 
 
@@ -72,16 +69,16 @@ def log_ground_state_finish(
 ) -> None:
   """Log a consistent solver-finish summary."""
   message = (
-    f"[{solver_name}] Finished | "
+    "Finished | "
     f"status={'converged' if converged else 'not_converged'} | "
     f"steps={steps_completed}/{max_steps} | "
     f"E_total={total_energy:.6f} Ha | "
     f"wall_time={wall_time:.2f}s"
   )
   if converged:
-    logging.info(message)
+    console_line(f"{stage_prefix(solver_name)} {message}")
   else:
-    logging.warning(message)
+    stage_warning(solver_name, message, color="red")
 
 
 def log_energy_breakdown(
@@ -92,8 +89,9 @@ def log_energy_breakdown(
   total_energy: float,
 ) -> None:
   """Log a unified energy-breakdown footer."""
-  logging.info("[%s] Energy breakdown:", solver_name)
+  prefix = stage_prefix(solver_name)
+  console_line(f"{prefix} Energy breakdown:")
   for name, value in energy_terms.items():
-    logging.info("[%s]   %s=%.4f Ha", solver_name, name, float(value))
-  logging.info("[%s]   ewald=%.4f Ha", solver_name, float(ewald))
-  logging.info("[%s]   total=%.4f Ha", solver_name, float(total_energy))
+    console_line(f"{prefix}   {name}={float(value):.4f} Ha")
+  console_line(f"{prefix}   ewald={float(ewald):.4f} Ha")
+  console_line(f"{prefix}   total={float(total_energy):.4f} Ha")

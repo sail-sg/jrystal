@@ -12,16 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import unittest
+
 import jax
 import jax.numpy as jnp
 import numpy as np
-from absl.testing import absltest, parameterized
+
 from jrystal._src.hessian import complex_hessian
 
 jax.config.update("jax_enable_x64", True)
 
 
-class _TestHessian(parameterized.TestCase):
+class _TestHessian(unittest.TestCase):
 
   def setUp(self):
     self.key = jax.random.PRNGKey(123)
@@ -43,7 +45,3 @@ class _TestHessian(parameterized.TestCase):
     # print(hessian_matrix)
     # print(H)
     np.testing.assert_allclose(hessian_matrix, H)
-
-
-if __name__ == '__main__':
-  absltest.main()

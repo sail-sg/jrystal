@@ -14,15 +14,15 @@
 """Tests for crystal.py."""
 
 from pathlib import Path
+import unittest
 
 import numpy as np
-from absl.testing import absltest, parameterized
 
 from .const import ANGSTROM2BOHR
 from .crystal import Crystal
 
 
-class _TestModules(parameterized.TestCase):
+class _TestModules(unittest.TestCase):
 
   def setUp(self):
     root = Path(__file__).resolve().parents[2]
@@ -89,7 +89,3 @@ class _TestModules(parameterized.TestCase):
     np.testing.assert_almost_equal(crystal.cell_vectors, self.cell_vectors)
     self.assertEqual(crystal.spin, 0)
     self.assertListEqual(crystal.symbols, symbols)
-
-
-if __name__ == "__main__":
-  absltest.main()

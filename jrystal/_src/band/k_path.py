@@ -29,7 +29,7 @@ def get_k_path(
   num: int,
   fractional: bool = False
 ) -> np.array:
-  """Return points along a high-symmetry :math:`k` path.
+  r"""Return points along a high-symmetry :math:`k` path.
 
   Args:
     cell_vectors (Float[Array, 'd d']): Real-space cell vectors in Bohr.

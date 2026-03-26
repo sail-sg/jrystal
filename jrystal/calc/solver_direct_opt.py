@@ -28,13 +28,12 @@ from typing import TYPE_CHECKING
 import jax
 import numpy as np
 import optax
-from absl import logging
 from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
-from tqdm import tqdm
 
 from .._src import occupation as _occupation
 from .._src import pw as _pw
+from ..terminal_ui import Spinner, stage_line
 from .convergence import create_convergence_checker
 from .opt_utils import create_optimizer
 from .types import EnergyDecomposition, GroundStateResult
@@ -74,7 +73,6 @@ def run_direct_opt(
   key = jax.random.PRNGKey(config.execution.seed)
 
   crystal = ctx.crystal
-  g_vec = ctx.g_vec
   freq_mask = ctx.basis.freq_mask
   ew = ctx.ewald_energy
   k_vec = ctx.ksampling.kpts
@@ -84,7 +82,7 @@ def run_direct_opt(
   num_kpts = k_vec.shape[0]
   num_bands = ceil(num_electrons / 2) + config.occupation.empty_bands
 
-  logging.info(f"Crystal: {crystal.symbols}")
+  stage_line("Init", f"Crystal: {crystal.symbols}")
   log_ground_state_start(
     "DirectOpt",
     max_steps=config.solver.direct_opt.max_steps,
@@ -103,9 +101,10 @@ def run_direct_opt(
   # --- Sharding / device setup ---
   num_devices = ctx.execution.num_devices
   util_devices = num_devices if ctx.execution.parallel_over_k else 1
-  logging.info(
+  stage_line(
+    "Init",
     f"Parallel over k: {ctx.execution.parallel_over_k}. "
-    f"Devices: {num_devices} (used {util_devices})."
+    f"Devices: {num_devices} (used {util_devices}).",
   )
 
   mesh = Mesh(
@@ -157,12 +156,14 @@ def run_direct_opt(
   convergence_checker = create_convergence_checker(config)
   converged = False
   total_energy_history = []
+  spinner = Spinner("DirectOpt")
 
   with mesh:
 
     @jax.jit
     def update(params, opt_state):
-      loss_fn = lambda x: free_energy(x["pw"], x["occ"])
+      def loss_fn(x):
+        return free_energy(x["pw"], x["occ"])
       (loss_val, etot), grad = jax.value_and_grad(
         loss_fn, has_aux=True,
       )(params)
@@ -170,36 +171,40 @@ def run_direct_opt(
       new_params = optax.apply_updates(params, updates)
       return new_params, new_opt_state, loss_val, etot
 
-    iters = tqdm(
-      range(config.solver.direct_opt.max_steps),
-      disable=not config.execution.verbose,
-    )
-    for i in iters:
-      start = time.time()
-      params, opt_state, loss_val, etot = update(params, opt_state)
-      etot = jax.block_until_ready(etot)
-      total_energy = float(etot + ew)
-      delta_energy = None
-      if total_energy_history:
-        delta_energy = abs(total_energy - total_energy_history[-1])
-      total_energy_history.append(total_energy)
-      converged = convergence_checker.check(float(etot))
-      energy_std = convergence_checker.current_std()
-      dt = time.time() - start
-      iters.set_description(
-        format_ground_state_iteration(
-          "DirectOpt",
-          step=i + 1,
-          max_steps=config.solver.direct_opt.max_steps,
-          total_energy=total_energy,
-          delta_energy=delta_energy,
-          step_time=dt,
-          energy_std=energy_std,
-        ),
-        refresh=False,
-      )
-      if converged:
-        break
+    try:
+      if config.execution.verbose:
+        spinner.start("initialising optimiser state...")
+
+      for i in range(config.solver.direct_opt.max_steps):
+        start = time.time()
+        params, opt_state, loss_val, etot = update(params, opt_state)
+        etot = jax.block_until_ready(etot)
+        total_energy = float(etot + ew)
+        delta_energy = None
+        if total_energy_history:
+          delta_energy = abs(total_energy - total_energy_history[-1])
+        total_energy_history.append(total_energy)
+        converged = convergence_checker.check(float(etot))
+        energy_std = convergence_checker.current_std()
+        dt = time.time() - start
+
+        if config.execution.verbose:
+          spinner.update(
+            format_ground_state_iteration(
+              "DirectOpt",
+              step=i + 1,
+              max_steps=config.solver.direct_opt.max_steps,
+              total_energy=total_energy,
+              delta_energy=delta_energy,
+              step_time=dt,
+              energy_std=energy_std,
+            )
+          )
+
+        if converged:
+          break
+    finally:
+      spinner.stop()
 
   # --- Final energy decomposition ---
   coeff = _pw.coeff(params["pw"], freq_mask)

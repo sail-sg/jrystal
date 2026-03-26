@@ -4,6 +4,7 @@ from typing import Sequence
 import yaml
 
 import jrystal as jr
+from jrystal.terminal_ui import render_logo
 
 _LEGACY_OVERRIDE_PATHS = {
   "solver.type": "solver.mode",
@@ -113,9 +114,7 @@ def _run_energy_command(config):
 
 
 def main(argv: Sequence[str] | None = None):
-  path = jr.get_pkg_path()
-  logo = open(path + "/jrystal_utf8.txt", "r").read()
-  print(logo)
+  render_logo(variant="utf8")
 
   parser = _build_parser()
   args, unknown = parser.parse_known_args(argv)

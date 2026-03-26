@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """General utility functions."""
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import jax
 import jax.numpy as jnp
@@ -123,7 +123,7 @@ def wave_to_density(
     try:
       occupation = jnp.expand_dims(occupation, range(-3, 0))
       dens = jnp.sum(dens * occupation, axis=(1, 2))
-    except:
+    except Exception:
       raise ValueError(
         f"wave_grid's shape ({wave_grid.shape}) and occupation's shape "
         f"({occupation.shape}) cannot align."

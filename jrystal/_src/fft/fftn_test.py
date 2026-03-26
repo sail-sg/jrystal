@@ -14,11 +14,11 @@
 """Tests for fftn.py."""
 
 import inspect
+import unittest
 
 import jax
 import jax.numpy as jnp
 import numpy as np
-from absl.testing import absltest, parameterized
 from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
 
@@ -32,7 +32,7 @@ from .fft import (
 jax.config.update("jax_enable_x64", True)
 
 
-class _TestModules(parameterized.TestCase):
+class _TestModules(unittest.TestCase):
 
   def setUp(self):
     self.key = jax.random.PRNGKey(0)
@@ -124,7 +124,3 @@ class _TestModules(parameterized.TestCase):
     )
     self.assertIsInstance(out_sharding, NamedSharding)
     self.assertEqual(out_sharding.spec, P(None, None, None))
-
-
-if __name__ == "__main__":
-  absltest.main()

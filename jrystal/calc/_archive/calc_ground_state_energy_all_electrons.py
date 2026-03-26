@@ -15,8 +15,8 @@
 import time
 from math import ceil
 
-import numpy as np
 import jax
+import numpy as np
 import optax
 from absl import logging
 from jax.sharding import Mesh, NamedSharding

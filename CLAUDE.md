@@ -42,7 +42,7 @@ bands = jr.calc.band(config, result)
 # Single test file
 .venv/bin/python -m pytest tests/smoke/test_backend.py -v
 
-# Kernel unit tests (co-located with source, absltest)
+# Kernel unit tests (co-located with source, pytest)
 .venv/bin/python -m pytest jrystal/_src/smearing_test.py -v
 .venv/bin/python -m pytest jrystal/_src/crystal_test.py -v
 
@@ -50,7 +50,7 @@ bands = jr.calc.band(config, result)
 .venv/bin/python tests/reference/run_baseline.py
 ```
 
-Tests use `absltest` (from `absl-py`), not plain pytest fixtures. CI runs `tests/smoke/` on push/PR.
+Tests use `pytest` as the unified runner. CI runs `tests/smoke/` on push/PR.
 
 ## Lint & Format
 
@@ -100,7 +100,7 @@ Nested YAML schema v1 with groups: `system`, `method`, `basis`, `ksampling`, `so
 - Internal units: Hartree (energy), Bohr (length). QE uses Rydberg — multiply by 2 when comparing.
 - `chex.dataclass` for objects crossing `jax.jit` boundaries (KSampling, RuntimeContext). Standard `dataclass` for result containers.
 - `_src` functions use jaxtyping shape annotations: `Float[Array, "spin kpt band x y z"]`.
-- Config access: `config.method.xc`, `config.basis.cutoff_energy`, `config.solver.epoch`, etc.
+- Config access: `config.method.xc`, `config.basis.cutoff_energy`, `config.solver.mode`, `config.solver.scf.max_iter`, etc.
 - Pseudopotential files live in `pseudopotential/normconserving/`. The `*.pz-vbc.UPF` files are QE-compatible LDA norm-conserving PPs.
 
 ## Things to Watch Out For

@@ -28,19 +28,19 @@ from __future__ import annotations
 
 import time
 from functools import partial
-from pathlib import Path
 from math import ceil
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
-from absl import logging
 
 from .._src import hamiltonian as _hamiltonian
 from .._src import pw as _pw
 from ..pseudopotential import normcons as _normcons
+from ..terminal_ui import stage_line
 from .opt_utils import create_optimizer
 from .types import BandStructureResult
 
@@ -174,7 +174,7 @@ def _run_nscf_ae(config, ctx, density, num_bands):
   t0 = time.time()
   eigen_values = optimize_eigenvalues(k_path, params_pw, opt_state)
   dt = time.time() - t0
-  logging.info(f"Band calculation done. ({dt:.2f}s)")
+  stage_line("Band", f"Band calculation done. ({dt:.2f}s)")
 
   return _reshape_eigenvalues(eigen_values, num_kpts, num_bands)
 
@@ -310,7 +310,7 @@ def _run_nscf_nc(config, ctx, density, num_bands):
     k_path, beta_gk_reshaped, params_pw, opt_state,
   )
   dt = time.time() - t0
-  logging.info(f"Band calculation done. ({dt:.2f}s)")
+  stage_line("Band", f"Band calculation done. ({dt:.2f}s)")
 
   return _reshape_eigenvalues(eigen_values, num_kpts, num_bands)
 
@@ -401,8 +401,10 @@ def run_nscf(
   num_electrons = backend.num_electrons(ctx)
   num_bands = ceil(num_electrons / 2) + config.band.empty_bands
 
-  logging.info(f"Band structure: {ctx.ksampling.kpts.shape[0]} k-points, "
-               f"{num_bands} bands")
+  stage_line(
+    "Band",
+    f"Band structure: {ctx.ksampling.kpts.shape[0]} k-points, {num_bands} bands",
+  )
 
   if isinstance(backend, _NCBackend):
     eigenvalues = _run_nscf_nc(config, ctx, density, num_bands)
@@ -414,7 +416,7 @@ def run_nscf(
   save_dir.mkdir(parents=True, exist_ok=True)
   output_path = save_dir / save_file
   np.save(output_path, np.asarray(eigenvalues))
-  logging.info(f"Results saved in {output_path}")
+  stage_line("Band", f"Results saved in {output_path}")
 
   return BandStructureResult(
     config=config,

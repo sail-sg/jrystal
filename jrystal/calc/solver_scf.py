@@ -28,13 +28,12 @@ from typing import TYPE_CHECKING
 
 import jax
 import jax.numpy as jnp
-from absl import logging
-from tqdm import tqdm
 
 from .._src import pw as _pw
 from .._src.linalg import batched_lobpcg
 from .._src.utils import expand_coefficient, squeeze_coefficient
 from ..smearing import fermi_dirac, find_chemical_potential
+from ..terminal_ui import Spinner, stage_line
 from .types import EnergyDecomposition, GroundStateResult
 from .workflow_logging import (
   format_ground_state_iteration,
@@ -138,7 +137,7 @@ def run_scf(
   energy_tol = scf_config.convergence.energy_tol
 
   occ_max = 2.0  # spin-restricted
-  logging.info(f"Crystal: {crystal.symbols}")
+  stage_line("Init", f"Crystal: {crystal.symbols}")
   log_ground_state_start(
     "SCF",
     max_steps=scf_max_iter,
@@ -211,68 +210,72 @@ def run_scf(
   converged = False
   total_energy_history = []
   band_energy = jnp.sum(evals * occ * k_weights[None, :, None])
+  spinner = Spinner("SCF")
+  try:
+    if config.execution.verbose:
+      spinner.start("initialising SCF state...")
 
-  iters = tqdm(
-    range(scf_max_iter),
-    disable=not config.execution.verbose,
-  )
-  for i in iters:
-    t0 = time.time()
+    for i in range(scf_max_iter):
+      t0 = time.time()
 
-    # 1. Diagonalise
-    coeff_new, evals_new = _diagonalise(coeff_compact, density)
-    coeff_new = coeff_new.conj()
+      # 1. Diagonalise
+      coeff_new, evals_new = _diagonalise(coeff_compact, density)
+      coeff_new = coeff_new.conj()
 
-    # 2. Update occupation
-    occ = _compute_occupation(
-      evals_new, num_electrons, k_weights, smearing,
-    )
+      # 2. Update occupation
+      occ = _compute_occupation(
+        evals_new, num_electrons, k_weights, smearing,
+      )
 
-    # 3. New density
-    coeff_full_new = expand_coefficient(coeff_new, freq_mask)
-    density_new = _pw.density_grid(
-      coeff_full_new, crystal.vol, occ, k_weights=k_weights,
-    )
+      # 3. New density
+      coeff_full_new = expand_coefficient(coeff_new, freq_mask)
+      density_new = _pw.density_grid(
+        coeff_full_new, crystal.vol, occ, k_weights=k_weights,
+      )
 
-    # 4. Check convergence
-    band_energy_new = jnp.sum(evals_new * occ * k_weights[None, :, None])
-    total_energy_new = float(backend.total_energy(coeff_full_new, occ, ctx) + ew)
-    delta_total_energy = None
-    if total_energy_history:
-      delta_total_energy = abs(total_energy_new - total_energy_history[-1])
-    total_energy_history.append(total_energy_new)
-    d_density = float(jnp.mean(jnp.abs(density_new - density)))
-    d_energy = float(jnp.abs(band_energy_new - band_energy))
-    dt = time.time() - t0
+      # 4. Check convergence
+      band_energy_new = jnp.sum(evals_new * occ * k_weights[None, :, None])
+      total_energy_new = float(
+        backend.total_energy(coeff_full_new, occ, ctx) + ew
+      )
+      delta_total_energy = None
+      if total_energy_history:
+        delta_total_energy = abs(total_energy_new - total_energy_history[-1])
+      total_energy_history.append(total_energy_new)
+      d_density = float(jnp.mean(jnp.abs(density_new - density)))
+      d_energy = float(jnp.abs(band_energy_new - band_energy))
+      dt = time.time() - t0
 
-    iters.set_description(
-      format_ground_state_iteration(
-        "SCF",
-        step=i + 1,
-        max_steps=scf_max_iter,
-        total_energy=total_energy_new,
-        delta_energy=delta_total_energy,
-        step_time=dt,
-        density_delta=d_density,
-      ),
-      refresh=False,
-    )
+      if config.execution.verbose:
+        spinner.update(
+          format_ground_state_iteration(
+            "SCF",
+            step=i + 1,
+            max_steps=scf_max_iter,
+            total_energy=total_energy_new,
+            delta_energy=delta_total_energy,
+            step_time=dt,
+            density_delta=d_density,
+          )
+        )
 
-    if d_density < density_tol and d_energy < energy_tol:
-      converged = True
-      coeff_compact = coeff_new
-      density = density_new
+      if d_density < density_tol and d_energy < energy_tol:
+        converged = True
+        coeff_compact = coeff_new
+        density = density_new
+        band_energy = band_energy_new
+        break
+
+      # 5. Density mixing (DIIS + linear)
+      dens_error = density_new - density
+      diis_state, density_mixed = diis_update(
+        diis_state, density_new, dens_error,
+      )
+      density = simple_mixing(density_mixed, density, beta=mixing_beta)
       band_energy = band_energy_new
-      break
-
-    # 5. Density mixing (DIIS + linear)
-    dens_error = density_new - density
-    diis_state, density_mixed = diis_update(
-      diis_state, density_new, dens_error,
-    )
-    density = simple_mixing(density_mixed, density, beta=mixing_beta)
-    band_energy = band_energy_new
-    coeff_compact = coeff_new
+      coeff_compact = coeff_new
+  finally:
+    spinner.stop()
 
   # --- Final energy decomposition via backend ---
   coeff_full = expand_coefficient(coeff_compact, freq_mask)

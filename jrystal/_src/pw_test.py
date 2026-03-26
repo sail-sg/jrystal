@@ -13,10 +13,11 @@
 # limitations under the License.
 """Tests for pw.py."""
 
+import unittest
+
 import jax
 import jax.numpy as jnp
 import numpy as np
-from absl.testing import absltest, parameterized
 
 from . import energy
 from .grid import cubic_mask, g_vectors, r_vectors
@@ -38,7 +39,7 @@ from .utils import volume
 jax.config.update("jax_enable_x64", True)
 
 
-class _TestModules(parameterized.TestCase):
+class _TestModules(unittest.TestCase):
 
   def setUp(self):
     self.key = jax.random.PRNGKey(123)
@@ -211,7 +212,3 @@ class _TestModules(parameterized.TestCase):
     num_grid = np.prod(self.grid_size)
     lapl_integral = jnp.sum(lapl) * self.vol / num_grid
     np.testing.assert_allclose(lapl_integral, 0.0, atol=1e-12)
-
-
-if __name__ == "__main__":
-  absltest.main()

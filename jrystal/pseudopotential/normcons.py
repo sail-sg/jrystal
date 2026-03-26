@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Norm Conserving Pseudopotential for Plane Waves. """
-from .local import (
-  hamiltonian_local, energy_local, potential_local_reciprocal
-)
 from .beta import beta_sbt_grid
+from .local import energy_local, hamiltonian_local, potential_local_reciprocal
 from .nloc import (
-  potential_nonlocal_psi_reciprocal,
-  hamiltonian_nonlocal,
-  hamiltonian_matrix,
   energy_nonlocal,
-  hamiltonian_trace
+  hamiltonian_matrix,
+  hamiltonian_nonlocal,
+  hamiltonian_trace,
+  potential_nonlocal_psi_reciprocal,
 )
 
 __call__ = [

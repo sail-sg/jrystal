@@ -17,9 +17,9 @@ from dataclasses import dataclass
 from math import ceil
 from typing import List, Union
 
-import numpy as np
 import jax
 import jax.numpy as jnp
+import numpy as np
 import optax
 from absl import logging
 from jax.sharding import Mesh, NamedSharding
@@ -38,8 +38,8 @@ from .opt_utils import (
   create_grids,
   create_optimizer,
   create_pseudopotential,
-  set_env_params,
   get_ewald_coulomb_repulsion,
+  set_env_params,
 )
 from .pre_calc import pre_calc_beta_sbt
 

@@ -26,8 +26,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import TYPE_CHECKING, Optional
 
-from absl import logging
-
+from ..terminal_ui import stage_warning
 from .backend import get_backend
 from .opt_utils import set_env_params
 from .runtime import build_runtime_context
@@ -92,12 +91,10 @@ def energy(config: JrystalConfigDict) -> GroundStateResult:
   except Exception as exc:
     if not fallback_on_error:
       raise
-    logging.warning(
-      "Primary solver '%s' failed with %s: %s. Falling back to '%s'.",
-      primary,
-      exc.__class__.__name__,
-      exc,
-      fallback,
+    stage_warning(
+      "AUTO",
+      f"Primary solver '{primary}' failed with "
+      f"{exc.__class__.__name__}: {exc}. Falling back to '{fallback}'.",
     )
     fallback_config = deepcopy(config)
     fallback_config.solver.mode = fallback
@@ -106,10 +103,10 @@ def energy(config: JrystalConfigDict) -> GroundStateResult:
   if result.converged or not fallback_on_nonconverged:
     return result
 
-  logging.warning(
-    "Primary solver '%s' did not converge. Falling back to '%s'.",
-    primary,
-    fallback,
+  stage_warning(
+    "AUTO",
+    f"Primary solver '{primary}' did not converge. "
+    f"Falling back to '{fallback}'.",
   )
   fallback_config = deepcopy(config)
   fallback_config.solver.mode = fallback

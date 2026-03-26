@@ -20,6 +20,7 @@ from .._src.utils import (
   wave_to_density,
   wave_to_density_reciprocal,
 )
+
 __all__ = [
   'safe_real',
   'vmapstack',
