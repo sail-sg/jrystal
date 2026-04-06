@@ -88,7 +88,7 @@ class AllElectronBackend:
         kohn_sham=True, keep_spin_axis=False,
       )
 
-    return jax.grad(_trace)(coeff.conj()) / 2.0
+    return jax.grad(_trace)(coeff) / 2.0
 
   def energy_decomposition(self, coeff, occ, ctx: RuntimeContext) -> dict:
     """Return individual energy terms for logging."""
