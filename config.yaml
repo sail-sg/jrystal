@@ -39,23 +39,25 @@ solver:
       history_size: 8
     convergence:
       density_tol: 1.0e-3
-      energy_tol: 1.0e-6
+      energy_tol: 1.0e-8
   direct_opt:
-    max_steps: 10000
+    max_steps: 20000
     optimizer:
       name: "adam"
-      learning_rate: 0.01
+      learning_rate: 1
       b1: 0.9
       b2: 0.99
     scheduler: null
     convergence:
       window_size: 20
-      energy_std_tol: 1.0e-6
+      energy_std_tol: 1.0e-8
 
 occupation:
+  # method: "fermi-dirac"
   method: "fixed"
-  smearing: 0.0
+  smearing: 0.001
   empty_bands: 20
+  warmup_steps: 2000
 
 ewald:
   eta: 0.1
