@@ -33,8 +33,10 @@ jobs:
             main.py
             jrystal/cli.py
             jrystal/config.py
+            jrystal/io.py
             jrystal/terminal_ui.py
             $(find jrystal/calc -maxdepth 1 -type f -name "*.py" | sort)
+            $(find jrystal/plot -maxdepth 1 -type f -name "*.py" | sort)
             $(find tests/smoke -type f -name "*.py" | sort)
           )
           ruff check "${TARGETS[@]}"
@@ -45,29 +47,11 @@ jobs:
             main.py
             jrystal/cli.py
             jrystal/config.py
+            jrystal/io.py
             jrystal/terminal_ui.py
             $(find jrystal/calc -maxdepth 1 -type f -name "*.py" | sort)
+            $(find jrystal/plot -maxdepth 1 -type f -name "*.py" | sort)
             $(find tests/smoke -type f -name "*.py" | sort)
           )
-          YAPF_FILES=(
-            main.py
-            jrystal/cli.py
-            jrystal/config.py
-            jrystal/terminal_ui.py
-            jrystal/calc/__init__.py
-            jrystal/calc/backend.py
-            jrystal/calc/convergence.py
-            jrystal/calc/density_mixing.py
-            jrystal/calc/pre_calc.py
-            jrystal/calc/solver_nscf.py
-            jrystal/calc/types.py
-            jrystal/calc/workflow_logging.py
-            tests/smoke/test_cli.py
-            tests/smoke/test_config.py
-            tests/smoke/test_import.py
-            tests/smoke/test_ksampling.py
-            tests/smoke/test_runtime.py
-            tests/smoke/test_terminal_ui.py
-          )
           isort --check "${PYTHON_FILES[@]}"
-          yapf -r -d "${YAPF_FILES[@]}"
+          yapf -r -d "${PYTHON_FILES[@]}"

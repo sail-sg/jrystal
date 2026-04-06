@@ -89,7 +89,15 @@ class GroundStateResult:
   energy_terms: EnergyDecomposition
   converged: bool
   density: Any
+  coefficients: Optional[dict[str, Any]] = None
   eigenvalues: Optional[Any] = None
+  occupations: Optional[Any] = None
+  actual_solver: str = ""
+  requested_solver_mode: str = ""
+  num_iterations: int = 0
+  wall_time: float = 0.0
+  fermi_energy: Optional[float] = None
+  convergence_history: list[dict[str, Any]] = field(default_factory=list)
   total_energy_history: list[float] = field(default_factory=list)
 
 
@@ -102,6 +110,7 @@ class BandStructureResult:
   kpath: KSampling
   eigenvalues: Any
   ground_state_energy: float = 0.0
+  reference_energy: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------

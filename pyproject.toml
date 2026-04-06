@@ -14,6 +14,7 @@ requires-python = ">=3.11"
 dependencies = [
   "jax[cuda]>=0.8.0",
   "jaxlib>=0.8.0",
+  "orbax-checkpoint>=0.11.0",
   "optax>=0.2.0",
   "jaxtyping",
   "tqdm",
@@ -57,6 +58,7 @@ dev = ["mypy>=1.5.0", "pytest>=8", "yapf", "pylint", "isort", "flake8"]
 test = ["pytest>=8"]
 format = ["yapf"]
 lint = ["pylint"]
+plot = ["matplotlib>=3.5"]
 docs = [
   "sphinx>=7.0.0",
   "sphinx-rtd-theme>=1.0.0",
@@ -88,6 +90,7 @@ split_all_top_level_comma_separated_values = true
 [tool.isort]
 profile = "black"
 line_length = 80
+indent = "  "
 
 
 [tool.ruff]

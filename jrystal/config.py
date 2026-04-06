@@ -128,9 +128,20 @@ default_config = {
       "verbose": True,
       "eps": 1e-8,
     },
-  "io": {
-    "save_dir": None,
-  },
+  "io":
+    {
+      "output_dir": "out/",
+      "save_dir": None,
+      "run_label": None,
+      "save_density": True,
+      "save_wavefunction": False,
+      "save_ground_state_spectrum": False,
+      "save_checkpoint": True,
+      "checkpoint_interval": 50,
+      "restart": "from_scratch",
+      "save_band_plot": True,
+      "log_level": "normal",
+    },
 }
 
 _GROUP_FIELDS = {
@@ -209,7 +220,20 @@ _GROUP_FIELDS = {
       "verbose",
       "eps",
     },
-  "io": {"save_dir",},
+  "io":
+    {
+      "output_dir",
+      "save_dir",
+      "run_label",
+      "save_density",
+      "save_wavefunction",
+      "save_ground_state_spectrum",
+      "save_checkpoint",
+      "checkpoint_interval",
+      "restart",
+      "save_band_plot",
+      "log_level",
+    },
 }
 
 _SOLVER_AUTO_FIELDS = {
@@ -330,7 +354,17 @@ _LEGACY_FIELD_MAP = {
   "jax_debug_nans": ("execution", "jax_debug_nans"),
   "verbose": ("execution", "verbose"),
   "eps": ("execution", "eps"),
+  "output_dir": ("io", "output_dir"),
   "save_dir": ("io", "save_dir"),
+  "run_label": ("io", "run_label"),
+  "save_density": ("io", "save_density"),
+  "save_wavefunction": ("io", "save_wavefunction"),
+  "save_ground_state_spectrum": ("io", "save_ground_state_spectrum"),
+  "save_checkpoint": ("io", "save_checkpoint"),
+  "checkpoint_interval": ("io", "checkpoint_interval"),
+  "restart": ("io", "restart"),
+  "save_band_plot": ("io", "save_band_plot"),
+  "log_level": ("io", "log_level"),
 }
 
 
@@ -678,10 +712,53 @@ def _normalize_solver_group(
   _deep_merge(target, solver_value)
 
 
+def _normalize_io_group(
+  target: dict[str, Any],
+  group_value: Mapping[str, Any],
+) -> None:
+  io_value = copy.deepcopy(dict(group_value))
+  legacy_save_dir = io_value.get("save_dir")
+  explicit_output_dir = "output_dir" in io_value
+
+  _deep_merge(target, io_value)
+
+  if legacy_save_dir is not None and explicit_output_dir and (
+    legacy_save_dir != target["output_dir"]
+  ):
+    warnings.warn(
+      "Config fields `io.output_dir` and legacy `io.save_dir` differ; "
+      "using `io.output_dir` for new outputs.",
+      stacklevel=3,
+    )
+  if legacy_save_dir is not None and (
+    not explicit_output_dir or
+    target["output_dir"] == default_config["io"]["output_dir"]
+  ):
+    target["output_dir"] = copy.deepcopy(legacy_save_dir)
+
+
+def _sync_log_level_and_verbose(
+  normalized: dict[str, Any],
+  *,
+  log_level_explicit: bool,
+  verbose_explicit: bool,
+) -> None:
+  if log_level_explicit:
+    normalized["execution"]["verbose"] = normalized["io"]["log_level"
+                                                         ] != "quiet"
+    return
+  if verbose_explicit:
+    normalized["io"]["log_level"] = (
+      "normal" if normalized["execution"]["verbose"] else "quiet"
+    )
+
+
 def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
   normalized = copy.deepcopy(default_config)
   if config is None:
     config = {}
+  log_level_explicit = False
+  verbose_explicit = False
 
   for key, value in config.items():
     if key == "schema_version":
@@ -698,8 +775,14 @@ def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
         parallel_over_k = group_value.pop("parallel_over_k")
         group_value.setdefault("parallel_over_k_mesh", parallel_over_k)
         group_value.setdefault("parallel_over_k_path", parallel_over_k)
+      if key == "execution" and "verbose" in group_value:
+        verbose_explicit = True
+      if key == "io" and "log_level" in group_value:
+        log_level_explicit = True
       if key == "solver":
         _normalize_solver_group(normalized["solver"], group_value)
+      elif key == "io":
+        _normalize_io_group(normalized["io"], group_value)
       else:
         if key == "occupation" and "warmup_step" in group_value:
           group_value.setdefault("warmup_steps", group_value.pop("warmup_step"))
@@ -707,6 +790,10 @@ def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
       continue
 
     if key == "ewald_args" or key in _LEGACY_FIELD_MAP:
+      if key == "verbose":
+        verbose_explicit = True
+      if key == "log_level":
+        log_level_explicit = True
       _apply_legacy_field(normalized, key, value)
       continue
 
@@ -715,6 +802,12 @@ def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
 
   if normalized["band"]["empty_bands"] is None:
     normalized["band"]["empty_bands"] = normalized["occupation"]["empty_bands"]
+
+  _sync_log_level_and_verbose(
+    normalized,
+    log_level_explicit=log_level_explicit,
+    verbose_explicit=verbose_explicit,
+  )
 
   return normalized
 
@@ -964,7 +1057,33 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
   _validate_bool(config["execution"]["verbose"], "execution.verbose")
   _validate_number(config["execution"]["eps"], "execution.eps")
 
+  if not isinstance(config["io"]["output_dir"], str):
+    raise TypeError("Config field `io.output_dir` must be a string.")
   _validate_optional_string(config["io"]["save_dir"], "io.save_dir")
+  _validate_optional_string(config["io"]["run_label"], "io.run_label")
+  _validate_bool(config["io"]["save_density"], "io.save_density")
+  _validate_bool(
+    config["io"]["save_wavefunction"],
+    "io.save_wavefunction",
+  )
+  _validate_bool(
+    config["io"]["save_ground_state_spectrum"],
+    "io.save_ground_state_spectrum",
+  )
+  _validate_bool(config["io"]["save_checkpoint"], "io.save_checkpoint")
+  _validate_int(
+    config["io"]["checkpoint_interval"],
+    "io.checkpoint_interval",
+  )
+  if config["io"]["checkpoint_interval"] <= 0:
+    raise ValueError("Config field `io.checkpoint_interval` must be positive.")
+  if not isinstance(config["io"]["restart"], str):
+    raise TypeError("Config field `io.restart` must be a string.")
+  _validate_bool(config["io"]["save_band_plot"], "io.save_band_plot")
+  if config["io"]["log_level"] not in {"quiet", "normal", "verbose"}:
+    raise ValueError(
+      "Config field `io.log_level` must be 'quiet', 'normal', or 'verbose'."
+    )
 
 
 def get_config(config_file: Optional[str] = None) -> JrystalConfigDict:
