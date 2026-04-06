@@ -29,7 +29,6 @@ from __future__ import annotations
 import time
 from functools import partial
 from math import ceil
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import jax
@@ -456,17 +455,11 @@ def run_nscf(
   else:
     eigenvalues = _run_nscf_ae(config, ctx, density, num_bands)
 
-  save_file = "".join(ctx.crystal.symbols) + "_band_structure.npy"
-  save_dir = Path(config.io.save_dir) if config.io.save_dir else Path.cwd()
-  save_dir.mkdir(parents=True, exist_ok=True)
-  output_path = save_dir / save_file
-  np.save(output_path, np.asarray(eigenvalues))
-  stage_line("Band", f"Results saved in {output_path}")
-
   return BandStructureResult(
     config=config,
     crystal=ctx.crystal,
     kpath=ctx.ksampling,
     eigenvalues=eigenvalues,
     ground_state_energy=ground_state_result.total_energy,
+    reference_energy=ground_state_result.fermi_energy,
   )

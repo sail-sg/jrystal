@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 import threading
 import time
@@ -28,6 +29,8 @@ _STAGE_STYLES = {
   "SCF": ("cyan", "<>"),
 }
 _OUTPUT_LOCK = threading.RLock()
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+_LOG_STATE: dict[str, TextIO | None] = {"file": None}
 _UTF8_LOGO_LINES = (
   ""
   "       ██    ███     █   █    ███    █████    ██     █",
@@ -131,13 +134,44 @@ def _warning_prefix(
   return style("!!", color=color, bold=True, stream=stream)
 
 
+def _strip_ansi(text: str) -> str:
+  return _ANSI_RE.sub("", text)
+
+
+def open_log(path: str | os.PathLike[str]) -> None:
+  """Open the mirrored plain-text log file for terminal output."""
+  close_log()
+  _LOG_STATE["file"] = open(path, "w", encoding="utf-8")
+
+
+def close_log() -> None:
+  """Close the mirrored log file if one is open."""
+  if _LOG_STATE["file"] is not None:
+    _LOG_STATE["file"].close()
+    _LOG_STATE["file"] = None
+
+
+def _emit(
+  text: str,
+  *,
+  stream: TextIO,
+  log_text: str | None = None,
+) -> None:
+  stream.write(text)
+  if _LOG_STATE["file"] is not None:
+    _LOG_STATE["file"].write(
+      _strip_ansi(log_text if log_text is not None else text)
+    )
+    _LOG_STATE["file"].flush()
+
+
 def console_line(text: str, *, stream: TextIO | None = None) -> None:
   """Write a stable terminal line without logger prefixes."""
   stream = sys.stderr if stream is None else stream
   with _OUTPUT_LOCK:
     if supports_live_output(stream):
       stream.write(_CLEAR_LINE)
-    stream.write(text + "\n")
+    _emit(text + "\n", stream=stream, log_text=text + "\n")
     stream.flush()
 
 

@@ -139,5 +139,4 @@ def main(argv: Sequence[str] | None = None):
   elif args.command == "energy":
     _run_energy_command(config)
   elif args.command == "band":
-    ground_state_result = _run_energy_command(config)
-    jr.calc.band(config, ground_state_result=ground_state_result)
+    jr.calc.band(config)

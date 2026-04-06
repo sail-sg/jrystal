@@ -22,9 +22,11 @@ solver agnostic to AE vs NC vs USPP physics.
 """
 from __future__ import annotations
 
+import signal
 import time
 from math import ceil
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 
 import jax
 import jax.numpy as jnp
@@ -32,14 +34,15 @@ import jax.numpy as jnp
 from .._src import pw as _pw
 from .._src.linalg import batched_lobpcg
 from .._src.utils import expand_coefficient, squeeze_coefficient
+from ..io import make_checkpoint_manager, save_checkpoint
 from ..smearing import fermi_dirac, find_chemical_potential
-from ..terminal_ui import Spinner, stage_line
+from ..terminal_ui import Spinner, stage_line, stage_warning
 from .types import EnergyDecomposition, GroundStateResult
 from .workflow_logging import (
-    format_ground_state_iteration,
-    log_energy_breakdown,
-    log_ground_state_finish,
-    log_ground_state_start,
+  format_ground_state_iteration,
+  log_energy_breakdown,
+  log_ground_state_finish,
+  log_ground_state_start,
 )
 
 if TYPE_CHECKING:
@@ -48,10 +51,10 @@ if TYPE_CHECKING:
   from .runtime import RuntimeContext
 
 from .density_mixing import (
-    diis_init,
-    diis_update,
-    kerker_preconditioner,
-    simple_mixing,
+  diis_init,
+  diis_update,
+  kerker_preconditioner,
+  simple_mixing,
 )
 
 
@@ -90,6 +93,10 @@ def run_scf(
   config: JrystalConfigDict,
   ctx: RuntimeContext,
   backend: AllElectronBackend | NormConservingBackend,
+  *,
+  requested_solver_mode: Optional[str] = None,
+  restart_state: Optional[dict] = None,
+  output_dir: Optional[Path] = None,
 ) -> GroundStateResult:
   """Run a ground-state calculation via the SCF loop.
 
@@ -160,22 +167,47 @@ def run_scf(
     ),
   )
 
-  # --- Init wavefunctions (compact, in masked G-space) ---
-  pw_params = _pw.param_init(
-    key,
-    num_bands,
-    num_kpts,
-    freq_mask,
-    spin_restricted=config.system.spin_restricted,
-  )
-  coeff_compact = pw_params["w_re"] + 1.0j * pw_params["w_im"]
-  coeff_compact = jnp.linalg.qr(coeff_compact)[0]  # [s, k, g, band]
+  checkpoint_manager = None
+  if output_dir is not None and config.io.save_checkpoint:
+    checkpoint_manager = make_checkpoint_manager(output_dir)
 
-  # --- Init eigenvalues, occupation, density ---
-  evals = jax.random.normal(key, [1, num_kpts, num_bands])
-  evals = jnp.sort(evals, axis=-1)
-  evals_new = evals
-  occ = _fixed_occupation(evals, num_electrons, occ_max)
+  # --- Init wavefunctions (compact, in masked G-space) ---
+  start_step = 0
+  previous_total_energy = None
+  if restart_state is None:
+    pw_params = _pw.param_init(
+      key,
+      num_bands,
+      num_kpts,
+      freq_mask,
+      spin_restricted=config.system.spin_restricted,
+    )
+    coeff_compact = pw_params["w_re"] + 1.0j * pw_params["w_im"]
+    coeff_compact = jnp.linalg.qr(coeff_compact)[0]  # [s, k, g, band]
+
+    # --- Init eigenvalues, occupation, density ---
+    evals = jax.random.normal(key, [1, num_kpts, num_bands])
+    evals = jnp.sort(evals, axis=-1)
+    evals_new = evals
+    occ = _fixed_occupation(evals, num_electrons, occ_max)
+  else:
+    coeff_compact = (
+      jnp.asarray(restart_state["coefficients"]["w_re"]) +
+      1.0j * jnp.asarray(restart_state["coefficients"]["w_im"])
+    )
+    occ = jnp.asarray(restart_state["occupations"])
+    if bool(restart_state["has_eigenvalues"]):
+      evals_new = jnp.asarray(restart_state["eigenvalues"])
+    else:
+      evals_new = jnp.sort(
+        jax.random.normal(key, [1, num_kpts, num_bands]), axis=-1
+      )
+    start_step = int(restart_state["step"]) + 1
+    previous_total_energy = float(restart_state["total_energy"])
+    stage_warning(
+      "SCF",
+      f"Restarting from step {start_step} using checkpoint state.",
+    )
 
   def _density_from_compact(c, occ):
     coeff_full = expand_coefficient(c, freq_mask)
@@ -186,7 +218,10 @@ def run_scf(
       k_weights=k_weights,
     )
 
-  density = _density_from_compact(coeff_compact, occ)
+  density = (
+    _density_from_compact(coeff_compact, occ)
+    if restart_state is None else jnp.asarray(restart_state["density"])
+  )
 
   # --- Preconditioner ---
   precond = kerker_preconditioner(g_vec, freq_mask)
@@ -226,13 +261,23 @@ def run_scf(
   # --- SCF loop ---
   converged = False
   total_energy_history = []
-  band_energy = jnp.sum(evals * occ * k_weights[None, :, None])
+  convergence_history = []
+  last_completed_step = start_step - 1
+  last_checkpointed_step = None
   spinner = Spinner("SCF")
+  interrupted = False
+
+  def _handle_sigint(sig, frame):
+    del sig, frame
+    nonlocal interrupted
+    interrupted = True
+
+  old_handler = signal.signal(signal.SIGINT, _handle_sigint)
   try:
     if config.execution.verbose:
       spinner.start("initialising SCF state...")
 
-    for i in range(scf_max_iter):
+    for step in range(start_step, scf_max_iter):
       t0 = time.time()
 
       # 1. Diagonalise
@@ -257,23 +302,34 @@ def run_scf(
       )
 
       # 4. Check convergence
-      band_energy_new = jnp.sum(evals_new * occ * k_weights[None, :, None])
       total_energy_new = float(
         backend.total_energy(coeff_full_new, occ, ctx) + ew
       )
       delta_total_energy = None
       if total_energy_history:
         delta_total_energy = abs(total_energy_new - total_energy_history[-1])
+      elif previous_total_energy is not None:
+        delta_total_energy = abs(total_energy_new - previous_total_energy)
       total_energy_history.append(total_energy_new)
       d_density = float(jnp.mean(jnp.abs(density_new - density)))
-      d_energy = float(jnp.abs(band_energy_new - band_energy))
       dt = time.time() - t0
+      display_step = step + 1
+      last_completed_step = step
+      convergence_history.append(
+        {
+          "step": display_step,
+          "total_energy": total_energy_new,
+          "delta_energy": delta_total_energy,
+          "delta_density": d_density,
+          "wall_time": dt,
+        }
+      )
 
       if config.execution.verbose:
         spinner.update(
           format_ground_state_iteration(
             "SCF",
-            step=i + 1,
+            step=display_step,
             max_steps=scf_max_iter,
             total_energy=total_energy_new,
             delta_energy=delta_total_energy,
@@ -282,11 +338,13 @@ def run_scf(
           )
         )
 
-      if d_density < density_tol and d_energy < energy_tol:
+      if (
+        delta_total_energy is not None and d_density < density_tol and
+        delta_total_energy < energy_tol
+      ):
         converged = True
         coeff_compact = coeff_new
         density = density_new
-        band_energy = band_energy_new
         break
 
       # 5. Density mixing (DIIS + linear)
@@ -295,9 +353,59 @@ def run_scf(
         diis_state, density_new, dens_error,
       )
       density = simple_mixing(density_mixed, density, beta=mixing_beta)
-      band_energy = band_energy_new
       coeff_compact = coeff_new
+      previous_total_energy = total_energy_new
+
+      if checkpoint_manager is not None and (
+        display_step % config.io.checkpoint_interval == 0 or interrupted
+      ):
+        save_checkpoint(
+          checkpoint_manager,
+          {
+            "density": density,
+            "coefficients":
+              {
+                "w_re": coeff_compact.real,
+                "w_im": coeff_compact.imag,
+              },
+            "occupations": occ,
+            "eigenvalues": evals_new,
+            "has_eigenvalues": True,
+            "step": step,
+            "total_energy": total_energy_new,
+          },
+          step,
+        )
+        last_checkpointed_step = step
+
+      if interrupted:
+        stage_warning("SCF", "Interrupted — checkpoint saved")
+        break
+
+    if checkpoint_manager is not None and (
+      last_completed_step >= 0 and last_checkpointed_step != last_completed_step
+    ):
+      save_checkpoint(
+        checkpoint_manager,
+        {
+          "density": density,
+          "coefficients":
+            {
+              "w_re": coeff_compact.real,
+              "w_im": coeff_compact.imag,
+            },
+          "occupations": occ,
+          "eigenvalues": evals_new,
+          "has_eigenvalues": True,
+          "step": last_completed_step,
+          "total_energy": total_energy_history[-1],
+        },
+        last_completed_step,
+      )
   finally:
+    signal.signal(signal.SIGINT, old_handler)
+    if checkpoint_manager is not None:
+      checkpoint_manager.wait_until_finished()
     spinner.stop()
 
   # --- Final energy decomposition via backend ---
@@ -338,6 +446,16 @@ def run_scf(
     ),
     converged=converged,
     density=density,
+    coefficients={
+      "w_re": coeff_compact.real,
+      "w_im": coeff_compact.imag,
+    },
     eigenvalues=evals_new,
+    occupations=occ,
+    actual_solver="scf",
+    requested_solver_mode=requested_solver_mode or config.solver.mode,
+    num_iterations=max(last_completed_step + 1, 0),
+    wall_time=wall_time,
+    convergence_history=convergence_history,
     total_energy_history=total_energy_history,
   )

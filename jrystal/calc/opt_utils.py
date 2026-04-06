@@ -26,14 +26,14 @@ from ..__init__ import get_pkg_path
 from .._src.crystal import Crystal
 from .._src.ewald import ewald_coulomb_repulsion
 from .._src.grid import (
-    cubic_mask,
-    estimate_max_cutoff_energy,
-    g_vectors,
-    k_vectors,
-    proper_grid_size,
-    r_vectors,
-    spherical_mask,
-    translation_vectors,
+  cubic_mask,
+  estimate_max_cutoff_energy,
+  g_vectors,
+  k_vectors,
+  proper_grid_size,
+  r_vectors,
+  spherical_mask,
+  translation_vectors,
 )
 from .._src.utils import check_spin_number
 from ..config import JrystalConfigDict

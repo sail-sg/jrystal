@@ -26,10 +26,10 @@ from .._src.crystal import Crystal
 from .._src.grid import proper_grid_size
 from ..config import JrystalConfigDict
 from .opt_utils import (
-    create_crystal,
-    create_freq_mask,
-    create_grids,
-    get_ewald_coulomb_repulsion,
+  create_crystal,
+  create_freq_mask,
+  create_grids,
+  get_ewald_coulomb_repulsion,
 )
 from .types import ExecutionPlan, KSampling, PlaneWaveBasis
 
