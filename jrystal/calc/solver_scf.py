@@ -73,6 +73,11 @@ def _compute_occupation(evals, num_electrons, k_weights, smearing):
   return _fixed_occupation(evals, num_electrons)
 
 
+def _occupation_max(spin_restricted: bool) -> float:
+  """Maximum occupation per state for the requested spin treatment."""
+  return 2.0 if spin_restricted else 1.0
+
+
 # ---------------------------------------------------------------------------
 # SCF solver
 # ---------------------------------------------------------------------------
@@ -115,8 +120,9 @@ def run_scf(
   k_weights = ctx.ksampling.weights
 
   num_electrons = backend.num_electrons(ctx)
+  occ_max = _occupation_max(config.system.spin_restricted)
   num_kpts = ctx.ksampling.kpts.shape[0]
-  num_bands = ceil(num_electrons / 2) + config.occupation.empty_bands
+  num_bands = ceil(num_electrons / occ_max) + config.occupation.empty_bands
   smearing = config.occupation.smearing
 
   scf_config = config.solver.scf
@@ -136,7 +142,6 @@ def run_scf(
   density_tol = scf_config.convergence.density_tol
   energy_tol = scf_config.convergence.energy_tol
 
-  occ_max = 2.0  # spin-restricted
   stage_line("Init", f"Crystal: {crystal.symbols}")
   log_ground_state_start(
     "SCF",

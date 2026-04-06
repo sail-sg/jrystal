@@ -146,7 +146,9 @@ class NormConservingBackend:
       pseudopot.local_potential_charge, crystal.vol,
     )
 
-    stage_line("Init", "Initializing pseudopotential (Spherical Bessel Transform)...")
+    stage_line(
+      "Init", "Initializing pseudopotential (Spherical Bessel Transform)..."
+    )
     beta_gk = pre_calc_beta_sbt(
       pseudopot, np.array(g_vec), np.array(ksampling.kpts),
     )

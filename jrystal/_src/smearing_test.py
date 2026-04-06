@@ -19,6 +19,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from .smearing import (
+  _bisect_root,
   fermi_dirac,
   find_chemical_potential,
   occupations_from_eigenvalues,
@@ -26,6 +27,25 @@ from .smearing import (
 
 
 class _TestSmearing(unittest.TestCase):
+
+  def test_bisect_root_supports_decreasing_residual(self):
+    root = _bisect_root(
+      lambda x: 1.0 - x,
+      jnp.array(0.0),
+      jnp.array(2.0),
+      max_iter=60,
+    )
+
+    self.assertAlmostEqual(float(root), 1.0, places=10)
+
+  def test_bisect_root_raises_for_unbracketed_interval(self):
+    with self.assertRaisesRegex(ValueError, "not bracketed"):
+      _bisect_root(
+        lambda x: x * x + 1.0,
+        jnp.array(-1.0),
+        jnp.array(1.0),
+        max_iter=20,
+      )
 
   def test_find_chemical_potential_tiny_smearing_uniform_occ_per_k(self):
     eigenvalues = jnp.array(

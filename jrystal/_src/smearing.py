@@ -392,16 +392,39 @@ def _bisect_root(
 ) -> Array:
   """Find a scalar root by bracketed bisection."""
 
+  f_lower = residual_fn(lower)
+  f_upper = residual_fn(upper)
+
+  if (
+    not isinstance(f_lower, jax.core.Tracer) and
+    not isinstance(f_upper, jax.core.Tracer)
+  ):
+    f_lower_f = float(f_lower)
+    f_upper_f = float(f_upper)
+    if f_lower_f != 0.0 and f_upper_f != 0.0 and f_lower_f * f_upper_f > 0.0:
+      raise ValueError(
+        "Bisection root is not bracketed. "
+        f"Residual at lower bound is {f_lower_f:.6e}, "
+        f"at upper bound is {f_upper_f:.6e}."
+      )
+
   def body(_, state):
-    lo, hi = state
+    lo, hi, f_lo = state
     mid = 0.5 * (lo + hi)
     f_mid = residual_fn(mid)
-    lo = jnp.where(f_mid < 0.0, mid, lo)
-    hi = jnp.where(f_mid < 0.0, hi, mid)
-    return lo, hi
+    same_sign = jnp.signbit(f_mid) == jnp.signbit(f_lo)
+    lo = jnp.where(same_sign, mid, lo)
+    hi = jnp.where(same_sign, hi, mid)
+    f_lo = jnp.where(same_sign, f_mid, f_lo)
+    return lo, hi, f_lo
 
-  lo, hi = jax.lax.fori_loop(0, max_iter, body, (lower, upper))
-  return 0.5 * (lo + hi)
+  lower_is_root = f_lower == 0.0
+  upper_is_root = f_upper == 0.0
+  lo, hi, _ = jax.lax.fori_loop(0, max_iter, body, (lower, upper, f_lower))
+  root = 0.5 * (lo + hi)
+  root = jnp.where(lower_is_root, lower, root)
+  root = jnp.where(upper_is_root, upper, root)
+  return root
 
 
 def find_chemical_potential(

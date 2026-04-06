@@ -22,15 +22,18 @@ terms to compute) is delegated entirely to an
 from __future__ import annotations
 
 import time
+from dataclasses import dataclass
 from math import ceil
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import jax
+import jax.numpy as jnp
 import numpy as np
 import optax
 from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
 
+from .._src import entropy as _entropy
 from .._src import occupation as _occupation
 from .._src import pw as _pw
 from ..terminal_ui import Spinner, stage_line
@@ -48,6 +51,73 @@ if TYPE_CHECKING:
   from ..config import JrystalConfigDict
   from .backend import AllElectronBackend, NormConservingBackend
   from .runtime import RuntimeContext
+
+
+@dataclass(frozen=True)
+class _OccupationSetup:
+  fn: Callable[[dict], jax.Array]
+  params: dict
+  trainable: bool
+
+
+def _occupation_max(spin_restricted: bool) -> float:
+  """Maximum occupation per state for the requested spin treatment."""
+  return 2.0 if spin_restricted else 1.0
+
+
+def _build_occupation_setup(
+  *,
+  num_electrons: int,
+  spin: int,
+  spin_restricted: bool,
+  num_bands: int,
+  num_kpts: int,
+  smearing: float,
+) -> _OccupationSetup:
+  """Create either trainable or fixed occupations for direct optimisation."""
+  if float(smearing) == 0.0 and num_kpts == 1:
+    fixed_occ = _occupation._get_fixed_occupation(
+      num_k=num_kpts,
+      num_electrons=num_electrons,
+      spin=spin,
+      num_bands=num_bands,
+      spin_restricted=spin_restricted,
+    )
+
+    def occ_fn(_params: dict) -> jax.Array:
+      return fixed_occ
+
+    return _OccupationSetup(fn=occ_fn, params={}, trainable=False)
+
+  occ_fn = _occupation.get_occupation_fn(
+    num_electrons,
+    spin=spin,
+    spin_restricted=spin_restricted,
+  )
+  params_occ = _occupation.params_init(num_bands, num_kpts)
+  return _OccupationSetup(fn=occ_fn, params=params_occ, trainable=True)
+
+
+def _free_energy_from_total_energy(
+  total_energy: jax.Array,
+  occupation: jax.Array,
+  smearing: float,
+) -> tuple[jax.Array, jax.Array]:
+  """Return free energy and entropy for the current occupations."""
+  total_energy = jnp.asarray(total_energy)
+  if float(smearing) == 0.0:
+    return total_energy, jnp.zeros((), dtype=total_energy.dtype)
+  entropy = _entropy.von_neumann(occupation)
+  free_energy = total_energy - jnp.asarray(smearing, dtype=total_energy.dtype) * entropy
+  return free_energy, entropy
+
+
+def _freeze_occupation_gradient(grad: dict) -> dict:
+  """Zero occupation gradients during the direct-opt warmup phase."""
+  return {
+    **grad,
+    "occ": jax.tree_util.tree_map(jnp.zeros_like, grad["occ"]),
+  }
 
 
 def run_direct_opt(
@@ -80,7 +150,10 @@ def run_direct_opt(
 
   num_electrons = backend.num_electrons(ctx)
   num_kpts = k_vec.shape[0]
-  num_bands = ceil(num_electrons / 2) + config.occupation.empty_bands
+  occ_max = _occupation_max(config.system.spin_restricted)
+  num_bands = ceil(num_electrons / occ_max) + config.occupation.empty_bands
+  smearing = config.occupation.smearing
+  occupation_warmup_steps = config.occupation.warmup_steps
 
   stage_line("Init", f"Crystal: {crystal.symbols}")
   log_ground_state_start(
@@ -92,6 +165,7 @@ def run_direct_opt(
     controls=(
       f"optimizer={config.solver.direct_opt.optimizer.name} "
       f"(lr={config.solver.direct_opt.optimizer.learning_rate:g}) | "
+      f"occ_warmup={occupation_warmup_steps} | "
       f"window={config.solver.direct_opt.convergence.window_size} | "
       f"energy_std_tol="
       f"{config.solver.direct_opt.convergence.energy_std_tol:.2e}"
@@ -128,18 +202,23 @@ def run_direct_opt(
   )
 
   # --- Occupation function ---
-  occ_fn = _occupation.get_occupation_fn(
-    num_electrons,
+  occupation_setup = _build_occupation_setup(
+    num_electrons=num_electrons,
     spin=crystal.spin,
     spin_restricted=config.system.spin_restricted,
+    num_bands=num_bands,
+    num_kpts=num_kpts,
+    smearing=smearing,
   )
+  occ_fn = occupation_setup.fn
 
   # --- Energy function (delegates to backend) ---
   def free_energy(params_pw, params_occ):
     coeff = _pw.coeff(params_pw, freq_mask, sharding=sharding)
     occ = occ_fn(params_occ)
-    etot = backend.total_energy(coeff, occ, ctx)
-    return etot, etot
+    total = backend.total_energy(coeff, occ, ctx)
+    free, _ = _free_energy_from_total_energy(total, occ, smearing)
+    return free, (total, free)
 
   # --- Init params + optimiser ---
   optimizer = create_optimizer(config)
@@ -148,7 +227,7 @@ def run_direct_opt(
     spin_restricted=config.system.spin_restricted,
     sharding=sharding,
   )
-  params_occ = _occupation.params_init(num_bands, num_kpts)
+  params_occ = occupation_setup.params
   params = {"pw": params_pw, "occ": params_occ}
   opt_state = optimizer.init(params)
 
@@ -160,16 +239,32 @@ def run_direct_opt(
 
   with mesh:
 
-    @jax.jit
-    def update(params, opt_state):
-      def loss_fn(x):
-        return free_energy(x["pw"], x["occ"])
-      (loss_val, etot), grad = jax.value_and_grad(
-        loss_fn, has_aux=True,
-      )(params)
-      updates, new_opt_state = optimizer.update(grad, opt_state)
-      new_params = optax.apply_updates(params, updates)
-      return new_params, new_opt_state, loss_val, etot
+    def _make_update(*, freeze_occupation: bool):
+      @jax.jit
+      def update(params, opt_state):
+        def loss_fn(x):
+          return free_energy(x["pw"], x["occ"])
+        (_loss_val, aux), grad = jax.value_and_grad(
+          loss_fn, has_aux=True,
+        )(params)
+        if freeze_occupation:
+          grad = _freeze_occupation_gradient(grad)
+        total_energy, free_energy_value = aux
+        updates, new_opt_state = optimizer.update(grad, opt_state)
+        new_params = optax.apply_updates(params, updates)
+        return (
+          new_params,
+          new_opt_state,
+          total_energy,
+          free_energy_value,
+        )
+
+      return update
+
+    update = _make_update(freeze_occupation=False)
+    update_warmup = _make_update(
+      freeze_occupation=occupation_setup.trainable and occupation_warmup_steps > 0,
+    )
 
     try:
       if config.execution.verbose:
@@ -177,14 +272,19 @@ def run_direct_opt(
 
       for i in range(config.solver.direct_opt.max_steps):
         start = time.time()
-        params, opt_state, loss_val, etot = update(params, opt_state)
-        etot = jax.block_until_ready(etot)
-        total_energy = float(etot + ew)
+        step_update = (
+          update_warmup
+          if occupation_setup.trainable and i < occupation_warmup_steps
+          else update
+        )
+        params, opt_state, total_val, free_val = step_update(params, opt_state)
+        total_val, free_val = jax.block_until_ready((total_val, free_val))
+        total_energy = float(total_val + ew)
         delta_energy = None
         if total_energy_history:
           delta_energy = abs(total_energy - total_energy_history[-1])
         total_energy_history.append(total_energy)
-        converged = convergence_checker.check(float(etot))
+        converged = convergence_checker.check(float(free_val))
         energy_std = convergence_checker.current_std()
         dt = time.time() - start
 

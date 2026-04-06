@@ -92,6 +92,7 @@ default_config = {
     "method": "uniform",
     "smearing": 0.0,
     "empty_bands": 20,
+    "warmup_steps": 500,
   },
   "ewald": {
     "eta": 0.1,
@@ -165,6 +166,8 @@ _GROUP_FIELDS = {
     "method",
     "smearing",
     "empty_bands",
+    "warmup_steps",
+    "warmup_step",
   },
   "ewald": {
     "eta",
@@ -293,6 +296,8 @@ _LEGACY_FIELD_MAP = {
   "occupation": ("occupation", "method"),
   "smearing": ("occupation", "smearing"),
   "empty_bands": ("occupation", "empty_bands"),
+  "occupation_warmup_steps": ("occupation", "warmup_steps"),
+  "occupation_warmup_step": ("occupation", "warmup_steps"),
   "band_structure_empty_bands": ("band", "empty_bands"),
   "k_path_special_points": ("band", "k_path_special_points"),
   "num_kpoints": ("band", "num_kpoints"),
@@ -676,6 +681,8 @@ def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
       if key == "solver":
         _normalize_solver_group(normalized["solver"], group_value)
       else:
+        if key == "occupation" and "warmup_step" in group_value:
+          group_value.setdefault("warmup_steps", group_value.pop("warmup_step"))
         _deep_merge(normalized[key], group_value)
       continue
 
@@ -892,6 +899,11 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
     raise TypeError("Config field `occupation.method` must be a string.")
   _validate_number(config["occupation"]["smearing"], "occupation.smearing")
   _validate_int(config["occupation"]["empty_bands"], "occupation.empty_bands")
+  _validate_int(config["occupation"]["warmup_steps"], "occupation.warmup_steps")
+  if config["occupation"]["warmup_steps"] < 0:
+    raise ValueError(
+      "Config field `occupation.warmup_steps` must be non-negative."
+    )
 
   _validate_number(config["ewald"]["eta"], "ewald.eta")
   _validate_number(config["ewald"]["cutoff"], "ewald.cutoff")
