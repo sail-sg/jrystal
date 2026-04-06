@@ -17,7 +17,6 @@ def uniform(
   mesh_shape = list(out_sharding.mesh.shape.values())
   sharding_dim = len(mesh_shape)
   num_devices = np.prod(mesh_shape)
-  # assert num_devices == jax.device_count(), f"Number of devices {num_devices} does not match the number of devices in the sharding {jax.device_count()}"
 
   single_device_arrays_shape = list(shape)
   for i in range(sharding_dim):
@@ -30,19 +29,3 @@ def uniform(
     output.append(jax.device_put(u, jax.devices()[i]))
 
   return jax.make_array_from_single_device_arrays(shape, out_sharding, output)
-
-
-if __name__ == "__main__":
-
-  import jax
-  import numpy as np
-  from jax.sharding import Mesh, NamedSharding
-  from jax.sharding import PartitionSpec as P
-
-  num_gpus = len(jax.local_devices())
-  mesh = Mesh(np.array(jax.devices()).reshape([1, 1, -1]), ('s', 'k', 'i'))
-  spec = P('s', 'k', 'i')
-  named_sharding = NamedSharding(mesh, spec)
-
-  with mesh:
-    uniform(jax.random.PRNGKey(123), (1, 1, 16, 123), named_sharding)

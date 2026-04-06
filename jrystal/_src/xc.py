@@ -251,7 +251,8 @@ def _gga_xc_potential(vrho, vsigma, density_grid, g_vector_grid):
 
 
 def _mgga_xc_potential(vrho, vsigma, vtau, vlapl, density_grid, g_vector_grid):
-  r"""Compute the local MGGA XC potential and return vtau for the non-local part.
+  r"""Compute the local MGGA XC potential and return vtau for the non-local
+  part.
 
   The local potential extends the GGA form with a Laplacian correction:
 

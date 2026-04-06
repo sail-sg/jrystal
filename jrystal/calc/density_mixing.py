@@ -30,6 +30,7 @@ from jaxtyping import Array, Bool, Float
 # DIIS  (copied from scf/diis.py to consolidate into calc/)
 # ---------------------------------------------------------------------------
 
+
 def diis_init(max_hist: int, density_shape: tuple, dtype=jnp.float32):
   """Initialise DIIS state.
 

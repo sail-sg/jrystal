@@ -401,9 +401,10 @@ def run_nscf(
   num_electrons = backend.num_electrons(ctx)
   num_bands = ceil(num_electrons / 2) + config.band.empty_bands
 
+  num_kpts = ctx.ksampling.kpts.shape[0]
   stage_line(
     "Band",
-    f"Band structure: {ctx.ksampling.kpts.shape[0]} k-points, {num_bands} bands",
+    f"Band structure: {num_kpts} k-points, {num_bands} bands",
   )
 
   if isinstance(backend, _NCBackend):

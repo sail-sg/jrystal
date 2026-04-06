@@ -101,8 +101,9 @@ def hamiltonian_matrix_trace(
       coefficients.
     positions (Float[Array, "atom 3"]): Atomic positions.
     charges (Int[Array, "atom"]): Atomic charges.
-    effictive_density_grid (Union[Float[Array, "x y z"], Float[Array, "spin x y z"]]):
-      Density used to build the effective potential.
+    effictive_density_grid (Union[Float[Array, "x y z"],
+      Float[Array, "spin x y z"]]): Density used to build the effective
+      potential.
     g_vector_grid (Float[Array, "x y z 3"]): Reciprocal-space G-vector grid.
     kpts (Float[Array, "kpt 3"]): :math:`k` points.
     vol (Float): Unit-cell volume.
@@ -162,8 +163,9 @@ def hamiltonian_matrix(
       coefficients.
     positions (Float[Array, "atom 3"]): Atomic positions.
     charges (Int[Array, "atom"]): Atomic charges.
-    effictive_density_grid (Union[Float[Array, "x y z"], Float[Array, "spin x y z"]]):
-      Density used to build the effective potential.
+    effictive_density_grid (Union[Float[Array, "x y z"],
+      Float[Array, "spin x y z"]]): Density used to build the effective
+      potential.
     g_vector_grid (Float[Array, "x y z 3"]): Reciprocal-space G-vector grid.
     kpts (Float[Array, "kpt 3"]): :math:`k` points.
     vol (Float): Unit-cell volume.
