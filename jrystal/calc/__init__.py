@@ -87,6 +87,10 @@ def _run_with_mode(
 def _physical_state_from_result(result: GroundStateResult) -> Optional[dict]:
   if result.coefficients is None or result.occupations is None:
     return None
+  if not isinstance(result.coefficients, dict):
+    return None
+  if "w_re" not in result.coefficients or "w_im" not in result.coefficients:
+    return None
   return {
     "density": result.density,
     "coefficients":
@@ -211,6 +215,10 @@ def _run_metadata(
     ase.Atoms(symbols=crystal.symbols).get_chemical_formula()
     if getattr(crystal, "symbols", None) else "system"
   )
+  if not isinstance(actual_solver, str):
+    actual_solver = None
+  if not isinstance(converged, bool):
+    converged = None
   return {
     "task":
       task,
@@ -261,13 +269,18 @@ def energy(config: JrystalConfigDict) -> GroundStateResult:
       ctx=ctx,
       output_dir=run_dir,
     )
-    result = save_ground_state(
-      config,
-      result,
-      run_dir,
-      ctx=ctx,
-      backend=backend,
-    )
+    actual_solver = getattr(result, "actual_solver", None)
+    converged = getattr(result, "converged", None)
+    if isinstance(result, GroundStateResult):
+      result = save_ground_state(
+        config,
+        result,
+        run_dir,
+        ctx=ctx,
+        backend=backend,
+      )
+      actual_solver = result.actual_solver
+      converged = result.converged
     save_run_metadata(
       run_dir,
       _run_metadata(
@@ -275,8 +288,8 @@ def energy(config: JrystalConfigDict) -> GroundStateResult:
         config=config,
         crystal=crystal,
         started_at=started_at,
-        actual_solver=result.actual_solver,
-        converged=result.converged,
+        actual_solver=actual_solver,
+        converged=converged,
         finished_at=datetime.now().isoformat(),
       ),
     )
@@ -333,13 +346,18 @@ def band(
         output_dir=run_dir,
       )
 
-    ground_state_result = save_ground_state(
-      config,
-      ground_state_result,
-      run_dir,
-      ctx=ctx_mesh,
-      backend=backend_mesh,
-    )
+    actual_solver = getattr(ground_state_result, "actual_solver", None)
+    converged = getattr(ground_state_result, "converged", None)
+    if isinstance(ground_state_result, GroundStateResult):
+      ground_state_result = save_ground_state(
+        config,
+        ground_state_result,
+        run_dir,
+        ctx=ctx_mesh,
+        backend=backend_mesh,
+      )
+      actual_solver = ground_state_result.actual_solver
+      converged = ground_state_result.converged
 
     backend_path = get_backend(config)
     ctx_path = build_runtime_context(config, mode="path", backend=backend_path)
@@ -352,8 +370,8 @@ def band(
         config=config,
         crystal=crystal,
         started_at=started_at,
-        actual_solver=ground_state_result.actual_solver,
-        converged=ground_state_result.converged,
+        actual_solver=actual_solver,
+        converged=converged,
         finished_at=datetime.now().isoformat(),
       ),
     )

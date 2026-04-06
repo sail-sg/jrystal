@@ -68,7 +68,7 @@ def resolve_output_root(config: JrystalConfigDict) -> Path:
     output_dir = config.io.save_dir
   if output_dir is None:
     output_dir = "out"
-  return Path(output_dir)
+  return Path(output_dir).expanduser().resolve()
 
 
 def setup_output_dir(
@@ -348,6 +348,10 @@ def save_band_structure(
   with open(band_dir / "kpath.json", "w", encoding="utf-8") as file:
     json.dump(_kpath_payload(result), file, indent=2, sort_keys=True)
     file.write("\n")
+
+  if config.io.save_dir is not None:
+    legacy_name = "".join(result.crystal.symbols or []) + "_band_structure.npy"
+    np.save(resolve_output_root(config) / legacy_name, np.asarray(result.eigenvalues))
 
   if not config.io.save_band_plot:
     return
