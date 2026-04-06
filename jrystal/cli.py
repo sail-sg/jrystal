@@ -87,9 +87,7 @@ def _apply_overrides(config, overrides: dict[str, str]) -> None:
 
     if key == "solver.optimizer_args":
       if not isinstance(value, dict):
-        raise TypeError(
-          "Override 'solver.optimizer_args' must be a mapping."
-        )
+        raise TypeError("Override 'solver.optimizer_args' must be a mapping.")
       for sub_key, sub_value in value.items():
         config.solver.direct_opt.optimizer[sub_key] = sub_value
       continue

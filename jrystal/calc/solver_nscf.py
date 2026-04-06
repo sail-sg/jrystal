@@ -50,10 +50,10 @@ if TYPE_CHECKING:
   from .runtime import RuntimeContext
   from .types import GroundStateResult
 
-
 # ---------------------------------------------------------------------------
 # All-electron NSCF internals
 # ---------------------------------------------------------------------------
+
 
 def _run_nscf_ae(config, ctx, density, num_bands):
   """Band structure for all-electron backend."""
@@ -67,13 +67,15 @@ def _run_nscf_ae(config, ctx, density, num_bands):
   num_devices = ctx.execution.num_devices
   num_kpts = int(ksampling.kpts.shape[0])
   util_devices = (
-    max(1, min(num_devices, num_kpts))
-    if ctx.execution.parallel_over_k else 1
+    max(1, min(num_devices, num_kpts)) if ctx.execution.parallel_over_k else 1
   )
 
   optimizer = create_optimizer(config)
   params_pw = _pw.param_init(
-    key, num_bands, 1, freq_mask,
+    key,
+    num_bands,
+    1,
+    freq_mask,
     spin_restricted=config.system.spin_restricted,
   )
   opt_state = optimizer.init(params_pw)
@@ -81,9 +83,15 @@ def _run_nscf_ae(config, ctx, density, num_bands):
   def hamiltonian_trace(params, kpts, g_vec_grid):
     coeff = _pw.coeff(params, freq_mask)
     output = _hamiltonian.hamiltonian_matrix_trace(
-      coeff, crystal.positions, crystal.charges,
-      density, crystal.vol, g_vec_grid, kpts,
-      xc=xc, kohn_sham=True,
+      coeff,
+      crystal.positions,
+      crystal.charges,
+      density,
+      crystal.vol,
+      g_vec_grid,
+      kpts,
+      xc=xc,
+      kohn_sham=True,
     )
     return jnp.sum(output)
 
@@ -97,7 +105,9 @@ def _run_nscf_ae(config, ctx, density, num_bands):
     return params, opt_state, val
 
   @partial(
-    jax.pmap, in_axes=(0, 0, 0), devices=jax.devices()[:util_devices],
+    jax.pmap,
+    in_axes=(0, 0, 0),
+    devices=jax.devices()[:util_devices],
   )
   def optimize_eigenvalues(kpts, params_pw, opt_state):
 
@@ -146,7 +156,9 @@ def _run_nscf_ae(config, ctx, density, num_bands):
       hpsi = jax.grad(_trace)(coeff.conj()) / 2.0
       num_grids = np.prod(coeff.shape[-3:])
       hmat = jnp.einsum(
-        "skixyz,skjxyz->skij", jnp.conj(coeff), hpsi,
+        "skixyz,skjxyz->skij",
+        jnp.conj(coeff),
+        hpsi,
       ) * (crystal.vol / (num_grids**2))
       return jax.vmap(jnp.linalg.eigvalsh)(hmat)
 
@@ -165,10 +177,12 @@ def _run_nscf_ae(config, ctx, density, num_bands):
     ksampling.kpts, util_devices,
   )
   params_pw = jax.tree.map(
-    lambda x: jnp.stack([x] * util_devices, axis=0), params_pw,
+    lambda x: jnp.stack([x] * util_devices, axis=0),
+    params_pw,
   )
   opt_state = jax.tree.map(
-    lambda x: jnp.stack([x] * util_devices, axis=0), opt_state,
+    lambda x: jnp.stack([x] * util_devices, axis=0),
+    opt_state,
   )
 
   t0 = time.time()
@@ -182,6 +196,7 @@ def _run_nscf_ae(config, ctx, density, num_bands):
 # ---------------------------------------------------------------------------
 # Norm-conserving NSCF internals
 # ---------------------------------------------------------------------------
+
 
 def _run_nscf_nc(config, ctx, density, num_bands):
   """Band structure for norm-conserving pseudopotential backend."""
@@ -198,8 +213,7 @@ def _run_nscf_nc(config, ctx, density, num_bands):
   num_devices = ctx.execution.num_devices
   num_kpts = int(ksampling.kpts.shape[0])
   util_devices = (
-    max(1, min(num_devices, num_kpts))
-    if ctx.execution.parallel_over_k else 1
+    max(1, min(num_devices, num_kpts)) if ctx.execution.parallel_over_k else 1
   )
 
   optimizer = create_optimizer(config)
@@ -211,17 +225,28 @@ def _run_nscf_nc(config, ctx, density, num_bands):
 
   def _get_nl(kpt, bgk):
     return _normcons.potential_nonlocal_psi_reciprocal(
-      crystal.positions, g_vec, kpt,
-      pseudopot.r_grid, pseudopot.nonlocal_beta_grid,
+      crystal.positions,
+      g_vec,
+      kpt,
+      pseudopot.r_grid,
+      pseudopot.nonlocal_beta_grid,
       pseudopot.nonlocal_angular_momentum,
-      pseudopot.nonlocal_d_matrix, bgk,
+      pseudopot.nonlocal_d_matrix,
+      bgk,
     )
 
   def hamiltonian_trace(params, kpts, g_vec_grid, potential_nl):
     coeff = _pw.coeff(params, freq_mask)
     return _normcons.hamiltonian_trace(
-      coeff, density, potential_loc, potential_nl,
-      g_vec_grid, kpts, crystal.vol, xc=xc, kohn_sham=True,
+      coeff,
+      density,
+      potential_loc,
+      potential_nl,
+      g_vec_grid,
+      kpts,
+      crystal.vol,
+      xc=xc,
+      kohn_sham=True,
     )
 
   @jax.jit
@@ -234,7 +259,9 @@ def _run_nscf_nc(config, ctx, density, num_bands):
     return params, opt_state, val
 
   @partial(
-    jax.pmap, in_axes=(0, 0, 0, 0), devices=jax.devices()[:util_devices],
+    jax.pmap,
+    in_axes=(0, 0, 0, 0),
+    devices=jax.devices()[:util_devices],
   )
   def optimize_eigenvalues(kpts, beta_gk, params_pw, opt_state):
 
@@ -271,13 +298,21 @@ def _run_nscf_nc(config, ctx, density, num_bands):
     def eig_fn(param, kpt, nl):
       coeff = _pw.coeff(param, freq_mask)
       hmat = _normcons.hamiltonian_matrix(
-        coeff, density, potential_loc, nl,
-        g_vec, kpt, crystal.vol, xc, kohn_sham=True,
+        coeff,
+        density,
+        potential_loc,
+        nl,
+        g_vec,
+        kpt,
+        crystal.vol,
+        xc,
+        kohn_sham=True,
       )
       return jnp.linalg.eigvalsh(hmat[0])
 
     eig_first = eig_fn(
-      params_first, kpts[0:1],
+      params_first,
+      kpts[0:1],
       _get_nl(kpts[0:1], _select_beta(beta_gk, 0)),
     )
 
@@ -299,15 +334,20 @@ def _run_nscf_nc(config, ctx, density, num_bands):
   )
   beta_gk_reshaped, _, _ = _chunk_beta_sbt(beta_gk, util_devices)
   params_pw = jax.tree.map(
-    lambda x: jnp.stack([x] * util_devices, axis=0), params_pw,
+    lambda x: jnp.stack([x] * util_devices, axis=0),
+    params_pw,
   )
   opt_state = jax.tree.map(
-    lambda x: jnp.stack([x] * util_devices, axis=0), opt_state,
+    lambda x: jnp.stack([x] * util_devices, axis=0),
+    opt_state,
   )
 
   t0 = time.time()
   eigen_values = optimize_eigenvalues(
-    k_path, beta_gk_reshaped, params_pw, opt_state,
+    k_path,
+    beta_gk_reshaped,
+    params_pw,
+    opt_state,
   )
   dt = time.time() - t0
   stage_line("Band", f"Band calculation done. ({dt:.2f}s)")
@@ -318,6 +358,7 @@ def _run_nscf_nc(config, ctx, density, num_bands):
 # ---------------------------------------------------------------------------
 # Shared helper
 # ---------------------------------------------------------------------------
+
 
 def _chunk_kpoint_axis(array, num_devices):
   """Pad and reshape a leading k-point axis for device-parallel NSCF."""
@@ -365,7 +406,9 @@ def _reshape_eigenvalues(eigen_values, num_kpts, num_bands):
 
   num_spin = eigen_values.shape[2]
   eigen_values = jnp.reshape(
-    eigen_values, (-1, num_spin, num_bands), order="F",
+    eigen_values,
+    (-1, num_spin, num_bands),
+    order="F",
   )
   eigen_values = eigen_values[:num_kpts]
   return jnp.transpose(eigen_values, (1, 0, 2))
@@ -374,6 +417,7 @@ def _reshape_eigenvalues(eigen_values, num_kpts, num_bands):
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
+
 
 def run_nscf(
   config: JrystalConfigDict,

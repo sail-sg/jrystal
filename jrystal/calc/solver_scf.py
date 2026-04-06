@@ -36,10 +36,10 @@ from ..smearing import fermi_dirac, find_chemical_potential
 from ..terminal_ui import Spinner, stage_line
 from .types import EnergyDecomposition, GroundStateResult
 from .workflow_logging import (
-  format_ground_state_iteration,
-  log_energy_breakdown,
-  log_ground_state_finish,
-  log_ground_state_start,
+    format_ground_state_iteration,
+    log_energy_breakdown,
+    log_ground_state_finish,
+    log_ground_state_start,
 )
 
 if TYPE_CHECKING:
@@ -48,10 +48,10 @@ if TYPE_CHECKING:
   from .runtime import RuntimeContext
 
 from .density_mixing import (
-  diis_init,
-  diis_update,
-  kerker_preconditioner,
-  simple_mixing,
+    diis_init,
+    diis_update,
+    kerker_preconditioner,
+    simple_mixing,
 )
 
 
@@ -67,7 +67,10 @@ def _compute_occupation(evals, num_electrons, k_weights, smearing):
   """Compute Fermi-Dirac or fixed occupation."""
   if smearing > 0:
     mu = find_chemical_potential(
-      evals, num_electrons, smearing=smearing, k_weights=k_weights,
+      evals,
+      num_electrons,
+      smearing=smearing,
+      k_weights=k_weights,
     )
     return fermi_dirac(evals, mu, smearing=smearing)
   return _fixed_occupation(evals, num_electrons)
@@ -81,6 +84,7 @@ def _occupation_max(spin_restricted: bool) -> float:
 # ---------------------------------------------------------------------------
 # SCF solver
 # ---------------------------------------------------------------------------
+
 
 def run_scf(
   config: JrystalConfigDict,
@@ -158,7 +162,10 @@ def run_scf(
 
   # --- Init wavefunctions (compact, in masked G-space) ---
   pw_params = _pw.param_init(
-    key, num_bands, num_kpts, freq_mask,
+    key,
+    num_bands,
+    num_kpts,
+    freq_mask,
     spin_restricted=config.system.spin_restricted,
   )
   coeff_compact = pw_params["w_re"] + 1.0j * pw_params["w_im"]
@@ -173,7 +180,10 @@ def run_scf(
   def _density_from_compact(c, occ):
     coeff_full = expand_coefficient(c, freq_mask)
     return _pw.density_grid(
-      coeff_full, crystal.vol, occ, k_weights=k_weights,
+      coeff_full,
+      crystal.vol,
+      occ,
+      k_weights=k_weights,
     )
 
   density = _density_from_compact(coeff_compact, occ)
@@ -183,7 +193,9 @@ def run_scf(
 
   # --- DIIS state ---
   diis_state = diis_init(
-    max_hist=diis_max_hist, density_shape=density.shape, dtype=density.dtype,
+    max_hist=diis_max_hist,
+    density_shape=density.shape,
+    dtype=density.dtype,
   )
 
   # --- Hvp via backend ---
@@ -229,13 +241,19 @@ def run_scf(
 
       # 2. Update occupation
       occ = _compute_occupation(
-        evals_new, num_electrons, k_weights, smearing,
+        evals_new,
+        num_electrons,
+        k_weights,
+        smearing,
       )
 
       # 3. New density
       coeff_full_new = expand_coefficient(coeff_new, freq_mask)
       density_new = _pw.density_grid(
-        coeff_full_new, crystal.vol, occ, k_weights=k_weights,
+        coeff_full_new,
+        crystal.vol,
+        occ,
+        k_weights=k_weights,
       )
 
       # 4. Check convergence
@@ -307,12 +325,16 @@ def run_scf(
   return GroundStateResult(
     config=config,
     crystal=crystal,
-    params_pw={"w_re": coeff_compact.real, "w_im": coeff_compact.imag},
+    params_pw={
+      "w_re": coeff_compact.real, "w_im": coeff_compact.imag
+    },
     params_occ={},
     total_energy=total_e,
     energy_terms=EnergyDecomposition(
       ewald=float(ew),
-      **{k: float(v) for k, v in decomp.items()},
+      **{
+        k: float(v) for k, v in decomp.items()
+      },
     ),
     converged=converged,
     density=density,

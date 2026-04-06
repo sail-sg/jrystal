@@ -84,10 +84,16 @@ def diis_update(state, density, error, eps=1e-12):
   head = state["head"]
 
   densities = jax.lax.dynamic_update_index_in_dim(
-    densities, density, head, axis=0,
+    densities,
+    density,
+    head,
+    axis=0,
   )
   errors = jax.lax.dynamic_update_index_in_dim(
-    errors, error, head, axis=0,
+    errors,
+    error,
+    head,
+    axis=0,
   )
 
   max_hist = densities.shape[0]
@@ -113,6 +119,7 @@ def diis_update(state, density, error, eps=1e-12):
 # Linear mixing
 # ---------------------------------------------------------------------------
 
+
 def simple_mixing(new_density, old_density, beta: float = 0.7):
   """Linear mixing: ``beta * new + (1 - beta) * old``."""
   return new_density * beta + old_density * (1.0 - beta)
@@ -121,6 +128,7 @@ def simple_mixing(new_density, old_density, beta: float = 0.7):
 # ---------------------------------------------------------------------------
 # Kerker preconditioner
 # ---------------------------------------------------------------------------
+
 
 def kerker_preconditioner(
   g_vec: Float[Array, "x y z 3"],
@@ -136,7 +144,7 @@ def kerker_preconditioner(
   LOBPCG elementwise preconditioner.
   """
   eff_g = g_vec[freq_mask]
-  g2 = jnp.sum(eff_g ** 2, axis=-1)
+  g2 = jnp.sum(eff_g**2, axis=-1)
   return g2 / (1.0 + g2)
 
 

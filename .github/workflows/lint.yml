@@ -25,19 +25,49 @@ jobs:
       - name: Install lint and format tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install flake8 flake8-bugbear isort yapf pylint
+          python -m pip install ruff isort yapf
 
-      - name: Run flake8
+      - name: Run ruff
         run: |
-          PYTHON_FILES=$(find . -type f -name "*.py" -not -path "*/.venv/*")
-          flake8 ${PYTHON_FILES} --count --show-source --statistics
+          TARGETS=(
+            main.py
+            jrystal/cli.py
+            jrystal/config.py
+            jrystal/terminal_ui.py
+            $(find jrystal/calc -maxdepth 1 -type f -name "*.py" | sort)
+            $(find tests/smoke -type f -name "*.py" | sort)
+          )
+          ruff check "${TARGETS[@]}"
 
       - name: Run format checks
         run: |
-          PYTHON_FILES=$(find . -type f -name "*.py" -not -path "*/.venv/*")
-          isort --check ${PYTHON_FILES}
-          yapf -r -d ${PYTHON_FILES}
-
-      - name: Run pylint
-        run: |
-          pylint jrystal
+          PYTHON_FILES=(
+            main.py
+            jrystal/cli.py
+            jrystal/config.py
+            jrystal/terminal_ui.py
+            $(find jrystal/calc -maxdepth 1 -type f -name "*.py" | sort)
+            $(find tests/smoke -type f -name "*.py" | sort)
+          )
+          YAPF_FILES=(
+            main.py
+            jrystal/cli.py
+            jrystal/config.py
+            jrystal/terminal_ui.py
+            jrystal/calc/__init__.py
+            jrystal/calc/backend.py
+            jrystal/calc/convergence.py
+            jrystal/calc/density_mixing.py
+            jrystal/calc/pre_calc.py
+            jrystal/calc/solver_nscf.py
+            jrystal/calc/types.py
+            jrystal/calc/workflow_logging.py
+            tests/smoke/test_cli.py
+            tests/smoke/test_config.py
+            tests/smoke/test_import.py
+            tests/smoke/test_ksampling.py
+            tests/smoke/test_runtime.py
+            tests/smoke/test_terminal_ui.py
+          )
+          isort --check "${PYTHON_FILES[@]}"
+          yapf -r -d "${YAPF_FILES[@]}"

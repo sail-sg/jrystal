@@ -162,4 +162,5 @@ cython_debug/
 
 
 # backup files
+_cache/
 *.backup

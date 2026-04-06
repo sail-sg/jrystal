@@ -61,7 +61,8 @@ def supports_color(stream: TextIO | None = None) -> bool:
   if os.environ.get("NO_COLOR"):
     return False
   term = os.environ.get("TERM", "")
-  return hasattr(stream, "isatty") and stream.isatty() and term.lower() != "dumb"
+  return hasattr(stream,
+                 "isatty") and stream.isatty() and term.lower() != "dumb"
 
 
 def supports_live_output(stream: TextIO | None = None) -> bool:
@@ -148,7 +149,9 @@ def stage_line(
 ) -> None:
   """Write a stage-labelled stable terminal line."""
   stream = sys.stderr if stream is None else stream
-  console_line(f"{stage_prefix(stage_name, stream=stream)} {message}", stream=stream)
+  console_line(
+    f"{stage_prefix(stage_name, stream=stream)} {message}", stream=stream
+  )
 
 
 def stage_warning(
@@ -221,9 +224,9 @@ def colorize_logo(
     start = max(0, min(len(line), scan_col))
     end = max(start, min(len(line), scan_col + band_width))
     coloured_lines.append(
-      style(line[:start], color=base_color, bold=True, stream=stream)
-      + style(line[start:end], color="white", bold=True, stream=stream)
-      + style(line[end:], color=base_color, bold=True, stream=stream)
+      style(line[:start], color=base_color, bold=True, stream=stream) +
+      style(line[start:end], color="white", bold=True, stream=stream) +
+      style(line[end:], color=base_color, bold=True, stream=stream)
     )
   return "\n".join(coloured_lines) + ("\n" if logo.endswith("\n") else "")
 
@@ -240,10 +243,8 @@ def render_logo(
 
   if animate is None:
     animate = (
-      supports_live_output(stream)
-      and supports_color(stream)
-      and not _env_flag("JRYSTAL_NO_ANIM")
-      and not _env_flag("CI")
+      supports_live_output(stream) and supports_color(stream) and
+      not _env_flag("JRYSTAL_NO_ANIM") and not _env_flag("CI")
     )
 
   if not animate:

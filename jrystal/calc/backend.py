@@ -36,10 +36,10 @@ if TYPE_CHECKING:
   from ..config import JrystalConfigDict
   from .runtime import RuntimeContext
 
-
 # ---------------------------------------------------------------------------
 # All-electron backend
 # ---------------------------------------------------------------------------
+
 
 class AllElectronBackend:
   """All-electron (no pseudopotential) backend."""
@@ -61,14 +61,25 @@ class AllElectronBackend:
 
     density = _pw.density_grid(coeff, vol, occ, k_weights=k_weights)
     density_reciprocal = _pw.density_grid_reciprocal(
-      coeff, vol, occ, k_weights=k_weights,
+      coeff,
+      vol,
+      occ,
+      k_weights=k_weights,
     )
     kin = _energy.kinetic(
-      coeff, g_vec, k_vec, kpts_weights=k_weights, occupation=occ,
+      coeff,
+      g_vec,
+      k_vec,
+      kpts_weights=k_weights,
+      occupation=occ,
     )
     hart = _energy.hartree(density_reciprocal, g_vec, vol)
     ext = _energy.external(
-      density_reciprocal, crystal.positions, crystal.charges, g_vec, vol,
+      density_reciprocal,
+      crystal.positions,
+      crystal.charges,
+      g_vec,
+      vol,
     )
     xc = _energy.xc_energy(density, g_vec, vol, self.xc, kohn_sham=False)
     return kin + hart + ext + xc
@@ -82,10 +93,17 @@ class AllElectronBackend:
 
     def _trace(c):
       return _hamiltonian.hamiltonian_matrix_trace(
-        c, crystal.positions, crystal.charges, density,
-        crystal.vol, g_vec, k_vec,
-        kpts_weights=k_weights, xc=self.xc,
-        kohn_sham=True, keep_spin_axis=False,
+        c,
+        crystal.positions,
+        crystal.charges,
+        density,
+        crystal.vol,
+        g_vec,
+        k_vec,
+        kpts_weights=k_weights,
+        xc=self.xc,
+        kohn_sham=True,
+        keep_spin_axis=False,
       )
 
     return jax.grad(_trace)(coeff) / 2.0
@@ -100,17 +118,32 @@ class AllElectronBackend:
 
     density = _pw.density_grid(coeff, vol, occ, k_weights=k_weights)
     density_reciprocal = _pw.density_grid_reciprocal(
-      coeff, vol, occ, k_weights=k_weights,
+      coeff,
+      vol,
+      occ,
+      k_weights=k_weights,
     )
     return {
-      "kinetic": _energy.kinetic(
-        coeff, g_vec, k_vec, kpts_weights=k_weights, occupation=occ,
-      ),
-      "hartree": _energy.hartree(density_reciprocal, g_vec, vol),
-      "external": _energy.external(
-        density_reciprocal, crystal.positions, crystal.charges, g_vec, vol,
-      ),
-      "xc": _energy.xc_energy(density, g_vec, vol, self.xc, kohn_sham=False),
+      "kinetic":
+        _energy.kinetic(
+          coeff,
+          g_vec,
+          k_vec,
+          kpts_weights=k_weights,
+          occupation=occ,
+        ),
+      "hartree":
+        _energy.hartree(density_reciprocal, g_vec, vol),
+      "external":
+        _energy.external(
+          density_reciprocal,
+          crystal.positions,
+          crystal.charges,
+          g_vec,
+          vol,
+        ),
+      "xc":
+        _energy.xc_energy(density, g_vec, vol, self.xc, kohn_sham=False),
     }
 
   def num_electrons(self, ctx: RuntimeContext) -> int:
@@ -121,6 +154,7 @@ class AllElectronBackend:
 # ---------------------------------------------------------------------------
 # Norm-conserving pseudopotential backend
 # ---------------------------------------------------------------------------
+
 
 class NormConservingBackend:
   """Norm-conserving pseudopotential backend."""
@@ -141,25 +175,34 @@ class NormConservingBackend:
 
     stage_line("Init", "Initializing pseudopotential (local)...")
     potential_loc = _normcons.potential_local_reciprocal(
-      crystal.positions, g_vec,
-      pseudopot.r_grid, pseudopot.local_potential_grid,
-      pseudopot.local_potential_charge, crystal.vol,
+      crystal.positions,
+      g_vec,
+      pseudopot.r_grid,
+      pseudopot.local_potential_grid,
+      pseudopot.local_potential_charge,
+      crystal.vol,
     )
 
     stage_line(
       "Init", "Initializing pseudopotential (Spherical Bessel Transform)..."
     )
     beta_gk = pre_calc_beta_sbt(
-      pseudopot, np.array(g_vec), np.array(ksampling.kpts),
+      pseudopot,
+      np.array(g_vec),
+      np.array(ksampling.kpts),
     )
 
     if ksampling.mode == "mesh":
       stage_line("Init", "Initializing pseudopotential (nonlocal)...")
       potential_nl = _normcons.potential_nonlocal_psi_reciprocal(
-        crystal.positions, g_vec, ksampling.kpts,
-        pseudopot.r_grid, pseudopot.nonlocal_beta_grid,
+        crystal.positions,
+        g_vec,
+        ksampling.kpts,
+        pseudopot.r_grid,
+        pseudopot.nonlocal_beta_grid,
         pseudopot.nonlocal_angular_momentum,
-        pseudopot.nonlocal_d_matrix, beta_gk,
+        pseudopot.nonlocal_d_matrix,
+        beta_gk,
       )
     else:
       # For band-path mode, keep SBT cache; nonlocal is built per k-point
@@ -182,17 +225,29 @@ class NormConservingBackend:
 
     density = _pw.density_grid(coeff, vol, occ, k_weights=k_weights)
     density_reciprocal = _pw.density_grid_reciprocal(
-      coeff, vol, occ, k_weights=k_weights,
+      coeff,
+      vol,
+      occ,
+      k_weights=k_weights,
     )
     kin = _energy.kinetic(
-      coeff, g_vec, k_vec, kpts_weights=k_weights, occupation=occ,
+      coeff,
+      g_vec,
+      k_vec,
+      kpts_weights=k_weights,
+      occupation=occ,
     )
     hart = _energy.hartree(density_reciprocal, g_vec, vol)
     ext_loc = _normcons.energy_local(
-      density_reciprocal, ctx.potential_local, vol=vol,
+      density_reciprocal,
+      ctx.potential_local,
+      vol=vol,
     )
     ext_nloc = _normcons.energy_nonlocal(
-      coeff, ctx.potential_nonlocal, vol=vol, occupation=occ,
+      coeff,
+      ctx.potential_nonlocal,
+      vol=vol,
+      occupation=occ,
     )
     xc = _energy.xc_energy(density, g_vec, vol, self.xc, kohn_sham=False)
     return kin + hart + ext_loc + ext_nloc + xc
@@ -205,8 +260,15 @@ class NormConservingBackend:
 
     def _trace(c):
       return _normcons.hamiltonian_trace(
-        c, density, ctx.potential_local, ctx.potential_nonlocal,
-        g_vec, k_vec, crystal.vol, xc=self.xc, kohn_sham=True,
+        c,
+        density,
+        ctx.potential_local,
+        ctx.potential_nonlocal,
+        g_vec,
+        k_vec,
+        crystal.vol,
+        xc=self.xc,
+        kohn_sham=True,
       )
 
     return jax.grad(_trace)(coeff.conj()) / 2.0
@@ -221,20 +283,37 @@ class NormConservingBackend:
 
     density = _pw.density_grid(coeff, vol, occ, k_weights=k_weights)
     density_reciprocal = _pw.density_grid_reciprocal(
-      coeff, vol, occ, k_weights=k_weights,
+      coeff,
+      vol,
+      occ,
+      k_weights=k_weights,
     )
     return {
-      "kinetic": _energy.kinetic(
-        coeff, g_vec, k_vec, kpts_weights=k_weights, occupation=occ,
-      ),
-      "hartree": _energy.hartree(density_reciprocal, g_vec, vol),
-      "external_local": _normcons.energy_local(
-        density_reciprocal, ctx.potential_local, vol=vol,
-      ),
-      "external_nonlocal": _normcons.energy_nonlocal(
-        coeff, ctx.potential_nonlocal, vol=vol, occupation=occ,
-      ),
-      "xc": _energy.xc_energy(density, g_vec, vol, self.xc, kohn_sham=False),
+      "kinetic":
+        _energy.kinetic(
+          coeff,
+          g_vec,
+          k_vec,
+          kpts_weights=k_weights,
+          occupation=occ,
+        ),
+      "hartree":
+        _energy.hartree(density_reciprocal, g_vec, vol),
+      "external_local":
+        _normcons.energy_local(
+          density_reciprocal,
+          ctx.potential_local,
+          vol=vol,
+        ),
+      "external_nonlocal":
+        _normcons.energy_nonlocal(
+          coeff,
+          ctx.potential_nonlocal,
+          vol=vol,
+          occupation=occ,
+        ),
+      "xc":
+        _energy.xc_energy(density, g_vec, vol, self.xc, kohn_sham=False),
     }
 
   def num_electrons(self, ctx: RuntimeContext) -> int:
@@ -245,6 +324,7 @@ class NormConservingBackend:
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
+
 
 def get_backend(
   config: JrystalConfigDict

@@ -26,14 +26,14 @@ from ..__init__ import get_pkg_path
 from .._src.crystal import Crystal
 from .._src.ewald import ewald_coulomb_repulsion
 from .._src.grid import (
-  cubic_mask,
-  estimate_max_cutoff_energy,
-  g_vectors,
-  k_vectors,
-  proper_grid_size,
-  r_vectors,
-  spherical_mask,
-  translation_vectors,
+    cubic_mask,
+    estimate_max_cutoff_energy,
+    g_vectors,
+    k_vectors,
+    proper_grid_size,
+    r_vectors,
+    spherical_mask,
+    translation_vectors,
 )
 from .._src.utils import check_spin_number
 from ..config import JrystalConfigDict
@@ -176,9 +176,7 @@ def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
   if opt:
     optimizer = opt(learning_rate=lr, **config_dict)
   else:
-    raise NotImplementedError(
-      f'"{optimizer_name}" is not found in optax.'
-    )
+    raise NotImplementedError(f'"{optimizer_name}" is not found in optax.')
   return optimizer
 
 
@@ -188,9 +186,7 @@ def get_ewald_coulomb_repulsion(
   g_vector_grid=None,
 ):
   crystal = create_crystal(config) if crystal is None else crystal
-  ewald_grid = translation_vectors(
-    crystal.cell_vectors, config.ewald.cutoff
-  )
+  ewald_grid = translation_vectors(crystal.cell_vectors, config.ewald.cutoff)
   if g_vector_grid is None:
     g_vector_grid, _, _ = create_grids(config, crystal=crystal)
   ew = ewald_coulomb_repulsion(
@@ -210,7 +206,4 @@ def save_beta_sbt(output, filename=None):
     filename = f"{cache_dir}/beta_sbt.npz"
   if not os.path.exists(cache_dir):
     os.makedirs(cache_dir)
-  np.savez(
-    filename,
-    *output
-  )
+  np.savez(filename, *output)

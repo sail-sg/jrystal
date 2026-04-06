@@ -22,10 +22,10 @@ from jaxtyping import Array, Float
 if TYPE_CHECKING:
   from .runtime import RuntimeContext
 
-
 # ---------------------------------------------------------------------------
 # Basis / grid objects
 # ---------------------------------------------------------------------------
+
 
 @chex_dataclass
 class KSampling:
@@ -62,6 +62,7 @@ class ExecutionPlan:
 # ---------------------------------------------------------------------------
 # Result objects
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class EnergyDecomposition:
@@ -107,6 +108,7 @@ class BandStructureResult:
 # Backend protocol
 # ---------------------------------------------------------------------------
 
+
 class ElectronicBackend(Protocol):
   """Backend protocol abstracting AE / NC / USPP physics differences.
 
@@ -119,14 +121,20 @@ class ElectronicBackend(Protocol):
     ...
 
   def total_energy(
-    self, coeff: Any, occ: Any, ctx: "RuntimeContext",
+    self,
+    coeff: Any,
+    occ: Any,
+    ctx: "RuntimeContext",
   ) -> float:
     """Compute electronic total energy (excluding Ewald) from
     plane-wave coefficients and occupation numbers."""
     ...
 
   def hamiltonian_apply(
-    self, coeff: Any, density: Any, ctx: "RuntimeContext",
+    self,
+    coeff: Any,
+    density: Any,
+    ctx: "RuntimeContext",
   ) -> Any:
     """Apply H to wavefunctions (H|psi>). Used by SCF eigensolver."""
     ...

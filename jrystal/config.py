@@ -28,95 +28,106 @@ class JrystalConfigDict(ConfigDict):
 
 default_config = {
   "schema_version": 1,
-  "system": {
-    "crystal": "diamond",
-    "crystal_file_path": None,
-    "spin": 0,
-    "spin_restricted": True,
-  },
-  "method": {
-    "xc": "lda_x",
-    "use_pseudopotential": False,
-    "pseudopotential_type": "nc",
-    "pseudopotential_file_dir": None,
-  },
-  "basis": {
-    "freq_mask_method": "spherical",
-    "cutoff_energy": 100,
-    "grid_sizes": 48,
-  },
+  "system":
+    {
+      "crystal": "diamond",
+      "crystal_file_path": None,
+      "spin": 0,
+      "spin_restricted": True,
+    },
+  "method":
+    {
+      "xc": "lda_x",
+      "use_pseudopotential": False,
+      "pseudopotential_type": "nc",
+      "pseudopotential_file_dir": None,
+    },
+  "basis":
+    {
+      "freq_mask_method": "spherical",
+      "cutoff_energy": 100,
+      "grid_sizes": 48,
+    },
   "ksampling": {
     "k_grid_sizes": [4, 4, 4],
     "symmetry_reduction": True,
   },
-  "solver": {
-    "mode": "auto",
-    "auto": {
-      "primary": "scf",
-      "fallback": "direct_opt",
-      "fallback_on_nonconverged": True,
-      "fallback_on_error": True,
+  "solver":
+    {
+      "mode": "auto",
+      "auto":
+        {
+          "primary": "scf",
+          "fallback": "direct_opt",
+          "fallback_on_nonconverged": True,
+          "fallback_on_error": True,
+        },
+      "scf":
+        {
+          "max_iter": 100,
+          "eigensolver": {
+            "method": "lobpcg",
+            "max_iter": 6,
+          },
+          "mixing": {
+            "method": "diis",
+            "beta": 0.8,
+            "history_size": 8,
+          },
+          "convergence": {
+            "density_tol": 1e-3,
+            "energy_tol": 1e-6,
+          },
+        },
+      "direct_opt":
+        {
+          "max_steps": 10000,
+          "optimizer":
+            {
+              "name": "adam",
+              "learning_rate": 0.01,
+              "b1": 0.9,
+              "b2": 0.99,
+            },
+          "scheduler": None,
+          "convergence": {
+            "window_size": 20,
+            "energy_std_tol": 1e-6,
+          },
+        },
     },
-    "scf": {
-      "max_iter": 100,
-      "eigensolver": {
-        "method": "lobpcg",
-        "max_iter": 6,
-      },
-      "mixing": {
-        "method": "diis",
-        "beta": 0.8,
-        "history_size": 8,
-      },
-      "convergence": {
-        "density_tol": 1e-3,
-        "energy_tol": 1e-6,
-      },
+  "occupation":
+    {
+      "method": "uniform",
+      "smearing": 0.0,
+      "empty_bands": 20,
+      "warmup_steps": 500,
     },
-    "direct_opt": {
-      "max_steps": 10000,
-      "optimizer": {
-        "name": "adam",
-        "learning_rate": 0.01,
-        "b1": 0.9,
-        "b2": 0.99,
-      },
-      "scheduler": None,
-      "convergence": {
-        "window_size": 20,
-        "energy_std_tol": 1e-6,
-      },
-    },
-  },
-  "occupation": {
-    "method": "uniform",
-    "smearing": 0.0,
-    "empty_bands": 20,
-    "warmup_steps": 500,
-  },
   "ewald": {
     "eta": 0.1,
     "cutoff": 2e4,
   },
-  "band": {
-    "empty_bands": None,
-    "k_path_special_points": None,
-    "num_kpoints": 64,
-    "k_path_file": None,
-    "epoch": 5000,
-    "fine_tuning": True,
-    "fine_tuning_epoch": 300,
-  },
-  "execution": {
-    "seed": 123,
-    "parallel_over_k_mesh": False,
-    "parallel_over_k_path": True,
-    "xla_preallocate": True,
-    "jax_enable_x64": True,
-    "jax_debug_nans": False,
-    "verbose": True,
-    "eps": 1e-8,
-  },
+  "band":
+    {
+      "empty_bands": None,
+      "k_path_special_points": None,
+      "num_kpoints": 64,
+      "k_path_file": None,
+      "epoch": 5000,
+      "fine_tuning": True,
+      "fine_tuning_epoch": 300,
+    },
+  "execution":
+    {
+      "seed": 123,
+      "parallel_over_k_mesh": False,
+      "parallel_over_k_path": True,
+      "xla_preallocate": True,
+      "jax_enable_x64": True,
+      "jax_debug_nans": False,
+      "verbose": True,
+      "eps": 1e-8,
+    },
   "io": {
     "save_dir": None,
   },
@@ -129,12 +140,13 @@ _GROUP_FIELDS = {
     "spin",
     "spin_restricted",
   },
-  "method": {
-    "xc",
-    "use_pseudopotential",
-    "pseudopotential_type",
-    "pseudopotential_file_dir",
-  },
+  "method":
+    {
+      "xc",
+      "use_pseudopotential",
+      "pseudopotential_type",
+      "pseudopotential_file_dir",
+    },
   "basis": {
     "freq_mask_method",
     "cutoff_energy",
@@ -144,58 +156,60 @@ _GROUP_FIELDS = {
     "k_grid_sizes",
     "symmetry_reduction",
   },
-  "solver": {
-    "mode",
-    "auto",
-    "scf",
-    "direct_opt",
-    "type",
-    "optimizer",
-    "optimizer_args",
-    "scheduler",
-    "epoch",
-    "scf_max_iter",
-    "scf_max_iteration",
-    "lobpcg_max_iter",
-    "mixing_beta",
-    "diis_max_hist",
-    "convergence_window_size",
-    "convergence_condition",
-  },
-  "occupation": {
-    "method",
-    "smearing",
-    "empty_bands",
-    "warmup_steps",
-    "warmup_step",
-  },
+  "solver":
+    {
+      "mode",
+      "auto",
+      "scf",
+      "direct_opt",
+      "type",
+      "optimizer",
+      "optimizer_args",
+      "scheduler",
+      "epoch",
+      "scf_max_iter",
+      "scf_max_iteration",
+      "lobpcg_max_iter",
+      "mixing_beta",
+      "diis_max_hist",
+      "convergence_window_size",
+      "convergence_condition",
+    },
+  "occupation":
+    {
+      "method",
+      "smearing",
+      "empty_bands",
+      "warmup_steps",
+      "warmup_step",
+    },
   "ewald": {
     "eta",
     "cutoff",
   },
-  "band": {
-    "empty_bands",
-    "k_path_special_points",
-    "num_kpoints",
-    "k_path_file",
-    "epoch",
-    "fine_tuning",
-    "fine_tuning_epoch",
-  },
-  "execution": {
-    "seed",
-    "parallel_over_k_mesh",
-    "parallel_over_k_path",
-    "parallel_over_k",
-    "xla_preallocate",
-    "jax_enable_x64",
-    "jax_debug_nans",
-    "verbose",
-    "eps",
-  },
-  "io": {
-  "save_dir",
-  },
+  "band":
+    {
+      "empty_bands",
+      "k_path_special_points",
+      "num_kpoints",
+      "k_path_file",
+      "epoch",
+      "fine_tuning",
+      "fine_tuning_epoch",
+    },
+  "execution":
+    {
+      "seed",
+      "parallel_over_k_mesh",
+      "parallel_over_k_path",
+      "parallel_over_k",
+      "xla_preallocate",
+      "jax_enable_x64",
+      "jax_debug_nans",
+      "verbose",
+      "eps",
+    },
+  "io": {"save_dir",},
 }
 
 _SOLVER_AUTO_FIELDS = {
@@ -281,18 +295,20 @@ _LEGACY_FIELD_MAP = {
   "optimizer": ("solver", "direct_opt", "optimizer", "name"),
   "optimizer_args": ("solver", "direct_opt", "optimizer"),
   "scheduler": ("solver", "direct_opt", "scheduler"),
-  "convergence_window_size": (
-    "solver",
-    "direct_opt",
-    "convergence",
-    "window_size",
-  ),
-  "convergence_condition": (
-    "solver",
-    "direct_opt",
-    "convergence",
-    "energy_std_tol",
-  ),
+  "convergence_window_size":
+    (
+      "solver",
+      "direct_opt",
+      "convergence",
+      "window_size",
+    ),
+  "convergence_condition":
+    (
+      "solver",
+      "direct_opt",
+      "convergence",
+      "energy_std_tol",
+    ),
   "occupation": ("occupation", "method"),
   "smearing": ("occupation", "smearing"),
   "empty_bands": ("occupation", "empty_bands"),
@@ -460,9 +476,7 @@ def _apply_legacy_field(
     config["solver"]["direct_opt"]["convergence"]["energy_std_tol"] = (
       copy.deepcopy(value)
     )
-    config["solver"]["scf"]["convergence"]["energy_tol"] = copy.deepcopy(
-      value,
-    )
+    config["solver"]["scf"]["convergence"]["energy_tol"] = copy.deepcopy(value,)
     return
 
   _set_nested_value(config, _LEGACY_FIELD_MAP[key], value)
@@ -489,7 +503,9 @@ def _normalize_solver_scf_group(
   eigensolver = scf_value.pop("eigensolver", None)
   if eigensolver is not None:
     if not isinstance(eigensolver, Mapping):
-      raise TypeError("Config group `solver.scf.eigensolver` must be a mapping.")
+      raise TypeError(
+        "Config group `solver.scf.eigensolver` must be a mapping."
+      )
     eigensolver_value = copy.deepcopy(dict(eigensolver))
     lobpcg_max_iter = eigensolver_value.pop("lobpcg_max_iter", None)
     if lobpcg_max_iter is not None and "max_iter" not in eigensolver_value:
@@ -512,7 +528,9 @@ def _normalize_solver_scf_group(
   convergence = scf_value.pop("convergence", None)
   if convergence is not None:
     if not isinstance(convergence, Mapping):
-      raise TypeError("Config group `solver.scf.convergence` must be a mapping.")
+      raise TypeError(
+        "Config group `solver.scf.convergence` must be a mapping."
+      )
     convergence_value = copy.deepcopy(dict(convergence))
     convergence_condition = convergence_value.pop("convergence_condition", None)
     if convergence_condition is not None and "energy_tol" not in convergence_value:
@@ -556,7 +574,9 @@ def _normalize_solver_direct_opt_group(
   optimizer_args = direct_opt_value.pop("optimizer_args", None)
   if optimizer_args is not None:
     if not isinstance(optimizer_args, Mapping):
-      raise TypeError("Config field `solver.direct_opt.optimizer_args` must be a mapping.")
+      raise TypeError(
+        "Config field `solver.direct_opt.optimizer_args` must be a mapping."
+      )
     _deep_merge(target["optimizer"], copy.deepcopy(dict(optimizer_args)))
 
   convergence = direct_opt_value.pop("convergence", None)
@@ -814,7 +834,8 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
     raise ValueError(
       "Config field `solver.auto.fallback` must be 'scf' or 'direct_opt'."
     )
-  if config["solver"]["auto"]["primary"] == config["solver"]["auto"]["fallback"]:
+  if config["solver"]["auto"]["primary"] == config["solver"]["auto"]["fallback"
+                                                                    ]:
     raise ValueError(
       "Config fields `solver.auto.primary` and `solver.auto.fallback` "
       "must be different."
@@ -842,13 +863,9 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
     "solver.scf.eigensolver.max_iter",
   )
   if not isinstance(config["solver"]["scf"]["mixing"]["method"], str):
-    raise TypeError(
-      "Config field `solver.scf.mixing.method` must be a string."
-    )
+    raise TypeError("Config field `solver.scf.mixing.method` must be a string.")
   if config["solver"]["scf"]["mixing"]["method"] != "diis":
-    raise ValueError(
-      "Config field `solver.scf.mixing.method` must be 'diis'."
-    )
+    raise ValueError("Config field `solver.scf.mixing.method` must be 'diis'.")
   _validate_number(
     config["solver"]["scf"]["mixing"]["beta"],
     "solver.scf.mixing.beta",

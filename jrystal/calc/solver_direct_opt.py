@@ -41,10 +41,10 @@ from .convergence import create_convergence_checker
 from .opt_utils import create_optimizer
 from .types import EnergyDecomposition, GroundStateResult
 from .workflow_logging import (
-  format_ground_state_iteration,
-  log_energy_breakdown,
-  log_ground_state_finish,
-  log_ground_state_start,
+    format_ground_state_iteration,
+    log_energy_breakdown,
+    log_ground_state_finish,
+    log_ground_state_start,
 )
 
 if TYPE_CHECKING:
@@ -108,7 +108,9 @@ def _free_energy_from_total_energy(
   if float(smearing) == 0.0:
     return total_energy, jnp.zeros((), dtype=total_energy.dtype)
   entropy = _entropy.von_neumann(occupation)
-  free_energy = total_energy - jnp.asarray(smearing, dtype=total_energy.dtype) * entropy
+  free_energy = total_energy - jnp.asarray(
+    smearing, dtype=total_energy.dtype
+  ) * entropy
   return free_energy, entropy
 
 
@@ -182,7 +184,8 @@ def run_direct_opt(
   )
 
   mesh = Mesh(
-    np.array(jax.devices()[:util_devices]).reshape([1, -1]), ("s", "k"),
+    np.array(jax.devices()[:util_devices]).reshape([1, -1]),
+    ("s", "k"),
   )
   sharding = NamedSharding(mesh, P("s", "k"))
 
@@ -192,7 +195,8 @@ def run_direct_opt(
   # For NC, deploy nonlocal potential to devices
   if ctx.potential_nonlocal is not None:
     potential_nl = jax.device_put(
-      ctx.potential_nonlocal, NamedSharding(mesh, P("k")),
+      ctx.potential_nonlocal,
+      NamedSharding(mesh, P("k")),
     )
     ctx = ctx.replace(potential_nonlocal=potential_nl)
 
@@ -223,7 +227,10 @@ def run_direct_opt(
   # --- Init params + optimiser ---
   optimizer = create_optimizer(config)
   params_pw = _pw.param_init(
-    key, num_bands, num_kpts, freq_mask,
+    key,
+    num_bands,
+    num_kpts,
+    freq_mask,
     spin_restricted=config.system.spin_restricted,
     sharding=sharding,
   )
@@ -240,8 +247,10 @@ def run_direct_opt(
   with mesh:
 
     def _make_update(*, freeze_occupation: bool):
+
       @jax.jit
       def update(params, opt_state):
+
         def loss_fn(x):
           return free_energy(x["pw"], x["occ"])
         (_loss_val, aux), grad = jax.value_and_grad(
@@ -263,7 +272,8 @@ def run_direct_opt(
 
     update = _make_update(freeze_occupation=False)
     update_warmup = _make_update(
-      freeze_occupation=occupation_setup.trainable and occupation_warmup_steps > 0,
+      freeze_occupation=occupation_setup.trainable and
+      occupation_warmup_steps > 0,
     )
 
     try:
@@ -273,9 +283,8 @@ def run_direct_opt(
       for i in range(config.solver.direct_opt.max_steps):
         start = time.time()
         step_update = (
-          update_warmup
-          if occupation_setup.trainable and i < occupation_warmup_steps
-          else update
+          update_warmup if occupation_setup.trainable and
+          i < occupation_warmup_steps else update
         )
         params, opt_state, total_val, free_val = step_update(params, opt_state)
         total_val, free_val = jax.block_until_ready((total_val, free_val))
@@ -310,7 +319,10 @@ def run_direct_opt(
   coeff = _pw.coeff(params["pw"], freq_mask)
   occ = occ_fn(params["occ"])
   density = _pw.density_grid(
-    coeff, crystal.vol, occ, k_weights=ctx.ksampling.weights,
+    coeff,
+    crystal.vol,
+    occ,
+    k_weights=ctx.ksampling.weights,
   )
   decomp = backend.energy_decomposition(coeff, occ, ctx)
   total_e = float(sum(decomp.values()) + ew)
@@ -339,7 +351,9 @@ def run_direct_opt(
     total_energy=total_e,
     energy_terms=EnergyDecomposition(
       ewald=float(ew),
-      **{k: float(v) for k, v in decomp.items()},
+      **{
+        k: float(v) for k, v in decomp.items()
+      },
     ),
     converged=converged,
     density=density,
