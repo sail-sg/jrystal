@@ -188,9 +188,7 @@ def __proj(x: jnp.array, sum: jnp.array):
     )
     return jnp.minimum(x + _lambda, 1.)
 
-  output = jax.lax.cond(
-    jnp.sum(x) <= sum, pushup, pushdown, x
-  )
+  output = jax.lax.cond(jnp.sum(x) <= sum, pushup, pushdown, x)
   return output
 
 

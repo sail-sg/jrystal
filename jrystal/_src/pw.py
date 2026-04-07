@@ -277,7 +277,7 @@ def sigma_grid(
   grad_dens = grad_density_grid(
     coeff, vol, g_vector_grid, occupation, k_weights
   )
-  return jnp.sum(grad_dens ** 2, axis=-1)
+  return jnp.sum(grad_dens**2, axis=-1)
 
 
 def tau_grid(
@@ -316,9 +316,8 @@ def tau_grid(
     if kpts is not None:
       gk_d = gk_d + jnp.reshape(kpts[:, d], (1, -1, 1, 1, 1, 1))
     nabla_coeff_d = coeff * (1j * gk_d)
-    nabla_psi_d = ifftn(
-      nabla_coeff_d, axes=range(-3, 0)
-    ) * num_grid_points / jnp.sqrt(vol)
+    nabla_psi_d = ifftn(nabla_coeff_d,
+                        axes=range(-3, 0)) * num_grid_points / jnp.sqrt(vol)
     nabla_psi_sq = nabla_psi_sq + absolute_square(nabla_psi_d)
 
   tau = 0.5 * nabla_psi_sq
@@ -355,7 +354,7 @@ def lapl_grid(
     Laplacian of density on the real-space grid.
   """
   dens_recip = density_grid_reciprocal(coeff, vol, occupation, k_weights)
-  g_sq = jnp.sum(g_vector_grid ** 2, axis=-1)
+  g_sq = jnp.sum(g_vector_grid**2, axis=-1)
   lapl_recip = -g_sq * dens_recip
   return jnp.real(ifftn(lapl_recip, axes=range(-3, 0)))
 
@@ -452,6 +451,7 @@ def nabla_density_r(
     Per-state density gradient if ``occupation`` is ``None``; otherwise
     occupation-weighted total density gradient at ``r``.
   """
+
   def den(r):
     return density_r(
       r, coeff, cell_vectors, g_vector_grid, occupation, k_weights

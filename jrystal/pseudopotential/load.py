@@ -147,11 +147,13 @@ def parse_pp_nonlocal(pp_nonlocal) -> dict:
   augmentation_element = pp_nonlocal.find('PP_AUGMENTATION')
   if augmentation_element is not None:
     augmentation_data = {
-      'q_with_l': augmentation_element.get('q_with_l') in [
-        'true', 'True', 'T', 't', '1', 'TRUE'
-      ],
-      'nqf': int(augmentation_element.get('nqf')),
-      'nqlc': int(augmentation_element.get('nqlc')),
+      'q_with_l':
+        augmentation_element.get('q_with_l') in
+        ['true', 'True', 'T', 't', '1', 'TRUE'],
+      'nqf':
+        int(augmentation_element.get('nqf')),
+      'nqlc':
+        int(augmentation_element.get('nqlc')),
     }
 
     # Parse <PP_Q>

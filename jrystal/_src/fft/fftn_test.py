@@ -58,9 +58,13 @@ class _TestModules(unittest.TestCase):
   def test_public_signatures_match_jax_fft(self):
     sig = inspect.signature(fftn)
     sig_ref = inspect.signature(jnp.fft.fftn)
-    self.assertEqual(tuple(sig.parameters.keys()), tuple(sig_ref.parameters.keys()))
+    self.assertEqual(
+      tuple(sig.parameters.keys()), tuple(sig_ref.parameters.keys())
+    )
     for name in sig.parameters:
-      self.assertEqual(sig.parameters[name].default, sig_ref.parameters[name].default)
+      self.assertEqual(
+        sig.parameters[name].default, sig_ref.parameters[name].default
+      )
 
     isig = inspect.signature(ifftn)
     isig_ref = inspect.signature(jnp.fft.ifftn)

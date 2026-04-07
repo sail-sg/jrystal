@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from ..calc.types import BandStructureResult, KSampling
-from ._style import energy_scale
+from ._style import HARTREE_TO_EV, energy_scale
 
 
 def _load_from_directory(
@@ -39,11 +39,58 @@ def _kpath_distance(kpts: np.ndarray) -> np.ndarray:
   return np.concatenate([[0.0], np.cumsum(lengths)])
 
 
+def _auto_energy_limits(values: np.ndarray) -> tuple[float, float]:
+  finite = np.asarray(values[np.isfinite(values)], dtype=float)
+  if finite.size == 0:
+    return (-1.0, 1.0)
+  ymin = float(np.min(finite))
+  ymax = float(np.max(finite))
+  if ymin == ymax:
+    pad = max(abs(ymin) * 0.05, 1.0)
+    return ymin - pad, ymax + pad
+  pad = max((ymax - ymin) * 0.03, 1e-6)
+  return ymin - pad, ymax + pad
+
+
+def _default_window_in_unit(unit: str) -> tuple[float, float]:
+  scale = energy_scale(unit) / HARTREE_TO_EV
+  return (-8.0 * scale, 8.0 * scale)
+
+
+def _resolve_energy_limits(
+  values: np.ndarray,
+  *,
+  unit: str,
+  reference_energy: float | None,
+  energy_range,
+  y_min,
+  y_max,
+) -> tuple[float, float]:
+  if energy_range is not None:
+    return tuple(energy_range)
+
+  auto_min, auto_max = _auto_energy_limits(values)
+  if reference_energy is not None:
+    focus_min, focus_max = _default_window_in_unit(unit)
+    clipped_min = max(auto_min, focus_min)
+    clipped_max = min(auto_max, focus_max)
+    if clipped_min < clipped_max:
+      auto_min, auto_max = clipped_min, clipped_max
+
+  lower = auto_min if y_min is None else float(y_min)
+  upper = auto_max if y_max is None else float(y_max)
+  if lower >= upper:
+    raise ValueError("Band plot y-axis limits must satisfy y_min < y_max.")
+  return lower, upper
+
+
 def band_structure(
   source,
   reference_energy=None,
   energy_range=None,
   unit="eV",
+  y_min=None,
+  y_max=None,
   figsize=(8, 6),
   colors=None,
   save_path=None,
@@ -95,8 +142,16 @@ def band_structure(
 
   ax.set_xlabel("k-path")
   ax.set_ylabel(f"Energy ({unit})")
-  if energy_range is not None:
-    ax.set_ylim(*energy_range)
+  ax.set_ylim(
+    *_resolve_energy_limits(
+      y,
+      unit=unit,
+      reference_energy=reference_energy,
+      energy_range=energy_range,
+      y_min=y_min,
+      y_max=y_max,
+    )
+  )
 
   if kpath.segments:
     for _, end in kpath.segments[:-1]:

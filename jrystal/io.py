@@ -137,6 +137,21 @@ def _infer_fermi_energy(
   occupations = jnp.asarray(result.occupations)
   smearing = float(result.config.occupation.smearing)
   num_electrons = int(np.asarray(result.crystal.num_electron))
+  occ_array = np.asarray(occupations)
+  eig_array = np.asarray(eigenvalues)
+  occ_max = 2.0 if bool(result.config.system.spin_restricted) else 1.0
+  occ_tol = max(occ_max * 1e-3, 1e-8)
+
+  partially_occupied = (
+    (occ_array > occ_tol) & (occ_array < (occ_max - occ_tol))
+  )
+  occupied_mask = occ_array > (0.5 * occ_max)
+  empty_mask = occ_array <= (0.5 * occ_max)
+  occupied = eig_array[occupied_mask]
+  empty = eig_array[empty_mask]
+
+  if (occupied.size > 0 and empty.size > 0 and not np.any(partially_occupied)):
+    return float(np.max(occupied))
 
   if smearing > 0:
     return float(
@@ -148,8 +163,8 @@ def _infer_fermi_energy(
       )
     )
 
-  occ_mask = np.asarray(occupations) > 1e-8
-  occupied = np.asarray(eigenvalues)[occ_mask]
+  occ_mask = occ_array > occ_tol
+  occupied = eig_array[occ_mask]
   if occupied.size == 0:
     return None
   return float(np.max(occupied))
@@ -351,9 +366,11 @@ def save_band_structure(
 
   if config.io.save_dir is not None:
     legacy_name = "".join(result.crystal.symbols or []) + "_band_structure.npy"
-    np.save(resolve_output_root(config) / legacy_name, np.asarray(result.eigenvalues))
+    np.save(
+      resolve_output_root(config) / legacy_name, np.asarray(result.eigenvalues)
+    )
 
-  if not config.io.save_band_plot:
+  if not config.band.plot.enabled:
     return
 
   try:
@@ -366,6 +383,9 @@ def save_band_structure(
     plot_band_structure(
       result,
       reference_energy=result.reference_energy,
+      unit=config.band.plot.unit,
+      y_min=config.band.plot.y_min,
+      y_max=config.band.plot.y_max,
       save_path=band_dir / "band_structure.pdf",
     )
   except Exception as exc:  # pragma: no cover - plotting failure path

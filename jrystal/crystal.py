@@ -27,8 +27,5 @@ from ._src.crystal import (
 )
 
 __all__ = [
-  "Crystal",
-  "create_from_symbols",
-  "create_from_file",
-  "create_from_ase_atoms"
+  "Crystal", "create_from_symbols", "create_from_file", "create_from_ase_atoms"
 ]

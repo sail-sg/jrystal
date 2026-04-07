@@ -65,21 +65,19 @@ def cartesian_to_spherical(x: Float[Array, "*n 3"],
 
 
 def batch_sph_harm_real(
-  l: int,
-  theta: Float[Array, "*batch"],
-  phi: Float[Array, "*batch"]
+  l: int, theta: Float[Array, "*batch"], phi: Float[Array, "*batch"]
 ) -> Float[Array, "*batch m"]:
   """
   Compute the real form of spherical harmonics for a batch of points.
   """
   _sph_harm1 = batch_sph_harm(l, theta, phi)  # [*batch m]
   m = jnp.arange(-l, l + 1)
-  _sph_harm2 = einsum(_sph_harm1.conj(), (-1) ** m, "... m, m -> ... m")
+  _sph_harm2 = einsum(_sph_harm1.conj(), (-1)**m, "... m, m -> ... m")
 
   output = jnp.where(
     m >= 0,
-    _sph_harm1.real * jnp.sqrt(2) * (-1) ** m,
-    _sph_harm2.imag * jnp.sqrt(2) * (-1) ** m,
+    _sph_harm1.real * jnp.sqrt(2) * (-1)**m,
+    _sph_harm2.imag * jnp.sqrt(2) * (-1)**m,
   )  # [m, *batch]
 
   output = output.at[..., l].set(_sph_harm1[..., l].real)
@@ -161,9 +159,9 @@ def legendre_to_sph_harm(
       theta = x_spherical[..., 1:2]  # azimuthal angle
       phi = x_spherical[..., 2:3]  # polar angle
 
-      y_lm = jax.vmap(
-        sph_harm, in_axes=[0, None, None, None]
-      )(m, n, theta, phi).reshape([-1])  # [m]
+      y_lm = jax.vmap(sph_harm, in_axes=[0, None, None,
+                                         None])(m, n, theta,
+                                                phi).reshape([-1])  # [m]
 
       y_lm = jnp.pad(y_lm, (0, (l_max - l) * 2), constant_values=0)
       # pad the y_lm to length l_max with zeros

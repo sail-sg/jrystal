@@ -171,9 +171,8 @@ class pyNumSBT(object):  # noqa: N801
     xx = np.exp(self.rho_min + self.kappa_min + np.arange(self.nr2) * self.drho)
 
     # M_lt2 is just the Fourier transform of spherical Bessel function j_l
-    self.M_lt2 = ifft(
-      spherical_jn(ll[:, None], xx[None, :]), axis=1
-    ).conj()[:, :self.nr + 1]
+    self.M_lt2 = ifft(spherical_jn(ll[:, None], xx[None, :]),
+                      axis=1).conj()[:, :self.nr + 1]
 
   def run(
     self,

@@ -33,7 +33,6 @@ from typing import TYPE_CHECKING
 
 import jax
 import jax.numpy as jnp
-import numpy as np
 import optax
 
 from .._src import hamiltonian as _hamiltonian
@@ -137,29 +136,18 @@ def _run_nscf_ae(config, ctx, density, num_bands):
 
     def eig_fn(param, kpt):
       coeff = _pw.coeff(param, freq_mask)
-
-      def _trace(c):
-        return _hamiltonian.hamiltonian_matrix_trace(
-          c,
-          crystal.positions,
-          crystal.charges,
-          density,
-          crystal.vol,
-          g_vec,
-          kpt,
-          xc=xc,
-          kohn_sham=True,
-          keep_spin_axis=False,
-        )
-
-      hpsi = jax.grad(_trace)(coeff.conj()) / 2.0
-      num_grids = np.prod(coeff.shape[-3:])
-      hmat = jnp.einsum(
-        "skixyz,skjxyz->skij",
-        jnp.conj(coeff),
-        hpsi,
-      ) * (crystal.vol / (num_grids**2))
-      return jax.vmap(jnp.linalg.eigvalsh)(hmat)
+      hmat = _hamiltonian.hamiltonian_matrix(
+        coeff,
+        crystal.positions,
+        crystal.charges,
+        density,
+        g_vec,
+        kpt,
+        crystal.vol,
+        xc=xc,
+        kohn_sham=True,
+      )
+      return jnp.linalg.eigvalsh(hmat)
 
     eig_first = eig_fn(params_first, kpts[0:1])
 

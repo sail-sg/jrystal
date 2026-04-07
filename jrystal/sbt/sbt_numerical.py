@@ -48,8 +48,8 @@ def sbt(
 
   g_max = kmax
   g_min = 0.0001
-  g_grid = np.linspace(g_min, g_max, len(r_grid)*2)
-  gr = einsum(g_grid, r_grid, "g, r -> g r")   # shape [g_batch* r]
+  g_grid = np.linspace(g_min, g_max, len(r_grid) * 2)
+  gr = einsum(g_grid, r_grid, "g, r -> g r")  # shape [g_batch* r]
 
   if hasattr(l, "__len__") and hasattr(l, "__getitem__"):
 
@@ -59,7 +59,7 @@ def sbt(
     jn_gr = np.empty((len(l), *gr.shape))  # [l g r]
 
     for i in range(len(l)):
-      jn_gr[i] = jn(l[i], gr)   # [l g r]
+      jn_gr[i] = jn(l[i], gr)  # [l g r]
 
     output = einsum(
       f_grid, r_grid**2, jn_gr, delta_r, "l r, r, l g r, r -> l g"
@@ -71,10 +71,7 @@ def sbt(
 
     jn_gr = jn(l, gr)  # shape: [g r]
 
-    output = einsum(
-      f_grid, r_grid**2, jn_gr, delta_r,
-      "f r, r, g r, r -> f g"
-    )
+    output = einsum(f_grid, r_grid**2, jn_gr, delta_r, "f r, r, g r, r -> f g")
 
   else:
     raise ValueError("\'l\' must be a integer or a list of int")

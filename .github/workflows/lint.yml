@@ -29,29 +29,21 @@ jobs:
 
       - name: Run ruff
         run: |
-          TARGETS=(
-            main.py
-            jrystal/cli.py
-            jrystal/config.py
-            jrystal/io.py
-            jrystal/terminal_ui.py
-            $(find jrystal/calc -maxdepth 1 -type f -name "*.py" | sort)
-            $(find jrystal/plot -maxdepth 1 -type f -name "*.py" | sort)
-            $(find tests/smoke -type f -name "*.py" | sort)
+          mapfile -t TARGETS < <(
+            find . \
+              \( -path "./.git" -o -path "./.venv" -o -path "./build" -o -path "./out" \
+                 -o -path "./_cache" -o -path "./docs/_build" -o -path "./__pycache__" \) -prune \
+              -o -type f -name "*.py" -print | sort
           )
           ruff check "${TARGETS[@]}"
 
       - name: Run format checks
         run: |
-          PYTHON_FILES=(
-            main.py
-            jrystal/cli.py
-            jrystal/config.py
-            jrystal/io.py
-            jrystal/terminal_ui.py
-            $(find jrystal/calc -maxdepth 1 -type f -name "*.py" | sort)
-            $(find jrystal/plot -maxdepth 1 -type f -name "*.py" | sort)
-            $(find tests/smoke -type f -name "*.py" | sort)
+          mapfile -t PYTHON_FILES < <(
+            find . \
+              \( -path "./.git" -o -path "./.venv" -o -path "./build" -o -path "./out" \
+                 -o -path "./_cache" -o -path "./docs/_build" -o -path "./__pycache__" \) -prune \
+              -o -type f -name "*.py" -print | sort
           )
           isort --check "${PYTHON_FILES[@]}"
           yapf -r -d "${PYTHON_FILES[@]}"

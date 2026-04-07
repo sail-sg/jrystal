@@ -139,6 +139,65 @@ def external(
   return jnp.fft.ifftn(ext_pot_grid_rcprl, axes=range(-3, 0))
 
 
+def xc_density(
+  density_grid: Float[Array, 'spin x y z'],
+  g_vector_grid: Float[Array, 'x y z 3'],
+  *,
+  xc_type: str = "lda_x",
+  kohn_sham: bool = False,
+) -> Float[Array, 'spin x y z']:
+  r"""Compute the XC potential on a real-space density grid.
+
+  This keeps compatibility with older pseudopotential code paths that build
+  Hartree and XC contributions separately instead of calling
+  :func:`effective`.
+
+  Args:
+    density_grid: Real-space density grid, with or without an explicit spin
+      axis.
+    g_vector_grid: Reciprocal-space G-vector grid.
+    xc_type: XC functional specification.
+    kohn_sham: Whether this potential is used in the Kohn-Sham operator path.
+
+  Returns:
+    Spin-resolved XC potential on the real-space grid.
+  """
+  dim = g_vector_grid.shape[-1]
+  assert density_grid.ndim in [dim, dim + 1]
+
+  if density_grid.ndim == dim:
+    density_grid = jnp.expand_dims(density_grid, 0)
+
+  polarized = density_grid.shape[0] == 2
+  if kohn_sham:
+    density_grid = stop_gradient(density_grid)
+
+  level = _xc.xc_level(xc_type)
+  rho = density_grid if polarized else density_grid[0]
+
+  sigma = None
+  if level in ('gga', 'mgga'):
+    sigma = _xc.compute_sigma(density_grid, g_vector_grid)
+
+  vxc_dict = _xc.xc_potential(rho, xc_type, polarized, sigma=sigma)
+
+  if level == 'lda':
+    vrho = vxc_dict['vrho']
+    if not polarized:
+      v_xc = vrho[None, ...]
+    else:
+      v_xc = jnp.moveaxis(vrho, -1, 0)
+  else:
+    v_xc = _xc.gga_xc_potential(
+      vxc_dict['vrho'],
+      vxc_dict['vsigma'],
+      density_grid,
+      g_vector_grid,
+    )
+
+  return stop_gradient(v_xc)
+
+
 def effective(
   density_grid: Float[Array, 'spin x y z'],
   position: Float[Array, "num_atom 3"],
@@ -207,8 +266,10 @@ def effective(
   else:
     # GGA (and MGGA local part): vrho − 2∇·(vsigma ∇ρ)
     v_xc = _xc.gga_xc_potential(
-      vxc_dict['vrho'], vxc_dict['vsigma'],
-      density_grid, g_vector_grid,
+      vxc_dict['vrho'],
+      vxc_dict['vsigma'],
+      density_grid,
+      g_vector_grid,
     )
 
   v_xc = stop_gradient(v_xc)

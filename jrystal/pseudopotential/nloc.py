@@ -17,10 +17,9 @@ from .utils import map_over_atoms
 
 
 def _compute_spherical_harmonics(
-    r_vector_grid: Float[Array, "*n 3"],
-    l_max: int
+  r_vector_grid: Float[Array, "*n 3"], l_max: int
 ) -> Complex[Array, "l *n m"]:
-    """Compute spherical harmonics for all angular momenta up to l_max.
+  """Compute spherical harmonics for all angular momenta up to l_max.
 
     Return:
       Complex[Array, "l *n m"]: the first dimension is the angular momentum,
@@ -28,16 +27,15 @@ def _compute_spherical_harmonics(
       number, m = -l, -l+1, ..., l. The remaining dimensions are the spatial
       dimensions of the r_vector_grid.
     """
-    ndims = r_vector_grid.shape[:-1]
-    r_sph = cartesian_to_spherical(r_vector_grid)
-    _, r_theta, r_phi = r_sph[..., 0], r_sph[..., 1], r_sph[..., 2]
+  ndims = r_vector_grid.shape[:-1]
+  r_sph = cartesian_to_spherical(r_vector_grid)
+  _, r_theta, r_phi = r_sph[..., 0], r_sph[..., 1], r_sph[..., 2]
 
-    y_lm = jnp.zeros((l_max + 1, *ndims, 2 * l_max + 1)) + 0.j
-    for i in range(l_max + 1):
-      y_lm = y_lm.at[i, ...,  l_max - i: l_max + i + 1].set(
-        batch_sph_harm_real(i, r_theta, r_phi)
-      )
-    return y_lm
+  y_lm = jnp.zeros((l_max + 1, *ndims, 2 * l_max + 1)) + 0.j
+  for i in range(l_max + 1):
+    y_lm = y_lm.at[i, ..., l_max - i:l_max + i +
+                   1].set(batch_sph_harm_real(i, r_theta, r_phi))
+  return y_lm
 
 
 def potential_nonlocal_psi_reciprocal(
@@ -81,9 +79,9 @@ def potential_nonlocal_psi_reciprocal(
   assert len(nonlocal_beta_grid) == len(nonlocal_angular_momentum)
   assert fourier_transform_method in ['fft', 'sbt', "numerical"]
 
-  gk_vector_grid = jnp.expand_dims(
-    kpts, axis=(1, 2, 3)
-  ) + jnp.expand_dims(g_vector_grid, 0)  # [nk x y z 3]
+  gk_vector_grid = jnp.expand_dims(kpts, axis=(1, 2, 3)) + jnp.expand_dims(
+    g_vector_grid, 0
+  )  # [nk x y z 3]
 
   # sbt for beta function and intepolate
   if beta_gk is None:
@@ -101,10 +99,7 @@ def potential_nonlocal_psi_reciprocal(
 
   @map_over_atoms
   def _get_psi(
-    position,
-    nonlocal_angular_momentum,
-    nonlocal_d_matrix,
-    beta_gk_single_atom
+    position, nonlocal_angular_momentum, nonlocal_d_matrix, beta_gk_single_atom
   ) -> Complex[Array, "kpt beta x y z m"]:
     y_lm_atom = y_lm[nonlocal_angular_momentum]  # [beta kpt x y z m]
     eigval, eigvec = jnp.linalg.eigh(nonlocal_d_matrix)
@@ -112,7 +107,9 @@ def potential_nonlocal_psi_reciprocal(
     # d_matrix_sqrt = jnp.linalg.cholesky(nonlocal_d_matrix).T.conj()
     # shape: [beta beta]
     output = einsum(
-      d_matrix_sqrt, y_lm_atom, beta_gk_single_atom,
+      d_matrix_sqrt,
+      y_lm_atom,
+      beta_gk_single_atom,
       "b1 b2, b2 kpt x y z m, kpt b2 x y z -> kpt b1 m x y z"
     )
 
@@ -120,11 +117,12 @@ def potential_nonlocal_psi_reciprocal(
       -1.j * jnp.matmul(gk_vector_grid, position)
     )  # shape: [kpt x y z]
     output = einsum(
-      output, structure_factor,
+      output,
+      structure_factor,
       "kpt beta m x y z, kpt x y z -> kpt beta m x y z"
     )
 
-    imag_factor = (1.j) ** nonlocal_angular_momentum
+    imag_factor = (1.j)**nonlocal_angular_momentum
     output = einsum(
       output, imag_factor, "kpt beta m x y z, beta -> kpt beta m x y z"
     )
@@ -187,9 +185,7 @@ def hamiltonian_matrix(
 
   dim = kpts.shape[-1]
   wave_grid = pw.wave_grid(coefficient, vol)
-  ext_nloc = hamiltonian_nonlocal(
-    coefficient, potential_nl_psi_reciprocal, vol
-  )
+  ext_nloc = hamiltonian_nonlocal(coefficient, potential_nl_psi_reciprocal, vol)
   ext_loc = hamiltonian_local(wave_grid, potential_local_grid_reciprocal, vol)
 
   hamiltonian_density_grid_reciprocal = jnp.fft.fftn(

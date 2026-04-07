@@ -79,12 +79,10 @@ class _TestSmearing(unittest.TestCase):
 
   def test_find_chemical_potential_finite_smearing_weighted_count(self):
     eigenvalues = jnp.array(
-      [
-        [
-          [-1.0, -0.2, 0.1, 0.8],
-          [-0.9, 0.05, 0.2, 1.0],
-        ]
-      ],
+      [[
+        [-1.0, -0.2, 0.1, 0.8],
+        [-0.9, 0.05, 0.2, 1.0],
+      ]],
       dtype=jnp.float32,
     )
     k_weights = jnp.array([0.5, 0.5], dtype=jnp.float32)
@@ -136,12 +134,10 @@ class _TestSmearing(unittest.TestCase):
 
   def test_occupations_from_eigenvalues_small_smearing_sorted_fill(self):
     eigenvalues = jnp.array(
-      [
-        [
-          [-2.0, -1.0, 0.5, 1.5],
-          [-1.9, -0.9, 0.6, 1.6],
-        ]
-      ],
+      [[
+        [-2.0, -1.0, 0.5, 1.5],
+        [-1.9, -0.9, 0.6, 1.6],
+      ]],
       dtype=jnp.float32,
     )
     k_weights = jnp.array([0.5, 0.5], dtype=jnp.float32)

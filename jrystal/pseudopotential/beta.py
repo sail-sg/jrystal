@@ -63,9 +63,9 @@ def _beta_sbt_single_atom(
   nonlocal_angular_momentum = list(nonlocal_angular_momentum)
 
   if kpts is not None:
-    gk_vector_grid = np.expand_dims(
-      kpts, axis=(1, 2, 3)
-    ) + np.expand_dims(g_vector_grid, 0)  # [nk x y z 3]
+    gk_vector_grid = np.expand_dims(kpts, axis=(1, 2, 3)) + np.expand_dims(
+      g_vector_grid, 0
+    )  # [nk x y z 3]
   else:
     gk_vector_grid = np.expand_dims(g_vector_grid, 0)  # [1 x y z 3]
 

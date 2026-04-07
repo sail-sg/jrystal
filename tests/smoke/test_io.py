@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from jrystal.io import (
+  _infer_fermi_energy,
   load_checkpoint,
   make_checkpoint_manager,
   save_band_structure,
@@ -118,3 +119,23 @@ def test_restart_shape_mismatch_raises(tmp_path):
   incompatible.basis.cutoff_energy = config.basis.cutoff_energy + 1
   with pytest.raises(ValueError, match="basis.cutoff_energy"):
     load_checkpoint(str(run_dir), incompatible, ctx)
+
+
+def test_infer_fermi_energy_uses_highest_occupied_state_for_insulator():
+  config = make_config()
+  config.occupation.smearing = 1e-3
+  result = make_ground_state_result(config)
+  result.eigenvalues = jnp.asarray(
+    [[[-3.0, -1.0, 1.0, 4.0, 6.0, 8.0]]],
+    dtype=jnp.float32,
+  )
+  result.occupations = jnp.asarray(
+    [[[2.0, 2.0, 0.0, 0.0, 0.0, 0.0]]],
+    dtype=jnp.float32,
+  )
+
+  fermi = _infer_fermi_energy(
+    result, k_weights=jnp.ones((1,), dtype=jnp.float32)
+  )
+
+  assert fermi == pytest.approx(-1.0)

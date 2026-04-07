@@ -49,8 +49,8 @@ def _raw_exc(name, polarized, rho, sigma=None, tau=None, lapl=None):
     kwargs['s'] = sigma
   if level == 'mgga':
     kwargs['l'] = (
-      lapl if lapl is not None
-      else jnp.zeros_like(rho if rho.ndim == 3 else rho[0])
+      lapl
+      if lapl is not None else jnp.zeros_like(rho if rho.ndim == 3 else rho[0])
     )
     if tau is not None:
       kwargs['tau'] = tau
@@ -72,21 +72,25 @@ def compute_sigma(density_grid, g_vector_grid):
   density_recip = jnp.fft.fftn(density_grid, axes=range(-3, 0))
   grads = []
   for d in range(3):
-    grad_d = jnp.real(jnp.fft.ifftn(
-      1j * g_vector_grid[..., d] * density_recip,
-      axes=range(-3, 0)
-    ))
+    grad_d = jnp.real(
+      jnp.fft.ifftn(
+        1j * g_vector_grid[..., d] * density_recip, axes=range(-3, 0)
+      )
+    )
     grads.append(grad_d)
 
   num_spin = density_grid.shape[0]
   if num_spin == 1:
     return sum(g[0]**2 for g in grads)
   else:
-    return jnp.stack([
-      sum(g[0]**2 for g in grads),
-      sum(g[0] * g[1] for g in grads),
-      sum(g[1]**2 for g in grads),
-    ], axis=0)
+    return jnp.stack(
+      [
+        sum(g[0]**2 for g in grads),
+        sum(g[0] * g[1] for g in grads),
+        sum(g[1]**2 for g in grads),
+      ],
+      axis=0
+    )
 
 
 def xc_energy_density(rho, xc_type, polarized, sigma=None, tau=None, lapl=None):
@@ -135,8 +139,8 @@ def _raw_vxc(name, polarized, rho, sigma=None, tau=None, lapl=None):
     kwargs['s'] = sigma
   if level == 'mgga':
     kwargs['l'] = (
-      lapl if lapl is not None
-      else jnp.zeros_like(rho if rho.ndim == 3 else rho[0])
+      lapl
+      if lapl is not None else jnp.zeros_like(rho if rho.ndim == 3 else rho[0])
     )
     if tau is not None:
       kwargs['tau'] = tau
@@ -207,10 +211,11 @@ def _gga_xc_potential(vrho, vsigma, density_grid, g_vector_grid):
   # Compute per-spin density gradients: list of 3 arrays each (spin, x, y, z)
   nabla_rho = []
   for d in range(3):
-    grad_d = jnp.real(jnp.fft.ifftn(
-      1j * g_vector_grid[..., d] * density_recip,
-      axes=range(-3, 0)
-    ))
+    grad_d = jnp.real(
+      jnp.fft.ifftn(
+        1j * g_vector_grid[..., d] * density_recip, axes=range(-3, 0)
+      )
+    )
     nabla_rho.append(grad_d)
 
   def _div(field_components):
@@ -218,10 +223,9 @@ def _gga_xc_potential(vrho, vsigma, density_grid, g_vector_grid):
     div = jnp.zeros(field_components[0].shape)
     for d in range(3):
       f_recip = jnp.fft.fftn(field_components[d], axes=range(-3, 0))
-      div = div + jnp.real(jnp.fft.ifftn(
-        1j * g_vector_grid[..., d] * f_recip,
-        axes=range(-3, 0)
-      ))
+      div = div + jnp.real(
+        jnp.fft.ifftn(1j * g_vector_grid[..., d] * f_recip, axes=range(-3, 0))
+      )
     return div
 
   if num_spin == 1:
@@ -238,12 +242,10 @@ def _gga_xc_potential(vrho, vsigma, density_grid, g_vector_grid):
     vrho_d = vrho[..., 1]
 
     field_u = [
-      2 * vs_uu * nabla_rho[d][0] + vs_ud * nabla_rho[d][1]
-      for d in range(3)
+      2 * vs_uu * nabla_rho[d][0] + vs_ud * nabla_rho[d][1] for d in range(3)
     ]
     field_d = [
-      vs_ud * nabla_rho[d][0] + 2 * vs_dd * nabla_rho[d][1]
-      for d in range(3)
+      vs_ud * nabla_rho[d][0] + 2 * vs_dd * nabla_rho[d][1] for d in range(3)
     ]
     v_xc_u = vrho_u - _div(field_u)
     v_xc_d = vrho_d - _div(field_d)
@@ -294,20 +296,20 @@ def _mgga_xc_potential(vrho, vsigma, vtau, vlapl, density_grid, g_vector_grid):
   # In reciprocal space: ∇²f = IFFT(-|G|² · FFT(f))
   if vlapl is not None:
     if num_spin == 1:
-      vl = vlapl[None, ...]          # (1, x, y, z)
+      vl = vlapl[None, ...]  # (1, x, y, z)
     else:
       vl = jnp.moveaxis(vlapl, -1, 0)  # (2, x, y, z)
 
     g_sq = jnp.sum(g_vector_grid**2, axis=-1)  # (x, y, z)
     vl_recip = jnp.fft.fftn(vl, axes=range(-3, 0))
-    lapl_vl = jnp.real(jnp.fft.ifftn(
-      -g_sq[None, ...] * vl_recip, axes=range(-3, 0)
-    ))
+    lapl_vl = jnp.real(
+      jnp.fft.ifftn(-g_sq[None, ...] * vl_recip, axes=range(-3, 0))
+    )
     v_xc_local = v_xc_local + lapl_vl
 
   # Reshape vtau to (spin, x, y, z) for the caller
   if num_spin == 1:
-    vtau_grid = vtau[None, ...]          # (1, x, y, z)
+    vtau_grid = vtau[None, ...]  # (1, x, y, z)
   else:
     vtau_grid = jnp.moveaxis(vtau, -1, 0)  # (2, x, y, z)
 

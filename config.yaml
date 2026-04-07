@@ -8,7 +8,7 @@ system:
 
 method:
   xc: "lda_x"
-  use_pseudopotential: false
+  use_pseudopotential: true
   pseudopotential_type: "nc"
   pseudopotential_file_dir: "/home/aiops/litb/projects/jrystal/pseudopotential/normconserving/"
 
@@ -44,7 +44,7 @@ solver:
     max_steps: 20000
     optimizer:
       name: "adam"
-      learning_rate: 1
+      learning_rate: 0.01
       b1: 0.9
       b2: 0.99
     scheduler: null
@@ -71,6 +71,11 @@ band:
   epoch: 5000
   fine_tuning: true
   fine_tuning_epoch: 300
+  plot:
+    enabled: true
+    unit: "eV"
+    y_min: -20
+    y_max: 10
 
 execution:
   seed: 123
@@ -83,4 +88,13 @@ execution:
   eps: 1.0e-8
 
 io:
+  output_dir: "out/"
   save_dir: null
+  run_label: null
+  save_density: true
+  save_wavefunction: false
+  save_ground_state_spectrum: false
+  save_checkpoint: true
+  checkpoint_interval: 50
+  restart: "from_scratch"
+  log_level: "normal"

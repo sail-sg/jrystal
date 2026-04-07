@@ -134,7 +134,7 @@ class NormConservingPseudopotential(Pseudopotential):
       # norm conserving pseudopotential use the same cutoff_radius for local
       # and nonlocal potentials.
 
-      local_potential_grid.append(np.array(pp["PP_LOCAL"])[_r_grid > 0]/2)
+      local_potential_grid.append(np.array(pp["PP_LOCAL"])[_r_grid > 0] / 2)
       # 1/2 is due to the conversion from rydberg to hartree.
       local_potential_charge.append(valence_charges[-1])
 
@@ -260,9 +260,8 @@ class UltrasoftPseudopotential(NormConservingPseudopotential):
         num_q = len(pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_Q"])
         num_q = np.sqrt(num_q).astype(int)
         q_matrix = q_matrix.reshape(num_q, num_q)
-        assert np.linalg.eigvalsh(q_matrix).max() >= -1, (
-          "The q_matrix is not negative semi-definite."
-        )
+        assert np.linalg.eigvalsh(q_matrix).max(
+        ) >= -1, ("The q_matrix is not negative semi-definite.")
         nonlocal_augmentation_q_matrix.append(q_matrix)
 
         num_r_grid = len(pp["PP_MESH"]["PP_R"])

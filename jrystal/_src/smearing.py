@@ -59,7 +59,9 @@ def _reduced_energy(
     )
 
   dtype = jnp.result_type(
-    eigenvalues, jnp.asarray(chemical_potential), jnp.asarray(smearing),
+    eigenvalues,
+    jnp.asarray(chemical_potential),
+    jnp.asarray(smearing),
     jnp.float32
   )
   eigenvalues = eigenvalues.astype(dtype)
@@ -187,9 +189,7 @@ def _occupation_from_method(
       eigenvalues, chemical_potential, smearing, spin_polorized
     )
   if method_normalized in ("gaussian", "gauss"):
-    return gaussian(
-      eigenvalues, chemical_potential, smearing, spin_polorized
-    )
+    return gaussian(eigenvalues, chemical_potential, smearing, spin_polorized)
   if method_normalized in ("marzari-vanderbilt", "marzari", "mv", "cold"):
     return marzari_vanderbilt(
       eigenvalues, chemical_potential, smearing, spin_polorized
@@ -264,9 +264,8 @@ def _sorted_fill_occupation(
   if num_states == 0:
     raise ValueError("eigenvalues must contain at least one state.")
 
-  state_weights = jnp.broadcast_to(
-    k_weights[None, :, None], eigenvalues.shape
-  ).reshape(-1)
+  state_weights = jnp.broadcast_to(k_weights[None, :, None],
+                                   eigenvalues.shape).reshape(-1)
   order = jnp.argsort(flat_e)
   e_sorted = flat_e[order]
   w_sorted = state_weights[order]

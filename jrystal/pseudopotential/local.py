@@ -89,6 +89,7 @@ def potential_local_reciprocal(
       return f_k
 
   elif fourier_transform_method == "fft":
+
     @map_over_atoms
     def g(r, v_r, z):
       v_r_modified = v_r + z / r

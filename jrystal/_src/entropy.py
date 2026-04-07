@@ -38,8 +38,7 @@ def von_neumann(
 
   entropy = -jnp.sum(
     occupation * jnp.log(eps + occupation) +
-    ((3 - num_spin) - occupation) *
-    jnp.log(eps + (3 - num_spin) - occupation)
+    ((3 - num_spin) - occupation) * jnp.log(eps + (3 - num_spin) - occupation)
   )
 
   return entropy
@@ -62,9 +61,9 @@ def renyi(
 
   assert alpha >= 0 and alpha <= 1, "alpha must be between 0 and 1"
   entropy = -jnp.sum(
-    occupation * jnp.log(
-      occupation**alpha + ((3 - num_spin) - occupation)**alpha
-    ) / (1 - alpha)
+    occupation *
+    jnp.log(occupation**alpha +
+            ((3 - num_spin) - occupation)**alpha) / (1 - alpha)
   )
 
   return entropy

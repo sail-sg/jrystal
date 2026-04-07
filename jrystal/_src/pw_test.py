@@ -134,15 +134,11 @@ class _TestModules(unittest.TestCase):
     np.testing.assert_allclose(grad_r, grad_grid, atol=1e-10, rtol=1e-10)
 
   def test_grad_density_grid_shape(self):
-    grad = grad_density_grid(
-      self.coeff, self.vol, self.g_vecs, self.occupation
-    )
+    grad = grad_density_grid(self.coeff, self.vol, self.g_vecs, self.occupation)
     self.assertEqual(grad.shape, (1,) + self.grid_size + (3,))
 
   def test_sigma_grid_shape(self):
-    sigma = sigma_grid(
-      self.coeff, self.vol, self.g_vecs, self.occupation
-    )
+    sigma = sigma_grid(self.coeff, self.vol, self.g_vecs, self.occupation)
     self.assertEqual(sigma.shape, (1,) + self.grid_size)
 
   def test_tau_grid_shape(self):
@@ -152,9 +148,7 @@ class _TestModules(unittest.TestCase):
     self.assertEqual(tau.shape, (1,) + self.grid_size)
 
   def test_lapl_grid_shape(self):
-    lapl = lapl_grid(
-      self.coeff, self.vol, self.g_vecs, self.occupation
-    )
+    lapl = lapl_grid(self.coeff, self.vol, self.g_vecs, self.occupation)
     self.assertEqual(lapl.shape, (1,) + self.grid_size)
 
   def test_grad_density_grid_matches_single_point(self):
@@ -175,10 +169,8 @@ class _TestModules(unittest.TestCase):
 
   def test_sigma_equals_grad_squared(self):
     """sigma should equal the squared norm of the density gradient."""
-    grad = grad_density_grid(
-      self.coeff, self.vol, self.g_vecs, self.occupation
-    )
-    sigma_expected = jnp.sum(grad ** 2, axis=-1)
+    grad = grad_density_grid(self.coeff, self.vol, self.g_vecs, self.occupation)
+    sigma_expected = jnp.sum(grad**2, axis=-1)
     sigma_actual = sigma_grid(
       self.coeff, self.vol, self.g_vecs, self.occupation
     )
@@ -206,9 +198,7 @@ class _TestModules(unittest.TestCase):
 
   def test_lapl_integrates_to_zero(self):
     """Integral of Laplacian over the periodic cell should vanish."""
-    lapl = lapl_grid(
-      self.coeff, self.vol, self.g_vecs, self.occupation
-    )
+    lapl = lapl_grid(self.coeff, self.vol, self.g_vecs, self.occupation)
     num_grid = np.prod(self.grid_size)
     lapl_integral = jnp.sum(lapl) * self.vol / num_grid
     np.testing.assert_allclose(lapl_integral, 0.0, atol=1e-12)

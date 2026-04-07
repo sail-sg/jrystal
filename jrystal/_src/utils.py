@@ -185,9 +185,8 @@ def expand_coefficient(
   """
   coeff_compact = jnp.swapaxes(coeff_compact, -1, -2)
   coeff_shape = coeff_compact.shape[:-1] + mask.shape
-  return jnp.zeros(
-    coeff_shape, dtype=coeff_compact.dtype
-  ).at[..., mask].set(coeff_compact)
+  return jnp.zeros(coeff_shape,
+                   dtype=coeff_compact.dtype).at[..., mask].set(coeff_compact)
 
 
 def squeeze_coefficient(

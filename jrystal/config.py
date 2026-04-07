@@ -116,6 +116,12 @@ default_config = {
       "epoch": 5000,
       "fine_tuning": True,
       "fine_tuning_epoch": 300,
+      "plot": {
+        "enabled": True,
+        "unit": "eV",
+        "y_min": None,
+        "y_max": None,
+      },
     },
   "execution":
     {
@@ -139,7 +145,6 @@ default_config = {
       "save_checkpoint": True,
       "checkpoint_interval": 50,
       "restart": "from_scratch",
-      "save_band_plot": True,
       "log_level": "normal",
     },
 }
@@ -207,6 +212,7 @@ _GROUP_FIELDS = {
       "epoch",
       "fine_tuning",
       "fine_tuning_epoch",
+      "plot",
     },
   "execution":
     {
@@ -294,6 +300,13 @@ _SOLVER_DIRECT_OPT_CONVERGENCE_FIELDS = {
   "convergence_condition",
 }
 
+_BAND_PLOT_FIELDS = {
+  "enabled",
+  "unit",
+  "y_min",
+  "y_max",
+}
+
 _LEGACY_FIELD_MAP = {
   "crystal": ("system", "crystal"),
   "crystal_file_path": ("system", "crystal_file_path"),
@@ -363,7 +376,7 @@ _LEGACY_FIELD_MAP = {
   "save_checkpoint": ("io", "save_checkpoint"),
   "checkpoint_interval": ("io", "checkpoint_interval"),
   "restart": ("io", "restart"),
-  "save_band_plot": ("io", "save_band_plot"),
+  "save_band_plot": ("band", "plot", "enabled"),
   "log_level": ("io", "log_level"),
 }
 
@@ -393,6 +406,9 @@ def _warn_unknown_fields(config: Mapping[str, Any]) -> None:
     if key in _GROUP_FIELDS and isinstance(value, Mapping):
       if key == "solver":
         _warn_unknown_solver_fields(value)
+        continue
+      if key == "band":
+        _warn_unknown_band_fields(value)
         continue
       unknown_fields = sorted(set(value) - _GROUP_FIELDS[key])
       for unknown_field in unknown_fields:
@@ -473,6 +489,23 @@ def _warn_unknown_solver_fields(solver_config: Mapping[str, Any]) -> None:
           f"Unknown config field: solver.direct_opt.convergence.{unknown_field}",
           stacklevel=4,
         )
+
+
+def _warn_unknown_band_fields(band_config: Mapping[str, Any]) -> None:
+  unknown_fields = sorted(set(band_config) - _GROUP_FIELDS["band"])
+  for unknown_field in unknown_fields:
+    warnings.warn(
+      f"Unknown config field: band.{unknown_field}",
+      stacklevel=4,
+    )
+
+  plot_config = band_config.get("plot")
+  if isinstance(plot_config, Mapping):
+    for unknown_field in sorted(set(plot_config) - _BAND_PLOT_FIELDS):
+      warnings.warn(
+        f"Unknown config field: band.plot.{unknown_field}",
+        stacklevel=4,
+      )
 
 
 def _apply_legacy_field(
@@ -712,6 +745,20 @@ def _normalize_solver_group(
   _deep_merge(target, solver_value)
 
 
+def _normalize_band_group(
+  target: dict[str, Any],
+  group_value: Mapping[str, Any],
+) -> None:
+  band_value = copy.deepcopy(dict(group_value))
+  plot = band_value.pop("plot", None)
+  if plot is not None:
+    if not isinstance(plot, Mapping):
+      raise TypeError("Config group `band.plot` must be a mapping.")
+    _deep_merge(target["plot"], copy.deepcopy(dict(plot)))
+
+  _deep_merge(target, band_value)
+
+
 def _normalize_io_group(
   target: dict[str, Any],
   group_value: Mapping[str, Any],
@@ -759,6 +806,8 @@ def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
     config = {}
   log_level_explicit = False
   verbose_explicit = False
+  band_plot_enabled_explicit = False
+  legacy_band_plot_enabled = None
 
   for key, value in config.items():
     if key == "schema_version":
@@ -779,8 +828,18 @@ def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
         verbose_explicit = True
       if key == "io" and "log_level" in group_value:
         log_level_explicit = True
+      if key == "io" and "save_band_plot" in group_value:
+        legacy_band_plot_enabled = copy.deepcopy(
+          group_value.pop("save_band_plot"),
+        )
+      if key == "band":
+        plot_value = group_value.get("plot")
+        if isinstance(plot_value, Mapping) and "enabled" in plot_value:
+          band_plot_enabled_explicit = True
       if key == "solver":
         _normalize_solver_group(normalized["solver"], group_value)
+      elif key == "band":
+        _normalize_band_group(normalized["band"], group_value)
       elif key == "io":
         _normalize_io_group(normalized["io"], group_value)
       else:
@@ -802,6 +861,9 @@ def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
 
   if normalized["band"]["empty_bands"] is None:
     normalized["band"]["empty_bands"] = normalized["occupation"]["empty_bands"]
+
+  if (not band_plot_enabled_explicit and legacy_band_plot_enabled is not None):
+    normalized["band"]["plot"]["enabled"] = legacy_band_plot_enabled
 
   _sync_log_level_and_verbose(
     normalized,
@@ -850,6 +912,11 @@ def _validate_int(value: Any, path: str) -> None:
 def _validate_number(value: Any, path: str) -> None:
   if not _is_number(value):
     raise TypeError(f"Config field `{path}` must be a number.")
+
+
+def _validate_optional_number(value: Any, path: str) -> None:
+  if value is not None:
+    _validate_number(value, path)
 
 
 def _validate_grid_sizes(value: Any, path: str) -> None:
@@ -1032,6 +1099,22 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
     config["band"]["fine_tuning_epoch"],
     "band.fine_tuning_epoch",
   )
+  _validate_bool(config["band"]["plot"]["enabled"], "band.plot.enabled")
+  if config["band"]["plot"]["unit"] not in {"eV", "Ha", "Ry"}:
+    raise ValueError(
+      "Config field `band.plot.unit` must be 'eV', 'Ha', or 'Ry'."
+    )
+  _validate_optional_number(config["band"]["plot"]["y_min"], "band.plot.y_min")
+  _validate_optional_number(config["band"]["plot"]["y_max"], "band.plot.y_max")
+  if (
+    config["band"]["plot"]["y_min"] is not None and
+    config["band"]["plot"]["y_max"] is not None and
+    config["band"]["plot"]["y_min"] >= config["band"]["plot"]["y_max"]
+  ):
+    raise ValueError(
+      "Config fields `band.plot.y_min` and `band.plot.y_max` "
+      "must satisfy y_min < y_max."
+    )
 
   _validate_int(config["execution"]["seed"], "execution.seed")
   _validate_bool(
@@ -1079,7 +1162,6 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
     raise ValueError("Config field `io.checkpoint_interval` must be positive.")
   if not isinstance(config["io"]["restart"], str):
     raise TypeError("Config field `io.restart` must be a string.")
-  _validate_bool(config["io"]["save_band_plot"], "io.save_band_plot")
   if config["io"]["log_level"] not in {"quiet", "normal", "verbose"}:
     raise ValueError(
       "Config field `io.log_level` must be 'quiet', 'normal', or 'verbose'."

@@ -23,7 +23,7 @@ def make_config():
   config.io.save_wavefunction = True
   config.io.save_ground_state_spectrum = True
   config.io.save_checkpoint = True
-  config.io.save_band_plot = False
+  config.band.plot.enabled = False
   config.io.log_level = "quiet"
   config.execution.verbose = False
   return config
