@@ -248,6 +248,7 @@ class NormConservingBackend:
       ctx.potential_nonlocal,
       vol=vol,
       occupation=occ,
+      kpts_weights=k_weights,
     )
     xc = _energy.xc_energy(density, g_vec, vol, self.xc, kohn_sham=False)
     return kin + hart + ext_loc + ext_nloc + xc
@@ -271,7 +272,7 @@ class NormConservingBackend:
         kohn_sham=True,
       )
 
-    return jax.grad(_trace)(coeff.conj()) / 2.0
+    return jax.grad(_trace)(coeff) / 2.0
 
   def energy_decomposition(self, coeff, occ, ctx: RuntimeContext) -> dict:
     """Return individual energy terms for logging."""
@@ -311,6 +312,7 @@ class NormConservingBackend:
           ctx.potential_nonlocal,
           vol=vol,
           occupation=occ,
+          kpts_weights=k_weights,
         ),
       "xc":
         _energy.xc_energy(density, g_vec, vol, self.xc, kohn_sham=False),

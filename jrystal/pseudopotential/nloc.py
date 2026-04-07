@@ -215,12 +215,17 @@ def energy_nonlocal(
   potential_nl_psi_reciprocal: Complex[Array, "kpt beta x y z phi"],
   vol: Float,
   occupation: Optional[Float[Array, "spin kpt band"]] = None,
+  kpts_weights: Optional[Float[Array, "kpt"]] = None,
 ) -> Float:
-  hamil_nl = hamiltonian_nonlocal(
-    pw_coefficients, potential_nl_psi_reciprocal, vol
+  f_matrix = einsum(
+    pw_coefficients,
+    potential_nl_psi_reciprocal,
+    "s k band x y z, k beta phi x y z -> s k band beta phi"
   )
-
-  return jnp.sum(jax.vmap(jax.vmap(jnp.diag))(hamil_nl) * occupation).real
+  diag_hamil_nl = jnp.sum(jnp.conj(f_matrix) * f_matrix, axis=(-2, -1)) / vol
+  if kpts_weights is not None:
+    occupation = occupation * kpts_weights[None, :, None]
+  return jnp.sum(diag_hamil_nl * occupation).real
 
 
 def hamiltonian_trace(

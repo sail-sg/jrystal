@@ -145,8 +145,16 @@ class NormConservingPseudopotential(Pseudopotential):
         nonlocal_num_beta.append(num_beta)
         beta_angular_momentum = []
         for beta_i in pp["PP_NONLOCAL"]["PP_BETA"]:
+          beta_values = np.asarray(beta_i['values'], dtype=np.float64)
+          beta_div_r = np.zeros_like(beta_values)
+          np.divide(
+            beta_values,
+            _r_grid,
+            where=(_r_grid > 0),
+            out=beta_div_r,
+          )
           beta.append(
-            np.divide(beta_i['values'], _r_grid, where=(_r_grid > 0))
+            beta_div_r
           )  # the beta function is multiplied by r in upf file
           beta_angular_momentum.append(int(beta_i["angular_momentum"]))
         nonlocal_beta_grid.append(np.stack(beta)[:, _r_grid > 0])
