@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from ..calc.types import BandStructureResult, KSampling
-from ._style import HARTREE_TO_EV, energy_scale
+from ._style import energy_scale
 
 
 def _load_from_directory(
@@ -52,11 +52,6 @@ def _auto_energy_limits(values: np.ndarray) -> tuple[float, float]:
   return ymin - pad, ymax + pad
 
 
-def _default_window_in_unit(unit: str) -> tuple[float, float]:
-  scale = energy_scale(unit) / HARTREE_TO_EV
-  return (-8.0 * scale, 8.0 * scale)
-
-
 def _resolve_energy_limits(
   values: np.ndarray,
   *,
@@ -70,12 +65,8 @@ def _resolve_energy_limits(
     return tuple(energy_range)
 
   auto_min, auto_max = _auto_energy_limits(values)
-  if reference_energy is not None:
-    focus_min, focus_max = _default_window_in_unit(unit)
-    clipped_min = max(auto_min, focus_min)
-    clipped_max = min(auto_max, focus_max)
-    if clipped_min < clipped_max:
-      auto_min, auto_max = clipped_min, clipped_max
+  if y_min is None and y_max is None:
+    return auto_min, auto_max
 
   lower = auto_min if y_min is None else float(y_min)
   upper = auto_max if y_max is None else float(y_max)

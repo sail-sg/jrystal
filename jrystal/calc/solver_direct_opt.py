@@ -53,8 +53,8 @@ from .workflow_logging import (
 
 if TYPE_CHECKING:
   from ..config import JrystalConfigDict
-  from .backend import AllElectronBackend, NormConservingBackend
   from .runtime import RuntimeContext
+  from .types import ElectronicBackend
 
 
 @dataclass(frozen=True)
@@ -149,7 +149,7 @@ def _occupation_params_from_tensor(
 def run_direct_opt(
   config: JrystalConfigDict,
   ctx: RuntimeContext,
-  backend: AllElectronBackend | NormConservingBackend,
+  backend: ElectronicBackend,
   *,
   requested_solver_mode: str | None = None,
   restart_state: dict | None = None,
@@ -185,6 +185,18 @@ def run_direct_opt(
   num_bands = ceil(num_electrons / occ_max) + config.occupation.empty_bands
   smearing = config.occupation.smearing
   occupation_warmup_steps = config.occupation.warmup_steps
+  canonical_transform = bool(
+    config.solver.direct_opt.canonical_transform or
+    getattr(backend, "requires_canonical_transform", False)
+  )
+  if (
+    getattr(backend, "requires_canonical_transform", False) and
+    not config.solver.direct_opt.canonical_transform
+  ):
+    stage_warning(
+      "DirectOpt",
+      "Enabling canonical overlap transform required by the backend.",
+    )
 
   stage_line("Init", f"Crystal: {crystal.symbols}")
   log_ground_state_start(
@@ -221,12 +233,47 @@ def run_direct_opt(
   k_vec = jax.device_put(k_vec, NamedSharding(mesh, P("k")))
   k_weights = jax.device_put(k_weights, NamedSharding(mesh, P("k")))
 
-  # For NC, deploy nonlocal potential to devices
-  if ctx.potential_nonlocal is not None:
-    potential_nl = jax.device_put(
-      ctx.potential_nonlocal,
-      NamedSharding(mesh, P("k")),
+  def _to_physical_coeff(coeff_full):
+    if canonical_transform:
+      return backend.overlap_inv_sqrt_apply(coeff_full, ctx)
+    return coeff_full
+
+  def _density_from_coeff(coeff_full, occ):
+    total_density_fn = getattr(backend, "_total_density", None)
+    if total_density_fn is not None:
+      return total_density_fn(coeff_full, occ, ctx)
+    return _pw.density_grid(
+      coeff_full,
+      crystal.vol,
+      occ,
+      k_weights=ctx.ksampling.weights,
     )
+
+  # For NC, deploy nonlocal potential to devices.
+  if ctx.potential_nonlocal is not None:
+    potential_nl = ctx.potential_nonlocal
+    if hasattr(potential_nl, "projectors") and hasattr(potential_nl, "d_matrices"):
+      from ..pseudopotential.nloc import NonlocalProjectorGrid
+
+      potential_nl = NonlocalProjectorGrid(
+        projectors=jax.device_put(
+          potential_nl.projectors,
+          NamedSharding(mesh, P(None, "k")),
+        ),
+        d_matrices=jax.device_put(
+          potential_nl.d_matrices,
+          NamedSharding(mesh, P()),
+        ),
+        projector_mask=jax.device_put(
+          potential_nl.projector_mask,
+          NamedSharding(mesh, P()),
+        ),
+      )
+    else:
+      potential_nl = jax.device_put(
+        potential_nl,
+        NamedSharding(mesh, P("k")),
+      )
     ctx = ctx.replace(potential_nonlocal=potential_nl)
 
   # Update ksampling on ctx with sharded arrays
@@ -248,6 +295,7 @@ def run_direct_opt(
   # --- Energy function (delegates to backend) ---
   def free_energy(params_pw, params_occ):
     coeff = _pw.coeff(params_pw, freq_mask, sharding=sharding)
+    coeff = _to_physical_coeff(coeff)
     occ = occ_fn(params_occ)
     total = backend.total_energy(coeff, occ, ctx)
     free, _ = _free_energy_from_total_energy(total, occ, smearing)
@@ -341,15 +389,11 @@ def run_direct_opt(
     old_handler = signal.signal(signal.SIGINT, _handle_sigint)
 
     def _physical_state_from_params(params, step, total_energy):
-      coeff_full = _pw.coeff(params["pw"], freq_mask, sharding=sharding)
-      coeff_compact = squeeze_coefficient(coeff_full, freq_mask)
+      coeff_full_param = _pw.coeff(params["pw"], freq_mask, sharding=sharding)
+      coeff_full = _to_physical_coeff(coeff_full_param)
+      coeff_compact = squeeze_coefficient(coeff_full_param, freq_mask)
       current_occ = occ_fn(params["occ"])
-      density = _pw.density_grid(
-        coeff_full,
-        crystal.vol,
-        current_occ,
-        k_weights=ctx.ksampling.weights,
-      )
+      density = _density_from_coeff(coeff_full, current_occ)
       return {
         "density":
           density,
@@ -458,15 +502,11 @@ def run_direct_opt(
       spinner.stop()
 
   # --- Final energy decomposition ---
-  coeff = _pw.coeff(params["pw"], freq_mask)
+  coeff_param = _pw.coeff(params["pw"], freq_mask)
+  coeff = _to_physical_coeff(coeff_param)
   occ = occ_fn(params["occ"])
-  coeff_compact = squeeze_coefficient(coeff, freq_mask)
-  density = _pw.density_grid(
-    coeff,
-    crystal.vol,
-    occ,
-    k_weights=ctx.ksampling.weights,
-  )
+  coeff_compact = squeeze_coefficient(coeff_param, freq_mask)
+  density = _density_from_coeff(coeff, occ)
   decomp = backend.energy_decomposition(coeff, occ, ctx)
   total_e = float(sum(decomp.values()) + ew)
   wall_time = time.time() - overall_start

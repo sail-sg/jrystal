@@ -19,6 +19,7 @@ from .nloc import (
   hamiltonian_matrix,
   hamiltonian_nonlocal,
   hamiltonian_trace,
+  NonlocalProjectorGrid,
   potential_nonlocal_psi_reciprocal,
 )
 
@@ -28,6 +29,7 @@ __call__ = [
   hamiltonian_local,
   energy_local,
   potential_nonlocal_psi_reciprocal,
+  NonlocalProjectorGrid,
   hamiltonian_nonlocal,
   hamiltonian_matrix,
   energy_nonlocal,

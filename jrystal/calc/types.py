@@ -113,6 +113,19 @@ class BandStructureResult:
   reference_energy: Optional[float] = None
 
 
+@dataclass
+class KPointOperatorBundle:
+  """Backend-provided operator data for one band-path k-point."""
+
+  kpt: Any
+  local_potential_r: Any
+  projector_channels_g: Any = None
+  channel_qii: Any = None
+  channel_dii_eff: Any = None
+  channel_mask: Any = None
+  solver_kind: Literal["standard", "generalized"] = "standard"
+
+
 # ---------------------------------------------------------------------------
 # Backend protocol
 # ---------------------------------------------------------------------------
@@ -142,10 +155,64 @@ class ElectronicBackend(Protocol):
   def hamiltonian_apply(
     self,
     coeff: Any,
-    density: Any,
+    iteration_state: Any,
     ctx: "RuntimeContext",
   ) -> Any:
     """Apply H to wavefunctions (H|psi>). Used by SCF eigensolver."""
+    ...
+
+  def prepare_iteration(
+    self,
+    density: Any,
+    ctx: "RuntimeContext",
+  ) -> Any:
+    """Build fixed-density operator state reused within one SCF iteration."""
+    ...
+
+  def overlap_apply(
+    self,
+    coeff: Any,
+    ctx: "RuntimeContext",
+  ) -> Any:
+    """Apply the overlap operator S to wavefunctions (S|psi>)."""
+    ...
+
+  def overlap_inv_sqrt_apply(
+    self,
+    coeff: Any,
+    ctx: "RuntimeContext",
+  ) -> Any:
+    """Apply S^{-1/2} to wavefunctions for canonical-orbital transforms."""
+    ...
+
+  def energy_decomposition(
+    self,
+    coeff: Any,
+    occ: Any,
+    ctx: "RuntimeContext",
+  ) -> dict[str, Any]:
+    """Return decomposed energy terms for reporting."""
+    ...
+
+  def prepare_nscf(
+    self,
+    density: Any,
+    ctx: "RuntimeContext",
+  ) -> Any:
+    """Build fixed-density state reused across a band-path solve."""
+    ...
+
+  def build_kpoint_operator(
+    self,
+    kpt_index: int,
+    nscf_state: Any,
+    ctx: "RuntimeContext",
+  ) -> KPointOperatorBundle:
+    """Return a data-only operator bundle for one k-point."""
+    ...
+
+  def num_electrons(self, ctx: "RuntimeContext") -> int:
+    """Return the electron count represented by this backend."""
     ...
 
 
@@ -155,6 +222,7 @@ __all__ = [
   "EnergyDecomposition",
   "ExecutionPlan",
   "GroundStateResult",
+  "KPointOperatorBundle",
   "KSampling",
   "PlaneWaveBasis",
 ]

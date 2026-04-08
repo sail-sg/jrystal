@@ -23,11 +23,26 @@ from typing import Callable
 import jax
 import jax.numpy as jnp
 import numpy as np
-from einops import einsum
-from jax.scipy.special import sph_harm, sph_harm_y
+from jax.scipy.special import sph_harm_y
 from jaxtyping import Array, Float
 
 from .._src.utils import vmapstack
+
+
+def _evaluate_sph_harm(
+  n: np.ndarray,
+  m: np.ndarray,
+  polar,
+  azimuth,
+):
+  """Evaluate spherical harmonics with a SciPy fallback for no-jit mode.
+
+  ``jax.scipy.special.sph_harm_y`` currently trips ``jax_debug_nans`` when
+  ``jax_disable_jit`` is enabled, even for otherwise valid inputs.  In that
+  debugging mode we fall back to SciPy's implementation and convert back to a
+  JAX array.
+  """
+  return sph_harm_y(n, m, polar, azimuth)
 
 
 def cartesian_to_spherical(x: Float[Array, "*n 3"],
@@ -70,17 +85,19 @@ def batch_sph_harm_real(
   """
   Compute the real form of spherical harmonics for a batch of points.
   """
-  _sph_harm1 = batch_sph_harm(l, theta, phi)  # [*batch m]
-  m = jnp.arange(-l, l + 1)
-  _sph_harm2 = einsum(_sph_harm1.conj(), (-1)**m, "... m, m -> ... m")
+  complex_harmonics = batch_sph_harm(l, theta, phi)  # [*batch m]
+  output = jnp.zeros_like(complex_harmonics.real)
+  output = output.at[..., l].set(complex_harmonics[..., l].real)
 
-  output = jnp.where(
-    m >= 0,
-    _sph_harm1.real * jnp.sqrt(2) * (-1)**m,
-    _sph_harm2.imag * jnp.sqrt(2) * (-1)**m,
-  )  # [m, *batch]
+  if l == 0:
+    return output
 
-  output = output.at[..., l].set(_sph_harm1[..., l].real)
+  positive_m = jnp.arange(1, l + 1)
+  positive_vals = complex_harmonics[..., l + positive_m]
+  factors = jnp.sqrt(2.0) * (-1.0) ** positive_m
+
+  output = output.at[..., l + positive_m].set(positive_vals.real * factors)
+  output = output.at[..., l - positive_m].set(positive_vals.imag * factors)
   return output
 
 
@@ -111,12 +128,29 @@ def batch_sph_harm(
   m = np.arange(-int(l), int(l) + 1)
   n = np.array([l])
 
-  @vmapstack(dim)
-  def _sph_harm_fun(theta, phi):
-    return sph_harm_y(n, m, phi, theta)
-    # note that the definitions of theta and phi are swapped in sph_harm_y.
+  # ``cartesian_to_spherical()`` uses the physics convention
+  # (theta=azimuth, phi=polar). Current JAX ``sph_harm_y`` expects the
+  # SciPy convention (theta=polar, phi=azimuth).
+  polar = phi
+  azimuth = theta
 
-  return _sph_harm_fun(theta, phi)
+  if jax.config.jax_disable_jit:
+    from scipy.special import sph_harm_y as scipy_sph_harm_y
+
+    polar_np = np.asarray(polar)
+    azimuth_np = np.asarray(azimuth)
+    flat = [
+      np.asarray(scipy_sph_harm_y(np.asarray(n), np.asarray(m), p, a)).reshape(-1)
+      for p, a in zip(polar_np.reshape(-1), azimuth_np.reshape(-1), strict=True)
+    ]
+    output = np.stack(flat, axis=0).reshape(polar_np.shape + (m.shape[0],))
+    return jnp.asarray(output)
+
+  @vmapstack(dim)
+  def _sph_harm_fun(polar, azimuth):
+    return _evaluate_sph_harm(n, m, polar, azimuth)
+
+  return _sph_harm_fun(polar, azimuth)
 
 
 def legendre_to_sph_harm(
@@ -156,12 +190,9 @@ def legendre_to_sph_harm(
     @vmapstack(x.ndim - 1)
     def _f(x_i):
       x_spherical = cartesian_to_spherical(x_i)
-      theta = x_spherical[..., 1:2]  # azimuthal angle
-      phi = x_spherical[..., 2:3]  # polar angle
-
-      y_lm = jax.vmap(sph_harm, in_axes=[0, None, None,
-                                         None])(m, n, theta,
-                                                phi).reshape([-1])  # [m]
+      azimuth = jnp.asarray(x_spherical[..., 1])
+      polar = jnp.asarray(x_spherical[..., 2])
+      y_lm = batch_sph_harm(l, azimuth, polar).reshape([-1])  # [m]
 
       y_lm = jnp.pad(y_lm, (0, (l_max - l) * 2), constant_values=0)
       # pad the y_lm to length l_max with zeros

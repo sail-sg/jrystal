@@ -16,18 +16,38 @@
 .. warning::
 The pseudopotential module is currently under development and may
 undergo changes in future versions. At this time, we only support the UPF
-format. Additionally, our implementation is limited to
-norm-conserving pseudopotentials. Please note that many functions in this module
-are not yet fully differentiable.
+format. Norm-conserving pseudopotentials are the most mature path; ultrasoft
+support is still partial and currently focused on Gamma-point direct
+optimisation. Please note that many functions in this module are not yet fully
+differentiable.
 
 """
-from . import beta, dataclass, load, local, nloc, normcons, spherical, utils
-from .dataclass import NormConservingPseudopotential, Pseudopotential
+from . import (
+  augmentation,
+  beta,
+  dataclass,
+  kernel,
+  load,
+  local,
+  nloc,
+  normcons,
+  spherical,
+  ultrasoft,
+  utils,
+)
+from .dataclass import (
+  NormConservingPseudopotential,
+  Pseudopotential,
+  UltrasoftPseudopotential,
+)
 
 __all__ = [
   "dataclass",
+  "kernel",
+  "augmentation",
   "Pseudopotential",
   "NormConservingPseudopotential",
+  "UltrasoftPseudopotential",
   'local',
   'load',
   'spherical',
@@ -35,4 +55,5 @@ __all__ = [
   'utils',
   'normcons',
   'nloc',
+  'ultrasoft',
 ]

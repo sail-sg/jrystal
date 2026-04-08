@@ -247,14 +247,20 @@ def _compute_ground_state_spectrum(config, ctx, backend, result):
   freq_mask = ctx.basis.freq_mask
   coeff_guess = jnp.asarray(coeffs["w_re"]) + 1.0j * jnp.asarray(coeffs["w_im"])
   density = jnp.asarray(result.density)
+  iteration_state = backend.prepare_iteration(density, ctx)
   precond = kerker_preconditioner(ctx.g_vec, freq_mask)
   lobpcg_max_iter = config.solver.scf.eigensolver.max_iter
   s, k, g, b = coeff_guess.shape
 
   def _hvp(coeff_compact):
     coeff_full = expand_coefficient(coeff_compact.conj(), freq_mask)
-    hpsi_full = backend.hamiltonian_apply(coeff_full, density, ctx)
+    hpsi_full = backend.hamiltonian_apply(coeff_full, iteration_state, ctx)
     return squeeze_coefficient(hpsi_full, freq_mask)
+
+  def _svp(coeff_compact):
+    coeff_full = expand_coefficient(coeff_compact.conj(), freq_mask)
+    spsi_full = backend.overlap_apply(coeff_full, ctx)
+    return squeeze_coefficient(spsi_full.conj(), freq_mask)
 
   def _matmul(c):
     coeff_batch = c.reshape(s, k, g, -1)
@@ -262,6 +268,7 @@ def _compute_ground_state_spectrum(config, ctx, backend, result):
 
   eigval, eigvec = batched_lobpcg(
     matmul=_matmul,
+    b_matmul=_svp,
     k=b,
     v0=coeff_guess.reshape(s * k, g, b),
     which="smallest",

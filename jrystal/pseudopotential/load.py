@@ -146,10 +146,12 @@ def parse_pp_nonlocal(pp_nonlocal) -> dict:
 
   augmentation_element = pp_nonlocal.find('PP_AUGMENTATION')
   if augmentation_element is not None:
+    q_with_l = augmentation_element.get('q_with_l') in [
+      'true', 'True', 'T', 't', '1', 'TRUE'
+    ]
     augmentation_data = {
       'q_with_l':
-        augmentation_element.get('q_with_l') in
-        ['true', 'True', 'T', 't', '1', 'TRUE'],
+        q_with_l,
       'nqf':
         int(augmentation_element.get('nqf')),
       'nqlc':
@@ -163,14 +165,19 @@ def parse_pp_nonlocal(pp_nonlocal) -> dict:
 
     # Parse multiple <PP_QIJ> elements
     # qij_elements = augmentation_element.findall('.//PP_QIJ.1.1')
-    qij_elements = [
-      elem for elem in augmentation_element if elem.tag.startswith('PP_QIJ')
-    ]
+    qij_elements = []
+    for elem in augmentation_element:
+      if q_with_l and elem.tag.startswith('PP_QIJL'):
+        qij_elements.append(elem)
+      elif (not q_with_l and elem.tag.startswith('PP_QIJ') and
+            not elem.tag.startswith('PP_QIJL')):
+        qij_elements.append(elem)
     if qij_elements:
       augmentation_data['PP_QIJ'] = []
       for qij in qij_elements:
         augmentation_data['PP_QIJ'].append(
           {
+            'tag': qij.tag,
             'first_index': qij.get('first_index'),
             'second_index': qij.get('second_index'),
             'composite_index': qij.get('composite_index'),
@@ -186,6 +193,16 @@ def parse_pp_nonlocal(pp_nonlocal) -> dict:
 def parse_pp_local(pp_local) -> list:
   """Parse the PP_LOCAL section into a list of floats."""
   return [float(i) for i in pp_local.text.split()]
+
+
+def parse_pp_nlcc(pp_nlcc) -> list:
+  """Parse the PP_NLCC section into a list of floats."""
+  return [float(i) for i in pp_nlcc.text.split()]
+
+
+def parse_pp_rhoatom(pp_rhoatom) -> list:
+  """Parse the PP_RHOATOM section into a list of floats."""
+  return [float(i) for i in pp_rhoatom.text.split()]
 
 
 def parse_upf(filepath: str) -> dict:
@@ -207,14 +224,21 @@ def parse_upf(filepath: str) -> dict:
   mesh_info = parse_pp_mesh(root.find('PP_MESH'))
   nonlocal_dict = parse_pp_nonlocal(root.find('PP_NONLOCAL'))
   local_dict = parse_pp_local(root.find('PP_LOCAL'))
+  nlcc_element = root.find('PP_NLCC')
+  rhoatom_element = root.find('PP_RHOATOM')
 
-  return {
+  parsed = {
     'PP_INFO': pp_info,
     'PP_HEADER': header_info,
     'PP_MESH': mesh_info,
     'PP_NONLOCAL': nonlocal_dict,
     'PP_LOCAL': local_dict,
   }
+  if nlcc_element is not None:
+    parsed['PP_NLCC'] = parse_pp_nlcc(nlcc_element)
+  if rhoatom_element is not None:
+    parsed['PP_RHOATOM'] = parse_pp_rhoatom(rhoatom_element)
+  return parsed
 
 
 def find_upf(dir_path: str, atom: str) -> str:
@@ -238,7 +262,7 @@ def find_upf(dir_path: str, atom: str) -> str:
       file_name_lower.startswith(atom.lower() + ".") and
       file_name_lower.endswith("upf")
     ):
-      return dir_path + file_name
+      return os.path.join(dir_path, file_name)
 
   raise ValueError(
     f"The pseudopotential file of element \'{atom}\' is not found in directory"

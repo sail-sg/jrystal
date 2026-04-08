@@ -13,13 +13,25 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Optional, Union
 
 import numpy as np
 from jaxtyping import Array, Float, Int
 
 from .._src.crystal import Crystal
-from .load import find_upf, parse_upf
+from .kernel import (
+  AtomSpeciesMap,
+  PseudoSpeciesSetup,
+  load_species_setups,
+)
+
+
+def _expand_species_field(
+  species_setups: tuple[PseudoSpeciesSetup, ...],
+  atom_species_map: AtomSpeciesMap,
+  getter,
+) -> list:
+  return [getter(species_setups[int(idx)]) for idx in atom_species_map.species_index]
 
 
 @dataclass
@@ -32,6 +44,8 @@ class Pseudopotential():
   charges: Int[Array, "atom"]
   atomic_symbols: List[str]
   valence_charges: List[int]
+  species_setups: tuple[PseudoSpeciesSetup, ...]
+  atom_species_map: Optional[AtomSpeciesMap]
 
   @staticmethod
   def create(
@@ -77,8 +91,8 @@ class NormConservingPseudopotential(Pseudopotential):
   r_grid: List[Float[Array, "num_r"]]
   r_ab: List[Float[Array, "num_r"]]
   r_cutoff: List[float]
-  l_max: int
-  l_max_rho: int
+  l_max: List[int]
+  l_max_rho: List[Optional[int]]
   local_potential_grid: List[Float[Array, "num_r"]]
   local_potential_charge: List[int]
   num_beta: List[int]
@@ -97,87 +111,74 @@ class NormConservingPseudopotential(Pseudopotential):
     charges = crystal.charges
     atomic_symbols = crystal.symbols
     num_atom = len(charges)
+    species_setups, atom_species_map = load_species_setups(crystal, dir, "nc")
 
-    pp_dict_list = []
-    for symbol in crystal.symbols:
-      pp_path = find_upf(dir, symbol)
-      pp_dict = parse_upf(pp_path)
-      pp_dict_list.append(pp_dict)
-
-    valence_charges = []
-    r_grid = []
-    r_ab = []
-    r_cutoff = []
-    l_max = []
-    l_max_rho = []
-    local_potential_grid = []
-    local_potential_charge = []
-    nonlocal_num_beta = []
-    nonlocal_beta_grid = []
-    nonlocal_beta_cutoff_radius = []
-    nonlocal_d_matrix = []
-    nonlocal_angular_momentum = []
-    nonlocal_valence_configuration = []
-
-    for pp in pp_dict_list:
-      valence_charges.append(int(float(pp["PP_HEADER"]["z_valence"])))
-      _r_grid = np.array(pp["PP_MESH"]["PP_R"])
-      r_grid.append(_r_grid[_r_grid > 0])
-      r_ab.append(np.array(pp["PP_MESH"]["PP_RAB"])[_r_grid > 0])
-      # r_cutoff.append(float(pp["PP_NONLOCAL"]["PP_BETA"]["cutoff_radius"][0]))
-      r_cutoff.append(None)
-      l_max.append(int(pp["PP_HEADER"]["l_max"]))
-      if "l_max_rho" in pp["PP_HEADER"]:
-        l_max_rho.append(int(pp["PP_HEADER"]["l_max_rho"]))
-      else:
-        l_max_rho.append(None)
-      # norm conserving pseudopotential use the same cutoff_radius for local
-      # and nonlocal potentials.
-
-      local_potential_grid.append(np.array(pp["PP_LOCAL"])[_r_grid > 0] / 2)
-      # 1/2 is due to the conversion from rydberg to hartree.
-      local_potential_charge.append(valence_charges[-1])
-
-      beta = []
-
-      if "PP_BETA" in pp["PP_NONLOCAL"]:
-        num_beta = len(pp["PP_NONLOCAL"]["PP_BETA"])
-        nonlocal_num_beta.append(num_beta)
-        beta_angular_momentum = []
-        for beta_i in pp["PP_NONLOCAL"]["PP_BETA"]:
-          beta_values = np.asarray(beta_i['values'], dtype=np.float64)
-          beta_div_r = np.zeros_like(beta_values)
-          np.divide(
-            beta_values,
-            _r_grid,
-            where=(_r_grid > 0),
-            out=beta_div_r,
-          )
-          beta.append(
-            beta_div_r
-          )  # the beta function is multiplied by r in upf file
-          beta_angular_momentum.append(int(beta_i["angular_momentum"]))
-        nonlocal_beta_grid.append(np.stack(beta)[:, _r_grid > 0])
-        nonlocal_beta_cutoff_radius.append(beta_i['cutoff_radius'])
-        d_mat = np.array(pp["PP_NONLOCAL"]["PP_DIJ"])
-        d_mat = np.reshape(d_mat, [num_beta, num_beta])
-        nonlocal_d_matrix.append(d_mat / 2)
-        # 1/2 is due to the conversion from rydberg to hartree.
-
-      else:
-        nonlocal_num_beta.append(1)
-        beta_angular_momentum = [0]
-        beta.append(np.zeros_like(r_grid[-1]))
-
-        nonlocal_beta_grid.append(np.stack(beta))
-        nonlocal_beta_cutoff_radius.append(0)
-        d_mat = np.zeros([1, 1])
-        nonlocal_d_matrix.append(d_mat)
-
-      nonlocal_angular_momentum.append(np.array(beta_angular_momentum))
-      nonlocal_valence_configuration.append(
-        pp["PP_INFO"]["Valence configuration"]
-      )
+    valence_charges = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.valence_charge,
+    )
+    r_grid = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.radial.r_g,
+    )
+    r_ab = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.radial.dr_g,
+    )
+    r_cutoff = [None] * num_atom
+    l_max = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.l_max,
+    )
+    l_max_rho = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.l_max_rho,
+    )
+    local_potential_grid = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.local.vloc_r,
+    )
+    local_potential_charge = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.local.z_valence,
+    )
+    nonlocal_num_beta = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: int(setup.projectors.beta_jr.shape[0]),
+    )
+    nonlocal_beta_grid = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.projectors.beta_jr,
+    )
+    nonlocal_beta_cutoff_radius = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: list(setup.projectors.cutoff_radii),
+    )
+    nonlocal_d_matrix = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.projectors.d_jj,
+    )
+    nonlocal_angular_momentum = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.projectors.l_j,
+    )
+    nonlocal_valence_configuration = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: list(setup.valence_configuration),
+    )
 
     return NormConservingPseudopotential(
       num_atom,
@@ -185,6 +186,8 @@ class NormConservingPseudopotential(Pseudopotential):
       charges,
       atomic_symbols,
       valence_charges,
+      species_setups,
+      atom_species_map,
       r_grid,
       r_ab,
       r_cutoff,
@@ -248,86 +251,132 @@ class UltrasoftPseudopotential(NormConservingPseudopotential):
     crystal: Crystal,
     dir: Union[str, None] = None,
   ):
+    positions = crystal.positions
+    charges = crystal.charges
+    atomic_symbols = crystal.symbols
+    num_atom = len(charges)
+    species_setups, atom_species_map = load_species_setups(crystal, dir, "us")
 
-    ncpp = NormConservingPseudopotential.create(crystal, dir)
+    valence_charges = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.valence_charge,
+    )
+    r_grid = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.radial.r_g,
+    )
+    r_ab = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.radial.dr_g,
+    )
+    r_cutoff = [None] * num_atom
+    l_max = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.l_max,
+    )
+    l_max_rho = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.l_max_rho,
+    )
+    local_potential_grid = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.local.vloc_r,
+    )
+    local_potential_charge = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.local.z_valence,
+    )
+    nonlocal_num_beta = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: int(setup.projectors.beta_jr.shape[0]),
+    )
+    nonlocal_beta_grid = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.projectors.beta_jr,
+    )
+    nonlocal_beta_cutoff_radius = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: list(setup.projectors.cutoff_radii),
+    )
+    nonlocal_d_matrix = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.projectors.d_jj,
+    )
+    nonlocal_angular_momentum = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: setup.projectors.l_j,
+    )
+    nonlocal_valence_configuration = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: list(setup.valence_configuration),
+    )
 
-    pp_dict_list = []
-    for symbol in crystal.symbols:
-      pp_path = find_upf(dir, symbol)
-      pp_dict = parse_upf(pp_path)
-      pp_dict_list.append(pp_dict)
+    def _q_matrix_or_default(setup):
+      num_beta = int(setup.projectors.beta_jr.shape[0])
+      if setup.augmentation is None:
+        return np.zeros((num_beta, num_beta), dtype=np.float64)
+      return np.asarray(setup.augmentation.q_jj, dtype=np.float64)
 
-    nonlocal_augmentation_q_matrix = []
-    nonlocal_augmentation_qij = []
-    nonlocal_augmentation_q_with_l = []
+    def _qij_or_default(setup):
+      num_beta = int(setup.projectors.beta_jr.shape[0])
+      num_r = int(setup.radial.r_g.shape[0])
+      if setup.augmentation is None:
+        return np.zeros((num_beta, num_beta, 1, num_r), dtype=np.float64)
+      return np.asarray(setup.augmentation.q_jjlr, dtype=np.float64)
 
-    for pp in pp_dict_list:
-      if "PP_AUGMENTATION" in pp["PP_NONLOCAL"]:
-        q_matrix = np.array(pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_Q"])
-        # q_matrix *= 2 * np.sqrt(np.pi)
-        num_q = len(pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_Q"])
-        num_q = np.sqrt(num_q).astype(int)
-        q_matrix = q_matrix.reshape(num_q, num_q)
-        assert np.linalg.eigvalsh(q_matrix).max(
-        ) >= -1, ("The q_matrix is not negative semi-definite.")
-        nonlocal_augmentation_q_matrix.append(q_matrix)
-
-        num_r_grid = len(pp["PP_MESH"]["PP_R"])
-        r_grid = np.array(pp["PP_MESH"]["PP_R"])
-        nonlocal_augmentation_q_with_l.append(
-          pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["q_with_l"]
-        )
-
-        if nonlocal_augmentation_q_with_l[-1] is True:
-
-          q_ij_a = np.zeros(
-            [num_q, num_q, int(pp["PP_HEADER"]["l_max_rho"]) + 1, num_r_grid]
-          )
-          for i in range(len(pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_QIJ"])):
-            m = int(
-              pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_QIJ"][i]["first_index"]
-            ) - 1
-            n = int(
-              pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_QIJ"][i]["second_index"]
-            ) - 1
-            angular_momentum = int(
-              pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_QIJ"][i]
-              ["angular_momentum"]
-            )
-            _q_ij = np.array(
-              pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_QIJ"][i]["values"]
-            )
-            q_ij_a[m, n, angular_momentum] = np.array(
-              np.divide(_q_ij, r_grid**2, where=(r_grid > 0))
-            )
-
-            if m != n:
-              q_ij_a[n, m, angular_momentum] = q_ij_a[m, n, angular_momentum]
-
-        else:
-          q_ij_a = np.zeros([num_q, num_q, 1, num_r_grid])
-          for i in range(len(pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_QIJ"])):
-            m = int(
-              pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_QIJ"][i]["first_index"]
-            ) - 1
-            n = int(
-              pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_QIJ"][i]["second_index"]
-            ) - 1
-            _q_ij = np.array(
-              pp["PP_NONLOCAL"]["PP_AUGMENTATION"]["PP_QIJ"][i]["values"]
-            )
-            q_ij_a[m, n, 0] = np.array(
-              np.divide(_q_ij, r_grid**2, where=(r_grid > 0))
-            )
-
-            if m != n:
-              q_ij_a[n, m, 0] = q_ij_a[m, n, 0]
-
-        nonlocal_augmentation_qij.append(q_ij_a)
+    nonlocal_augmentation_q_matrix = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      _q_matrix_or_default,
+    )
+    nonlocal_augmentation_qij = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      _qij_or_default,
+    )
+    nonlocal_augmentation_q_with_l = _expand_species_field(
+      species_setups,
+      atom_species_map,
+      lambda setup: bool(
+        setup.augmentation.q_with_l if setup.augmentation is not None else False
+      ),
+    )
 
     return UltrasoftPseudopotential(
-      **ncpp.__dict__,
+      num_atom,
+      positions,
+      charges,
+      atomic_symbols,
+      valence_charges,
+      species_setups,
+      atom_species_map,
+      r_grid,
+      r_ab,
+      r_cutoff,
+      l_max,
+      l_max_rho,
+      local_potential_grid,
+      local_potential_charge,
+      nonlocal_num_beta,
+      nonlocal_beta_grid,
+      nonlocal_beta_cutoff_radius,
+      nonlocal_d_matrix,
+      nonlocal_angular_momentum,
+      nonlocal_valence_configuration,
       nonlocal_augmentation_q_matrix=nonlocal_augmentation_q_matrix,
       nonlocal_augmentation_qij=nonlocal_augmentation_qij,
-      nonlocal_augmentation_q_with_l=nonlocal_augmentation_q_with_l
+      nonlocal_augmentation_q_with_l=nonlocal_augmentation_q_with_l,
     )

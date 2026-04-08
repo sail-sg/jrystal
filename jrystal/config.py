@@ -82,6 +82,7 @@ default_config = {
       "direct_opt":
         {
           "max_steps": 10000,
+          "canonical_transform": False,
           "optimizer":
             {
               "name": "adam",
@@ -133,6 +134,10 @@ default_config = {
       "jax_debug_nans": False,
       "verbose": True,
       "eps": 1e-8,
+    },
+  "experimental":
+    {
+      "disable_jit": False,
     },
   "io":
     {
@@ -226,6 +231,9 @@ _GROUP_FIELDS = {
       "verbose",
       "eps",
     },
+  "experimental": {
+    "disable_jit",
+  },
   "io":
     {
       "output_dir",
@@ -284,6 +292,7 @@ _SOLVER_SCF_CONVERGENCE_FIELDS = {
 
 _SOLVER_DIRECT_OPT_FIELDS = {
   "max_steps",
+  "canonical_transform",
   "epoch",
   "optimizer",
   "optimizer_args",
@@ -367,6 +376,8 @@ _LEGACY_FIELD_MAP = {
   "jax_debug_nans": ("execution", "jax_debug_nans"),
   "verbose": ("execution", "verbose"),
   "eps": ("execution", "eps"),
+  "disable_jit": ("experimental", "disable_jit"),
+  "jax_disable_jit": ("experimental", "disable_jit"),
   "output_dir": ("io", "output_dir"),
   "save_dir": ("io", "save_dir"),
   "run_label": ("io", "run_label"),
@@ -1047,6 +1058,10 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
     config["solver"]["direct_opt"]["max_steps"],
     "solver.direct_opt.max_steps",
   )
+  if not isinstance(config["solver"]["direct_opt"]["canonical_transform"], bool):
+    raise TypeError(
+      "Config field `solver.direct_opt.canonical_transform` must be a bool."
+    )
   if not isinstance(config["solver"]["direct_opt"]["optimizer"], Mapping):
     raise TypeError(
       "Config field `solver.direct_opt.optimizer` must be a mapping."
@@ -1139,6 +1154,10 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
   )
   _validate_bool(config["execution"]["verbose"], "execution.verbose")
   _validate_number(config["execution"]["eps"], "execution.eps")
+  _validate_bool(
+    config["experimental"]["disable_jit"],
+    "experimental.disable_jit",
+  )
 
   if not isinstance(config["io"]["output_dir"], str):
     raise TypeError("Config field `io.output_dir` must be a string.")

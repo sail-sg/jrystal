@@ -24,17 +24,21 @@ from __future__ import annotations
 
 import signal
 import time
+from functools import partial
 from math import ceil
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from .._src import pw as _pw
 from .._src.linalg import batched_lobpcg
 from .._src.utils import expand_coefficient, squeeze_coefficient
 from ..io import make_checkpoint_manager, save_checkpoint
+from ..pseudopotential.kernel import UltrasoftMeshCache
+from ..pseudopotential import ultrasoft as _ultrasoft
 from ..smearing import fermi_dirac, find_chemical_potential
 from ..terminal_ui import Spinner, stage_line, stage_warning
 from .types import EnergyDecomposition, GroundStateResult
@@ -47,8 +51,8 @@ from .workflow_logging import (
 
 if TYPE_CHECKING:
   from ..config import JrystalConfigDict
-  from .backend import AllElectronBackend, NormConservingBackend
   from .runtime import RuntimeContext
+  from .types import ElectronicBackend
 
 from .density_mixing import (
   diis_init,
@@ -84,6 +88,100 @@ def _occupation_max(spin_restricted: bool) -> float:
   return 2.0 if spin_restricted else 1.0
 
 
+def _compact_g_indices(freq_mask) -> jax.Array:
+  """Flattened reciprocal-grid indices for the active plane-wave mask."""
+  return jnp.asarray(
+    np.flatnonzero(np.asarray(freq_mask).reshape(-1)),
+    dtype=jnp.int32,
+  )
+
+
+def _expand_compact_with_indices(
+  coeff_compact,
+  grid_shape: tuple[int, int, int],
+  g_indices,
+):
+  """JIT-safe version of expand_coefficient using integer gather/scatter."""
+  coeff_compact = jnp.swapaxes(coeff_compact, -1, -2)
+  flat_size = grid_shape[0] * grid_shape[1] * grid_shape[2]
+  flat = jnp.zeros(
+    coeff_compact.shape[:-1] + (flat_size,),
+    dtype=coeff_compact.dtype,
+  )
+  flat = flat.at[..., g_indices].set(coeff_compact)
+  return flat.reshape(coeff_compact.shape[:-1] + grid_shape)
+
+
+def _squeeze_full_with_indices(coeff_full, g_indices):
+  """JIT-safe version of squeeze_coefficient using integer indexing."""
+  flat = coeff_full.reshape(coeff_full.shape[:-3] + (-1,))
+  coeff_compact = jnp.take(flat, g_indices, axis=-1)
+  return jnp.swapaxes(coeff_compact, -1, -2)
+
+
+@partial(jax.jit, inline=False, static_argnums=(2,))
+def _uspp_hvp_compact(
+  coeff_compact_conj,
+  iteration_state,
+  grid_shape,
+  g_indices,
+  g_vec,
+  kpts,
+  projector_channels,
+  channel_mask,
+  vol,
+):
+  """USPP-specific compact-space H|psi> using only explicit operator arrays."""
+  coeff_full = _expand_compact_with_indices(
+    coeff_compact_conj.conj(),
+    grid_shape,
+    g_indices,
+  )
+  kinetic = _ultrasoft.kinetic_apply(coeff_full, g_vec, kpts)
+  local = _ultrasoft.local_potential_apply(
+    coeff_full,
+    iteration_state.local_potential_r,
+    vol,
+  )
+  nonlocal_term = _ultrasoft.channel_nonlocal_apply(
+    coeff_full,
+    projector_channels,
+    iteration_state.channel_dii,
+    vol,
+    channel_mask=channel_mask,
+  )
+  return _squeeze_full_with_indices(
+    jnp.conj(kinetic + local + nonlocal_term),
+    g_indices,
+  )
+
+
+@partial(jax.jit, inline=False, static_argnums=(1,))
+def _uspp_svp_compact(
+  coeff_compact_conj,
+  grid_shape,
+  g_indices,
+  projector_channels,
+  channel_qii,
+  channel_mask,
+  vol,
+):
+  """USPP-specific compact-space S|psi> using only explicit operator arrays."""
+  coeff_full = _expand_compact_with_indices(
+    coeff_compact_conj.conj(),
+    grid_shape,
+    g_indices,
+  )
+  spsi_full = _ultrasoft.overlap_apply(
+    coeff_full,
+    projector_channels,
+    channel_qii,
+    vol,
+    channel_mask=channel_mask,
+  )
+  return _squeeze_full_with_indices(spsi_full.conj(), g_indices)
+
+
 # ---------------------------------------------------------------------------
 # SCF solver
 # ---------------------------------------------------------------------------
@@ -92,7 +190,7 @@ def _occupation_max(spin_restricted: bool) -> float:
 def run_scf(
   config: JrystalConfigDict,
   ctx: RuntimeContext,
-  backend: AllElectronBackend | NormConservingBackend,
+  backend: ElectronicBackend,
   *,
   requested_solver_mode: Optional[str] = None,
   restart_state: Optional[dict] = None,
@@ -211,6 +309,9 @@ def run_scf(
 
   def _density_from_compact(c, occ):
     coeff_full = expand_coefficient(c, freq_mask)
+    total_density_fn = getattr(backend, "_total_density", None)
+    if total_density_fn is not None:
+      return total_density_fn(coeff_full, occ, ctx)
     return _pw.density_grid(
       coeff_full,
       crystal.vol,
@@ -225,6 +326,13 @@ def run_scf(
 
   # --- Preconditioner ---
   precond = kerker_preconditioner(g_vec, freq_mask)
+  uspp_cache = (
+    ctx.pseudo_cache
+    if isinstance(ctx.pseudo_cache, UltrasoftMeshCache)
+    else None
+  )
+  compact_g_indices = _compact_g_indices(freq_mask)
+  reciprocal_grid_shape = tuple(int(x) for x in freq_mask.shape)
 
   # --- DIIS state ---
   diis_state = diis_init(
@@ -234,21 +342,83 @@ def run_scf(
   )
 
   # --- Hvp via backend ---
-  def _hvp(coeff_compact_conj, dens):
+  def _generic_hvp(coeff_compact_conj, iteration_state):
     coeff_full = expand_coefficient(coeff_compact_conj.conj(), freq_mask)
-    hpsi_full = backend.hamiltonian_apply(coeff_full, dens, ctx)
+    hpsi_full = backend.hamiltonian_apply(coeff_full, iteration_state, ctx)
     return squeeze_coefficient(hpsi_full, freq_mask)
 
+  def _generic_svp(coeff_compact_conj):
+    coeff_full = expand_coefficient(coeff_compact_conj.conj(), freq_mask)
+    spsi_full = backend.overlap_apply(coeff_full, ctx)
+    return squeeze_coefficient(spsi_full.conj(), freq_mask)
+
   @jax.jit
-  def _diagonalise(coeff_compact, dens):
+  def _diagonalise_generic(coeff_compact, iteration_state, precond):
     s, k, g, b = coeff_compact.shape
 
     def _lobpcg_matmul(c):
       coeff_batch = c.reshape(s, k, g, -1)
-      return _hvp(coeff_batch, dens).reshape(s * k, g, -1)
+      return _generic_hvp(coeff_batch, iteration_state).reshape(s * k, g, -1)
+
+    def _lobpcg_bmatmul(c):
+      coeff_batch = c.reshape(s, k, g, -1)
+      return _generic_svp(coeff_batch).reshape(s * k, g, -1)
 
     eigval, evec = batched_lobpcg(
       matmul=_lobpcg_matmul,
+      b_matmul=_lobpcg_bmatmul,
+      k=b,
+      v0=coeff_compact.reshape(s * k, g, b),
+      which="smallest",
+      preconditioner=precond,
+      maxit=lobpcg_max_iter,
+      tol=1e-8,
+    )
+    return evec.reshape(s, k, g, b), eigval.reshape(s, k, b)
+
+  @jax.jit
+  def _diagonalise_uspp(
+    coeff_compact,
+    iteration_state,
+    precond,
+    g_vec,
+    kpts,
+    projector_channels,
+    channel_qii,
+    channel_mask,
+    vol,
+  ):
+    s, k, g, b = coeff_compact.shape
+
+    def _lobpcg_matmul(c):
+      coeff_batch = c.reshape(s, k, g, -1)
+      return _uspp_hvp_compact(
+        coeff_batch,
+        iteration_state,
+        reciprocal_grid_shape,
+        compact_g_indices,
+        g_vec,
+        kpts,
+        projector_channels,
+        channel_mask,
+        vol,
+      ).reshape(s * k, g, -1)
+
+    def _lobpcg_bmatmul(c):
+      coeff_batch = c.reshape(s, k, g, -1)
+      return _uspp_svp_compact(
+        coeff_batch,
+        reciprocal_grid_shape,
+        compact_g_indices,
+        projector_channels,
+        channel_qii,
+        channel_mask,
+        vol,
+      ).reshape(s * k, g, -1)
+
+    eigval, evec = batched_lobpcg(
+      matmul=_lobpcg_matmul,
+      b_matmul=_lobpcg_bmatmul,
       k=b,
       v0=coeff_compact.reshape(s * k, g, b),
       which="smallest",
@@ -281,7 +451,25 @@ def run_scf(
       t0 = time.time()
 
       # 1. Diagonalise
-      coeff_new, evals_new = _diagonalise(coeff_compact, density)
+      iteration_state = backend.prepare_iteration(density, ctx)
+      if uspp_cache is not None:
+        coeff_new, evals_new = _diagonalise_uspp(
+          coeff_compact,
+          iteration_state,
+          precond,
+          g_vec,
+          ctx.ksampling.kpts,
+          uspp_cache.channel_projectors_gk,
+          uspp_cache.channel_qii,
+          uspp_cache.channel_mask,
+          crystal.vol,
+        )
+      else:
+        coeff_new, evals_new = _diagonalise_generic(
+          coeff_compact,
+          iteration_state,
+          precond,
+        )
       coeff_new = coeff_new.conj()
 
       # 2. Update occupation
@@ -294,12 +482,7 @@ def run_scf(
 
       # 3. New density
       coeff_full_new = expand_coefficient(coeff_new, freq_mask)
-      density_new = _pw.density_grid(
-        coeff_full_new,
-        crystal.vol,
-        occ,
-        k_weights=k_weights,
-      )
+      density_new = _density_from_compact(coeff_new, occ)
 
       # 4. Check convergence
       total_energy_new = float(

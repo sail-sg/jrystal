@@ -33,18 +33,24 @@ from typing import TYPE_CHECKING
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 import optax
 
 from .._src import hamiltonian as _hamiltonian
+from .._src.linalg import batched_lobpcg
 from .._src import pw as _pw
+from .._src.utils import expand_coefficient, squeeze_coefficient
 from ..pseudopotential import normcons as _normcons
+from ..pseudopotential import ultrasoft as _ultrasoft
+from ..pseudopotential.kernel import UltrasoftPathCache
 from ..terminal_ui import stage_line
+from .density_mixing import kerker_preconditioner
 from .opt_utils import create_optimizer
 from .types import BandStructureResult
 
 if TYPE_CHECKING:
   from ..config import JrystalConfigDict
-  from .backend import AllElectronBackend, NormConservingBackend
+  from .backend import AllElectronBackend, NormConservingBackend, UltrasoftBackend
   from .runtime import RuntimeContext
   from .types import GroundStateResult
 
@@ -192,10 +198,20 @@ def _run_nscf_nc(config, ctx, density, num_bands):
   g_vec = ctx.g_vec
   freq_mask = ctx.basis.freq_mask
   ksampling = ctx.ksampling
-  pseudopot = ctx.pseudopotential
+  pseudo_cache = ctx.pseudo_cache
   potential_loc = ctx.potential_local
-  beta_gk = ctx.potential_nonlocal  # SBT cache for path mode
+  beta_gk = ctx.potential_nonlocal  # species-level SBT cache for path mode
   xc = config.method.xc
+
+  atom_positions = pseudo_cache.atom_species_map.positions
+  species_index = tuple(int(i) for i in pseudo_cache.atom_species_map.species_index)
+  atom_setups = tuple(
+    pseudo_cache.species_setups[i] for i in species_index
+  )
+  atom_r_grid = [setup.radial.r_g for setup in atom_setups]
+  atom_beta_grid = [setup.projectors.beta_jr for setup in atom_setups]
+  atom_l = [setup.projectors.l_j for setup in atom_setups]
+  atom_d = [setup.projectors.d_jj for setup in atom_setups]
 
   num_devices = ctx.execution.num_devices
   num_kpts = int(ksampling.kpts.shape[0])
@@ -208,17 +224,18 @@ def _run_nscf_nc(config, ctx, density, num_bands):
   opt_state = optimizer.init(params_pw)
 
   def _select_beta(beta_gk, idx):
-    return jax.tree.map(lambda x: x.at[idx:idx + 1].get(), beta_gk)
+    species_beta = [beta.at[idx:idx + 1].get() for beta in beta_gk]
+    return [species_beta[i] for i in species_index]
 
   def _get_nl(kpt, bgk):
     return _normcons.potential_nonlocal_psi_reciprocal(
-      crystal.positions,
+      atom_positions,
       g_vec,
       kpt,
-      pseudopot.r_grid,
-      pseudopot.nonlocal_beta_grid,
-      pseudopot.nonlocal_angular_momentum,
-      pseudopot.nonlocal_d_matrix,
+      atom_r_grid,
+      atom_beta_grid,
+      atom_l,
+      atom_d,
       bgk,
     )
 
@@ -268,6 +285,7 @@ def _run_nscf_nc(config, ctx, density, num_bands):
       kpt, bgk = x
       kpt = jnp.expand_dims(kpt, 0)
       bgk = [jnp.expand_dims(b, 0) for b in bgk]
+      bgk = [bgk[i] for i in species_index]
       params, opt_state = carry
       nl = _get_nl(kpt, bgk)
       carry, _ = jax.lax.scan(
@@ -307,6 +325,7 @@ def _run_nscf_nc(config, ctx, density, num_bands):
       kpt, bgk, prm = x
       kpt = jnp.expand_dims(kpt, 0)
       bgk = [jnp.expand_dims(b, 0) for b in bgk]
+      bgk = [bgk[i] for i in species_index]
       nl = _get_nl(kpt, bgk)
       return None, eig_fn(prm, kpt, nl)
 
@@ -343,8 +362,181 @@ def _run_nscf_nc(config, ctx, density, num_bands):
 
 
 # ---------------------------------------------------------------------------
+# Ultrasoft NSCF internals
+# ---------------------------------------------------------------------------
+
+
+def _run_nscf_us(config, ctx, density, num_bands, backend, source_coeff=None):
+  """Band structure for ultrasoft pseudopotential backend."""
+  if not isinstance(ctx.pseudo_cache, UltrasoftPathCache):
+    raise TypeError("USPP band calculation requires an UltrasoftPathCache.")
+
+  key = jax.random.PRNGKey(config.execution.seed)
+  g_vec = ctx.g_vec
+  freq_mask = ctx.basis.freq_mask
+  ksampling = ctx.ksampling
+  vol = ctx.crystal.vol
+  num_kpts = int(ksampling.kpts.shape[0])
+  g_dim = int(np.sum(np.asarray(freq_mask)))
+  precond = kerker_preconditioner(g_vec, freq_mask)
+  nscf_state = backend.prepare_nscf(density, ctx)
+
+  initial_guess = _initial_band_guess(key, num_bands, freq_mask, source_coeff)
+  coeff_guess = jnp.asarray(initial_guess)
+  eigenvalues = []
+
+  for k_idx in range(num_kpts):
+    bundle = backend.build_kpoint_operator(k_idx, nscf_state, ctx)
+    coeff_guess = _canonicalize_uspp_subspace(
+      coeff_guess,
+      bundle,
+      g_vec,
+      freq_mask,
+      vol,
+    )
+
+    def _matmul(c):
+      return _uspp_h_apply_compact(
+        c,
+        bundle,
+        g_vec,
+        freq_mask,
+        vol,
+      ).reshape(1, g_dim, -1)
+
+    def _b_matmul(c):
+      return _uspp_s_apply_compact(
+        c,
+        bundle,
+        freq_mask,
+        vol,
+      ).reshape(1, g_dim, -1)
+
+    evals, evecs = batched_lobpcg(
+      matmul=_matmul,
+      b_matmul=_b_matmul,
+      k=num_bands,
+      v0=coeff_guess.reshape(1, g_dim, num_bands),
+      which="smallest",
+      preconditioner=precond,
+      maxit=config.solver.scf.eigensolver.max_iter,
+      tol=1e-8,
+    )
+    coeff_guess = evecs.reshape(1, 1, g_dim, num_bands).conj()
+    eigenvalues.append(evals[0])
+
+  return jnp.stack(eigenvalues, axis=0)[None, ...]
+
+
+# ---------------------------------------------------------------------------
 # Shared helper
 # ---------------------------------------------------------------------------
+
+
+def _initial_band_guess(key, num_bands, freq_mask, source_coeff=None):
+  """Return a compact masked-G initial guess for a band solve."""
+  if source_coeff is not None:
+    source_coeff = jnp.asarray(source_coeff)
+    if source_coeff.shape[-1] >= num_bands:
+      return source_coeff[..., :num_bands]
+
+  params = _pw.param_init(key, num_bands, 1, freq_mask)
+  return squeeze_coefficient(_pw.coeff(params, freq_mask), freq_mask)
+
+
+def _hermitian_inverse_sqrt(matrix):
+  """Return a numerically safe inverse square root of a Hermitian matrix."""
+  matrix = 0.5 * (matrix + jnp.swapaxes(jnp.conj(matrix), -1, -2))
+  eigvals, eigvecs = jnp.linalg.eigh(matrix)
+  real_dtype = jnp.real(matrix).dtype
+  eps = jnp.finfo(real_dtype).eps
+  scale = jnp.max(jnp.abs(eigvals), axis=-1, keepdims=True)
+  floor = jnp.maximum(scale * eps * matrix.shape[-1], eps)
+  inv_sqrt = jnp.reciprocal(jnp.sqrt(jnp.maximum(eigvals, floor)))
+  return jnp.einsum(
+    "...ik,...k,...jk->...ij",
+    eigvecs,
+    inv_sqrt,
+    jnp.conj(eigvecs),
+  )
+
+
+def _solve_dense_generalized(h_dense, s_dense, k):
+  """Solve a dense Hermitian generalized eigenproblem for the lowest k roots."""
+  h_dense = 0.5 * (h_dense + jnp.swapaxes(jnp.conj(h_dense), -1, -2))
+  s_dense = 0.5 * (s_dense + jnp.swapaxes(jnp.conj(s_dense), -1, -2))
+  s_inv_sqrt = _hermitian_inverse_sqrt(s_dense)
+  h_whitened = s_inv_sqrt.conj().T @ h_dense @ s_inv_sqrt
+  h_whitened = 0.5 * (h_whitened + h_whitened.conj().T)
+  evals, vecs_white = jnp.linalg.eigh(h_whitened)
+  order = jnp.argsort(jnp.real(evals))[:k]
+  evals = jnp.take(evals, order, axis=-1)
+  vecs_white = jnp.take(vecs_white, order, axis=-1)
+  vecs = s_inv_sqrt @ vecs_white
+  return jnp.real(evals), vecs
+
+
+def _uspp_h_apply_compact(coeff_compact, bundle, g_vec, freq_mask, vol):
+  """Apply the fixed-density USPP Hamiltonian to compact masked-G coefficients."""
+  coeff_compact = jnp.asarray(coeff_compact)
+  if coeff_compact.ndim == 3:
+    coeff_compact = coeff_compact[:, None, ...]
+  coeff_full = expand_coefficient(coeff_compact.conj(), freq_mask)
+  kinetic = _ultrasoft.kinetic_apply(coeff_full, g_vec, bundle.kpt)
+  local = _ultrasoft.local_potential_apply(
+    coeff_full,
+    bundle.local_potential_r,
+    vol,
+  )
+  nonlocal_term = _ultrasoft.channel_nonlocal_apply(
+    coeff_full,
+    bundle.projector_channels_g,
+    bundle.channel_dii_eff,
+    vol,
+    channel_mask=bundle.channel_mask,
+  )
+  hpsi_full = jnp.conj(kinetic + local + nonlocal_term)
+  return squeeze_coefficient(hpsi_full, freq_mask)
+
+
+def _uspp_s_apply_compact(coeff_compact, bundle, freq_mask, vol):
+  """Apply the USPP overlap operator to compact masked-G coefficients."""
+  coeff_compact = jnp.asarray(coeff_compact)
+  if coeff_compact.ndim == 3:
+    coeff_compact = coeff_compact[:, None, ...]
+  coeff_full = expand_coefficient(coeff_compact.conj(), freq_mask)
+  spsi_full = _ultrasoft.overlap_apply(
+    coeff_full,
+    bundle.projector_channels_g,
+    bundle.channel_qii,
+    vol,
+    channel_mask=bundle.channel_mask,
+  )
+  return squeeze_coefficient(spsi_full.conj(), freq_mask)
+
+
+def _canonicalize_uspp_subspace(coeff_compact, bundle, g_vec, freq_mask, vol):
+  """Canonicalize a compact coefficient subspace with respect to the bundle S(k)."""
+  coeff_compact = jnp.asarray(coeff_compact)
+  if coeff_compact.ndim == 3:
+    coeff_compact = coeff_compact[:, None, ...]
+  s_coeff = _uspp_s_apply_compact(coeff_compact, bundle, freq_mask, vol)
+  overlap = jnp.einsum(
+    "...gb,...gc->...bc",
+    jnp.conj(coeff_compact),
+    s_coeff,
+  )
+  inv_sqrt = _hermitian_inverse_sqrt(overlap)
+  return jnp.einsum("...gb,...bc->...gc", coeff_compact, inv_sqrt)
+
+
+def _build_dense_uspp_kpoint_operators(bundle, g_vec, freq_mask, vol):
+  """Materialize dense H/S matrices for one USPP k-point operator bundle."""
+  g_dim = int(np.sum(np.asarray(freq_mask)))
+  eye = jnp.eye(g_dim, dtype=jnp.complex64).reshape(1, 1, g_dim, g_dim)
+  h_dense = _uspp_h_apply_compact(eye, bundle, g_vec, freq_mask, vol)[0, 0]
+  s_dense = _uspp_s_apply_compact(eye, bundle, freq_mask, vol)[0, 0]
+  return h_dense, s_dense
 
 
 def _chunk_kpoint_axis(array, num_devices):
@@ -409,7 +601,7 @@ def _reshape_eigenvalues(eigen_values, num_kpts, num_bands):
 def run_nscf(
   config: JrystalConfigDict,
   ctx: RuntimeContext,
-  backend: AllElectronBackend | NormConservingBackend,
+  backend: AllElectronBackend | NormConservingBackend | UltrasoftBackend,
   ground_state_result: GroundStateResult,
 ) -> BandStructureResult:
   """Run a non-self-consistent band-structure calculation.
@@ -426,11 +618,19 @@ def run_nscf(
   Returns:
     Band-structure result with eigenvalues along the k-path.
   """
-  from .backend import NormConservingBackend as _NCBackend
+  from .backend import (
+    NormConservingBackend as _NCBackend,
+    UltrasoftBackend as _USBackend,
+  )
 
   density = ground_state_result.density
   num_electrons = backend.num_electrons(ctx)
-  num_bands = ceil(num_electrons / 2) + config.band.empty_bands
+  empty_bands = (
+    config.band.empty_bands
+    if config.band.empty_bands is not None
+    else config.occupation.empty_bands
+  )
+  num_bands = ceil(num_electrons / 2) + empty_bands
 
   num_kpts = ctx.ksampling.kpts.shape[0]
   stage_line(
@@ -440,6 +640,22 @@ def run_nscf(
 
   if isinstance(backend, _NCBackend):
     eigenvalues = _run_nscf_nc(config, ctx, density, num_bands)
+  elif isinstance(backend, _USBackend):
+    source_coeff = None
+    if getattr(ground_state_result, "coefficients", None) is not None:
+      coeff_dict = ground_state_result.coefficients
+      if isinstance(coeff_dict, dict) and "w_re" in coeff_dict and "w_im" in coeff_dict:
+        source_coeff = (
+          jnp.asarray(coeff_dict["w_re"]) + 1.0j * jnp.asarray(coeff_dict["w_im"])
+        )
+    eigenvalues = _run_nscf_us(
+      config,
+      ctx,
+      density,
+      num_bands,
+      backend,
+      source_coeff=source_coeff,
+    )
   else:
     eigenvalues = _run_nscf_ae(config, ctx, density, num_bands)
 

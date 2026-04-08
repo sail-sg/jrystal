@@ -49,6 +49,7 @@ def set_env_params(config: JrystalConfigDict):
     config.execution.xla_preallocate
   ).lower()
   jax.config.update("jax_debug_nans", config.execution.jax_debug_nans)
+  jax.config.update("jax_disable_jit", config.experimental.disable_jit)
 
   if config.execution.verbose:
     stage_line("Init", "Verbose mode is on.")
@@ -56,6 +57,8 @@ def set_env_params(config: JrystalConfigDict):
       stage_line("Init", "Precision: Double (64 bit).")
     else:
       stage_line("Init", "Precision: Single (32 bit).")
+    if config.experimental.disable_jit:
+      stage_line("Init", "Experimental: JIT compilation disabled.")
   else:
     stage_warning("Init", "Verbose mode is off.")
 

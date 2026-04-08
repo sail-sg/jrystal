@@ -46,6 +46,7 @@ class RuntimeContext:
   ewald_energy: float
   execution: ExecutionPlan
   pseudopotential: Optional[object] = None
+  pseudo_cache: Optional[object] = None
   potential_local: Optional[object] = None
   potential_nonlocal: Optional[object] = None
 
