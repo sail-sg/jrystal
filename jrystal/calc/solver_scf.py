@@ -119,6 +119,24 @@ def _squeeze_full_with_indices(coeff_full, g_indices):
   return jnp.swapaxes(coeff_compact, -1, -2)
 
 
+def _density_dtype_from_context(density, ctx):
+  """Choose a stable real dtype for SCF density storage and DIIS buffers."""
+  density_dtype = jnp.result_type(
+    jnp.real(jnp.asarray(density)),
+    jnp.real(jnp.asarray(ctx.g_vec)),
+    jnp.asarray(ctx.crystal.vol),
+  )
+  if ctx.potential_local is not None:
+    density_dtype = jnp.result_type(
+      density_dtype,
+      jnp.real(jnp.asarray(ctx.potential_local)),
+    )
+  nlcc = getattr(getattr(ctx, "pseudo_cache", None), "nlcc_g", None)
+  if nlcc is not None:
+    density_dtype = jnp.result_type(density_dtype, jnp.asarray(nlcc))
+  return density_dtype
+
+
 @partial(jax.jit, inline=False, static_argnums=(2,))
 def _uspp_hvp_compact(
   coeff_compact_conj,
@@ -127,13 +145,14 @@ def _uspp_hvp_compact(
   g_indices,
   g_vec,
   kpts,
-  projector_channels,
+  projector_channels_compact,
   channel_mask,
   vol,
 ):
   """USPP-specific compact-space H|psi> using only explicit operator arrays."""
+  coeff_compact = coeff_compact_conj.conj()
   coeff_full = _expand_compact_with_indices(
-    coeff_compact_conj.conj(),
+    coeff_compact,
     grid_shape,
     g_indices,
   )
@@ -143,17 +162,15 @@ def _uspp_hvp_compact(
     iteration_state.local_potential_r,
     vol,
   )
-  nonlocal_term = _ultrasoft.channel_nonlocal_apply(
-    coeff_full,
-    projector_channels,
+  nonlocal_compact = _ultrasoft.channel_nonlocal_apply_compact(
+    coeff_compact,
+    projector_channels_compact,
     iteration_state.channel_dii,
     vol,
     channel_mask=channel_mask,
   )
-  return _squeeze_full_with_indices(
-    jnp.conj(kinetic + local + nonlocal_term),
-    g_indices,
-  )
+  smooth_compact = _squeeze_full_with_indices(jnp.conj(kinetic + local), g_indices)
+  return smooth_compact + jnp.conj(nonlocal_compact)
 
 
 @partial(jax.jit, inline=False, static_argnums=(1,))
@@ -161,25 +178,83 @@ def _uspp_svp_compact(
   coeff_compact_conj,
   grid_shape,
   g_indices,
-  projector_channels,
+  projector_channels_compact,
   channel_qii,
   channel_mask,
   vol,
 ):
   """USPP-specific compact-space S|psi> using only explicit operator arrays."""
-  coeff_full = _expand_compact_with_indices(
+  del grid_shape, g_indices
+  spsi_compact = _ultrasoft.overlap_apply_compact(
     coeff_compact_conj.conj(),
-    grid_shape,
-    g_indices,
-  )
-  spsi_full = _ultrasoft.overlap_apply(
-    coeff_full,
-    projector_channels,
+    projector_channels_compact,
     channel_qii,
     vol,
     channel_mask=channel_mask,
   )
-  return _squeeze_full_with_indices(spsi_full.conj(), g_indices)
+  return spsi_compact.conj()
+
+
+@partial(jax.jit, inline=False, static_argnums=(3, 11))
+def _diagonalise_uspp_explicit(
+  coeff_compact,
+  iteration_state,
+  precond,
+  grid_shape,
+  g_indices,
+  g_vec,
+  kpts,
+  projector_channels_compact,
+  channel_qii,
+  channel_mask,
+  vol,
+  lobpcg_max_iter,
+):
+  """USPP LOBPCG solve driven only by explicit operator arrays.
+
+  Keeping this kernel at module scope avoids rebuilding a large jitted
+  function object for every SCF run, and avoids closing over the full
+  runtime/backend object graph.
+  """
+  s, k, g, b = coeff_compact.shape
+
+  def _lobpcg_matmul(c):
+    coeff_batch = c.reshape(s, k, g, -1)
+    return _uspp_hvp_compact(
+      coeff_batch,
+      iteration_state,
+        grid_shape,
+        g_indices,
+        g_vec,
+        kpts,
+        projector_channels_compact,
+        channel_mask,
+        vol,
+      ).reshape(s * k, g, -1)
+
+  def _lobpcg_bmatmul(c):
+    coeff_batch = c.reshape(s, k, g, -1)
+    return _uspp_svp_compact(
+        coeff_batch,
+        grid_shape,
+        g_indices,
+        projector_channels_compact,
+        channel_qii,
+        channel_mask,
+        vol,
+      ).reshape(s * k, g, -1)
+
+  eigval, evec = batched_lobpcg(
+    matmul=_lobpcg_matmul,
+    b_matmul=_lobpcg_bmatmul,
+    k=b,
+    v0=coeff_compact.reshape(s * k, g, b),
+    which="smallest",
+    preconditioner=precond,
+    maxit=lobpcg_max_iter,
+    tol=1e-8,
+  )
+  return evec.reshape(s, k, g, b), eigval.reshape(s, k, b)
 
 
 # ---------------------------------------------------------------------------
@@ -323,6 +398,10 @@ def run_scf(
     _density_from_compact(coeff_compact, occ)
     if restart_state is None else jnp.asarray(restart_state["density"])
   )
+  density = jnp.asarray(
+    density,
+    dtype=_density_dtype_from_context(density, ctx),
+  )
 
   # --- Preconditioner ---
   precond = kerker_preconditioner(g_vec, freq_mask)
@@ -331,6 +410,10 @@ def run_scf(
     if isinstance(ctx.pseudo_cache, UltrasoftMeshCache)
     else None
   )
+  if uspp_cache is not None and uspp_cache.channel_projectors_compact_gk is None:
+    raise ValueError(
+      "USPP SCF requires compact active-G channel projectors in the mesh cache."
+    )
   compact_g_indices = _compact_g_indices(freq_mask)
   reciprocal_grid_shape = tuple(int(x) for x in freq_mask.shape)
 
@@ -376,58 +459,6 @@ def run_scf(
     )
     return evec.reshape(s, k, g, b), eigval.reshape(s, k, b)
 
-  @jax.jit
-  def _diagonalise_uspp(
-    coeff_compact,
-    iteration_state,
-    precond,
-    g_vec,
-    kpts,
-    projector_channels,
-    channel_qii,
-    channel_mask,
-    vol,
-  ):
-    s, k, g, b = coeff_compact.shape
-
-    def _lobpcg_matmul(c):
-      coeff_batch = c.reshape(s, k, g, -1)
-      return _uspp_hvp_compact(
-        coeff_batch,
-        iteration_state,
-        reciprocal_grid_shape,
-        compact_g_indices,
-        g_vec,
-        kpts,
-        projector_channels,
-        channel_mask,
-        vol,
-      ).reshape(s * k, g, -1)
-
-    def _lobpcg_bmatmul(c):
-      coeff_batch = c.reshape(s, k, g, -1)
-      return _uspp_svp_compact(
-        coeff_batch,
-        reciprocal_grid_shape,
-        compact_g_indices,
-        projector_channels,
-        channel_qii,
-        channel_mask,
-        vol,
-      ).reshape(s * k, g, -1)
-
-    eigval, evec = batched_lobpcg(
-      matmul=_lobpcg_matmul,
-      b_matmul=_lobpcg_bmatmul,
-      k=b,
-      v0=coeff_compact.reshape(s * k, g, b),
-      which="smallest",
-      preconditioner=precond,
-      maxit=lobpcg_max_iter,
-      tol=1e-8,
-    )
-    return evec.reshape(s, k, g, b), eigval.reshape(s, k, b)
-
   # --- SCF loop ---
   converged = False
   total_energy_history = []
@@ -453,16 +484,19 @@ def run_scf(
       # 1. Diagonalise
       iteration_state = backend.prepare_iteration(density, ctx)
       if uspp_cache is not None:
-        coeff_new, evals_new = _diagonalise_uspp(
+        coeff_new, evals_new = _diagonalise_uspp_explicit(
           coeff_compact,
           iteration_state,
           precond,
+          reciprocal_grid_shape,
+          compact_g_indices,
           g_vec,
           ctx.ksampling.kpts,
-          uspp_cache.channel_projectors_gk,
+          uspp_cache.channel_projectors_compact_gk,
           uspp_cache.channel_qii,
           uspp_cache.channel_mask,
           crystal.vol,
+          lobpcg_max_iter,
         )
       else:
         coeff_new, evals_new = _diagonalise_generic(
@@ -482,7 +516,10 @@ def run_scf(
 
       # 3. New density
       coeff_full_new = expand_coefficient(coeff_new, freq_mask)
-      density_new = _density_from_compact(coeff_new, occ)
+      density_new = jnp.asarray(
+        _density_from_compact(coeff_new, occ),
+        dtype=density.dtype,
+      )
 
       # 4. Check convergence
       total_energy_new = float(
@@ -595,7 +632,10 @@ def run_scf(
   coeff_full = expand_coefficient(coeff_compact, freq_mask)
   decomp = backend.energy_decomposition(coeff_full, occ, ctx)
   total_e = float(sum(decomp.values()) + ew)
-  density = _density_from_compact(coeff_compact, occ)
+  density = jnp.asarray(
+    _density_from_compact(coeff_compact, occ),
+    dtype=_density_dtype_from_context(density, ctx),
+  )
   wall_time = time.time() - overall_start
 
   log_ground_state_finish(

@@ -31,6 +31,7 @@ from .._src import energy as _energy
 from .._src import hamiltonian as _hamiltonian
 from .._src import potential as _potential
 from .._src import pw as _pw
+from .._src.utils import expand_coefficient, squeeze_coefficient
 from ..pseudopotential import normcons as _normcons
 from ..pseudopotential import ultrasoft as _ultrasoft
 from ..pseudopotential.kernel import (
@@ -220,6 +221,7 @@ class NormConservingBackend:
       ctx.r_vec,
       ctx.ksampling,
       crystal.vol,
+      freq_mask=ctx.basis.freq_mask,
     )
 
     potential_loc = pseudo_cache.vloc_g
@@ -263,13 +265,29 @@ class NormConservingBackend:
       ctx.potential_local,
       vol=vol,
     )
-    ext_nloc = _normcons.energy_nonlocal(
-      coeff,
-      ctx.potential_nonlocal,
-      vol=vol,
-      occupation=occ,
-      kpts_weights=k_weights,
+    projector_channels_compact = getattr(
+      ctx.pseudo_cache,
+      "channel_projectors_compact_gk",
+      None,
     )
+    if projector_channels_compact is not None:
+      ext_nloc = _ultrasoft.channel_nonlocal_energy_compact(
+        squeeze_coefficient(coeff, ctx.basis.freq_mask),
+        projector_channels_compact,
+        ctx.pseudo_cache.channel_dii,
+        vol=vol,
+        occupation=occ,
+        kpts_weights=k_weights,
+        channel_mask=ctx.pseudo_cache.channel_mask,
+      )
+    else:
+      ext_nloc = _normcons.energy_nonlocal(
+        coeff,
+        ctx.potential_nonlocal,
+        vol=vol,
+        occupation=occ,
+        kpts_weights=k_weights,
+      )
     xc = _energy.xc_energy(density, g_vec, vol, self.xc, kohn_sham=False)
     return kin + hart + ext_loc + ext_nloc + xc
 
@@ -353,12 +371,24 @@ class NormConservingBackend:
           vol=vol,
         ),
       "external_nonlocal":
-        _normcons.energy_nonlocal(
-          coeff,
-          ctx.potential_nonlocal,
-          vol=vol,
-          occupation=occ,
-          kpts_weights=k_weights,
+        (
+          _ultrasoft.channel_nonlocal_energy_compact(
+            squeeze_coefficient(coeff, ctx.basis.freq_mask),
+            ctx.pseudo_cache.channel_projectors_compact_gk,
+            ctx.pseudo_cache.channel_dii,
+            vol=vol,
+            occupation=occ,
+            kpts_weights=k_weights,
+            channel_mask=ctx.pseudo_cache.channel_mask,
+          )
+          if getattr(ctx.pseudo_cache, "channel_projectors_compact_gk", None) is not None
+          else _normcons.energy_nonlocal(
+            coeff,
+            ctx.potential_nonlocal,
+            vol=vol,
+            occupation=occ,
+            kpts_weights=k_weights,
+          )
         ),
       "xc":
         _energy.xc_energy(density, g_vec, vol, self.xc, kohn_sham=False),
@@ -416,14 +446,10 @@ class UltrasoftBackend:
       ctx.r_vec,
       ctx.ksampling,
       crystal.vol,
+      freq_mask=ctx.basis.freq_mask,
     )
     if not isinstance(pseudo_cache, UltrasoftBaseCache):
       raise TypeError("Ultrasoft cache construction returned the wrong type.")
-    if isinstance(pseudo_cache, UltrasoftMeshCache) and pseudo_cache.projector_gk is None:
-      raise NotImplementedError(
-        "Ultrasoft mesh cache requires reciprocal-space projectors."
-      )
-
     if pseudo_cache.nlcc_g is not None:
       stage_line("Init", "Ultrasoft NLCC will be included in XC density.")
 
@@ -479,18 +505,37 @@ class UltrasoftBackend:
       occ,
       k_weights=ctx.ksampling.weights,
     )
-    augmentation = _ultrasoft.augmentation_density(
-      coeff,
-      occ,
-      ctx.pseudo_cache.channel_projectors_gk,
-      ctx.pseudo_cache.augmentation_radial_fields_g,
-      ctx.pseudo_cache.augmentation_harmonics_g,
-      ctx.pseudo_cache.channel_coupling,
-      ctx.pseudo_cache.channel_beta,
-      ctx.crystal.vol,
-      kpts_weights=ctx.ksampling.weights,
-      channel_mask=ctx.pseudo_cache.channel_mask,
+    projector_channels_compact = getattr(
+      ctx.pseudo_cache,
+      "channel_projectors_compact_gk",
+      None,
     )
+    if projector_channels_compact is not None:
+      augmentation = _ultrasoft.augmentation_density_compact(
+        squeeze_coefficient(coeff, ctx.basis.freq_mask),
+        occ,
+        projector_channels_compact,
+        ctx.pseudo_cache.augmentation_radial_fields_g,
+        ctx.pseudo_cache.augmentation_harmonics_g,
+        ctx.pseudo_cache.channel_coupling,
+        ctx.pseudo_cache.channel_beta,
+        ctx.crystal.vol,
+        kpts_weights=ctx.ksampling.weights,
+        channel_mask=ctx.pseudo_cache.channel_mask,
+      )
+    else:
+      augmentation = _ultrasoft.augmentation_density(
+        coeff,
+        occ,
+        ctx.pseudo_cache.channel_projectors_gk,
+        ctx.pseudo_cache.augmentation_radial_fields_g,
+        ctx.pseudo_cache.augmentation_harmonics_g,
+        ctx.pseudo_cache.channel_coupling,
+        ctx.pseudo_cache.channel_beta,
+        ctx.crystal.vol,
+        kpts_weights=ctx.ksampling.weights,
+        channel_mask=ctx.pseudo_cache.channel_mask,
+      )
     return smooth_density + augmentation
 
   def prepare_iteration(self, density, ctx: RuntimeContext):
@@ -571,13 +616,29 @@ class UltrasoftBackend:
       ctx.potential_local,
       vol=vol,
     )
-    ext_nloc = _normcons.energy_nonlocal(
-      coeff,
-      ctx.potential_nonlocal,
-      vol=vol,
-      occupation=occ,
-      kpts_weights=k_weights,
+    projector_channels_compact = getattr(
+      ctx.pseudo_cache,
+      "channel_projectors_compact_gk",
+      None,
     )
+    if projector_channels_compact is not None:
+      ext_nloc = _ultrasoft.channel_nonlocal_energy_compact(
+        squeeze_coefficient(coeff, ctx.basis.freq_mask),
+        projector_channels_compact,
+        ctx.pseudo_cache.channel_dii,
+        vol=vol,
+        occupation=occ,
+        kpts_weights=k_weights,
+        channel_mask=ctx.pseudo_cache.channel_mask,
+      )
+    else:
+      ext_nloc = _normcons.energy_nonlocal(
+        coeff,
+        ctx.potential_nonlocal,
+        vol=vol,
+        occupation=occ,
+        kpts_weights=k_weights,
+      )
     xc = _energy.xc_energy(
       self._xc_density(density, ctx),
       g_vec,
@@ -599,17 +660,50 @@ class UltrasoftBackend:
       iteration_state.local_potential_r,
       ctx.crystal.vol,
     )
-    nonlocal_term = _ultrasoft.channel_nonlocal_apply(
-      coeff,
-      ctx.pseudo_cache.channel_projectors_gk,
-      iteration_state.channel_dii,
-      ctx.crystal.vol,
-      channel_mask=ctx.pseudo_cache.channel_mask,
+    projector_channels_compact = getattr(
+      ctx.pseudo_cache,
+      "channel_projectors_compact_gk",
+      None,
     )
+    if projector_channels_compact is not None:
+      nonlocal_term = expand_coefficient(
+        _ultrasoft.channel_nonlocal_apply_compact(
+          squeeze_coefficient(coeff, ctx.basis.freq_mask),
+          projector_channels_compact,
+          iteration_state.channel_dii,
+          ctx.crystal.vol,
+          channel_mask=ctx.pseudo_cache.channel_mask,
+        ),
+        ctx.basis.freq_mask,
+      )
+    else:
+      nonlocal_term = _ultrasoft.channel_nonlocal_apply(
+        coeff,
+        ctx.pseudo_cache.channel_projectors_gk,
+        iteration_state.channel_dii,
+        ctx.crystal.vol,
+        channel_mask=ctx.pseudo_cache.channel_mask,
+      )
     return jnp.conj(kinetic + local + nonlocal_term)
 
   def overlap_apply(self, coeff, ctx: RuntimeContext):
     """Apply the ultrasoft overlap operator."""
+    projector_channels_compact = getattr(
+      ctx.pseudo_cache,
+      "channel_projectors_compact_gk",
+      None,
+    )
+    if projector_channels_compact is not None:
+      return expand_coefficient(
+        _ultrasoft.overlap_apply_compact(
+          squeeze_coefficient(coeff, ctx.basis.freq_mask),
+          projector_channels_compact,
+          ctx.pseudo_cache.channel_qii,
+          ctx.crystal.vol,
+          channel_mask=ctx.pseudo_cache.channel_mask,
+        ),
+        ctx.basis.freq_mask,
+      )
     return _ultrasoft.overlap_apply(
       coeff,
       ctx.pseudo_cache.channel_projectors_gk,
@@ -620,6 +714,22 @@ class UltrasoftBackend:
 
   def overlap_inv_sqrt_apply(self, coeff, ctx: RuntimeContext):
     """Canonicalize a coefficient batch in the ultrasoft overlap metric."""
+    projector_channels_compact = getattr(
+      ctx.pseudo_cache,
+      "channel_projectors_compact_gk",
+      None,
+    )
+    if projector_channels_compact is not None:
+      return expand_coefficient(
+        _ultrasoft.overlap_inv_sqrt_apply_compact(
+          squeeze_coefficient(coeff, ctx.basis.freq_mask),
+          projector_channels_compact,
+          ctx.pseudo_cache.channel_qii,
+          ctx.crystal.vol,
+          channel_mask=ctx.pseudo_cache.channel_mask,
+        ),
+        ctx.basis.freq_mask,
+      )
     return _ultrasoft.overlap_inv_sqrt_apply(
       coeff,
       ctx.pseudo_cache.channel_projectors_gk,
@@ -657,12 +767,24 @@ class UltrasoftBackend:
           vol=vol,
         ),
       "external_nonlocal":
-        _normcons.energy_nonlocal(
-          coeff,
-          ctx.potential_nonlocal,
-          vol=vol,
-          occupation=occ,
-          kpts_weights=k_weights,
+        (
+          _ultrasoft.channel_nonlocal_energy_compact(
+            squeeze_coefficient(coeff, ctx.basis.freq_mask),
+            ctx.pseudo_cache.channel_projectors_compact_gk,
+            ctx.pseudo_cache.channel_dii,
+            vol=vol,
+            occupation=occ,
+            kpts_weights=k_weights,
+            channel_mask=ctx.pseudo_cache.channel_mask,
+          )
+          if getattr(ctx.pseudo_cache, "channel_projectors_compact_gk", None) is not None
+          else _normcons.energy_nonlocal(
+            coeff,
+            ctx.potential_nonlocal,
+            vol=vol,
+            occupation=occ,
+            kpts_weights=k_weights,
+          )
         ),
       "xc":
         _energy.xc_energy(

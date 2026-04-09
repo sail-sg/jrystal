@@ -75,6 +75,68 @@ def channel_nonlocal_apply(
   return correction
 
 
+def channel_nonlocal_apply_compact(
+  pw_coefficients: Complex[Array, "spin kpt gpt band"],
+  projector_channels: Complex[Array, "atom kpt channel gpt"],
+  channel_dii: Float[Array, "atom channel channel"],
+  vol: float,
+  channel_mask: Float[Array, "atom channel"] | None = None,
+) -> Complex[Array, "spin kpt gpt band"]:
+  """Apply a channel-space separable nonlocal operator in compact G-space."""
+  from .ultrasoft import projector_channel_overlap_compact
+
+  f_matrix = projector_channel_overlap_compact(
+    pw_coefficients,
+    projector_channels,
+    channel_mask=channel_mask,
+  )
+  df_matrix = einsum(
+    channel_dii,
+    f_matrix,
+    "a i j, s a k band j -> s a k band i",
+  )
+  correction = einsum(
+    jnp.conj(projector_channels),
+    df_matrix,
+    "a k i g, s a k band i -> s k band g",
+  ) / vol
+  return jnp.swapaxes(correction, -1, -2)
+
+
+def channel_nonlocal_energy_compact(
+  pw_coefficients: Complex[Array, "spin kpt gpt band"],
+  projector_channels: Complex[Array, "atom kpt channel gpt"],
+  channel_dii: Float[Array, "atom channel channel"],
+  vol: float,
+  occupation: Float[Array, "spin kpt band"] | None = None,
+  kpts_weights: Float[Array, "kpt"] | None = None,
+  channel_mask: Float[Array, "atom channel"] | None = None,
+) -> Float:
+  """Return the compact-G ultrasoft nonlocal energy expectation value."""
+  from .ultrasoft import projector_channel_overlap_compact
+
+  f_matrix = projector_channel_overlap_compact(
+    pw_coefficients,
+    projector_channels,
+    channel_mask=channel_mask,
+  )
+  df_matrix = einsum(
+    channel_dii,
+    f_matrix,
+    "a i j, s a k band j -> s a k band i",
+  )
+  diag_nl = einsum(
+    jnp.conj(f_matrix),
+    df_matrix,
+    "s a k band i, s a k band i -> s k band",
+  ).real / vol
+  if occupation is None:
+    occupation = jnp.ones(diag_nl.shape, dtype=diag_nl.dtype)
+  if kpts_weights is not None:
+    occupation = occupation * kpts_weights[None, :, None]
+  return jnp.sum(diag_nl * occupation).real
+
+
 def channel_pair_density(
   pw_coefficients: Complex[Array, "spin kpt band x y z"],
   occupation: Float[Array, "spin kpt band"],
@@ -86,6 +148,31 @@ def channel_pair_density(
   from .ultrasoft import projector_channel_overlap
 
   f_matrix = projector_channel_overlap(
+    pw_coefficients,
+    projector_channels,
+    channel_mask=channel_mask,
+  )
+  if kpts_weights is not None:
+    occupation = occupation * kpts_weights[None, :, None]
+  return einsum(
+    jnp.conj(f_matrix),
+    occupation,
+    f_matrix,
+    "s a k band i, s k band, s a k band j -> s a i j",
+  )
+
+
+def channel_pair_density_compact(
+  pw_coefficients: Complex[Array, "spin kpt gpt band"],
+  occupation: Float[Array, "spin kpt band"],
+  projector_channels: Complex[Array, "atom kpt channel gpt"],
+  channel_mask: Float[Array, "atom channel"] | None = None,
+  kpts_weights: Float[Array, "kpt"] | None = None,
+) -> Complex[Array, "spin atom channel channel"]:
+  """Return occupied projector-space density in channel basis from compact G."""
+  from .ultrasoft import projector_channel_overlap_compact
+
+  f_matrix = projector_channel_overlap_compact(
     pw_coefficients,
     projector_channels,
     channel_mask=channel_mask,
@@ -189,6 +276,55 @@ def augmentation_density(
   )
 
 
+def augmentation_density_compact(
+  pw_coefficients: Complex[Array, "spin kpt gpt band"],
+  occupation: Float[Array, "spin kpt band"],
+  projector_channels: Complex[Array, "atom kpt channel gpt"],
+  radial_fields: Float[Array, "atom beta beta l x y z"] | None,
+  harmonics: Float[Array, "atom l m x y z"] | None,
+  channel_coupling: Float[Array, "atom channel channel l m"] | None,
+  channel_beta: Int[Array, "atom channel"] | None,
+  vol: float,
+  kpts_weights: Float[Array, "kpt"] | None = None,
+  channel_mask: Float[Array, "atom channel"] | None = None,
+) -> Float[Array, "spin x y z"]:
+  """Build ultrasoft augmentation density using compact G-space projectors."""
+  if (
+    radial_fields is None or harmonics is None or channel_coupling is None or
+    channel_beta is None
+  ):
+    if radial_fields is not None:
+      grid_shape = radial_fields.shape[-3:]
+    elif harmonics is not None:
+      grid_shape = harmonics.shape[-3:]
+    else:
+      grid_shape = (1, 1, 1)
+    return jnp.zeros(
+      (pw_coefficients.shape[0], *grid_shape),
+      dtype=pw_coefficients.real.dtype,
+    )
+
+  pair_density = channel_pair_density_compact(
+    pw_coefficients,
+    occupation,
+    projector_channels,
+    channel_mask=channel_mask,
+    kpts_weights=kpts_weights,
+  )
+  multipoles = channel_pair_multipoles(
+    pair_density,
+    channel_coupling,
+    channel_beta,
+    max_beta=radial_fields.shape[1],
+  )
+  return augmentation_density_from_multipoles(
+    multipoles,
+    radial_fields,
+    harmonics,
+    vol,
+  )
+
+
 def effective_channel_matrix(
   local_potential_r: Float[Array, "x y z"],
   channel_dii: Float[Array, "atom channel channel"],
@@ -231,9 +367,13 @@ def effective_channel_matrix(
 
 __all__ = [
   "augmentation_density",
+  "augmentation_density_compact",
   "augmentation_density_from_multipoles",
   "channel_nonlocal_apply",
+  "channel_nonlocal_apply_compact",
+  "channel_nonlocal_energy_compact",
   "channel_pair_density",
+  "channel_pair_density_compact",
   "channel_pair_multipoles",
   "effective_channel_matrix",
   "kinetic_apply",

@@ -9,13 +9,14 @@ system:
 method:
   xc: "lda_x"
   use_pseudopotential: true
-  pseudopotential_type: "nc"
-  pseudopotential_file_dir: "/home/aiops/litb/projects/jrystal/pseudopotential/normconserving/"
+  pseudopotential_type: "us"
+  # pseudopotential_file_dir: "/home/aiops/litb/projects/jrystal/pseudopotential/normconserving/"
+  pseudopotential_file_dir: "/home/aiops/litb/projects/jrystal/pseudopotential/ultrasoft/"
 
 basis:
   freq_mask_method: "spherical"
-  cutoff_energy: 100
-  grid_sizes: 48
+  cutoff_energy: 10
+  grid_sizes: 24
 
 ksampling:
   k_grid_sizes: [1, 1, 1]
@@ -55,8 +56,8 @@ solver:
 occupation:
   # method: "fermi-dirac"
   method: "fixed"
-  smearing: 0.001
-  empty_bands: 20
+  smearing: 0.000
+  empty_bands: 10
   warmup_steps: 2000
 
 ewald:
@@ -74,8 +75,8 @@ band:
   plot:
     enabled: true
     unit: "eV"
-    y_min: -20
-    y_max: 10
+    y_min: null
+    y_max: null
 
 execution:
   seed: 123
@@ -83,9 +84,12 @@ execution:
   parallel_over_k_path: true
   xla_preallocate: true
   jax_enable_x64: true
-  jax_debug_nans: false
+  jax_debug_nans: true
   verbose: true
   eps: 1.0e-8
+
+experimental:
+  disable_jit: false
 
 io:
   output_dir: "out/"

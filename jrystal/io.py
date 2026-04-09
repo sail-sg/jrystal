@@ -257,10 +257,11 @@ def _compute_ground_state_spectrum(config, ctx, backend, result):
     hpsi_full = backend.hamiltonian_apply(coeff_full, iteration_state, ctx)
     return squeeze_coefficient(hpsi_full, freq_mask)
 
-  def _svp(coeff_compact):
-    coeff_full = expand_coefficient(coeff_compact.conj(), freq_mask)
+  def _svp(c):
+    coeff_batch = c.reshape(s, k, g, -1)
+    coeff_full = expand_coefficient(coeff_batch.conj(), freq_mask)
     spsi_full = backend.overlap_apply(coeff_full, ctx)
-    return squeeze_coefficient(spsi_full.conj(), freq_mask)
+    return squeeze_coefficient(spsi_full.conj(), freq_mask).reshape(s * k, g, -1)
 
   def _matmul(c):
     coeff_batch = c.reshape(s, k, g, -1)

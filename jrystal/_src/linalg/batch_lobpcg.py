@@ -42,45 +42,42 @@ def _hermitian_inv_sqrt(matrix):
   )
 
 
+def _project_out_block(W, V=None, b_matmul=None):
+  """Project a block of vectors out of a fixed basis under the B-inner product."""
+  if V is None or V.size == 0:
+    return W
+  coeff = _gram_matrix(V, W, b_matmul)
+  return W - jnp.matmul(V, coeff)
+
+
+def _block_metric_whiten(W, b_matmul=None):
+  """Whiten a vector block under the B-inner product via Hermitian inv sqrt."""
+  if W.shape[-1] == 0:
+    return jnp.zeros_like(W)
+  gram = _symmetrize_hermitian(_gram_matrix(W, b_matmul=b_matmul))
+  transform = _hermitian_inv_sqrt(gram)
+  return jnp.matmul(W, transform)
+
+
 def block_mgs(W, V=None, reorth=True, b_matmul=None):
-  """Orthonormalize columns under the B-inner product."""
+  """Block-orthonormalize columns under the B-inner product.
+
+  The old implementation used column-wise modified Gram-Schmidt. That is
+  numerically reasonable but traces poorly under JIT because the Python loop
+  gets unrolled. The current implementation keeps the public API but uses
+  block projection plus Hermitian inverse-square-root whitening instead.
+  """
   if W.ndim == 1:
     W = W[:, None]
   if W.shape[-1] == 0:
     return jnp.zeros_like(W)
 
-  def _project_out(vector, basis):
-    if basis is None or basis.size == 0:
-      return vector
-    coeff = _gram_matrix(basis, vector, b_matmul)
-    return vector - jnp.matmul(basis, coeff)
-
-  real_dtype = jnp.real(W).dtype
-  eps = jnp.asarray(jnp.finfo(real_dtype).eps * W.shape[-2], dtype=real_dtype)
-  columns = []
-
-  for col_idx in range(W.shape[-1]):
-    vector = W[..., :, col_idx:col_idx + 1]
-    vector = _project_out(vector, V)
-
-    if columns:
-      basis = jnp.concatenate(columns, axis=-1)
-      vector = _project_out(vector, basis)
-      if reorth:
-        vector = _project_out(vector, V)
-        vector = _project_out(vector, basis)
-
-    norm_sq = jnp.real(_gram_matrix(vector, b_matmul=b_matmul)[..., 0, 0])
-    safe_norm = jnp.sqrt(jnp.maximum(norm_sq, eps))
-    vector = vector / safe_norm[..., None, None]
-    vector = jnp.where(
-      norm_sq[..., None, None] <= eps,
-      jnp.zeros_like(vector),
-      vector,
-    )
-    columns.append(vector)
-
-  return jnp.concatenate(columns, axis=-1)
+  W = _project_out_block(W, V=V, b_matmul=b_matmul)
+  W = _block_metric_whiten(W, b_matmul=b_matmul)
+  if reorth:
+    W = _project_out_block(W, V=V, b_matmul=b_matmul)
+    W = _block_metric_whiten(W, b_matmul=b_matmul)
+  return W
 
 
 def block_mgs_batch(W, V=None, reorth=True, b_matmul=None):

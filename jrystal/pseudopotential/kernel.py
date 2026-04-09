@@ -148,6 +148,7 @@ class UltrasoftBaseCache(BasePseudoCache):
 @dataclass(frozen=True)
 class UltrasoftMeshCache(UltrasoftBaseCache):
   channel_projectors_gk: Complex[Array, "atom kpt channel x y z"] | None = None
+  channel_projectors_compact_gk: Complex[Array, "atom kpt channel gpt"] | None = None
 
 
 @dataclass(frozen=True)
@@ -454,6 +455,98 @@ def _expand_projector_channels(
   return jnp.asarray(expanded), jnp.asarray(channel_mask)
 
 
+def _build_compact_projector_channels(
+  beta_radial_gk: tuple[jnp.ndarray, ...],
+  atom_setups: tuple[PseudoSpeciesSetup, ...],
+  atom_species_map: AtomSpeciesMap,
+  g_vec: Float[Array, "x y z 3"],
+  kpts: Float[Array, "kpt 3"],
+  freq_mask: Array,
+) -> tuple[jnp.ndarray, jnp.ndarray]:
+  """Build compact ultrasoft channel projectors directly on the active G mask."""
+  max_channel = max(
+    len(setup.projectors.channel_map.channel_beta)
+    for setup in atom_setups
+  )
+  g_indices = np.flatnonzero(np.asarray(freq_mask).reshape(-1))
+  active_g = np.asarray(g_vec).reshape(-1, 3)[g_indices]
+  kpts_np = np.asarray(kpts)
+  gk_vectors = kpts_np[:, None, :] + active_g[None, :, :]
+
+  l_max = max(
+    int(np.max(np.asarray(setup.projectors.l_j)))
+    if np.asarray(setup.projectors.l_j).size else 0
+    for setup in atom_setups
+  )
+  spherical = cartesian_to_spherical(jnp.asarray(gk_vectors))
+  theta = spherical[..., 1]
+  phi = spherical[..., 2]
+  harmonics_by_l = {
+    l_val: np.asarray(batch_sph_harm_real(l_val, theta, phi))
+    for l_val in range(l_max + 1)
+  }
+
+  species_beta_compact = []
+  for beta in beta_radial_gk:
+    beta_flat = np.asarray(beta).reshape(beta.shape[:2] + (-1,))
+    species_beta_compact.append(beta_flat[..., g_indices])
+
+  atom_positions = np.asarray(atom_species_map.positions, dtype=np.float64)
+  projector_channels = []
+  channel_mask = []
+  for atom_idx, setup in enumerate(atom_setups):
+    channel_map = setup.projectors.channel_map
+    num_channel = len(channel_map.channel_beta)
+    species_idx = int(atom_species_map.species_index[atom_idx])
+    beta_compact = species_beta_compact[species_idx]
+    structure_factor = np.exp(
+      -1.0j * np.einsum("kgd,d->kg", gk_vectors, atom_positions[atom_idx])
+    )
+    atom_projectors = np.zeros(
+      (kpts_np.shape[0], max_channel, active_g.shape[0]),
+      dtype=np.result_type(beta_compact.dtype, np.complex64),
+    )
+
+    for channel_idx, (beta_idx, l_val, m_val) in enumerate(
+      zip(
+        np.asarray(channel_map.channel_beta, dtype=np.int32),
+        np.asarray(channel_map.channel_l, dtype=np.int32),
+        np.asarray(channel_map.channel_m, dtype=np.int32),
+        strict=True,
+      )
+    ):
+      y_lm = harmonics_by_l[int(l_val)][..., int(m_val) + int(l_val)]
+      atom_projectors[:, channel_idx] = (
+        4.0 * np.pi *
+        (1.0j ** int(l_val)) *
+        y_lm *
+        beta_compact[:, int(beta_idx)] *
+        structure_factor
+      )
+
+    projector_channels.append(atom_projectors)
+    channel_mask.append(
+      np.pad(
+        np.ones(num_channel, dtype=np.float64),
+        ((0, max_channel - num_channel),),
+      )
+    )
+
+  return jnp.asarray(projector_channels), jnp.asarray(channel_mask)
+
+
+def squeeze_projector_channels_to_mask(
+  projector_channels_gk: Complex[Array, "atom kpt channel x y z"],
+  freq_mask: Array,
+) -> jnp.ndarray:
+  """Project full reciprocal-grid channel projectors onto the active G basis."""
+  flat = np.asarray(projector_channels_gk).reshape(
+    projector_channels_gk.shape[:3] + (-1,),
+  )
+  g_indices = np.flatnonzero(np.asarray(freq_mask).reshape(-1))
+  return jnp.asarray(flat[..., g_indices])
+
+
 def _build_channel_mask(
   atom_setups: tuple[PseudoSpeciesSetup, ...],
   max_channel: int,
@@ -639,6 +732,7 @@ def build_pseudo_cache(
   r_vec: Float[Array, "x y z 3"],
   ksampling,
   vol: float,
+  freq_mask: Array | None = None,
 ) -> BasePseudoCache | UltrasoftBaseCache:
   """Build reusable pseudo caches from normalized species setups."""
   from .beta import beta_sbt_grid
@@ -680,17 +774,18 @@ def build_pseudo_cache(
   projector_gk = None
   projector_mask = None
   if ksampling.mode == "mesh":
-    projector_gk = potential_nonlocal_psi_reciprocal(
-      atom_positions,
-      g_vec,
-      ksampling.kpts,
-      atom_r_grid,
-      atom_beta,
-      atom_l,
-      atom_d,
-      atom_beta_gk,
-    )
-    projector_mask = projector_gk.projector_mask
+    if not (family == "us" and freq_mask is not None):
+      projector_gk = potential_nonlocal_psi_reciprocal(
+        atom_positions,
+        g_vec,
+        ksampling.kpts,
+        atom_r_grid,
+        atom_beta,
+        atom_l,
+        atom_d,
+        atom_beta_gk,
+      )
+      projector_mask = projector_gk.projector_mask
 
   if family != "us":
     return BasePseudoCache(
@@ -858,16 +953,40 @@ def build_pseudo_cache(
   )
 
   if projector_gk is None:
+    if ksampling.mode == "mesh" and freq_mask is not None:
+      channel_projectors_compact_gk, channel_mask = _build_compact_projector_channels(
+        beta_radial_gk,
+        atom_setups,
+        atom_species_map,
+        g_vec,
+        ksampling.kpts,
+        freq_mask,
+      )
+      return UltrasoftMeshCache(
+        **{
+          **common_kwargs,
+          "channel_mask": channel_mask,
+        },
+        channel_projectors_gk=None,
+        channel_projectors_compact_gk=channel_projectors_compact_gk,
+      )
     return UltrasoftPathCache(**common_kwargs)
 
   channel_projectors_gk, _ = _expand_projector_channels(
     projector_gk,
     atom_setups,
   )
+  channel_projectors_compact_gk = None
+  if freq_mask is not None:
+    channel_projectors_compact_gk = squeeze_projector_channels_to_mask(
+      channel_projectors_gk,
+      freq_mask,
+    )
 
   return UltrasoftMeshCache(
     **common_kwargs,
     channel_projectors_gk=channel_projectors_gk,
+    channel_projectors_compact_gk=channel_projectors_compact_gk,
   )
 
 
@@ -890,4 +1009,5 @@ __all__ = [
   "expand_species_setups",
   "divide_on_positive_grid",
   "load_species_setups",
+  "squeeze_projector_channels_to_mask",
 ]
