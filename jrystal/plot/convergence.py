@@ -18,7 +18,7 @@ def _load_payload(source) -> dict:
     if source.convergence_history:
       columns = list(source.convergence_history[0].keys())
       for column in columns:
-        if column == "wall_time":
+        if column == "wall_time" or column.endswith("_s"):
           units.append("s")
         elif column in {"step", "delta_density"}:
           units.append("")

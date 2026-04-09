@@ -37,16 +37,18 @@ from .._src import pw as _pw
 from .._src.linalg import batched_lobpcg
 from .._src.utils import expand_coefficient, squeeze_coefficient
 from ..io import make_checkpoint_manager, save_checkpoint
-from ..pseudopotential.kernel import UltrasoftMeshCache
 from ..pseudopotential import ultrasoft as _ultrasoft
+from ..pseudopotential.kernel import UltrasoftMeshCache
 from ..smearing import fermi_dirac, find_chemical_potential
-from ..terminal_ui import Spinner, stage_line, stage_warning
+from ..terminal_ui import Spinner, stage_warning
+from .timer import PhaseTimer
 from .types import EnergyDecomposition, GroundStateResult
 from .workflow_logging import (
   format_ground_state_iteration,
   log_energy_breakdown,
   log_ground_state_finish,
   log_ground_state_start,
+  log_timing_breakdown,
 )
 
 if TYPE_CHECKING:
@@ -79,8 +81,8 @@ def _compute_occupation(evals, num_electrons, k_weights, smearing):
       smearing=smearing,
       k_weights=k_weights,
     )
-    return fermi_dirac(evals, mu, smearing=smearing)
-  return _fixed_occupation(evals, num_electrons)
+    return fermi_dirac(evals, mu, smearing=smearing), mu
+  return _fixed_occupation(evals, num_electrons), None
 
 
 def _occupation_max(spin_restricted: bool) -> float:
@@ -325,8 +327,9 @@ def run_scf(
   diis_max_hist = scf_config.mixing.history_size
   density_tol = scf_config.convergence.density_tol
   energy_tol = scf_config.convergence.energy_tol
+  show_progress = config.io.log_level != "quiet"
+  phase_timer = PhaseTimer(enabled=config.execution.profile)
 
-  stage_line("Init", f"Crystal: {crystal.symbols}")
   log_ground_state_start(
     "SCF",
     max_steps=scf_max_iter,
@@ -334,9 +337,9 @@ def run_scf(
     smearing=smearing,
     xc=config.method.xc,
     controls=(
-      f"eigensolver=lobpcg(max_iter={lobpcg_max_iter}) | "
-      f"mixing=diis(beta={mixing_beta:.3f}, hist={diis_max_hist}) | "
-      f"density_tol={density_tol:.2e} | energy_tol={energy_tol:.2e}"
+      f"lobpcg={lobpcg_max_iter} mix=diis "
+      f"beta={mixing_beta:.2f} hist={diis_max_hist} "
+      f"tol=({density_tol:.1e},{energy_tol:.1e})"
     ),
   )
 
@@ -467,6 +470,7 @@ def run_scf(
   last_checkpointed_step = None
   spinner = Spinner("SCF")
   interrupted = False
+  last_chemical_potential = None
 
   def _handle_sigint(sig, frame):
     del sig, frame
@@ -475,56 +479,73 @@ def run_scf(
 
   old_handler = signal.signal(signal.SIGINT, _handle_sigint)
   try:
-    if config.execution.verbose:
+    if show_progress:
       spinner.start("initialising SCF state...")
 
     for step in range(start_step, scf_max_iter):
       t0 = time.time()
 
       # 1. Diagonalise
-      iteration_state = backend.prepare_iteration(density, ctx)
-      if uspp_cache is not None:
-        coeff_new, evals_new = _diagonalise_uspp_explicit(
-          coeff_compact,
-          iteration_state,
-          precond,
-          reciprocal_grid_shape,
-          compact_g_indices,
-          g_vec,
-          ctx.ksampling.kpts,
-          uspp_cache.channel_projectors_compact_gk,
-          uspp_cache.channel_qii,
-          uspp_cache.channel_mask,
-          crystal.vol,
-          lobpcg_max_iter,
-        )
-      else:
-        coeff_new, evals_new = _diagonalise_generic(
-          coeff_compact,
-          iteration_state,
-          precond,
-        )
+      with phase_timer.phase("potential"):
+        iteration_state = backend.prepare_iteration(density, ctx)
+      diagonalise_phase = (
+        "first_call_overhead" if (config.execution.profile and step == start_step)
+        else "diagonalize"
+      )
+      with phase_timer.phase(diagonalise_phase):
+        if uspp_cache is not None:
+          coeff_new, evals_new = _diagonalise_uspp_explicit(
+            coeff_compact,
+            iteration_state,
+            precond,
+            reciprocal_grid_shape,
+            compact_g_indices,
+            g_vec,
+            ctx.ksampling.kpts,
+            uspp_cache.channel_projectors_compact_gk,
+            uspp_cache.channel_qii,
+            uspp_cache.channel_mask,
+            crystal.vol,
+            lobpcg_max_iter,
+          )
+        else:
+          coeff_new, evals_new = _diagonalise_generic(
+            coeff_compact,
+            iteration_state,
+            precond,
+          )
+        if config.execution.profile:
+          coeff_new, evals_new = jax.block_until_ready((coeff_new, evals_new))
       coeff_new = coeff_new.conj()
 
       # 2. Update occupation
-      occ = _compute_occupation(
-        evals_new,
-        num_electrons,
-        k_weights,
-        smearing,
-      )
+      with phase_timer.phase("occupation"):
+        occ, chemical_potential = _compute_occupation(
+          evals_new,
+          num_electrons,
+          k_weights,
+          smearing,
+        )
+        if config.execution.profile:
+          occ = jax.block_until_ready(occ)
+      if chemical_potential is not None:
+        last_chemical_potential = float(chemical_potential)
 
       # 3. New density
-      coeff_full_new = expand_coefficient(coeff_new, freq_mask)
-      density_new = jnp.asarray(
-        _density_from_compact(coeff_new, occ),
-        dtype=density.dtype,
-      )
+      with phase_timer.phase("density"):
+        coeff_full_new = expand_coefficient(coeff_new, freq_mask)
+        density_new = jnp.asarray(
+          _density_from_compact(coeff_new, occ),
+          dtype=density.dtype,
+        )
+        if config.execution.profile:
+          density_new = jax.block_until_ready(density_new)
 
       # 4. Check convergence
-      total_energy_new = float(
-        backend.total_energy(coeff_full_new, occ, ctx) + ew
-      )
+      with phase_timer.phase("energy"):
+        total_energy_new = float(
+          backend.total_energy(coeff_full_new, occ, ctx) + ew
+        )
       delta_total_energy = None
       if total_energy_history:
         delta_total_energy = abs(total_energy_new - total_energy_history[-1])
@@ -533,19 +554,22 @@ def run_scf(
       total_energy_history.append(total_energy_new)
       d_density = float(jnp.mean(jnp.abs(density_new - density)))
       dt = time.time() - t0
+      cumulative_time = time.time() - overall_start
       display_step = step + 1
       last_completed_step = step
-      convergence_history.append(
-        {
-          "step": display_step,
-          "total_energy": total_energy_new,
-          "delta_energy": delta_total_energy,
-          "delta_density": d_density,
-          "wall_time": dt,
-        }
-      )
+      record = {
+        "step": display_step,
+        "total_energy": total_energy_new,
+        "delta_energy": delta_total_energy,
+        "delta_density": d_density,
+        "wall_time": dt,
+        "cumulative_time_s": cumulative_time,
+      }
+      if chemical_potential is not None:
+        record["chemical_potential_ha"] = float(chemical_potential)
+      convergence_history.append(record)
 
-      if config.execution.verbose:
+      if show_progress:
         spinner.update(
           format_ground_state_iteration(
             "SCF",
@@ -554,7 +578,12 @@ def run_scf(
             total_energy=total_energy_new,
             delta_energy=delta_total_energy,
             step_time=dt,
+            cumulative_time=cumulative_time,
             density_delta=d_density,
+            chemical_potential=(
+              float(chemical_potential)
+              if chemical_potential is not None else None
+            ),
           )
         )
 
@@ -568,34 +597,36 @@ def run_scf(
         break
 
       # 5. Density mixing (DIIS + linear)
-      dens_error = density_new - density
-      diis_state, density_mixed = diis_update(
-        diis_state, density_new, dens_error,
-      )
-      density = simple_mixing(density_mixed, density, beta=mixing_beta)
+      with phase_timer.phase("mixing"):
+        dens_error = density_new - density
+        diis_state, density_mixed = diis_update(
+          diis_state, density_new, dens_error,
+        )
+        density = simple_mixing(density_mixed, density, beta=mixing_beta)
       coeff_compact = coeff_new
       previous_total_energy = total_energy_new
 
       if checkpoint_manager is not None and (
         display_step % config.io.checkpoint_interval == 0 or interrupted
       ):
-        save_checkpoint(
-          checkpoint_manager,
-          {
-            "density": density,
-            "coefficients":
-              {
-                "w_re": coeff_compact.real,
-                "w_im": coeff_compact.imag,
-              },
-            "occupations": occ,
-            "eigenvalues": evals_new,
-            "has_eigenvalues": True,
-            "step": step,
-            "total_energy": total_energy_new,
-          },
-          step,
-        )
+        with phase_timer.phase("checkpoint"):
+          save_checkpoint(
+            checkpoint_manager,
+            {
+              "density": density,
+              "coefficients":
+                {
+                  "w_re": coeff_compact.real,
+                  "w_im": coeff_compact.imag,
+                },
+              "occupations": occ,
+              "eigenvalues": evals_new,
+              "has_eigenvalues": True,
+              "step": step,
+              "total_energy": total_energy_new,
+            },
+            step,
+          )
         last_checkpointed_step = step
 
       if interrupted:
@@ -646,6 +677,12 @@ def run_scf(
     total_energy=total_e,
     wall_time=wall_time,
   )
+  if config.execution.profile:
+    log_timing_breakdown(
+      "SCF",
+      phase_timer.summary(total_wall_time=wall_time),
+      total_wall_time=wall_time,
+    )
   log_energy_breakdown(
     "SCF",
     decomp,
@@ -679,6 +716,7 @@ def run_scf(
     requested_solver_mode=requested_solver_mode or config.solver.mode,
     num_iterations=max(last_completed_step + 1, 0),
     wall_time=wall_time,
+    fermi_energy=last_chemical_potential,
     convergence_history=convergence_history,
     total_energy_history=total_energy_history,
   )

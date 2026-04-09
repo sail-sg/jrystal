@@ -179,7 +179,7 @@ def _convergence_payload(result) -> dict[str, Any]:
         units.append("")
       elif column in {"delta_density"}:
         units.append("")
-      elif column in {"wall_time"}:
+      elif column in {"wall_time"} or column.endswith("_s"):
         units.append("s")
       else:
         units.append("Ha")
@@ -213,6 +213,9 @@ def _ground_state_energy_payload(result, *, k_weights) -> dict[str, Any]:
     "total_energy_ha": float(result.total_energy),
     "total_energy_ev": float(result.total_energy * HARTREE_TO_EV),
     "decomposition": _energy_terms_dict(result),
+    "chemical_potential_ha": (
+      None if fermi_energy is None else float(fermi_energy)
+    ),
     "fermi_energy_ha": None if fermi_energy is None else float(fermi_energy),
     "fermi_energy_available": fermi_energy is not None,
     "num_electrons": int(np.asarray(result.crystal.num_electron)),

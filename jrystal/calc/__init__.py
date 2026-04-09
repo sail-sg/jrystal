@@ -38,7 +38,13 @@ from ..io import (
   save_run_metadata,
   setup_output_dir,
 )
-from ..terminal_ui import close_log, open_log, stage_warning
+from ..terminal_ui import (
+  close_log,
+  get_log_level,
+  open_log,
+  set_log_level,
+  stage_warning,
+)
 from .backend import get_backend
 from .opt_utils import create_crystal, set_env_params
 from .runtime import build_runtime_context
@@ -46,6 +52,7 @@ from .solver_direct_opt import run_direct_opt
 from .solver_nscf import run_nscf
 from .solver_scf import run_scf
 from .types import BandStructureResult, GroundStateResult
+from .workflow_logging import log_system_info
 
 if TYPE_CHECKING:
   from ..config import JrystalConfigDict
@@ -258,11 +265,20 @@ def energy(config: JrystalConfigDict) -> GroundStateResult:
   run_dir = setup_output_dir(config, crystal, task="energy")
   save_config_snapshot(config, run_dir)
   open_log(run_dir / "jrystal.log")
+  previous_log_level = get_log_level()
+  set_log_level(config.io.log_level)
   started_at = datetime.now().isoformat()
   try:
     set_env_params(config)
     backend = get_backend(config)
     ctx = build_runtime_context(config, mode="mesh", backend=backend)
+    log_system_info(
+      config,
+      ctx,
+      backend,
+      task="energy",
+      started_at=started_at,
+    )
     result = _run_ground_state(
       config,
       backend=backend,
@@ -308,6 +324,7 @@ def energy(config: JrystalConfigDict) -> GroundStateResult:
     )
     raise
   finally:
+    set_log_level(previous_log_level)
     close_log()
 
 
@@ -331,12 +348,21 @@ def band(
   run_dir = setup_output_dir(config, crystal, task="band")
   save_config_snapshot(config, run_dir)
   open_log(run_dir / "jrystal.log")
+  previous_log_level = get_log_level()
+  set_log_level(config.io.log_level)
   started_at = datetime.now().isoformat()
 
   try:
     set_env_params(config)
     backend_mesh = get_backend(config)
     ctx_mesh = build_runtime_context(config, mode="mesh", backend=backend_mesh)
+    log_system_info(
+      config,
+      ctx_mesh,
+      backend_mesh,
+      task="band",
+      started_at=started_at,
+    )
 
     if ground_state_result is None:
       ground_state_result = _run_ground_state(
@@ -390,6 +416,7 @@ def band(
     )
     raise
   finally:
+    set_log_level(previous_log_level)
     close_log()
 
 
