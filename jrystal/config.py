@@ -129,6 +129,7 @@ default_config = {
       "seed": 123,
       "parallel_over_k_mesh": False,
       "parallel_over_k_path": True,
+      "profile": False,
       "xla_preallocate": True,
       "jax_enable_x64": True,
       "jax_debug_nans": False,
@@ -225,6 +226,7 @@ _GROUP_FIELDS = {
       "parallel_over_k_mesh",
       "parallel_over_k_path",
       "parallel_over_k",
+      "profile",
       "xla_preallocate",
       "jax_enable_x64",
       "jax_debug_nans",
@@ -371,6 +373,7 @@ _LEGACY_FIELD_MAP = {
   "parallel_over_k": ("execution", "parallel_over_k"),
   "parallel_over_k_mesh": ("execution", "parallel_over_k_mesh"),
   "parallel_over_k_path": ("execution", "parallel_over_k_path"),
+  "profile": ("execution", "profile"),
   "xla_preallocate": ("execution", "xla_preallocate"),
   "jax_enable_x64": ("execution", "jax_enable_x64"),
   "jax_debug_nans": ("execution", "jax_debug_nans"),
@@ -1140,6 +1143,7 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
     config["execution"]["parallel_over_k_path"],
     "execution.parallel_over_k_path",
   )
+  _validate_bool(config["execution"]["profile"], "execution.profile")
   _validate_bool(
     config["execution"]["xla_preallocate"],
     "execution.xla_preallocate",

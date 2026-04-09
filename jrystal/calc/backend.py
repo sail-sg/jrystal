@@ -38,8 +38,8 @@ from ..pseudopotential.kernel import (
   UltrasoftBaseCache,
   UltrasoftMeshCache,
   UltrasoftPathCache,
-  build_uspp_projector_channels_for_k,
   build_pseudo_cache,
+  build_uspp_projector_channels_for_k,
 )
 from ..terminal_ui import stage_line
 from .types import KPointOperatorBundle
@@ -213,7 +213,11 @@ class NormConservingBackend:
     crystal = ctx.crystal
     pseudopot = create_pseudopotential(self._config, crystal=crystal)
 
-    stage_line("Init", "Initializing pseudopotential cache...")
+    stage_line(
+      "Init",
+      "Initializing pseudopotential cache...",
+      level="verbose",
+    )
     pseudo_cache = build_pseudo_cache(
       pseudopot.species_setups,
       pseudopot.atom_species_map,
@@ -438,7 +442,7 @@ class UltrasoftBackend:
     crystal = ctx.crystal
     pseudopot = create_pseudopotential(self._config, crystal=crystal)
 
-    stage_line("Init", "Initializing ultrasoft cache...")
+    stage_line("Init", "Initializing ultrasoft cache...", level="verbose")
     pseudo_cache = build_pseudo_cache(
       pseudopot.species_setups,
       pseudopot.atom_species_map,
@@ -451,7 +455,11 @@ class UltrasoftBackend:
     if not isinstance(pseudo_cache, UltrasoftBaseCache):
       raise TypeError("Ultrasoft cache construction returned the wrong type.")
     if pseudo_cache.nlcc_g is not None:
-      stage_line("Init", "Ultrasoft NLCC will be included in XC density.")
+      stage_line(
+        "Init",
+        "Ultrasoft NLCC will be included in XC density.",
+        level="verbose",
+      )
 
     potential_nl = (
       pseudo_cache.projector_gk

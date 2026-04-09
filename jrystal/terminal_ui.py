@@ -28,9 +28,15 @@ _STAGE_STYLES = {
   "Init": ("blue", ".."),
   "SCF": ("cyan", "<>"),
 }
+_LOG_LEVEL_ORDER = {
+  "quiet": 0,
+  "normal": 1,
+  "verbose": 2,
+}
 _OUTPUT_LOCK = threading.RLock()
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 _LOG_STATE: dict[str, TextIO | None] = {"file": None}
+_TERMINAL_STATE: dict[str, str] = {"log_level": "normal"}
 _UTF8_LOGO_LINES = (
   ""
   "       ██    ███     █   █    ███    █████    ██     █",
@@ -54,6 +60,34 @@ _ASCII_LOGO_LINES = (
 def _env_flag(name: str) -> bool:
   value = os.environ.get(name)
   return value is not None and value.lower() not in {"", "0", "false", "no"}
+
+
+def set_log_level(level: str) -> None:
+  """Set the global terminal verbosity level."""
+  if level not in _LOG_LEVEL_ORDER:
+    raise ValueError(
+      f"Unknown log level '{level}'. Use 'quiet', 'normal', or 'verbose'."
+    )
+  _TERMINAL_STATE["log_level"] = level
+
+
+def get_log_level() -> str:
+  """Return the active terminal verbosity level."""
+  return _TERMINAL_STATE["log_level"]
+
+
+def log_enabled(level: str = "normal") -> bool:
+  """Return True when a message at *level* should be emitted."""
+  if level not in _LOG_LEVEL_ORDER:
+    raise ValueError(
+      f"Unknown log level '{level}'. Use 'quiet', 'normal', or 'verbose'."
+    )
+  return _LOG_LEVEL_ORDER[get_log_level()] >= _LOG_LEVEL_ORDER[level]
+
+
+def get_output_lock() -> threading.RLock:
+  """Expose the shared output lock for coordinated terminal helpers."""
+  return _OUTPUT_LOCK
 
 
 def supports_color(stream: TextIO | None = None) -> bool:
@@ -165,8 +199,15 @@ def _emit(
     _LOG_STATE["file"].flush()
 
 
-def console_line(text: str, *, stream: TextIO | None = None) -> None:
+def console_line(
+  text: str,
+  *,
+  stream: TextIO | None = None,
+  level: str = "normal",
+) -> None:
   """Write a stable terminal line without logger prefixes."""
+  if not log_enabled(level):
+    return
   stream = sys.stderr if stream is None else stream
   with _OUTPUT_LOCK:
     if supports_live_output(stream):
@@ -180,11 +221,14 @@ def stage_line(
   message: str,
   *,
   stream: TextIO | None = None,
+  level: str = "normal",
 ) -> None:
   """Write a stage-labelled stable terminal line."""
   stream = sys.stderr if stream is None else stream
   console_line(
-    f"{stage_prefix(stage_name, stream=stream)} {message}", stream=stream
+    f"{stage_prefix(stage_name, stream=stream)} {message}",
+    stream=stream,
+    level=level,
   )
 
 
@@ -194,8 +238,11 @@ def stage_warning(
   *,
   stream: TextIO | None = None,
   color: str = "yellow",
+  level: str = "quiet",
 ) -> None:
   """Write a warning line for a stage."""
+  if not log_enabled(level):
+    return
   stream = sys.stderr if stream is None else stream
   console_line(
     (
@@ -204,6 +251,7 @@ def stage_warning(
       f"{style(message, color=color, bold=(color == 'red'), stream=stream)}"
     ),
     stream=stream,
+    level=level,
   )
 
 
@@ -327,7 +375,7 @@ class Spinner:
     self.stage_name = stage_name
     self.stream = sys.stderr if stream is None else stream
     self.interval = interval
-    self.enabled = supports_live_output(self.stream)
+    self.enabled = supports_live_output(self.stream) and log_enabled("normal")
     self._frames = ["|", "/", "-", "\\"]
     self._message = ""
     self._stop_event = threading.Event()

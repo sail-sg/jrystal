@@ -37,7 +37,7 @@ from .._src.grid import (
 )
 from .._src.utils import check_spin_number
 from ..config import JrystalConfigDict
-from ..terminal_ui import stage_line, stage_warning
+from ..terminal_ui import stage_line
 from .types import KSampling
 
 
@@ -52,15 +52,17 @@ def set_env_params(config: JrystalConfigDict):
   jax.config.update("jax_disable_jit", config.experimental.disable_jit)
 
   if config.execution.verbose:
-    stage_line("Init", "Verbose mode is on.")
+    stage_line("Init", "Verbose mode is on.", level="verbose")
     if config.execution.jax_enable_x64:
-      stage_line("Init", "Precision: Double (64 bit).")
+      stage_line("Init", "Precision: Double (64 bit).", level="verbose")
     else:
-      stage_line("Init", "Precision: Single (32 bit).")
+      stage_line("Init", "Precision: Single (32 bit).", level="verbose")
     if config.experimental.disable_jit:
-      stage_line("Init", "Experimental: JIT compilation disabled.")
-  else:
-    stage_warning("Init", "Verbose mode is off.")
+      stage_line(
+        "Init",
+        "Experimental: JIT compilation disabled.",
+        level="verbose",
+      )
 
   jax.config.update("jax_enable_x64", config.execution.jax_enable_x64)
 
@@ -71,7 +73,11 @@ def create_freq_mask(
 ):
   crystal = create_crystal(config) if crystal is None else crystal
   grid_sizes = proper_grid_size(config.basis.grid_sizes)
-  stage_line("Init", f"freq_mask_method: {config.basis.freq_mask_method}")
+  stage_line(
+    "Init",
+    f"freq_mask_method: {config.basis.freq_mask_method}",
+    level="verbose",
+  )
 
   if config.basis.freq_mask_method == "cubic":
     mask = np.array(cubic_mask(grid_sizes))
@@ -79,20 +85,26 @@ def create_freq_mask(
     stage_line(
       "Init",
       f"Maximum cutoff: {max_cutoff:.0f} Ha ({max_cutoff*27.2114:.0f} eV)",
+      level="verbose",
     )
-    stage_line("Init", f"Number of g points: {np.sum(mask)}")
+    stage_line("Init", f"Number of g points: {np.sum(mask)}", level="verbose")
 
   elif config.basis.freq_mask_method == "spherical":
     mask = spherical_mask(
       crystal.cell_vectors, grid_sizes, config.basis.cutoff_energy
     )
-    stage_line("Init", f"Mask percentage: {np.mean(mask)*100:.2f}%")
+    stage_line(
+      "Init",
+      f"Mask percentage: {np.mean(mask)*100:.2f}%",
+      level="verbose",
+    )
     stage_line(
       "Init",
       f"Maximum cutoff: {config.basis.cutoff_energy:.0f} Ha "
       f"({config.basis.cutoff_energy*27.2114:.0f} eV)",
+      level="verbose",
     )
-    stage_line("Init", f"Number of g points: {np.sum(mask)}")
+    stage_line("Init", f"Number of g points: {np.sum(mask)}", level="verbose")
 
   else:
     raise ValueError("freq_mask_method must be either cubic or spherical.")
@@ -136,7 +148,7 @@ def create_pseudopotential(
       f"supported."
     )
 
-  stage_line("Init", f"Pseudopotential path: {path}")
+  stage_line("Init", f"Pseudopotential path: {path}", level="verbose")
 
   return pp
 
@@ -166,11 +178,11 @@ def create_grids(
 def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
   optimizer_config = dict(config.solver.direct_opt.optimizer)
   optimizer_name = optimizer_config.pop("name")
-  stage_line("DirectOpt", f"optimizer={optimizer_name}")
+  stage_line("DirectOpt", f"optimizer={optimizer_name}", level="verbose")
   opt = getattr(alias, optimizer_name, None)
   config_dict = dict(optimizer_config)
   lr = config_dict.pop("learning_rate")
-  stage_line("DirectOpt", f"learning_rate={lr}")
+  stage_line("DirectOpt", f"learning_rate={lr}", level="verbose")
   if config.solver.direct_opt.scheduler:
     raise NotImplementedError("Scheduler is not implemented yet.")
 

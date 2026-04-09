@@ -43,12 +43,14 @@ from ..io import make_checkpoint_manager, save_checkpoint
 from ..terminal_ui import Spinner, stage_line, stage_warning
 from .convergence import create_convergence_checker
 from .opt_utils import create_optimizer
+from .timer import PhaseTimer
 from .types import EnergyDecomposition, GroundStateResult
 from .workflow_logging import (
   format_ground_state_iteration,
   log_energy_breakdown,
   log_ground_state_finish,
   log_ground_state_start,
+  log_timing_breakdown,
 )
 
 if TYPE_CHECKING:
@@ -185,6 +187,8 @@ def run_direct_opt(
   num_bands = ceil(num_electrons / occ_max) + config.occupation.empty_bands
   smearing = config.occupation.smearing
   occupation_warmup_steps = config.occupation.warmup_steps
+  show_progress = config.io.log_level != "quiet"
+  phase_timer = PhaseTimer(enabled=config.execution.profile)
   canonical_transform = bool(
     config.solver.direct_opt.canonical_transform or
     getattr(backend, "requires_canonical_transform", False)
@@ -198,7 +202,6 @@ def run_direct_opt(
       "Enabling canonical overlap transform required by the backend.",
     )
 
-  stage_line("Init", f"Crystal: {crystal.symbols}")
   log_ground_state_start(
     "DirectOpt",
     max_steps=config.solver.direct_opt.max_steps,
@@ -206,12 +209,11 @@ def run_direct_opt(
     smearing=config.occupation.smearing,
     xc=config.method.xc,
     controls=(
-      f"optimizer={config.solver.direct_opt.optimizer.name} "
-      f"(lr={config.solver.direct_opt.optimizer.learning_rate:g}) | "
-      f"occ_warmup={occupation_warmup_steps} | "
-      f"window={config.solver.direct_opt.convergence.window_size} | "
-      f"energy_std_tol="
-      f"{config.solver.direct_opt.convergence.energy_std_tol:.2e}"
+      f"opt={config.solver.direct_opt.optimizer.name} "
+      f"lr={config.solver.direct_opt.optimizer.learning_rate:g} "
+      f"warmup={occupation_warmup_steps} "
+      f"win={config.solver.direct_opt.convergence.window_size} "
+      f"tol={config.solver.direct_opt.convergence.energy_std_tol:.1e}"
     ),
   )
 
@@ -222,6 +224,7 @@ def run_direct_opt(
     "Init",
     f"Parallel over k: {ctx.execution.parallel_over_k}. "
     f"Devices: {num_devices} (used {util_devices}).",
+    level="verbose",
   )
 
   mesh = Mesh(
@@ -418,7 +421,7 @@ def run_direct_opt(
       }
 
     try:
-      if config.execution.verbose:
+      if show_progress:
         spinner.start("initialising optimiser state...")
 
       for step in range(start_step, config.solver.direct_opt.max_steps):
@@ -427,8 +430,13 @@ def run_direct_opt(
           update_warmup if occupation_setup.trainable and
           step < occupation_warmup_steps else update
         )
-        params, opt_state, total_val, free_val = step_update(params, opt_state)
-        total_val, free_val = jax.block_until_ready((total_val, free_val))
+        update_phase = (
+          "first_call_overhead" if (config.execution.profile and step == start_step)
+          else "update_step"
+        )
+        with phase_timer.phase(update_phase):
+          params, opt_state, total_val, free_val = step_update(params, opt_state)
+          total_val, free_val = jax.block_until_ready((total_val, free_val))
         total_energy = float(total_val + ew)
         delta_energy = None
         if total_energy_history:
@@ -439,6 +447,7 @@ def run_direct_opt(
         converged = convergence_checker.check(float(free_val))
         energy_std = convergence_checker.current_std()
         dt = time.time() - start
+        cumulative_time = time.time() - overall_start
         display_step = step + 1
         last_completed_step = step
         convergence_history.append(
@@ -449,10 +458,11 @@ def run_direct_opt(
             "delta_energy": delta_energy,
             "energy_std": energy_std,
             "wall_time": dt,
+            "cumulative_time_s": cumulative_time,
           }
         )
 
-        if config.execution.verbose:
+        if show_progress:
           spinner.update(
             format_ground_state_iteration(
               "DirectOpt",
@@ -461,6 +471,7 @@ def run_direct_opt(
               total_energy=total_energy,
               delta_energy=delta_energy,
               step_time=dt,
+              cumulative_time=cumulative_time,
               energy_std=energy_std,
             )
           )
@@ -468,11 +479,12 @@ def run_direct_opt(
         if checkpoint_manager is not None and (
           display_step % config.io.checkpoint_interval == 0 or interrupted
         ):
-          save_checkpoint(
-            checkpoint_manager,
-            _physical_state_from_params(params, step, total_energy),
-            step,
-          )
+          with phase_timer.phase("checkpoint"):
+            save_checkpoint(
+              checkpoint_manager,
+              _physical_state_from_params(params, step, total_energy),
+              step,
+            )
           last_checkpointed_step = step
 
         if interrupted:
@@ -519,6 +531,12 @@ def run_direct_opt(
     total_energy=total_e,
     wall_time=wall_time,
   )
+  if config.execution.profile:
+    log_timing_breakdown(
+      "DirectOpt",
+      phase_timer.summary(total_wall_time=wall_time),
+      total_wall_time=wall_time,
+    )
   log_energy_breakdown(
     "DirectOpt",
     decomp,
