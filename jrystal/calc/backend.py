@@ -505,7 +505,10 @@ class UltrasoftBackend:
   def _xc_density(self, total_density, ctx: RuntimeContext):
     xc_density = total_density
     if ctx.pseudo_cache.nlcc_g is not None:
-      xc_density = total_density + ctx.pseudo_cache.nlcc_g[None, ...]
+      num_spin = total_density.shape[0] if total_density.ndim == 4 else 1
+      xc_density = total_density + (
+        ctx.pseudo_cache.nlcc_g[None, ...] / float(num_spin)
+      )
     return xc_density
 
   def _effective_local_potential(
@@ -531,7 +534,7 @@ class UltrasoftBackend:
       xc_type=self.xc,
       kohn_sham=kohn_sham,
     )
-    return v_local + v_hartree + v_xc[0]
+    return v_xc + v_local[None, ...] + v_hartree[None, ...]
 
   def _total_density(self, coeff, occ, ctx: RuntimeContext):
     """Build smooth + augmentation valence density."""

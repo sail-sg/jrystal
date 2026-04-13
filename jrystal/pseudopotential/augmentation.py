@@ -15,9 +15,9 @@
 
 from __future__ import annotations
 
-import numpy as np
-
+import jax
 import jax.numpy as jnp
+import numpy as np
 from einops import einsum
 from jaxtyping import Array, Complex, Float, Int
 
@@ -27,14 +27,26 @@ from .._src import pw as _pw
 
 def local_potential_apply(
   pw_coefficients: Complex[Array, "spin kpt band x y z"],
-  local_potential_r: Float[Array, "x y z"],
+  local_potential_r: Float[Array, "... x y z"],
   vol: float,
 ) -> Complex[Array, "spin kpt band x y z"]:
   """Apply a real-space local potential to plane-wave coefficients."""
   wave_grid = _pw.wave_grid(pw_coefficients, vol)
-  local_wave = wave_grid * local_potential_r[None, None, None, ...]
+  local_potential_r = jnp.asarray(local_potential_r)
+  if local_potential_r.ndim == 3:
+    local_wave = wave_grid * local_potential_r[None, None, None, ...]
+  elif local_potential_r.ndim == 4:
+    local_wave = wave_grid * local_potential_r[:, None, None, ...]
+  else:
+    raise ValueError(
+      "local_potential_r must have shape [x, y, z] or [spin, x, y, z]. "
+      f"Got {local_potential_r.shape}."
+    )
   coeff = jnp.fft.fftn(local_wave, axes=range(-3, 0))
-  return coeff * (jnp.sqrt(jnp.asarray(vol, dtype=coeff.real.dtype)) / np.prod(pw_coefficients.shape[-3:]))
+  return coeff * (
+    jnp.sqrt(jnp.asarray(vol, dtype=coeff.real.dtype)) /
+    np.prod(pw_coefficients.shape[-3:])
+  )
 
 
 def kinetic_apply(
@@ -50,7 +62,7 @@ def kinetic_apply(
 def channel_nonlocal_apply(
   pw_coefficients: Complex[Array, "spin kpt band x y z"],
   projector_channels: Complex[Array, "atom kpt channel x y z"],
-  channel_dii: Float[Array, "atom channel channel"],
+  channel_dii: Float[Array, "... atom channel channel"],
   vol: float,
   channel_mask: Float[Array, "atom channel"] | None = None,
 ) -> Complex[Array, "spin kpt band x y z"]:
@@ -62,11 +74,24 @@ def channel_nonlocal_apply(
     projector_channels,
     channel_mask=channel_mask,
   )
-  df_matrix = einsum(
-    channel_dii,
-    f_matrix,
-    "a i j, s a k band j -> s a k band i",
-  )
+  channel_dii = jnp.asarray(channel_dii)
+  if channel_dii.ndim == 3:
+    df_matrix = einsum(
+      channel_dii,
+      f_matrix,
+      "a i j, s a k band j -> s a k band i",
+    )
+  elif channel_dii.ndim == 4:
+    df_matrix = einsum(
+      channel_dii,
+      f_matrix,
+      "s a i j, s a k band j -> s a k band i",
+    )
+  else:
+    raise ValueError(
+      "channel_dii must have shape [atom, ch, ch] or [spin, atom, ch, ch]. "
+      f"Got {channel_dii.shape}."
+    )
   correction = einsum(
     jnp.conj(projector_channels),
     df_matrix,
@@ -78,7 +103,7 @@ def channel_nonlocal_apply(
 def channel_nonlocal_apply_compact(
   pw_coefficients: Complex[Array, "spin kpt gpt band"],
   projector_channels: Complex[Array, "atom kpt channel gpt"],
-  channel_dii: Float[Array, "atom channel channel"],
+  channel_dii: Float[Array, "... atom channel channel"],
   vol: float,
   channel_mask: Float[Array, "atom channel"] | None = None,
 ) -> Complex[Array, "spin kpt gpt band"]:
@@ -90,11 +115,24 @@ def channel_nonlocal_apply_compact(
     projector_channels,
     channel_mask=channel_mask,
   )
-  df_matrix = einsum(
-    channel_dii,
-    f_matrix,
-    "a i j, s a k band j -> s a k band i",
-  )
+  channel_dii = jnp.asarray(channel_dii)
+  if channel_dii.ndim == 3:
+    df_matrix = einsum(
+      channel_dii,
+      f_matrix,
+      "a i j, s a k band j -> s a k band i",
+    )
+  elif channel_dii.ndim == 4:
+    df_matrix = einsum(
+      channel_dii,
+      f_matrix,
+      "s a i j, s a k band j -> s a k band i",
+    )
+  else:
+    raise ValueError(
+      "channel_dii must have shape [atom, ch, ch] or [spin, atom, ch, ch]. "
+      f"Got {channel_dii.shape}."
+    )
   correction = einsum(
     jnp.conj(projector_channels),
     df_matrix,
@@ -106,7 +144,7 @@ def channel_nonlocal_apply_compact(
 def channel_nonlocal_energy_compact(
   pw_coefficients: Complex[Array, "spin kpt gpt band"],
   projector_channels: Complex[Array, "atom kpt channel gpt"],
-  channel_dii: Float[Array, "atom channel channel"],
+  channel_dii: Float[Array, "... atom channel channel"],
   vol: float,
   occupation: Float[Array, "spin kpt band"] | None = None,
   kpts_weights: Float[Array, "kpt"] | None = None,
@@ -120,11 +158,24 @@ def channel_nonlocal_energy_compact(
     projector_channels,
     channel_mask=channel_mask,
   )
-  df_matrix = einsum(
-    channel_dii,
-    f_matrix,
-    "a i j, s a k band j -> s a k band i",
-  )
+  channel_dii = jnp.asarray(channel_dii)
+  if channel_dii.ndim == 3:
+    df_matrix = einsum(
+      channel_dii,
+      f_matrix,
+      "a i j, s a k band j -> s a k band i",
+    )
+  elif channel_dii.ndim == 4:
+    df_matrix = einsum(
+      channel_dii,
+      f_matrix,
+      "s a i j, s a k band j -> s a k band i",
+    )
+  else:
+    raise ValueError(
+      "channel_dii must have shape [atom, ch, ch] or [spin, atom, ch, ch]. "
+      f"Got {channel_dii.shape}."
+    )
   diag_nl = einsum(
     jnp.conj(f_matrix),
     df_matrix,
@@ -198,7 +249,9 @@ def channel_pair_multipoles(
   atom = pair_density.shape[1]
   l_dim = channel_coupling.shape[3]
   m_dim = channel_coupling.shape[4]
-  output = jnp.zeros((spin, atom, max_beta, max_beta, l_dim, m_dim), dtype=pair_density.dtype)
+  output = jnp.zeros(
+    (spin, atom, max_beta, max_beta, l_dim, m_dim), dtype=pair_density.dtype
+  )
 
   channel_beta_np = np.asarray(channel_beta, dtype=np.int32)
   num_channel = pair_density.shape[2]
@@ -326,7 +379,7 @@ def augmentation_density_compact(
 
 
 def effective_channel_matrix(
-  local_potential_r: Float[Array, "x y z"],
+  local_potential_r: Float[Array, "... x y z"],
   channel_dii: Float[Array, "atom channel channel"],
   channel_coupling: Float[Array, "atom channel channel l m"],
   channel_beta: Int[Array, "atom channel"],
@@ -336,33 +389,46 @@ def effective_channel_matrix(
   channel_mask: Float[Array, "atom channel"] | None = None,
 ) -> Float[Array, "atom channel channel"]:
   """Build the fixed-density ultrasoft effective channel matrix."""
-  num_grids = np.prod(local_potential_r.shape)
-  basis_integrals = einsum(
-    radial_fields,
-    harmonics,
-    local_potential_r,
-    "a i j l x y z, a l m x y z, x y z -> a i j l m",
-  ) * (vol / num_grids)
 
-  atom_matrices = []
-  channel_beta_np = np.asarray(channel_beta, dtype=np.int32)
-  num_channel = channel_dii.shape[1]
-  if channel_mask is not None:
-    channel_mask = jnp.asarray(channel_mask)
+  def _single(local_potential_spin):
+    num_grids = np.prod(local_potential_spin.shape)
+    basis_integrals = einsum(
+      radial_fields,
+      harmonics,
+      local_potential_spin,
+      "a i j l x y z, a l m x y z, x y z -> a i j l m",
+    ) * (vol / num_grids)
 
-  for atom_idx in range(channel_dii.shape[0]):
-    beta_indices = channel_beta_np[atom_idx]
-    gathered = basis_integrals[atom_idx][beta_indices[:, None], beta_indices[None, :]]
-    atom_matrix = channel_dii[atom_idx] + jnp.sum(
-      channel_coupling[atom_idx] * gathered,
-      axis=(-1, -2),
-    )
-    if channel_mask is not None:
-      atom_mask = channel_mask[atom_idx]
-      atom_matrix = atom_matrix * (atom_mask[:, None] * atom_mask[None, :])
-    atom_matrices.append(atom_matrix)
+    atom_matrices = []
+    channel_beta_np = np.asarray(channel_beta, dtype=np.int32)
+    mask = jnp.asarray(channel_mask) if channel_mask is not None else None
 
-  return jnp.stack(atom_matrices, axis=0)
+    for atom_idx in range(channel_dii.shape[0]):
+      beta_indices = channel_beta_np[atom_idx]
+      gathered = basis_integrals[atom_idx][
+        beta_indices[:, None],
+        beta_indices[None, :],
+      ]
+      atom_matrix = channel_dii[atom_idx] + jnp.sum(
+        channel_coupling[atom_idx] * gathered,
+        axis=(-1, -2),
+      )
+      if mask is not None:
+        atom_mask = mask[atom_idx]
+        atom_matrix = atom_matrix * (atom_mask[:, None] * atom_mask[None, :])
+      atom_matrices.append(atom_matrix)
+
+    return jnp.stack(atom_matrices, axis=0)
+
+  local_potential_r = jnp.asarray(local_potential_r)
+  if local_potential_r.ndim == 3:
+    return _single(local_potential_r)
+  if local_potential_r.ndim == 4:
+    return jax.vmap(_single)(local_potential_r)
+  raise ValueError(
+    "local_potential_r must have shape [x, y, z] or [spin, x, y, z]. "
+    f"Got {local_potential_r.shape}."
+  )
 
 
 __all__ = [

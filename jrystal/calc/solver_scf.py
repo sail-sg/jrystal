@@ -64,25 +64,98 @@ from .density_mixing import (
 )
 
 
-def _fixed_occupation(evals, num_electrons, occ_max=2.0):
+def _spin_channel_electron_counts(
+  num_electrons: int,
+  spin: int,
+  spin_restricted: bool,
+) -> tuple[int, ...]:
+  """Return the per-spin electron counts for the requested spin treatment."""
+  if spin_restricted:
+    return (num_electrons,)
+  return ((num_electrons + spin) // 2, (num_electrons - spin) // 2)
+
+
+def _fixed_occupation(
+  evals,
+  num_electrons,
+  *,
+  spin: int,
+  spin_restricted: bool,
+):
   """Assign identical occupied-band count at every k-point (insulator)."""
-  num_occ = int(round(num_electrons / occ_max))
-  order = jnp.argsort(evals, axis=-1)
-  rank = jnp.argsort(order, axis=-1)
-  return jnp.where(rank < num_occ, occ_max, 0.0).astype(evals.dtype)
+  evals = jnp.asarray(evals)
+  occ_max = _occupation_max(spin_restricted)
+  electron_counts = _spin_channel_electron_counts(
+    num_electrons,
+    spin,
+    spin_restricted,
+  )
+  if evals.shape[0] != len(electron_counts):
+    raise ValueError(
+      "Eigenvalue spin axis does not match the requested occupation mode. "
+      f"Got evals.shape[0]={evals.shape[0]} and "
+      f"{len(electron_counts)} spin channel(s)."
+    )
+
+  occupations = []
+  for spin_index, electron_count in enumerate(electron_counts):
+    num_occ = int(round(electron_count / occ_max))
+    order = jnp.argsort(evals[spin_index], axis=-1)
+    rank = jnp.argsort(order, axis=-1)
+    occupations.append(
+      jnp.where(rank < num_occ, occ_max, 0.0).astype(evals.dtype)
+    )
+  return jnp.stack(occupations, axis=0)
 
 
-def _compute_occupation(evals, num_electrons, k_weights, smearing):
+def _compute_occupation(
+  evals,
+  num_electrons,
+  k_weights,
+  smearing,
+  *,
+  spin: int,
+  spin_restricted: bool,
+):
   """Compute Fermi-Dirac or fixed occupation."""
   if smearing > 0:
-    mu = find_chemical_potential(
-      evals,
-      num_electrons,
-      smearing=smearing,
-      k_weights=k_weights,
-    )
-    return fermi_dirac(evals, mu, smearing=smearing), mu
-  return _fixed_occupation(evals, num_electrons), None
+    if spin_restricted:
+      mu = find_chemical_potential(
+        evals,
+        num_electrons,
+        smearing=smearing,
+        k_weights=k_weights,
+      )
+      return fermi_dirac(evals, mu, smearing=smearing), mu
+
+    mus = []
+    occupations = []
+    for spin_index, electron_count in enumerate(
+      _spin_channel_electron_counts(num_electrons, spin, spin_restricted)
+    ):
+      spin_evals = evals[spin_index:spin_index + 1]
+      mu = find_chemical_potential(
+        spin_evals,
+        electron_count,
+        smearing=smearing,
+        k_weights=k_weights,
+        spin_polorized=True,
+      )
+      occ = fermi_dirac(
+        spin_evals,
+        mu,
+        smearing=smearing,
+        spin_polorized=True,
+      )
+      mus.append(mu)
+      occupations.append(occ[0])
+    return jnp.stack(occupations, axis=0), jnp.stack(mus, axis=0)
+  return _fixed_occupation(
+    evals,
+    num_electrons,
+    spin=spin,
+    spin_restricted=spin_restricted,
+  ), None
 
 
 def _occupation_max(spin_restricted: bool) -> float:
@@ -291,18 +364,13 @@ def run_scf(
   key = jax.random.PRNGKey(config.execution.seed)
   crystal = ctx.crystal
 
-  if crystal.spin != 0 or not config.system.spin_restricted:
-    raise NotImplementedError(
-      "SCF currently supports only spin-restricted calculations "
-      "with system.spin == 0."
-    )
-
   g_vec = ctx.g_vec
   freq_mask = ctx.basis.freq_mask
   ew = ctx.ewald_energy
   k_weights = ctx.ksampling.weights
 
   num_electrons = backend.num_electrons(ctx)
+  num_spin = 1 if config.system.spin_restricted else 2
   occ_max = _occupation_max(config.system.spin_restricted)
   num_kpts = ctx.ksampling.kpts.shape[0]
   num_bands = ceil(num_electrons / occ_max) + config.occupation.empty_bands
@@ -359,10 +427,15 @@ def run_scf(
     coeff_compact = jnp.linalg.qr(coeff_compact)[0]  # [s, k, g, band]
 
     # --- Init eigenvalues, occupation, density ---
-    evals = jax.random.normal(key, [1, num_kpts, num_bands])
+    evals = jax.random.normal(key, [num_spin, num_kpts, num_bands])
     evals = jnp.sort(evals, axis=-1)
     evals_new = evals
-    occ = _fixed_occupation(evals, num_electrons, occ_max)
+    occ = _fixed_occupation(
+      evals,
+      num_electrons,
+      spin=crystal.spin,
+      spin_restricted=config.system.spin_restricted,
+    )
   else:
     coeff_compact = (
       jnp.asarray(restart_state["coefficients"]["w_re"]) +
@@ -373,7 +446,7 @@ def run_scf(
       evals_new = jnp.asarray(restart_state["eigenvalues"])
     else:
       evals_new = jnp.sort(
-        jax.random.normal(key, [1, num_kpts, num_bands]), axis=-1
+        jax.random.normal(key, [num_spin, num_kpts, num_bands]), axis=-1
       )
     start_step = int(restart_state["step"]) + 1
     previous_total_energy = float(restart_state["total_energy"])
@@ -521,11 +594,17 @@ def run_scf(
           num_electrons,
           k_weights,
           smearing,
+          spin=crystal.spin,
+          spin_restricted=config.system.spin_restricted,
         )
         if config.execution.profile:
           occ = jax.block_until_ready(occ)
+      scalar_chemical_potential = None
       if chemical_potential is not None:
-        last_chemical_potential = float(chemical_potential)
+        chemical_potential_arr = np.asarray(chemical_potential)
+        if chemical_potential_arr.ndim == 0:
+          scalar_chemical_potential = float(chemical_potential_arr)
+          last_chemical_potential = scalar_chemical_potential
 
       # 3. New density
       with phase_timer.phase("density"):
@@ -562,7 +641,13 @@ def run_scf(
         "cumulative_time_s": cumulative_time,
       }
       if chemical_potential is not None:
-        record["chemical_potential_ha"] = float(chemical_potential)
+        chemical_potential_arr = np.asarray(chemical_potential)
+        if chemical_potential_arr.ndim == 0:
+          record["chemical_potential_ha"] = float(chemical_potential_arr)
+        else:
+          record["chemical_potential_ha"] = [
+            float(x) for x in chemical_potential_arr.reshape(-1)
+          ]
       convergence_history.append(record)
 
       if show_progress:
@@ -576,10 +661,7 @@ def run_scf(
             step_time=dt,
             cumulative_time=cumulative_time,
             density_delta=d_density,
-            chemical_potential=(
-              float(chemical_potential)
-              if chemical_potential is not None else None
-            ),
+            chemical_potential=scalar_chemical_potential,
           )
         )
 

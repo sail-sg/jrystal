@@ -74,6 +74,11 @@ def _block_tree(value):
   )
 
 
+def _occupation_max(spin_restricted: bool) -> float:
+  """Maximum occupation per state for the requested spin treatment."""
+  return 2.0 if spin_restricted else 1.0
+
+
 def _run_nscf_ae(
   config,
   ctx,
@@ -275,7 +280,13 @@ def _run_nscf_nc(
   )
 
   optimizer = create_optimizer(config)
-  params_pw = _pw.param_init(key, num_bands, 1, freq_mask)
+  params_pw = _pw.param_init(
+    key,
+    num_bands,
+    1,
+    freq_mask,
+    spin_restricted=config.system.spin_restricted,
+  )
   opt_state = optimizer.init(params_pw)
 
   def _select_beta(beta_gk, idx):
@@ -384,7 +395,7 @@ def _run_nscf_nc(
         xc,
         kohn_sham=True,
       )
-      return jnp.linalg.eigvalsh(hmat[0])
+      return jnp.linalg.eigvalsh(hmat)
 
     eig_first = eig_fn(
       params_first,
@@ -490,10 +501,17 @@ def _run_nscf_us(
   vol = ctx.crystal.vol
   num_kpts = int(ksampling.kpts.shape[0])
   g_dim = int(np.sum(np.asarray(freq_mask)))
+  num_spin = 1 if config.system.spin_restricted else 2
   precond = kerker_preconditioner(g_vec, freq_mask)
   nscf_state = backend.prepare_nscf(density, ctx)
 
-  initial_guess = _initial_band_guess(key, num_bands, freq_mask, source_coeff)
+  initial_guess = _initial_band_guess(
+    key,
+    num_bands,
+    freq_mask,
+    source_coeff,
+    spin_restricted=config.system.spin_restricted,
+  )
   coeff_guess = jnp.asarray(initial_guess)
   eigenvalues = []
 
@@ -541,7 +559,7 @@ def _run_nscf_us(
         matmul=_matmul,
         b_matmul=_b_matmul,
         k=num_bands,
-        v0=coeff_guess.reshape(1, g_dim, num_bands),
+        v0=coeff_guess.reshape(num_spin, g_dim, num_bands),
         which="smallest",
         preconditioner=precond,
         maxit=config.solver.scf.eigensolver.max_iter,
@@ -549,10 +567,10 @@ def _run_nscf_us(
       )
       if phase_timer is not None and phase_timer.enabled:
         evals, evecs = _block_tree((evals, evecs))
-    coeff_guess = evecs.reshape(1, 1, g_dim, num_bands).conj()
-    eigenvalues.append(evals[0])
+    coeff_guess = evecs.reshape(num_spin, 1, g_dim, num_bands).conj()
+    eigenvalues.append(evals)
 
-  return jnp.stack(eigenvalues, axis=0)[None, ...]
+  return jnp.stack(eigenvalues, axis=1)
 
 
 # ---------------------------------------------------------------------------
@@ -560,14 +578,27 @@ def _run_nscf_us(
 # ---------------------------------------------------------------------------
 
 
-def _initial_band_guess(key, num_bands, freq_mask, source_coeff=None):
+def _initial_band_guess(
+  key,
+  num_bands,
+  freq_mask,
+  source_coeff=None,
+  *,
+  spin_restricted=True,
+):
   """Return a compact masked-G initial guess for a band solve."""
   if source_coeff is not None:
     source_coeff = jnp.asarray(source_coeff)
     if source_coeff.shape[-1] >= num_bands:
       return source_coeff[..., :num_bands]
 
-  params = _pw.param_init(key, num_bands, 1, freq_mask)
+  params = _pw.param_init(
+    key,
+    num_bands,
+    1,
+    freq_mask,
+    spin_restricted=spin_restricted,
+  )
   return squeeze_coefficient(_pw.coeff(params, freq_mask), freq_mask)
 
 
@@ -756,7 +787,9 @@ def run_nscf(
     config.band.empty_bands
     if config.band.empty_bands is not None else config.occupation.empty_bands
   )
-  num_bands = ceil(num_electrons / 2) + empty_bands
+  num_bands = ceil(
+    num_electrons / _occupation_max(config.system.spin_restricted)
+  ) + empty_bands
 
   num_kpts = ctx.ksampling.kpts.shape[0]
   stage_line(

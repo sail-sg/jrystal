@@ -55,9 +55,6 @@ def _hamiltonian_matrix(
   Returns:
     Float[Array, "spin kpt band band"]: Hamiltonian matrices.
   """
-  if effictive_density_grid.ndim == 4:  # has spin axis, sum over spin axis
-    effictive_density_grid = jnp.sum(effictive_density_grid, axis=0)
-
   v_eff = potential.effective(
     effictive_density_grid,
     positions,
