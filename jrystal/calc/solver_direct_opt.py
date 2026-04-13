@@ -522,6 +522,7 @@ def run_direct_opt(
   decomp = backend.energy_decomposition(coeff, occ, ctx)
   total_e = float(sum(decomp.values()) + ew)
   wall_time = time.time() - overall_start
+  profiling = {}
 
   log_ground_state_finish(
     "DirectOpt",
@@ -532,9 +533,15 @@ def run_direct_opt(
     wall_time=wall_time,
   )
   if config.execution.profile:
+    profiling = {
+      "kind": "ground_state",
+      "enabled": True,
+      "wall_time_sec": wall_time,
+      "phases": phase_timer.summary(total_wall_time=wall_time),
+    }
     log_timing_breakdown(
       "DirectOpt",
-      phase_timer.summary(total_wall_time=wall_time),
+      profiling["phases"],
       total_wall_time=wall_time,
     )
   log_energy_breakdown(
@@ -569,4 +576,5 @@ def run_direct_opt(
     wall_time=wall_time,
     convergence_history=convergence_history,
     total_energy_history=total_energy_history,
+    profiling=profiling,
   )

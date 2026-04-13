@@ -119,6 +119,12 @@ def save_run_metadata(run_dir: Path, metadata: Mapping[str, Any]) -> None:
     file.write("\n")
 
 
+def _save_json(path: Path, payload: Mapping[str, Any]) -> None:
+  with open(path, "w", encoding="utf-8") as file:
+    json.dump(_jsonable(dict(payload)), file, indent=2, sort_keys=True)
+    file.write("\n")
+
+
 def _energy_terms_dict(result) -> dict[str, float]:
   return {
     key: float(value) for key, value in asdict(result.energy_terms).items()
@@ -213,9 +219,8 @@ def _ground_state_energy_payload(result, *, k_weights) -> dict[str, Any]:
     "total_energy_ha": float(result.total_energy),
     "total_energy_ev": float(result.total_energy * HARTREE_TO_EV),
     "decomposition": _energy_terms_dict(result),
-    "chemical_potential_ha": (
-      None if fermi_energy is None else float(fermi_energy)
-    ),
+    "chemical_potential_ha":
+      (None if fermi_energy is None else float(fermi_energy)),
     "fermi_energy_ha": None if fermi_energy is None else float(fermi_energy),
     "fermi_energy_available": fermi_energy is not None,
     "num_electrons": int(np.asarray(result.crystal.num_electron)),
@@ -224,6 +229,21 @@ def _ground_state_energy_payload(result, *, k_weights) -> dict[str, Any]:
     "converged": bool(result.converged),
     "num_iterations": int(result.num_iterations),
     "wall_time_sec": float(result.wall_time),
+  }
+
+
+def _profiling_payload(result) -> dict[str, Any]:
+  profiling = dict(getattr(result, "profiling", {}) or {})
+  phases = profiling.get("phases", {})
+  return {
+    "kind":
+      profiling.get("kind", "unknown"),
+    "enabled":
+      bool(profiling.get("enabled", False)),
+    "wall_time_sec":
+      float(profiling.get("wall_time_sec", getattr(result, "wall_time", 0.0))),
+    "phases":
+      phases,
   }
 
 
@@ -264,7 +284,8 @@ def _compute_ground_state_spectrum(config, ctx, backend, result):
     coeff_batch = c.reshape(s, k, g, -1)
     coeff_full = expand_coefficient(coeff_batch.conj(), freq_mask)
     spsi_full = backend.overlap_apply(coeff_full, ctx)
-    return squeeze_coefficient(spsi_full.conj(), freq_mask).reshape(s * k, g, -1)
+    return squeeze_coefficient(spsi_full.conj(),
+                               freq_mask).reshape(s * k, g, -1)
 
   def _matmul(c):
     coeff_batch = c.reshape(s, k, g, -1)
@@ -314,22 +335,21 @@ def save_ground_state(
   if fermi_energy is not None and result.fermi_energy is None:
     result = replace(result, fermi_energy=fermi_energy)
 
-  with open(ground_state_dir / "energy.json", "w", encoding="utf-8") as file:
-    json.dump(
-      _ground_state_energy_payload(result, k_weights=ctx.ksampling.weights),
-      file,
-      indent=2,
-      sort_keys=True,
-    )
-    file.write("\n")
+  _save_json(
+    ground_state_dir / "energy.json",
+    _ground_state_energy_payload(result, k_weights=ctx.ksampling.weights),
+  )
 
-  with open(
+  _save_json(
     ground_state_dir / "convergence.json",
-    "w",
-    encoding="utf-8",
-  ) as file:
-    json.dump(_convergence_payload(result), file, indent=2, sort_keys=True)
-    file.write("\n")
+    _convergence_payload(result),
+  )
+
+  if getattr(result, "profiling", None):
+    _save_json(
+      ground_state_dir / "profiling.json",
+      _profiling_payload(result),
+    )
 
   if config.io.save_density:
     np.save(ground_state_dir / "density.npy", np.asarray(result.density))
@@ -371,9 +391,13 @@ def save_band_structure(
   band_dir = run_dir / "band"
   band_dir.mkdir(parents=True, exist_ok=True)
   np.save(band_dir / "eigenvalues.npy", np.asarray(result.eigenvalues))
-  with open(band_dir / "kpath.json", "w", encoding="utf-8") as file:
-    json.dump(_kpath_payload(result), file, indent=2, sort_keys=True)
-    file.write("\n")
+  _save_json(band_dir / "kpath.json", _kpath_payload(result))
+
+  if getattr(result, "profiling", None):
+    _save_json(
+      band_dir / "profiling.json",
+      _profiling_payload(result),
+    )
 
   if config.io.save_dir is not None:
     legacy_name = "".join(result.crystal.symbols or []) + "_band_structure.npy"
@@ -403,9 +427,17 @@ def save_band_structure(
     stage_warning("Band", f"Failed to save band plot: {exc}")
 
 
+def _ground_state_dir(run_dir: Path) -> Path:
+  return run_dir / "ground_state"
+
+
+def _checkpoint_dir(run_dir: Path) -> Path:
+  return _ground_state_dir(run_dir) / "checkpoint"
+
+
 def make_checkpoint_manager(run_dir: Path):
   ocp = _require_orbax()
-  ckpt_dir = run_dir / "checkpoint"
+  ckpt_dir = _checkpoint_dir(run_dir)
   ckpt_dir.mkdir(parents=True, exist_ok=True)
   return ocp.CheckpointManager(
     ckpt_dir,
@@ -555,10 +587,22 @@ def load_checkpoint(
 ) -> tuple[dict[str, Any], int]:
   ocp = _require_orbax()
   run_dir = Path(restart_path)
-  ckpt_dir = run_dir / "checkpoint"
-  if not (ckpt_dir / "meta.json").exists():
+  candidates = [
+    _checkpoint_dir(run_dir),
+    run_dir / "checkpoint",
+  ]
+  ckpt_dir = next(
+    (
+      candidate for candidate in candidates
+      if (candidate / "meta.json").exists()
+    ),
+    None,
+  )
+  if ckpt_dir is None:
     raise FileNotFoundError(
-      f"No checkpoint found at {ckpt_dir}. Cannot restart from {restart_path}."
+      "No checkpoint found under "
+      f"{_checkpoint_dir(run_dir)} or {run_dir / 'checkpoint'}. "
+      f"Cannot restart from {restart_path}."
     )
 
   _validate_restart_compatibility(run_dir / "config.yaml", config)

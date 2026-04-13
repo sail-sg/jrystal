@@ -27,6 +27,7 @@ fine-tune along the path, then diagonalise).
 from __future__ import annotations
 
 import time
+from contextlib import nullcontext
 from functools import partial
 from math import ceil
 from typing import TYPE_CHECKING
@@ -37,8 +38,8 @@ import numpy as np
 import optax
 
 from .._src import hamiltonian as _hamiltonian
-from .._src.linalg import batched_lobpcg
 from .._src import pw as _pw
+from .._src.linalg import batched_lobpcg
 from .._src.utils import expand_coefficient, squeeze_coefficient
 from ..pseudopotential import normcons as _normcons
 from ..pseudopotential import ultrasoft as _ultrasoft
@@ -46,11 +47,17 @@ from ..pseudopotential.kernel import UltrasoftPathCache
 from ..terminal_ui import stage_line
 from .density_mixing import kerker_preconditioner
 from .opt_utils import create_optimizer
+from .timer import PhaseTimer
 from .types import BandStructureResult
+from .workflow_logging import log_timing_breakdown
 
 if TYPE_CHECKING:
   from ..config import JrystalConfigDict
-  from .backend import AllElectronBackend, NormConservingBackend, UltrasoftBackend
+  from .backend import (
+    AllElectronBackend,
+    NormConservingBackend,
+    UltrasoftBackend,
+  )
   from .runtime import RuntimeContext
   from .types import GroundStateResult
 
@@ -59,7 +66,22 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
-def _run_nscf_ae(config, ctx, density, num_bands):
+def _block_tree(value):
+  """Synchronize a pytree of JAX arrays."""
+  return jax.tree.map(
+    lambda x: x.block_until_ready() if hasattr(x, "block_until_ready") else x,
+    value,
+  )
+
+
+def _run_nscf_ae(
+  config,
+  ctx,
+  density,
+  num_bands,
+  *,
+  phase_timer: PhaseTimer | None = None,
+):
   """Band structure for all-electron backend."""
   key = jax.random.PRNGKey(config.execution.seed)
   crystal = ctx.crystal
@@ -108,12 +130,8 @@ def _run_nscf_ae(config, ctx, density, num_bands):
     params = optax.apply_updates(params, updates)
     return params, opt_state, val
 
-  @partial(
-    jax.pmap,
-    in_axes=(0, 0, 0),
-    devices=jax.devices()[:util_devices],
-  )
-  def optimize_eigenvalues(kpts, params_pw, opt_state):
+  @partial(jax.pmap, in_axes=(0, 0, 0), devices=jax.devices()[:util_devices])
+  def optimize_first_kpoint(kpts, params_pw, opt_state):
 
     def update_scan(carry, _):
       params, opt_state, kpts = carry
@@ -125,6 +143,10 @@ def _run_nscf_ae(config, ctx, density, num_bands):
       length=config.band.epoch, unroll=1,
     )
     params_first, opt_state, _ = carry
+    return params_first, opt_state
+
+  @partial(jax.pmap, in_axes=(0, 0, 0), devices=jax.devices()[:util_devices])
+  def fine_tune_path(kpts, params_first, opt_state):
 
     def finetune(carry, kpt):
       kpt = jnp.expand_dims(kpt, 0)
@@ -139,6 +161,10 @@ def _run_nscf_ae(config, ctx, density, num_bands):
     _, params_rest = jax.lax.scan(
       finetune, (params_first, opt_state), kpts[1:],
     )
+    return params_rest
+
+  @partial(jax.pmap, in_axes=(0, 0, 0), devices=jax.devices()[:util_devices])
+  def diagonalize_path(kpts, params_first, params_rest):
 
     def eig_fn(param, kpt):
       coeff = _pw.coeff(param, freq_mask)
@@ -164,7 +190,7 @@ def _run_nscf_ae(config, ctx, density, num_bands):
     _, eig_rest = jax.lax.scan(
       eig_scan, None, (kpts[1:], params_rest),
     )
-    return [eig_first] + list(eig_rest)
+    return jnp.concatenate([eig_first[None, ...], eig_rest], axis=0)
 
   k_path, num_kpts, util_devices = _chunk_kpoint_axis(
     ksampling.kpts, util_devices,
@@ -178,10 +204,32 @@ def _run_nscf_ae(config, ctx, density, num_bands):
     opt_state,
   )
 
-  t0 = time.time()
-  eigen_values = optimize_eigenvalues(k_path, params_pw, opt_state)
-  dt = time.time() - t0
-  stage_line("Band", f"Band calculation done. ({dt:.2f}s)")
+  first_phase = (
+    "first_call_overhead"
+    if phase_timer is not None and phase_timer.enabled else "optimize_first_k"
+  )
+  with (
+    phase_timer.phase(first_phase) if phase_timer is not None else nullcontext()
+  ):
+    params_first, opt_state = optimize_first_kpoint(k_path, params_pw, opt_state)
+    if phase_timer is not None and phase_timer.enabled:
+      params_first, opt_state = _block_tree((params_first, opt_state))
+
+  with (
+    phase_timer.phase("fine_tune_path")
+    if phase_timer is not None else nullcontext()
+  ):
+    params_rest = fine_tune_path(k_path, params_first, opt_state)
+    if phase_timer is not None and phase_timer.enabled:
+      params_rest = _block_tree(params_rest)
+
+  with (
+    phase_timer.phase("diagonalize_path")
+    if phase_timer is not None else nullcontext()
+  ):
+    eigen_values = diagonalize_path(k_path, params_first, params_rest)
+    if phase_timer is not None and phase_timer.enabled:
+      eigen_values = _block_tree(eigen_values)
 
   return _reshape_eigenvalues(eigen_values, num_kpts, num_bands)
 
@@ -191,7 +239,14 @@ def _run_nscf_ae(config, ctx, density, num_bands):
 # ---------------------------------------------------------------------------
 
 
-def _run_nscf_nc(config, ctx, density, num_bands):
+def _run_nscf_nc(
+  config,
+  ctx,
+  density,
+  num_bands,
+  *,
+  phase_timer: PhaseTimer | None = None,
+):
   """Band structure for norm-conserving pseudopotential backend."""
   key = jax.random.PRNGKey(config.execution.seed)
   crystal = ctx.crystal
@@ -204,10 +259,10 @@ def _run_nscf_nc(config, ctx, density, num_bands):
   xc = config.method.xc
 
   atom_positions = pseudo_cache.atom_species_map.positions
-  species_index = tuple(int(i) for i in pseudo_cache.atom_species_map.species_index)
-  atom_setups = tuple(
-    pseudo_cache.species_setups[i] for i in species_index
+  species_index = tuple(
+    int(i) for i in pseudo_cache.atom_species_map.species_index
   )
+  atom_setups = tuple(pseudo_cache.species_setups[i] for i in species_index)
   atom_r_grid = [setup.radial.r_g for setup in atom_setups]
   atom_beta_grid = [setup.projectors.beta_jr for setup in atom_setups]
   atom_l = [setup.projectors.l_j for setup in atom_setups]
@@ -267,7 +322,7 @@ def _run_nscf_nc(config, ctx, density, num_bands):
     in_axes=(0, 0, 0, 0),
     devices=jax.devices()[:util_devices],
   )
-  def optimize_eigenvalues(kpts, beta_gk, params_pw, opt_state):
+  def optimize_first_kpoint(kpts, beta_gk, params_pw, opt_state):
 
     def update_scan(carry, _):
       params, opt_state, nl, kpt = carry
@@ -280,6 +335,14 @@ def _run_nscf_nc(config, ctx, density, num_bands):
       length=config.band.epoch, unroll=1,
     )
     params_first, opt_state, _, _ = carry
+    return params_first, opt_state
+
+  @partial(
+    jax.pmap,
+    in_axes=(0, 0, 0, 0),
+    devices=jax.devices()[:util_devices],
+  )
+  def fine_tune_path(kpts, beta_gk, params_first, opt_state):
 
     def finetune(carry, x):
       kpt, bgk = x
@@ -299,6 +362,14 @@ def _run_nscf_nc(config, ctx, density, num_bands):
       finetune, (params_first, opt_state),
       (kpts[1:], [b[1:] for b in beta_gk]),
     )
+    return params_rest
+
+  @partial(
+    jax.pmap,
+    in_axes=(0, 0, 0, 0),
+    devices=jax.devices()[:util_devices],
+  )
+  def diagonalize_path(kpts, beta_gk, params_first, params_rest):
 
     def eig_fn(param, kpt, nl):
       coeff = _pw.coeff(param, freq_mask)
@@ -333,7 +404,7 @@ def _run_nscf_nc(config, ctx, density, num_bands):
       eig_scan, None,
       (kpts[1:], [b[1:] for b in beta_gk], params_rest),
     )
-    return [eig_first] + list(eig_rest)
+    return jnp.concatenate([eig_first[None, ...], eig_rest], axis=0)
 
   k_path, num_kpts, util_devices = _chunk_kpoint_axis(
     ksampling.kpts, util_devices,
@@ -348,15 +419,47 @@ def _run_nscf_nc(config, ctx, density, num_bands):
     opt_state,
   )
 
-  t0 = time.time()
-  eigen_values = optimize_eigenvalues(
-    k_path,
-    beta_gk_reshaped,
-    params_pw,
-    opt_state,
+  first_phase = (
+    "first_call_overhead"
+    if phase_timer is not None and phase_timer.enabled else "optimize_first_k"
   )
-  dt = time.time() - t0
-  stage_line("Band", f"Band calculation done. ({dt:.2f}s)")
+  with (
+    phase_timer.phase(first_phase) if phase_timer is not None else nullcontext()
+  ):
+    params_first, opt_state = optimize_first_kpoint(
+      k_path,
+      beta_gk_reshaped,
+      params_pw,
+      opt_state,
+    )
+    if phase_timer is not None and phase_timer.enabled:
+      params_first, opt_state = _block_tree((params_first, opt_state))
+
+  with (
+    phase_timer.phase("fine_tune_path")
+    if phase_timer is not None else nullcontext()
+  ):
+    params_rest = fine_tune_path(
+      k_path,
+      beta_gk_reshaped,
+      params_first,
+      opt_state,
+    )
+    if phase_timer is not None and phase_timer.enabled:
+      params_rest = _block_tree(params_rest)
+
+  with (
+    phase_timer.phase("diagonalize_path")
+    if phase_timer is not None else nullcontext()
+  ):
+    eigen_values = diagonalize_path(
+      k_path,
+      beta_gk_reshaped,
+      params_first,
+      params_rest,
+    )
+    if phase_timer is not None and phase_timer.enabled:
+      eigen_values = _block_tree(eigen_values)
 
   return _reshape_eigenvalues(eigen_values, num_kpts, num_bands)
 
@@ -366,7 +469,16 @@ def _run_nscf_nc(config, ctx, density, num_bands):
 # ---------------------------------------------------------------------------
 
 
-def _run_nscf_us(config, ctx, density, num_bands, backend, source_coeff=None):
+def _run_nscf_us(
+  config,
+  ctx,
+  density,
+  num_bands,
+  backend,
+  source_coeff=None,
+  *,
+  phase_timer: PhaseTimer | None = None,
+):
   """Band structure for ultrasoft pseudopotential backend."""
   if not isinstance(ctx.pseudo_cache, UltrasoftPathCache):
     raise TypeError("USPP band calculation requires an UltrasoftPathCache.")
@@ -386,14 +498,18 @@ def _run_nscf_us(config, ctx, density, num_bands, backend, source_coeff=None):
   eigenvalues = []
 
   for k_idx in range(num_kpts):
-    bundle = backend.build_kpoint_operator(k_idx, nscf_state, ctx)
-    coeff_guess = _canonicalize_uspp_subspace(
-      coeff_guess,
-      bundle,
-      g_vec,
-      freq_mask,
-      vol,
-    )
+    with (
+      phase_timer.phase("operator_bundle")
+      if phase_timer is not None else nullcontext()
+    ):
+      bundle = backend.build_kpoint_operator(k_idx, nscf_state, ctx)
+      coeff_guess = _canonicalize_uspp_subspace(
+        coeff_guess,
+        bundle,
+        g_vec,
+        freq_mask,
+        vol,
+      )
 
     def _matmul(c):
       return _uspp_h_apply_compact(
@@ -412,16 +528,27 @@ def _run_nscf_us(config, ctx, density, num_bands, backend, source_coeff=None):
         vol,
       ).reshape(1, g_dim, -1)
 
-    evals, evecs = batched_lobpcg(
-      matmul=_matmul,
-      b_matmul=_b_matmul,
-      k=num_bands,
-      v0=coeff_guess.reshape(1, g_dim, num_bands),
-      which="smallest",
-      preconditioner=precond,
-      maxit=config.solver.scf.eigensolver.max_iter,
-      tol=1e-8,
+    phase_name = (
+      "first_call_overhead" if
+      (phase_timer is not None and phase_timer.enabled and
+       k_idx == 0) else "diagonalize_path"
     )
+    with (
+      phase_timer.phase(phase_name)
+      if phase_timer is not None else nullcontext()
+    ):
+      evals, evecs = batched_lobpcg(
+        matmul=_matmul,
+        b_matmul=_b_matmul,
+        k=num_bands,
+        v0=coeff_guess.reshape(1, g_dim, num_bands),
+        which="smallest",
+        preconditioner=precond,
+        maxit=config.solver.scf.eigensolver.max_iter,
+        tol=1e-8,
+      )
+      if phase_timer is not None and phase_timer.enabled:
+        evals, evecs = _block_tree((evals, evecs))
     coeff_guess = evecs.reshape(1, 1, g_dim, num_bands).conj()
     eigenvalues.append(evals[0])
 
@@ -574,7 +701,9 @@ def _chunk_beta_sbt(beta_gk, num_devices):
 
 def _reshape_eigenvalues(eigen_values, num_kpts, num_bands):
   """Stack pmap outputs into a trimmed ``(spin, kpt, band)`` array."""
-  eigen_values = jnp.stack(eigen_values)
+  eigen_values = jnp.asarray(eigen_values)
+  if eigen_values.ndim == 1:
+    eigen_values = jnp.stack(eigen_values)
   if eigen_values.ndim == 5:
     eigen_values = jnp.squeeze(eigen_values, axis=3)
   elif eigen_values.ndim != 4:
@@ -618,17 +747,14 @@ def run_nscf(
   Returns:
     Band-structure result with eigenvalues along the k-path.
   """
-  from .backend import (
-    NormConservingBackend as _NCBackend,
-    UltrasoftBackend as _USBackend,
-  )
+  from .backend import NormConservingBackend as _NCBackend
+  from .backend import UltrasoftBackend as _USBackend
 
   density = ground_state_result.density
   num_electrons = backend.num_electrons(ctx)
   empty_bands = (
     config.band.empty_bands
-    if config.band.empty_bands is not None
-    else config.occupation.empty_bands
+    if config.band.empty_bands is not None else config.occupation.empty_bands
   )
   num_bands = ceil(num_electrons / 2) + empty_bands
 
@@ -637,16 +763,27 @@ def run_nscf(
     "Band",
     f"Band structure: {num_kpts} k-points, {num_bands} bands",
   )
+  band_start = time.time()
+  phase_timer = PhaseTimer(enabled=config.execution.profile)
 
   if isinstance(backend, _NCBackend):
-    eigenvalues = _run_nscf_nc(config, ctx, density, num_bands)
+    eigenvalues = _run_nscf_nc(
+      config,
+      ctx,
+      density,
+      num_bands,
+      phase_timer=phase_timer,
+    )
   elif isinstance(backend, _USBackend):
     source_coeff = None
     if getattr(ground_state_result, "coefficients", None) is not None:
       coeff_dict = ground_state_result.coefficients
-      if isinstance(coeff_dict, dict) and "w_re" in coeff_dict and "w_im" in coeff_dict:
+      if isinstance(
+        coeff_dict, dict
+      ) and "w_re" in coeff_dict and "w_im" in coeff_dict:
         source_coeff = (
-          jnp.asarray(coeff_dict["w_re"]) + 1.0j * jnp.asarray(coeff_dict["w_im"])
+          jnp.asarray(coeff_dict["w_re"]) +
+          1.0j * jnp.asarray(coeff_dict["w_im"])
         )
     eigenvalues = _run_nscf_us(
       config,
@@ -655,9 +792,32 @@ def run_nscf(
       num_bands,
       backend,
       source_coeff=source_coeff,
+      phase_timer=phase_timer,
     )
   else:
-    eigenvalues = _run_nscf_ae(config, ctx, density, num_bands)
+    eigenvalues = _run_nscf_ae(
+      config,
+      ctx,
+      density,
+      num_bands,
+      phase_timer=phase_timer,
+    )
+
+  wall_time = time.time() - band_start
+  profiling = {}
+  stage_line("Band", f"Band calculation done. ({wall_time:.2f}s)")
+  if config.execution.profile:
+    profiling = {
+      "kind": "band",
+      "enabled": True,
+      "wall_time_sec": wall_time,
+      "phases": phase_timer.summary(total_wall_time=wall_time),
+    }
+    log_timing_breakdown(
+      "Band",
+      profiling["phases"],
+      total_wall_time=wall_time,
+    )
 
   return BandStructureResult(
     config=config,
@@ -666,4 +826,6 @@ def run_nscf(
     eigenvalues=eigenvalues,
     ground_state_energy=ground_state_result.total_energy,
     reference_energy=ground_state_result.fermi_energy,
+    wall_time=wall_time,
+    profiling=profiling,
   )

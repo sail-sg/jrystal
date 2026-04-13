@@ -664,6 +664,7 @@ def run_scf(
     dtype=_density_dtype_from_context(density, ctx),
   )
   wall_time = time.time() - overall_start
+  profiling = {}
 
   log_ground_state_finish(
     "SCF",
@@ -674,9 +675,15 @@ def run_scf(
     wall_time=wall_time,
   )
   if config.execution.profile:
+    profiling = {
+      "kind": "ground_state",
+      "enabled": True,
+      "wall_time_sec": wall_time,
+      "phases": phase_timer.summary(total_wall_time=wall_time),
+    }
     log_timing_breakdown(
       "SCF",
-      phase_timer.summary(total_wall_time=wall_time),
+      profiling["phases"],
       total_wall_time=wall_time,
     )
   log_energy_breakdown(
@@ -715,4 +722,5 @@ def run_scf(
     fermi_energy=last_chemical_potential,
     convergence_history=convergence_history,
     total_energy_history=total_energy_history,
+    profiling=profiling,
   )
