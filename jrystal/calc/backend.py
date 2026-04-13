@@ -136,7 +136,9 @@ class AllElectronBackend:
     """Reuse the SCF fixed-density preparation for band workflows."""
     return self.prepare_iteration(density, ctx)
 
-  def build_kpoint_operator(self, kpt_index: int, nscf_state, ctx: RuntimeContext):
+  def build_kpoint_operator(
+    self, kpt_index: int, nscf_state, ctx: RuntimeContext
+  ):
     del kpt_index, nscf_state, ctx
     raise NotImplementedError(
       "Band operator bundles are not implemented for the all-electron backend."
@@ -326,7 +328,9 @@ class NormConservingBackend:
     """Reuse the SCF fixed-density preparation for band workflows."""
     return self.prepare_iteration(density, ctx)
 
-  def build_kpoint_operator(self, kpt_index: int, nscf_state, ctx: RuntimeContext):
+  def build_kpoint_operator(
+    self, kpt_index: int, nscf_state, ctx: RuntimeContext
+  ):
     del kpt_index, nscf_state, ctx
     raise NotImplementedError(
       "Band operator bundles are not implemented for the norm-conserving backend."
@@ -384,9 +388,8 @@ class NormConservingBackend:
             occupation=occ,
             kpts_weights=k_weights,
             channel_mask=ctx.pseudo_cache.channel_mask,
-          )
-          if getattr(ctx.pseudo_cache, "channel_projectors_compact_gk", None) is not None
-          else _normcons.energy_nonlocal(
+          ) if getattr(ctx.pseudo_cache, "channel_projectors_compact_gk", None)
+          is not None else _normcons.energy_nonlocal(
             coeff,
             ctx.potential_nonlocal,
             vol=vol,
@@ -411,8 +414,8 @@ class NormConservingBackend:
 class UltrasoftBackend:
   """Ultrasoft pseudopotential backend.
 
-  Ground-state workflows are currently limited to Gamma-only mesh mode.
-  Path-mode runtime/cache construction is supported for future band workflows.
+  Ground-state workflows support mesh mode through the compact-projector path.
+  Path-mode runtime/cache construction is also supported for band workflows.
   """
 
   requires_canonical_transform = True
@@ -428,15 +431,6 @@ class UltrasoftBackend:
     if ctx.ksampling.mode not in ("mesh", "path"):
       raise NotImplementedError(
         f"Unsupported ultrasoft sampling mode: {ctx.ksampling.mode}"
-      )
-    if ctx.ksampling.mode == "mesh" and (
-      ctx.ksampling.kpts.shape[0] != 1 or not np.allclose(
-        np.asarray(ctx.ksampling.kpts),
-        0.0,
-      )
-    ):
-      raise NotImplementedError(
-        "Phase 5 ultrasoft ground-state support is limited to Gamma-only k sampling."
       )
 
     crystal = ctx.crystal
@@ -460,10 +454,44 @@ class UltrasoftBackend:
         "Ultrasoft NLCC will be included in XC density.",
         level="verbose",
       )
+    if ctx.ksampling.mode == "mesh":
+      if not isinstance(pseudo_cache, UltrasoftMeshCache):
+        raise TypeError("USPP mesh mode requires an UltrasoftMeshCache.")
+      if pseudo_cache.channel_projectors_compact_gk is None:
+        raise ValueError(
+          "USPP mesh mode requires compact projector channels for ground-state "
+          "workflows."
+        )
+      num_kpts = int(ctx.ksampling.kpts.shape[0])
+      if pseudo_cache.channel_projectors_compact_gk.shape[1] != num_kpts:
+        raise ValueError(
+          "USPP compact projector k-point dimension does not match runtime "
+          "k-sampling."
+        )
+      if pseudo_cache.channel_qii is None or pseudo_cache.channel_qii.ndim != 3:
+        raise ValueError(
+          "USPP channel_qii must be a k-independent [atom, ch, ch] tensor."
+        )
+      if pseudo_cache.channel_dii is None or pseudo_cache.channel_dii.ndim != 3:
+        raise ValueError(
+          "USPP channel_dii must be a k-independent [atom, ch, ch] tensor."
+        )
+      if pseudo_cache.channel_mask is None or pseudo_cache.channel_mask.ndim != 2:
+        raise ValueError(
+          "USPP channel_mask must be a k-independent [atom, ch] tensor."
+        )
+      stage_line(
+        "Init",
+        (
+          "USPP mesh cache: "
+          f"ik={num_kpts} sym={self._config.ksampling.symmetry_reduction} "
+          "compact_projectors=on"
+        ),
+        level="verbose",
+      )
 
     potential_nl = (
-      pseudo_cache.projector_gk
-      if isinstance(pseudo_cache, UltrasoftMeshCache)
+      pseudo_cache.projector_gk if isinstance(pseudo_cache, UltrasoftMeshCache)
       else pseudo_cache.beta_radial_gk
     )
 
@@ -784,9 +812,8 @@ class UltrasoftBackend:
             occupation=occ,
             kpts_weights=k_weights,
             channel_mask=ctx.pseudo_cache.channel_mask,
-          )
-          if getattr(ctx.pseudo_cache, "channel_projectors_compact_gk", None) is not None
-          else _normcons.energy_nonlocal(
+          ) if getattr(ctx.pseudo_cache, "channel_projectors_compact_gk", None)
+          is not None else _normcons.energy_nonlocal(
             coeff,
             ctx.potential_nonlocal,
             vol=vol,
@@ -824,7 +851,9 @@ def get_backend(
       return NormConservingBackend(config)
     if pp_type in ("us", "ultrasoft"):
       return UltrasoftBackend(config)
-    raise NotImplementedError(f"Pseudopotential type '{pp_type}' is not yet supported.")
+    raise NotImplementedError(
+      f"Pseudopotential type '{pp_type}' is not yet supported."
+    )
   return AllElectronBackend(config)
 
 

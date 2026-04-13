@@ -171,22 +171,21 @@ def _uspp_hvp_compact(
     vol,
     channel_mask=channel_mask,
   )
-  smooth_compact = _squeeze_full_with_indices(jnp.conj(kinetic + local), g_indices)
+  smooth_compact = _squeeze_full_with_indices(
+    jnp.conj(kinetic + local), g_indices
+  )
   return smooth_compact + jnp.conj(nonlocal_compact)
 
 
-@partial(jax.jit, inline=False, static_argnums=(1,))
+@partial(jax.jit, inline=False)
 def _uspp_svp_compact(
   coeff_compact_conj,
-  grid_shape,
-  g_indices,
   projector_channels_compact,
   channel_qii,
   channel_mask,
   vol,
 ):
   """USPP-specific compact-space S|psi> using only explicit operator arrays."""
-  del grid_shape, g_indices
   spsi_compact = _ultrasoft.overlap_apply_compact(
     coeff_compact_conj.conj(),
     projector_channels_compact,
@@ -225,26 +224,24 @@ def _diagonalise_uspp_explicit(
     return _uspp_hvp_compact(
       coeff_batch,
       iteration_state,
-        grid_shape,
-        g_indices,
-        g_vec,
-        kpts,
-        projector_channels_compact,
-        channel_mask,
-        vol,
-      ).reshape(s * k, g, -1)
+      grid_shape,
+      g_indices,
+      g_vec,
+      kpts,
+      projector_channels_compact,
+      channel_mask,
+      vol,
+    ).reshape(s * k, g, -1)
 
   def _lobpcg_bmatmul(c):
     coeff_batch = c.reshape(s, k, g, -1)
     return _uspp_svp_compact(
-        coeff_batch,
-        grid_shape,
-        g_indices,
-        projector_channels_compact,
-        channel_qii,
-        channel_mask,
-        vol,
-      ).reshape(s * k, g, -1)
+      coeff_batch,
+      projector_channels_compact,
+      channel_qii,
+      channel_mask,
+      vol,
+    ).reshape(s * k, g, -1)
 
   eigval, evec = batched_lobpcg(
     matmul=_lobpcg_matmul,
@@ -410,8 +407,7 @@ def run_scf(
   precond = kerker_preconditioner(g_vec, freq_mask)
   uspp_cache = (
     ctx.pseudo_cache
-    if isinstance(ctx.pseudo_cache, UltrasoftMeshCache)
-    else None
+    if isinstance(ctx.pseudo_cache, UltrasoftMeshCache) else None
   )
   if uspp_cache is not None and uspp_cache.channel_projectors_compact_gk is None:
     raise ValueError(
@@ -489,8 +485,8 @@ def run_scf(
       with phase_timer.phase("potential"):
         iteration_state = backend.prepare_iteration(density, ctx)
       diagonalise_phase = (
-        "first_call_overhead" if (config.execution.profile and step == start_step)
-        else "diagonalize"
+        "first_call_overhead" if
+        (config.execution.profile and step == start_step) else "diagonalize"
       )
       with phase_timer.phase(diagonalise_phase):
         if uspp_cache is not None:
