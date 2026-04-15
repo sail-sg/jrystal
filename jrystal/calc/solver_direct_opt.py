@@ -375,45 +375,43 @@ def run_direct_opt(
     interrupted = True
 
   with mesh:
-
-    def _make_update(*, freeze_occupation: bool):
-
-      @jax.jit
-      def update(params, opt_state):
-
-        def loss_fn(x):
-          return free_energy(
-            x["pw"],
-            x["occ"],
-          )
-        (_loss_val, aux), grad = jax.value_and_grad(
-          loss_fn, has_aux=True,
-        )(params)
-        if freeze_occupation:
-          grad = _freeze_occupation_gradient(grad)
-        total_energy, free_energy_value = aux
-        total_energy_metric = _total_energy_metric(total_energy, ew)
-        updates, new_opt_state = optimizer.update(
-          grad,
-          opt_state,
-          params,
-          value=total_energy_metric,
-        )
-        new_params = optax.apply_updates(params, updates)
-        return (
-          new_params,
-          new_opt_state,
-          total_energy,
-          free_energy_value,
-        )
-
-      return update
-
-    update = _make_update(freeze_occupation=False)
-    update_warmup = _make_update(
-      freeze_occupation=occupation_setup.trainable and
-      occupation_warmup_steps > 0,
+    freeze_allowed = bool(
+      occupation_setup.trainable and occupation_warmup_steps > 0
     )
+
+    @jax.jit
+    def update(params, opt_state, freeze_occupation):
+
+      def loss_fn(x):
+        return free_energy(
+          x["pw"],
+          x["occ"],
+        )
+
+      (_loss_val, aux), grad = jax.value_and_grad(
+        loss_fn, has_aux=True,
+      )(params)
+      grad = jax.lax.cond(
+        freeze_occupation,
+        _freeze_occupation_gradient,
+        lambda g: g,
+        grad,
+      )
+      total_energy, free_energy_value = aux
+      total_energy_metric = _total_energy_metric(total_energy, ew)
+      updates, new_opt_state = optimizer.update(
+        grad,
+        opt_state,
+        params,
+        value=total_energy_metric,
+      )
+      new_params = optax.apply_updates(params, updates)
+      return (
+        new_params,
+        new_opt_state,
+        total_energy,
+        free_energy_value,
+      )
 
     old_handler = signal.signal(signal.SIGINT, _handle_sigint)
 
@@ -459,18 +457,19 @@ def run_direct_opt(
           opt_state = reset_occupation_plateau_state(
             optimizer, opt_state, params
           )
-        step_update = (
-          update_warmup if occupation_setup.trainable and
-          step < occupation_warmup_steps else update
+        freeze_now = jnp.asarray(
+          freeze_allowed and step < occupation_warmup_steps,
+          dtype=jnp.bool_,
         )
         update_phase = (
           "first_call_overhead" if
           (config.execution.profile and step == start_step) else "update_step"
         )
         with phase_timer.phase(update_phase):
-          params, opt_state, total_val, free_val = step_update(
+          params, opt_state, total_val, free_val = update(
             params,
             opt_state,
+            freeze_now,
           )
           total_val, free_val = jax.block_until_ready((total_val, free_val))
         total_energy = float(_total_energy_metric(total_val, ew))

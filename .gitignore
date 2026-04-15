@@ -43,6 +43,8 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+*/jax_compile_cache/
+jax_compile_cache/
 nosetests.xml
 coverage.xml
 *.cover

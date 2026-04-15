@@ -50,9 +50,27 @@ def set_env_params(config: JrystalConfigDict):
   ).lower()
   jax.config.update("jax_debug_nans", config.execution.jax_debug_nans)
   jax.config.update("jax_disable_jit", config.experimental.disable_jit)
+  if (
+    config.execution.compile_cache and
+    config.execution.compile_cache_dir is not None
+  ):
+    cache_dir = os.path.expanduser(config.execution.compile_cache_dir)
+    os.makedirs(cache_dir, exist_ok=True)
+    jax.config.update("jax_compilation_cache_dir", cache_dir)
+    jax.config.update("jax_persistent_cache_min_entry_size_bytes", -1)
+    jax.config.update("jax_persistent_cache_min_compile_time_secs", 1.0)
 
   if config.execution.verbose:
     stage_line("Init", "Verbose mode is on.", level="verbose")
+    if (
+      config.execution.compile_cache and
+      config.execution.compile_cache_dir is not None
+    ):
+      stage_line(
+        "Init",
+        f"JAX compile cache: {os.path.expanduser(config.execution.compile_cache_dir)}",
+        level="verbose",
+      )
     if config.execution.jax_enable_x64:
       stage_line("Init", "Precision: Double (64 bit).", level="verbose")
     else:

@@ -238,6 +238,19 @@ def channel_pair_density_compact(
   )
 
 
+def _channel_to_beta_one_hot(
+  channel_beta: Int[Array, "atom channel"],
+  num_beta: int,
+  dtype,
+) -> Float[Array, "atom channel beta"]:
+  """Return a one-hot channel->beta map for vectorized contractions."""
+  return jax.nn.one_hot(
+    jnp.asarray(channel_beta, dtype=jnp.int32),
+    num_classes=num_beta,
+    dtype=dtype,
+  )
+
+
 def channel_pair_multipoles(
   pair_density: Complex[Array, "spin atom channel channel"],
   channel_coupling: Float[Array, "atom channel channel l m"],
@@ -245,26 +258,18 @@ def channel_pair_multipoles(
   max_beta: int,
 ) -> Complex[Array, "spin atom beta beta l m"]:
   """Accumulate channel-pair density into one-center beta-pair multipoles."""
-  spin = pair_density.shape[0]
-  atom = pair_density.shape[1]
-  l_dim = channel_coupling.shape[3]
-  m_dim = channel_coupling.shape[4]
-  output = jnp.zeros(
-    (spin, atom, max_beta, max_beta, l_dim, m_dim), dtype=pair_density.dtype
+  one_hot = _channel_to_beta_one_hot(
+    channel_beta,
+    max_beta,
+    pair_density.real.dtype,
   )
-
-  channel_beta_np = np.asarray(channel_beta, dtype=np.int32)
-  num_channel = pair_density.shape[2]
-  for atom_idx in range(atom):
-    for channel_i in range(num_channel):
-      beta_i = int(channel_beta_np[atom_idx, channel_i])
-      for channel_j in range(num_channel):
-        beta_j = int(channel_beta_np[atom_idx, channel_j])
-        output = output.at[:, atom_idx, beta_i, beta_j].add(
-          pair_density[:, atom_idx, channel_i, channel_j][..., None, None] *
-          channel_coupling[atom_idx, channel_i, channel_j],
-        )
-  return output
+  return einsum(
+    pair_density,
+    one_hot,
+    one_hot,
+    channel_coupling,
+    "s a i j, a i p, a j q, a i j l m -> s a p q l m",
+  )
 
 
 def augmentation_density_from_multipoles(
@@ -398,27 +403,25 @@ def effective_channel_matrix(
       local_potential_spin,
       "a i j l x y z, a l m x y z, x y z -> a i j l m",
     ) * (vol / num_grids)
-
-    atom_matrices = []
-    channel_beta_np = np.asarray(channel_beta, dtype=np.int32)
     mask = jnp.asarray(channel_mask) if channel_mask is not None else None
-
-    for atom_idx in range(channel_dii.shape[0]):
-      beta_indices = channel_beta_np[atom_idx]
-      gathered = basis_integrals[atom_idx][
-        beta_indices[:, None],
-        beta_indices[None, :],
-      ]
-      atom_matrix = channel_dii[atom_idx] + jnp.sum(
-        channel_coupling[atom_idx] * gathered,
-        axis=(-1, -2),
-      )
-      if mask is not None:
-        atom_mask = mask[atom_idx]
-        atom_matrix = atom_matrix * (atom_mask[:, None] * atom_mask[None, :])
-      atom_matrices.append(atom_matrix)
-
-    return jnp.stack(atom_matrices, axis=0)
+    one_hot = _channel_to_beta_one_hot(
+      channel_beta,
+      basis_integrals.shape[1],
+      basis_integrals.dtype,
+    )
+    gathered = einsum(
+      basis_integrals,
+      one_hot,
+      one_hot,
+      "a p q l m, a i p, a j q -> a i j l m",
+    )
+    atom_matrix = channel_dii + jnp.sum(
+      channel_coupling * gathered,
+      axis=(-1, -2),
+    )
+    if mask is not None:
+      atom_matrix = atom_matrix * (mask[..., None] * mask[:, None, :])
+    return atom_matrix
 
   local_potential_r = jnp.asarray(local_potential_r)
   if local_potential_r.ndim == 3:
