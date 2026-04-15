@@ -84,6 +84,7 @@ def band_structure(
   y_max=None,
   figsize=(8, 6),
   colors=None,
+  alpha=0.6,
   save_path=None,
   ax=None,
 ):
@@ -118,14 +119,24 @@ def band_structure(
     fig = ax.figure
 
   num_spin = y.shape[0]
-  colors = colors or ["#1f77b4", "#ff7f0e"]
+  colors = colors or ["#1f77b4", "#d62728"]
   for spin_index in range(num_spin):
+    if num_spin == 1:
+      spin_label = "Spin"
+    elif spin_index == 0:
+      spin_label = "Spin up"
+    elif spin_index == 1:
+      spin_label = "Spin down"
+    else:
+      spin_label = f"Spin {spin_index + 1}"
     for band_index in range(y.shape[-1]):
       ax.plot(
         x,
         y[spin_index, :, band_index],
         color=colors[spin_index % len(colors)],
         linewidth=1.2,
+        alpha=alpha,
+        label=spin_label if band_index == 0 else None,
       )
 
   if reference_energy is not None:
@@ -157,6 +168,7 @@ def band_structure(
     ax.set_xticks(tick_positions[:len(tick_labels)])
     ax.set_xticklabels(tick_labels[:len(tick_positions)])
 
+  ax.legend(frameon=False)
   fig.tight_layout()
   if save_path is not None:
     fig.savefig(save_path)

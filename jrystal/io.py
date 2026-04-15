@@ -63,12 +63,7 @@ def _formula_from_crystal(crystal) -> str:
 
 
 def resolve_output_root(config: JrystalConfigDict) -> Path:
-  output_dir = config.io.output_dir
-  if output_dir is None and config.io.save_dir is not None:
-    output_dir = config.io.save_dir
-  if output_dir is None:
-    output_dir = "out"
-  return Path(output_dir).expanduser().resolve()
+  return Path(config.io.output_dir).expanduser().resolve()
 
 
 def setup_output_dir(
@@ -399,12 +394,6 @@ def save_band_structure(
       _profiling_payload(result),
     )
 
-  if config.io.save_dir is not None:
-    legacy_name = "".join(result.crystal.symbols or []) + "_band_structure.npy"
-    np.save(
-      resolve_output_root(config) / legacy_name, np.asarray(result.eigenvalues)
-    )
-
   if not config.band.plot.enabled:
     return
 
@@ -559,9 +548,9 @@ def _validate_restart_compatibility(
     current_config.occupation.empty_bands,
   )
   _compare_restart_field(
-    "method.pseudopotential_type",
-    prev_config.method.pseudopotential_type,
-    current_config.method.pseudopotential_type,
+    "method.family",
+    prev_config.method.family,
+    current_config.method.family,
   )
 
   from .calc.opt_utils import create_crystal

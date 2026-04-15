@@ -135,13 +135,13 @@ def _run_nscf_ae(
     params = optax.apply_updates(params, updates)
     return params, opt_state, val
 
+  def update_scan(carry, _):
+    params, opt_state, kpts = carry
+    params, opt_state, _ = update(params, opt_state, kpts, g_vec)
+    return (params, opt_state, kpts), None
+
   @partial(jax.pmap, in_axes=(0, 0, 0), devices=jax.devices()[:util_devices])
   def optimize_first_kpoint(kpts, params_pw, opt_state):
-
-    def update_scan(carry, _):
-      params, opt_state, kpts = carry
-      params, opt_state, _ = update(params, opt_state, kpts, g_vec)
-      return (params, opt_state, kpts), None
 
     carry, _ = jax.lax.scan(
       update_scan, (params_pw, opt_state, kpts[0:1]),
@@ -328,17 +328,17 @@ def _run_nscf_nc(
     params = optax.apply_updates(params, updates)
     return params, opt_state, val
 
+  def update_scan(carry, _):
+    params, opt_state, nl, kpt = carry
+    params, opt_state, _ = update(params, opt_state, kpt, g_vec, nl)
+    return (params, opt_state, nl, kpt), None
+
   @partial(
     jax.pmap,
     in_axes=(0, 0, 0, 0),
     devices=jax.devices()[:util_devices],
   )
   def optimize_first_kpoint(kpts, beta_gk, params_pw, opt_state):
-
-    def update_scan(carry, _):
-      params, opt_state, nl, kpt = carry
-      params, opt_state, _ = update(params, opt_state, kpt, g_vec, nl)
-      return (params, opt_state, nl, kpt), None
 
     nl_first = _get_nl(kpts[0:1], _select_beta(beta_gk, 0))
     carry, _ = jax.lax.scan(
@@ -783,10 +783,7 @@ def run_nscf(
 
   density = ground_state_result.density
   num_electrons = backend.num_electrons(ctx)
-  empty_bands = (
-    config.band.empty_bands
-    if config.band.empty_bands is not None else config.occupation.empty_bands
-  )
+  empty_bands = config.band.empty_bands
   num_bands = ceil(
     num_electrons / _occupation_max(config.system.spin_restricted)
   ) + empty_bands

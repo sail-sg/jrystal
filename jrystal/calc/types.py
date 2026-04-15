@@ -99,6 +99,7 @@ class GroundStateResult:
   fermi_energy: Optional[float] = None
   convergence_history: list[dict[str, Any]] = field(default_factory=list)
   total_energy_history: list[float] = field(default_factory=list)
+  profiling: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -111,6 +112,8 @@ class BandStructureResult:
   eigenvalues: Any
   ground_state_energy: float = 0.0
   reference_energy: Optional[float] = None
+  wall_time: float = 0.0
+  profiling: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

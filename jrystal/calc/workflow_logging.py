@@ -36,10 +36,8 @@ def _solver_mode_summary(config) -> str:
   if mode != "auto":
     return mode
   auto = config.solver.auto
-  return (
-    f"auto primary={auto.primary} "
-    f"fallback={auto.fallback}"
-  )
+  return (f"auto primary={auto.primary} "
+          f"fallback={auto.fallback}")
 
 
 def _electronic_counts(config, num_electrons: int) -> tuple[int, int, int]:
@@ -50,15 +48,15 @@ def _electronic_counts(config, num_electrons: int) -> tuple[int, int, int]:
 
 
 def _method_label(config) -> str:
-  if not config.method.use_pseudopotential:
+  family = str(config.method.family).lower()
+  if family == "ae":
     return f"AE xc={config.method.xc}"
-  pp_kind = str(config.method.pseudopotential_type).lower()
-  if pp_kind in {"nc", "normcons", "normconserving"}:
+  if family == "nc":
     kind = "NC"
-  elif pp_kind in {"us", "ultrasoft"}:
+  elif family == "us":
     kind = "USPP"
   else:
-    kind = pp_kind
+    kind = family
   return f"{kind} xc={config.method.xc}"
 
 
@@ -74,6 +72,14 @@ def _k_summary(config, ctx) -> str:
 
 def _started_label(started_at: str) -> str:
   return started_at.replace("T", " ")[:19]
+
+
+def _mask_ratio_percent(ctx) -> float:
+  grid_sizes = tuple(int(x) for x in ctx.basis.grid_sizes)
+  total_grid = int(np.prod(grid_sizes))
+  if total_grid <= 0:
+    return 0.0
+  return 100.0 * float(ctx.basis.num_g) / float(total_grid)
 
 
 def log_system_info(
@@ -126,7 +132,8 @@ def log_system_info(
     (
       f"Basis    cutoff={float(config.basis.cutoff_energy):.1f} Ha "
       f"grid={tuple(int(x) for x in ctx.basis.grid_sizes)} "
-      f"g={int(ctx.basis.num_g)}"
+      f"g={int(ctx.basis.num_g)} "
+      f"mask={_mask_ratio_percent(ctx):.2f}%"
     ),
     level="normal",
   )

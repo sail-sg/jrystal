@@ -37,9 +37,8 @@ default_config = {
     },
   "method":
     {
-      "xc": "lda_x",
-      "use_pseudopotential": False,
-      "pseudopotential_type": "nc",
+      "xc": "lda_x+lda_c_pw",
+      "family": "ae",
       "pseudopotential_file_dir": None,
     },
   "basis":
@@ -91,26 +90,30 @@ default_config = {
               "b2": 0.99,
             },
           "scheduler": None,
+          "occupation_optimizer":
+            {
+              "warmup_steps": 500,
+              "learning_rate": 0.001,
+              "scheduler": None,
+            },
           "convergence": {
             "window_size": 20,
             "energy_std_tol": 1e-6,
           },
         },
     },
-  "occupation":
-    {
-      "method": "uniform",
-      "smearing": 0.0,
-      "empty_bands": 20,
-      "warmup_steps": 500,
-    },
+  "occupation": {
+    "method": "fermi-dirac",
+    "smearing": 0.0,
+    "empty_bands": 20,
+  },
   "ewald": {
     "eta": 0.1,
     "cutoff": 2e4,
   },
   "band":
     {
-      "empty_bands": None,
+      "empty_bands": 20,
       "k_path_special_points": None,
       "num_kpoints": 64,
       "k_path_file": None,
@@ -136,14 +139,12 @@ default_config = {
       "verbose": True,
       "eps": 1e-8,
     },
-  "experimental":
-    {
-      "disable_jit": False,
-    },
+  "experimental": {
+    "disable_jit": False,
+  },
   "io":
     {
       "output_dir": "out/",
-      "save_dir": None,
       "run_label": None,
       "save_density": True,
       "save_wavefunction": False,
@@ -165,15 +166,18 @@ _GROUP_FIELDS = {
   "method":
     {
       "xc",
+      "family",
       "use_pseudopotential",
       "pseudopotential_type",
       "pseudopotential_file_dir",
     },
-  "basis": {
-    "freq_mask_method",
-    "cutoff_energy",
-    "grid_sizes",
-  },
+  "basis":
+    {
+      "freq_mask_method",
+      "cutoff_energy",
+      "cutoff_energy_ha",
+      "grid_sizes",
+    },
   "ksampling": {
     "k_grid_sizes",
     "symmetry_reduction",
@@ -188,6 +192,7 @@ _GROUP_FIELDS = {
       "optimizer",
       "optimizer_args",
       "scheduler",
+      "occupation_optimizer",
       "epoch",
       "scf_max_iter",
       "scf_max_iteration",
@@ -204,6 +209,8 @@ _GROUP_FIELDS = {
       "empty_bands",
       "warmup_steps",
       "warmup_step",
+      "learning_rate",
+      "scheduler",
     },
   "ewald": {
     "eta",
@@ -233,9 +240,7 @@ _GROUP_FIELDS = {
       "verbose",
       "eps",
     },
-  "experimental": {
-    "disable_jit",
-  },
+  "experimental": {"disable_jit",},
   "io":
     {
       "output_dir",
@@ -299,9 +304,17 @@ _SOLVER_DIRECT_OPT_FIELDS = {
   "optimizer",
   "optimizer_args",
   "scheduler",
+  "occupation_optimizer",
   "convergence",
   "convergence_window_size",
   "convergence_condition",
+}
+
+_SOLVER_DIRECT_OPT_OCCUPATION_OPT_FIELDS = {
+  "warmup_steps",
+  "warmup_step",
+  "learning_rate",
+  "scheduler",
 }
 
 _SOLVER_DIRECT_OPT_CONVERGENCE_FIELDS = {
@@ -309,6 +322,28 @@ _SOLVER_DIRECT_OPT_CONVERGENCE_FIELDS = {
   "energy_std_tol",
   "convergence_window_size",
   "convergence_condition",
+}
+
+_OCCUPATION_SCHEDULER_FIELDS = {
+  "name",
+  "factor",
+  "patience",
+  "rtol",
+  "atol",
+  "cooldown",
+  "accumulation_size",
+  "min_scale",
+}
+
+_DEFAULT_OCCUPATION_SCHEDULER = {
+  "name": "reduce_on_plateau",
+  "factor": 0.5,
+  "patience": 50,
+  "rtol": 1e-4,
+  "atol": 0.0,
+  "cooldown": 20,
+  "accumulation_size": 1,
+  "min_scale": 1e-2,
 }
 
 _BAND_PLOT_FIELDS = {
@@ -325,11 +360,11 @@ _LEGACY_FIELD_MAP = {
   "spin": ("system", "spin"),
   "spin_restricted": ("system", "spin_restricted"),
   "xc": ("method", "xc"),
-  "use_pseudopotential": ("method", "use_pseudopotential"),
-  "pseudopotential_type": ("method", "pseudopotential_type"),
+  "family": ("method", "family"),
   "pseudopotential_file_dir": ("method", "pseudopotential_file_dir"),
   "freq_mask_method": ("basis", "freq_mask_method"),
   "cutoff_energy": ("basis", "cutoff_energy"),
+  "cutoff_energy_ha": ("basis", "cutoff_energy"),
   "grid_sizes": ("basis", "grid_sizes"),
   "k_grid_sizes": ("ksampling", "k_grid_sizes"),
   "symmetry_reduction": ("ksampling", "symmetry_reduction"),
@@ -360,8 +395,12 @@ _LEGACY_FIELD_MAP = {
   "occupation": ("occupation", "method"),
   "smearing": ("occupation", "smearing"),
   "empty_bands": ("occupation", "empty_bands"),
-  "occupation_warmup_steps": ("occupation", "warmup_steps"),
-  "occupation_warmup_step": ("occupation", "warmup_steps"),
+  "occupation_warmup_steps":
+    ("solver", "direct_opt", "occupation_optimizer", "warmup_steps"),
+  "occupation_warmup_step":
+    ("solver", "direct_opt", "occupation_optimizer", "warmup_steps"),
+  "occupation_learning_rate":
+    ("solver", "direct_opt", "occupation_optimizer", "learning_rate"),
   "band_structure_empty_bands": ("band", "empty_bands"),
   "k_path_special_points": ("band", "k_path_special_points"),
   "num_kpoints": ("band", "num_kpoints"),
@@ -382,7 +421,7 @@ _LEGACY_FIELD_MAP = {
   "disable_jit": ("experimental", "disable_jit"),
   "jax_disable_jit": ("experimental", "disable_jit"),
   "output_dir": ("io", "output_dir"),
-  "save_dir": ("io", "save_dir"),
+  "save_dir": ("io", "output_dir"),
   "run_label": ("io", "run_label"),
   "save_density": ("io", "save_density"),
   "save_wavefunction": ("io", "save_wavefunction"),
@@ -423,6 +462,9 @@ def _warn_unknown_fields(config: Mapping[str, Any]) -> None:
         continue
       if key == "band":
         _warn_unknown_band_fields(value)
+        continue
+      if key == "occupation":
+        _warn_unknown_occupation_fields(value)
         continue
       unknown_fields = sorted(set(value) - _GROUP_FIELDS[key])
       for unknown_field in unknown_fields:
@@ -503,6 +545,16 @@ def _warn_unknown_solver_fields(solver_config: Mapping[str, Any]) -> None:
           f"Unknown config field: solver.direct_opt.convergence.{unknown_field}",
           stacklevel=4,
         )
+    occupation_optimizer = direct_opt_config.get("occupation_optimizer")
+    if isinstance(occupation_optimizer, Mapping):
+      for unknown_field in sorted(
+        set(occupation_optimizer) - _SOLVER_DIRECT_OPT_OCCUPATION_OPT_FIELDS
+      ):
+        warnings.warn(
+          "Unknown config field: "
+          f"solver.direct_opt.occupation_optimizer.{unknown_field}",
+          stacklevel=4,
+        )
 
 
 def _warn_unknown_band_fields(band_config: Mapping[str, Any]) -> None:
@@ -522,11 +574,42 @@ def _warn_unknown_band_fields(band_config: Mapping[str, Any]) -> None:
       )
 
 
+def _warn_unknown_occupation_fields(
+  occupation_config: Mapping[str, Any]
+) -> None:
+  unknown_fields = sorted(set(occupation_config) - _GROUP_FIELDS["occupation"])
+  for unknown_field in unknown_fields:
+    warnings.warn(
+      f"Unknown config field: occupation.{unknown_field}",
+      stacklevel=4,
+    )
+
+  scheduler_config = occupation_config.get("scheduler")
+  if isinstance(scheduler_config, Mapping):
+    for unknown_field in sorted(
+      set(scheduler_config) - _OCCUPATION_SCHEDULER_FIELDS,
+    ):
+      warnings.warn(
+        f"Unknown config field: occupation.scheduler.{unknown_field}",
+        stacklevel=4,
+      )
+
+
 def _apply_legacy_field(
   config: dict[str, Any],
   key: str,
   value: Any,
 ) -> None:
+  if key == "use_pseudopotential":
+    if not isinstance(value, bool):
+      raise TypeError("Config field `use_pseudopotential` must be a bool.")
+    config["method"]["family"] = "nc" if value else "ae"
+    return
+
+  if key == "pseudopotential_type":
+    config["method"]["family"] = _normalize_method_family(value)
+    return
+
   if key == "ewald_args":
     if not isinstance(value, Mapping):
       raise TypeError("Config field `ewald_args` must be a mapping.")
@@ -567,6 +650,66 @@ def _normalize_solver_mode(value: Any) -> Any:
   if value == "direct":
     return "direct_opt"
   return value
+
+
+def _normalize_method_family(value: Any) -> str:
+  if not isinstance(value, str):
+    raise TypeError("Config field `method.family` must be a string.")
+  normalized = value.lower().replace("-", "_")
+  if normalized in {"ae", "all_electron", "allelectron"}:
+    return "ae"
+  if normalized in {"nc", "normcons", "normconserving"}:
+    return "nc"
+  if normalized in {"us", "ultrasoft"}:
+    return "us"
+  raise ValueError(
+    "Config field `method.family` must be one of 'ae', 'nc', or 'us'."
+  )
+
+
+def _normalize_method_group(
+  target: dict[str, Any],
+  group_value: Mapping[str, Any],
+) -> None:
+  method_value = copy.deepcopy(dict(group_value))
+  family = method_value.pop("family", None)
+  use_pseudopotential = method_value.pop("use_pseudopotential", None)
+  pseudopotential_type = method_value.pop("pseudopotential_type", None)
+
+  explicit_family = (
+    _normalize_method_family(family) if family is not None else None
+  )
+  legacy_family = None
+  if use_pseudopotential is not None:
+    if not isinstance(use_pseudopotential, bool):
+      raise TypeError(
+        "Config field `method.use_pseudopotential` must be a bool."
+      )
+    if not use_pseudopotential:
+      legacy_family = "ae"
+    else:
+      legacy_family = (
+        _normalize_method_family(pseudopotential_type)
+        if pseudopotential_type is not None else "nc"
+      )
+  elif pseudopotential_type is not None:
+    legacy_family = _normalize_method_family(pseudopotential_type)
+
+  if explicit_family is not None and legacy_family is not None and (
+    explicit_family != legacy_family
+  ):
+    raise ValueError(
+      "Config fields `method.family` and legacy "
+      "`method.use_pseudopotential`/`method.pseudopotential_type` "
+      "must agree."
+    )
+
+  if explicit_family is not None:
+    target["family"] = explicit_family
+  elif legacy_family is not None:
+    target["family"] = legacy_family
+
+  _deep_merge(target, method_value)
 
 
 def _normalize_solver_scf_group(
@@ -660,6 +803,18 @@ def _normalize_solver_direct_opt_group(
       )
     _deep_merge(target["optimizer"], copy.deepcopy(dict(optimizer_args)))
 
+  occupation_optimizer = direct_opt_value.pop("occupation_optimizer", None)
+  if occupation_optimizer is not None:
+    if not isinstance(occupation_optimizer, Mapping):
+      raise TypeError(
+        "Config group `solver.direct_opt.occupation_optimizer` "
+        "must be a mapping."
+      )
+    _normalize_occupation_optimizer_group(
+      target["occupation_optimizer"],
+      occupation_optimizer,
+    )
+
   convergence = direct_opt_value.pop("convergence", None)
   if convergence is not None:
     if not isinstance(convergence, Mapping):
@@ -691,6 +846,17 @@ def _normalize_solver_direct_opt_group(
     )
 
   _deep_merge(target, direct_opt_value)
+
+
+def _normalize_basis_group(
+  target: dict[str, Any],
+  group_value: Mapping[str, Any],
+) -> None:
+  basis_value = copy.deepcopy(dict(group_value))
+  cutoff_energy_ha = basis_value.pop("cutoff_energy_ha", None)
+  if cutoff_energy_ha is not None and "cutoff_energy" not in basis_value:
+    basis_value["cutoff_energy"] = cutoff_energy_ha
+  _deep_merge(target, basis_value)
 
 
 def _normalize_solver_group(
@@ -764,6 +930,8 @@ def _normalize_band_group(
   group_value: Mapping[str, Any],
 ) -> None:
   band_value = copy.deepcopy(dict(group_value))
+  if band_value.get("empty_bands") is None:
+    band_value.pop("empty_bands", None)
   plot = band_value.pop("plot", None)
   if plot is not None:
     if not isinstance(plot, Mapping):
@@ -773,12 +941,55 @@ def _normalize_band_group(
   _deep_merge(target, band_value)
 
 
+def _normalize_occupation_optimizer_group(
+  target: dict[str, Any],
+  group_value: Mapping[str, Any],
+) -> None:
+  occupation_optimizer_value = copy.deepcopy(dict(group_value))
+  if "warmup_step" in occupation_optimizer_value:
+    occupation_optimizer_value.setdefault(
+      "warmup_steps",
+      occupation_optimizer_value.pop("warmup_step"),
+    )
+
+  scheduler = occupation_optimizer_value.pop("scheduler", None)
+  if scheduler is not None:
+    if not isinstance(scheduler, Mapping):
+      raise TypeError(
+        "Config group `solver.direct_opt.occupation_optimizer.scheduler` "
+        "must be a mapping."
+      )
+    scheduler_value = copy.deepcopy(_DEFAULT_OCCUPATION_SCHEDULER)
+    _deep_merge(scheduler_value, copy.deepcopy(dict(scheduler)))
+    occupation_optimizer_value["scheduler"] = scheduler_value
+
+  _deep_merge(target, occupation_optimizer_value)
+
+
+def _normalize_occupation_group(
+  normalized: dict[str, Any],
+  group_value: Mapping[str, Any],
+) -> None:
+  occupation_value = copy.deepcopy(dict(group_value))
+  legacy_optimizer_fields = {}
+  for key in ("warmup_steps", "warmup_step", "learning_rate", "scheduler"):
+    if key in occupation_value:
+      legacy_optimizer_fields[key] = occupation_value.pop(key)
+
+  _deep_merge(normalized["occupation"], occupation_value)
+  if legacy_optimizer_fields:
+    _normalize_occupation_optimizer_group(
+      normalized["solver"]["direct_opt"]["occupation_optimizer"],
+      legacy_optimizer_fields,
+    )
+
+
 def _normalize_io_group(
   target: dict[str, Any],
   group_value: Mapping[str, Any],
 ) -> None:
   io_value = copy.deepcopy(dict(group_value))
-  legacy_save_dir = io_value.get("save_dir")
+  legacy_save_dir = io_value.pop("save_dir", None)
   explicit_output_dir = "output_dir" in io_value
 
   _deep_merge(target, io_value)
@@ -852,13 +1063,17 @@ def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
           band_plot_enabled_explicit = True
       if key == "solver":
         _normalize_solver_group(normalized["solver"], group_value)
+      elif key == "method":
+        _normalize_method_group(normalized["method"], group_value)
+      elif key == "basis":
+        _normalize_basis_group(normalized["basis"], group_value)
       elif key == "band":
         _normalize_band_group(normalized["band"], group_value)
+      elif key == "occupation":
+        _normalize_occupation_group(normalized, group_value)
       elif key == "io":
         _normalize_io_group(normalized["io"], group_value)
       else:
-        if key == "occupation" and "warmup_step" in group_value:
-          group_value.setdefault("warmup_steps", group_value.pop("warmup_step"))
         _deep_merge(normalized[key], group_value)
       continue
 
@@ -872,9 +1087,6 @@ def _normalize_config(config: Optional[Mapping[str, Any]]) -> dict[str, Any]:
 
     if key in _GROUP_FIELDS:
       raise TypeError(f"Config group `{key}` must be a mapping.")
-
-  if normalized["band"]["empty_bands"] is None:
-    normalized["band"]["empty_bands"] = normalized["occupation"]["empty_bands"]
 
   if (not band_plot_enabled_explicit and legacy_band_plot_enabled is not None):
     normalized["band"]["plot"]["enabled"] = legacy_band_plot_enabled
@@ -897,9 +1109,6 @@ def _migrate_flat_config(flat: dict[str, Any]) -> dict[str, Any]:
   for key, value in flat.items():
     if key == "ewald_args" or key in _LEGACY_FIELD_MAP:
       _apply_legacy_field(migrated, key, value)
-
-  if migrated["band"]["empty_bands"] is None:
-    migrated["band"]["empty_bands"] = migrated["occupation"]["empty_bands"]
 
   return migrated
 
@@ -962,13 +1171,11 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
 
   if not isinstance(config["method"]["xc"], str):
     raise TypeError("Config field `method.xc` must be a string.")
-  _validate_bool(
-    config["method"]["use_pseudopotential"],
-    "method.use_pseudopotential",
-  )
-  if not isinstance(config["method"]["pseudopotential_type"], str):
-    raise TypeError(
-      "Config field `method.pseudopotential_type` must be a string."
+  if not isinstance(config["method"]["family"], str):
+    raise TypeError("Config field `method.family` must be a string.")
+  if config["method"]["family"] not in {"ae", "nc", "us"}:
+    raise ValueError(
+      "Config field `method.family` must be one of 'ae', 'nc', or 'us'."
     )
   _validate_optional_string(
     config["method"]["pseudopotential_file_dir"],
@@ -1061,7 +1268,9 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
     config["solver"]["direct_opt"]["max_steps"],
     "solver.direct_opt.max_steps",
   )
-  if not isinstance(config["solver"]["direct_opt"]["canonical_transform"], bool):
+  if not isinstance(
+    config["solver"]["direct_opt"]["canonical_transform"], bool
+  ):
     raise TypeError(
       "Config field `solver.direct_opt.canonical_transform` must be a bool."
     )
@@ -1089,22 +1298,101 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
     config["solver"]["direct_opt"]["convergence"]["energy_std_tol"],
     "solver.direct_opt.convergence.energy_std_tol",
   )
+  occupation_optimizer = config["solver"]["direct_opt"]["occupation_optimizer"]
+  _validate_int(
+    occupation_optimizer["warmup_steps"],
+    "solver.direct_opt.occupation_optimizer.warmup_steps",
+  )
+  if occupation_optimizer["warmup_steps"] < 0:
+    raise ValueError(
+      "Config field `solver.direct_opt.occupation_optimizer.warmup_steps` "
+      "must be non-negative."
+    )
+  _validate_number(
+    occupation_optimizer["learning_rate"],
+    "solver.direct_opt.occupation_optimizer.learning_rate",
+  )
+  if occupation_optimizer["learning_rate"] <= 0:
+    raise ValueError(
+      "Config field `solver.direct_opt.occupation_optimizer.learning_rate` "
+      "must be positive."
+    )
+  scheduler_config = occupation_optimizer["scheduler"]
+  if scheduler_config is not None:
+    if not isinstance(scheduler_config, Mapping):
+      raise TypeError(
+        "Config field `solver.direct_opt.occupation_optimizer.scheduler` "
+        "must be a mapping or None."
+      )
+    if scheduler_config.get("name") != "reduce_on_plateau":
+      raise ValueError(
+        "Config field `solver.direct_opt.occupation_optimizer.scheduler.name` "
+        "must be 'reduce_on_plateau'."
+      )
+    _validate_number(
+      scheduler_config["factor"],
+      "solver.direct_opt.occupation_optimizer.scheduler.factor",
+    )
+    _validate_int(
+      scheduler_config["patience"],
+      "solver.direct_opt.occupation_optimizer.scheduler.patience",
+    )
+    _validate_number(
+      scheduler_config["rtol"],
+      "solver.direct_opt.occupation_optimizer.scheduler.rtol",
+    )
+    _validate_number(
+      scheduler_config["atol"],
+      "solver.direct_opt.occupation_optimizer.scheduler.atol",
+    )
+    _validate_int(
+      scheduler_config["cooldown"],
+      "solver.direct_opt.occupation_optimizer.scheduler.cooldown",
+    )
+    _validate_int(
+      scheduler_config["accumulation_size"],
+      "solver.direct_opt.occupation_optimizer.scheduler.accumulation_size",
+    )
+    _validate_number(
+      scheduler_config["min_scale"],
+      "solver.direct_opt.occupation_optimizer.scheduler.min_scale",
+    )
+    if not (0.0 < scheduler_config["factor"] < 1.0):
+      raise ValueError(
+        "Config field `solver.direct_opt.occupation_optimizer.scheduler.factor` "
+        "must satisfy 0 < factor < 1."
+      )
+    if scheduler_config["patience"] < 1:
+      raise ValueError(
+        "Config field `solver.direct_opt.occupation_optimizer.scheduler.patience` "
+        "must be positive."
+      )
+    if scheduler_config["cooldown"] < 0:
+      raise ValueError(
+        "Config field `solver.direct_opt.occupation_optimizer.scheduler.cooldown` "
+        "must be non-negative."
+      )
+    if scheduler_config["accumulation_size"] < 1:
+      raise ValueError(
+        "Config field "
+        "`solver.direct_opt.occupation_optimizer.scheduler.accumulation_size` "
+        "must be positive."
+      )
+    if scheduler_config["min_scale"] < 0:
+      raise ValueError(
+        "Config field `solver.direct_opt.occupation_optimizer.scheduler.min_scale` "
+        "must be non-negative."
+      )
 
   if not isinstance(config["occupation"]["method"], str):
     raise TypeError("Config field `occupation.method` must be a string.")
   _validate_number(config["occupation"]["smearing"], "occupation.smearing")
   _validate_int(config["occupation"]["empty_bands"], "occupation.empty_bands")
-  _validate_int(config["occupation"]["warmup_steps"], "occupation.warmup_steps")
-  if config["occupation"]["warmup_steps"] < 0:
-    raise ValueError(
-      "Config field `occupation.warmup_steps` must be non-negative."
-    )
 
   _validate_number(config["ewald"]["eta"], "ewald.eta")
   _validate_number(config["ewald"]["cutoff"], "ewald.cutoff")
 
-  if config["band"]["empty_bands"] is not None:
-    _validate_int(config["band"]["empty_bands"], "band.empty_bands")
+  _validate_int(config["band"]["empty_bands"], "band.empty_bands")
   _validate_optional_string(
     config["band"]["k_path_special_points"],
     "band.k_path_special_points",
@@ -1165,7 +1453,6 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
 
   if not isinstance(config["io"]["output_dir"], str):
     raise TypeError("Config field `io.output_dir` must be a string.")
-  _validate_optional_string(config["io"]["save_dir"], "io.save_dir")
   _validate_optional_string(config["io"]["run_label"], "io.run_label")
   _validate_bool(config["io"]["save_density"], "io.save_density")
   _validate_bool(
@@ -1188,6 +1475,41 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
   if config["io"]["log_level"] not in {"quiet", "normal", "verbose"}:
     raise ValueError(
       "Config field `io.log_level` must be 'quiet', 'normal', or 'verbose'."
+    )
+
+  if config["system"]["spin_restricted"] and config["system"]["spin"] != 0:
+    raise ValueError(
+      "Config fields `system.spin_restricted=true` and `system.spin != 0` "
+      "are incompatible."
+    )
+
+  if (
+    config["method"]["family"] == "ae" and
+    config["method"]["pseudopotential_file_dir"] is not None
+  ):
+    raise ValueError(
+      "Config field `method.pseudopotential_file_dir` cannot be set when "
+      "`method.family` is 'ae'."
+    )
+
+  if config["method"]["family"] in {"nc", "us"}:
+    pseudopotential_dir = config["method"]["pseudopotential_file_dir"]
+    if pseudopotential_dir is not None:
+      from pathlib import Path
+
+      if not Path(pseudopotential_dir).expanduser().exists():
+        raise ValueError(
+          "Config field `method.pseudopotential_file_dir` must point to an "
+          "existing directory."
+        )
+
+  if (
+    config["band"]["k_path_special_points"] is not None and
+    config["band"]["k_path_file"] is not None
+  ):
+    raise ValueError(
+      "Config fields `band.k_path_special_points` and `band.k_path_file` "
+      "cannot both be set."
     )
 
 

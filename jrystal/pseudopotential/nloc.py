@@ -2,7 +2,6 @@
 
 from typing import List, Optional
 
-import jax
 import jax.numpy as jnp
 import numpy as np
 from chex import dataclass
@@ -14,6 +13,24 @@ from .._src.utils import wave_to_density
 from .beta import beta_sbt_grid
 from .local import energy_local, hamiltonian_local
 from .spherical import batch_sph_harm_real, cartesian_to_spherical
+
+
+def _spin_expectation_real(wave_grid, potential_grid, vol, *, diagonal: bool):
+  """Apply a spin-resolved real-space scalar potential to each spin slice."""
+  integral_factor = vol / np.prod(wave_grid.shape[-3:])
+  if diagonal:
+    return einsum(
+      jnp.conj(wave_grid),
+      potential_grid,
+      wave_grid,
+      "s k band x y z, s x y z, s k band x y z -> s k band",
+    ) * integral_factor
+  return einsum(
+    jnp.conj(wave_grid),
+    potential_grid,
+    wave_grid,
+    "s k b1 x y z, s x y z, s k b2 x y z -> s k b1 b2",
+  ) * integral_factor
 
 
 def _compute_spherical_harmonics(
@@ -159,13 +176,13 @@ def potential_nonlocal_psi_reciprocal(
 
   projectors_by_atom = []
   d_matrices = []
-  for atom_position, atom_l, atom_d, atom_beta_gk in zip(
+  for atom_position, atom_l_values, atom_d, atom_beta_gk in zip(
     position,
     nonlocal_angular_momentum,
     nonlocal_d_matrix,
     beta_gk,
   ):
-    atom_l = jnp.asarray(atom_l, dtype=jnp.int32)
+    atom_l = jnp.asarray(atom_l_values, dtype=jnp.int32)
     y_lm_atom = y_lm[atom_l]  # [beta k x y z m]
     projector = einsum(
       y_lm_atom,
@@ -248,8 +265,9 @@ def hamiltonian_matrix(
   v_xc = potential.xc_density(
     hamiltonian_density_grid, g_vector_grid, kohn_sham=kohn_sham, xc_type=xc
   )
-  v_s = har + v_xc
-  h_s = braket.expectation(wave_grid, v_s, vol, diagonal=False, mode="real")
+  h_har = braket.expectation(wave_grid, har, vol, diagonal=False, mode="real")
+  h_xc = _spin_expectation_real(wave_grid, v_xc, vol, diagonal=False)
+  h_s = h_har + h_xc
 
   return ext_nloc + ext_loc + h_s + h_kin
 
@@ -328,9 +346,7 @@ def hamiltonian_trace(
   v_xc = potential.xc_density(
     hamiltonian_density_grid, g_vector_grid, kohn_sham=kohn_sham, xc_type=xc
   )
-  xc_energy = braket.expectation(
-    wave_grid, v_xc, vol, diagonal=True, mode="real"
-  )
+  xc_energy = _spin_expectation_real(wave_grid, v_xc, vol, diagonal=True)
   if kpts_weights is not None:
     xc_energy = xc_energy * kpts_weights[None, :, None]
   h_s = jnp.sum(har + xc_energy)

@@ -127,26 +127,24 @@ def create_pseudopotential(
   config: JrystalConfigDict,
   crystal: Optional[Crystal] = None,
 ):
-  assert config.method.use_pseudopotential
+  if config.method.family == "ae":
+    raise ValueError("All-electron calculations do not use pseudopotentials.")
   crystal = create_crystal(config) if crystal is None else crystal
   _pkg_path = jr.get_pkg_path()
-  if config.method.pseudopotential_type in ["normcons", "normconserving", "nc"]:
+  if config.method.family == "nc":
     if config.method.pseudopotential_file_dir is None:
       path = _pkg_path + '/pseudopotential/normconserving/'
     else:
       path = config.method.pseudopotential_file_dir
     pp = jr.pseudopotential.NormConservingPseudopotential.create(crystal, path)
-  elif config.method.pseudopotential_type in ["ultrasoft", "us"]:
+  elif config.method.family == "us":
     if config.method.pseudopotential_file_dir is None:
       path = _pkg_path + '/pseudopotential/ultrasoft/'
     else:
       path = config.method.pseudopotential_file_dir
     pp = jr.pseudopotential.UltrasoftPseudopotential.create(crystal, path)
   else:
-    raise ValueError(
-      f"Pseudopotential type {config.method.pseudopotential_type} is not "
-      f"supported."
-    )
+    raise ValueError(f"Method family {config.method.family} is not supported.")
 
   stage_line("Init", f"Pseudopotential path: {path}", level="verbose")
 
@@ -176,6 +174,8 @@ def create_grids(
 
 
 def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
+  if config.solver.direct_opt.scheduler:
+    raise NotImplementedError("Scheduler is not implemented yet.")
   optimizer_config = dict(config.solver.direct_opt.optimizer)
   optimizer_name = optimizer_config.pop("name")
   stage_line("DirectOpt", f"optimizer={optimizer_name}", level="verbose")
@@ -183,16 +183,125 @@ def create_optimizer(config: JrystalConfigDict) -> optax.GradientTransformation:
   config_dict = dict(optimizer_config)
   lr = config_dict.pop("learning_rate")
   stage_line("DirectOpt", f"learning_rate={lr}", level="verbose")
-  if config.solver.direct_opt.scheduler:
-    raise NotImplementedError("Scheduler is not implemented yet.")
-
-  # TODO: Add scheduler
 
   if opt:
     optimizer = opt(learning_rate=lr, **config_dict)
   else:
     raise NotImplementedError(f'"{optimizer_name}" is not found in optax.')
   return optimizer
+
+
+def _create_alias_optimizer(
+  optimizer_config,
+  *,
+  learning_rate: float,
+) -> optax.GradientTransformation:
+  optimizer_config = dict(optimizer_config)
+  optimizer_name = optimizer_config.pop("name")
+  opt = getattr(alias, optimizer_name, None)
+  config_dict = dict(optimizer_config)
+  config_dict.pop("learning_rate", None)
+  if opt:
+    return opt(learning_rate=learning_rate, **config_dict)
+  raise NotImplementedError(f'"{optimizer_name}" is not found in optax.')
+
+
+def _create_occupation_scheduler(config: JrystalConfigDict):
+  scheduler_config = config.solver.direct_opt.occupation_optimizer.scheduler
+  if scheduler_config is None:
+    return None
+  if config.solver.direct_opt.scheduler:
+    raise NotImplementedError(
+      "Global `solver.direct_opt.scheduler` is not implemented together "
+      "with `solver.direct_opt.occupation_optimizer.scheduler`."
+    )
+  if scheduler_config.name != "reduce_on_plateau":
+    raise NotImplementedError(
+      f'Occupation scheduler "{scheduler_config.name}" is not supported.'
+    )
+  return optax.contrib.reduce_on_plateau(
+    factor=scheduler_config.factor,
+    patience=scheduler_config.patience,
+    rtol=scheduler_config.rtol,
+    atol=scheduler_config.atol,
+    cooldown=scheduler_config.cooldown,
+    accumulation_size=scheduler_config.accumulation_size,
+    min_scale=scheduler_config.min_scale,
+  )
+
+
+def create_direct_opt_optimizer(
+  config: JrystalConfigDict,
+) -> optax.GradientTransformationExtraArgs:
+  optimizer_name = config.solver.direct_opt.optimizer.name
+  pw_lr = config.solver.direct_opt.optimizer.learning_rate
+  occ_lr = config.solver.direct_opt.occupation_optimizer.learning_rate
+  scheduler = _create_occupation_scheduler(config)
+
+  stage_line(
+    "DirectOpt",
+    f"optimizer={optimizer_name} pw_lr={pw_lr:g} occ_lr={occ_lr:g}",
+    level="verbose",
+  )
+  if scheduler is not None:
+    stage_line(
+      "DirectOpt",
+      (
+        "occ_scheduler=reduce_on_plateau "
+        f"factor={config.solver.direct_opt.occupation_optimizer.scheduler.factor:g} "
+        f"patience={config.solver.direct_opt.occupation_optimizer.scheduler.patience}"
+      ),
+      level="verbose",
+    )
+
+  pw_tx = _create_alias_optimizer(
+    config.solver.direct_opt.optimizer,
+    learning_rate=pw_lr,
+  )
+  occ_optimizer = _create_alias_optimizer(
+    config.solver.direct_opt.optimizer,
+    learning_rate=occ_lr,
+  )
+  if scheduler is not None:
+    occ_tx = optax.named_chain(
+      ("optimizer", occ_optimizer),
+      ("plateau", scheduler),
+    )
+  else:
+    occ_tx = optax.named_chain(("optimizer", occ_optimizer),)
+
+  return optax.partition(
+    {
+      "pw": pw_tx,
+      "occ": occ_tx,
+    },
+    {
+      "pw": "pw",
+      "occ": "occ",
+    },
+  )
+
+
+def has_occupation_scheduler(config: JrystalConfigDict) -> bool:
+  return config.solver.direct_opt.occupation_optimizer.scheduler is not None
+
+
+def reset_occupation_plateau_state(
+  optimizer: optax.GradientTransformationExtraArgs,
+  opt_state,
+  params,
+):
+  if "occ" not in opt_state.inner_states:
+    return opt_state
+  occ_state = opt_state.inner_states["occ"]
+  if "plateau" not in occ_state.inner_state:
+    return opt_state
+  fresh_occ_state = optimizer.init(params).inner_states["occ"]
+  occ_inner_state = occ_state.inner_state.copy()
+  occ_inner_state["plateau"] = fresh_occ_state.inner_state["plateau"]
+  inner_states = dict(opt_state.inner_states)
+  inner_states["occ"] = occ_state._replace(inner_state=occ_inner_state)
+  return opt_state._replace(inner_states=inner_states)
 
 
 def get_ewald_coulomb_repulsion(

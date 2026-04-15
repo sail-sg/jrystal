@@ -848,16 +848,14 @@ def get_backend(
   config: JrystalConfigDict
 ) -> AllElectronBackend | NormConservingBackend | UltrasoftBackend:
   """Select the appropriate backend from config."""
-  if config.method.use_pseudopotential:
-    pp_type = config.method.pseudopotential_type
-    if pp_type in ("nc", "normcons", "normconserving"):
-      return NormConservingBackend(config)
-    if pp_type in ("us", "ultrasoft"):
-      return UltrasoftBackend(config)
-    raise NotImplementedError(
-      f"Pseudopotential type '{pp_type}' is not yet supported."
-    )
-  return AllElectronBackend(config)
+  family = str(config.method.family).lower()
+  if family == "ae":
+    return AllElectronBackend(config)
+  if family == "nc":
+    return NormConservingBackend(config)
+  if family == "us":
+    return UltrasoftBackend(config)
+  raise NotImplementedError(f"Method family '{family}' is not yet supported.")
 
 
 __all__ = [

@@ -42,7 +42,11 @@ from .._src.utils import squeeze_coefficient
 from ..io import make_checkpoint_manager, save_checkpoint
 from ..terminal_ui import Spinner, stage_line, stage_warning
 from .convergence import create_convergence_checker
-from .opt_utils import create_optimizer
+from .opt_utils import (
+  create_direct_opt_optimizer,
+  has_occupation_scheduler,
+  reset_occupation_plateau_state,
+)
 from .timer import PhaseTimer
 from .types import EnergyDecomposition, GroundStateResult
 from .workflow_logging import (
@@ -120,6 +124,15 @@ def _free_energy_from_total_energy(
   return free_energy, entropy
 
 
+def _total_energy_metric(
+  total_energy: jax.Array,
+  ewald_energy: float | jax.Array,
+) -> jax.Array:
+  """Return the total-energy metric used for convergence and LR scheduling."""
+  total_energy = jnp.asarray(total_energy)
+  return total_energy + jnp.asarray(ewald_energy, dtype=total_energy.dtype)
+
+
 def _freeze_occupation_gradient(grad: dict) -> dict:
   """Zero occupation gradients during the direct-opt warmup phase."""
   return {
@@ -186,7 +199,9 @@ def run_direct_opt(
   occ_max = _occupation_max(config.system.spin_restricted)
   num_bands = ceil(num_electrons / occ_max) + config.occupation.empty_bands
   smearing = config.occupation.smearing
-  occupation_warmup_steps = config.occupation.warmup_steps
+  occupation_warmup_steps = (
+    config.solver.direct_opt.occupation_optimizer.warmup_steps
+  )
   show_progress = config.io.log_level != "quiet"
   phase_timer = PhaseTimer(enabled=config.execution.profile)
   canonical_transform = bool(
@@ -211,6 +226,7 @@ def run_direct_opt(
     controls=(
       f"opt={config.solver.direct_opt.optimizer.name} "
       f"lr={config.solver.direct_opt.optimizer.learning_rate:g} "
+      f"occ_lr={config.solver.direct_opt.occupation_optimizer.learning_rate:g} "
       f"warmup={occupation_warmup_steps} "
       f"win={config.solver.direct_opt.convergence.window_size} "
       f"tol={config.solver.direct_opt.convergence.energy_std_tol:.1e}"
@@ -255,7 +271,8 @@ def run_direct_opt(
   # For NC, deploy nonlocal potential to devices.
   if ctx.potential_nonlocal is not None:
     potential_nl = ctx.potential_nonlocal
-    if hasattr(potential_nl, "projectors") and hasattr(potential_nl, "d_matrices"):
+    if hasattr(potential_nl,
+               "projectors") and hasattr(potential_nl, "d_matrices"):
       from ..pseudopotential.nloc import NonlocalProjectorGrid
 
       potential_nl = NonlocalProjectorGrid(
@@ -305,7 +322,7 @@ def run_direct_opt(
     return free, (total, free)
 
   # --- Init params + optimiser ---
-  optimizer = create_optimizer(config)
+  optimizer = create_direct_opt_optimizer(config)
   start_step = 0
   previous_total_energy = None
   if restart_state is None:
@@ -365,14 +382,23 @@ def run_direct_opt(
       def update(params, opt_state):
 
         def loss_fn(x):
-          return free_energy(x["pw"], x["occ"])
+          return free_energy(
+            x["pw"],
+            x["occ"],
+          )
         (_loss_val, aux), grad = jax.value_and_grad(
           loss_fn, has_aux=True,
         )(params)
         if freeze_occupation:
           grad = _freeze_occupation_gradient(grad)
         total_energy, free_energy_value = aux
-        updates, new_opt_state = optimizer.update(grad, opt_state)
+        total_energy_metric = _total_energy_metric(total_energy, ew)
+        updates, new_opt_state = optimizer.update(
+          grad,
+          opt_state,
+          params,
+          value=total_energy_metric,
+        )
         new_params = optax.apply_updates(params, updates)
         return (
           new_params,
@@ -426,25 +452,35 @@ def run_direct_opt(
 
       for step in range(start_step, config.solver.direct_opt.max_steps):
         start = time.time()
+        if (
+          occupation_setup.trainable and has_occupation_scheduler(config) and
+          step == occupation_warmup_steps
+        ):
+          opt_state = reset_occupation_plateau_state(
+            optimizer, opt_state, params
+          )
         step_update = (
           update_warmup if occupation_setup.trainable and
           step < occupation_warmup_steps else update
         )
         update_phase = (
-          "first_call_overhead" if (config.execution.profile and step == start_step)
-          else "update_step"
+          "first_call_overhead" if
+          (config.execution.profile and step == start_step) else "update_step"
         )
         with phase_timer.phase(update_phase):
-          params, opt_state, total_val, free_val = step_update(params, opt_state)
+          params, opt_state, total_val, free_val = step_update(
+            params,
+            opt_state,
+          )
           total_val, free_val = jax.block_until_ready((total_val, free_val))
-        total_energy = float(total_val + ew)
+        total_energy = float(_total_energy_metric(total_val, ew))
         delta_energy = None
         if total_energy_history:
           delta_energy = abs(total_energy - total_energy_history[-1])
         elif previous_total_energy is not None:
           delta_energy = abs(total_energy - previous_total_energy)
         total_energy_history.append(total_energy)
-        converged = convergence_checker.check(float(free_val))
+        converged = convergence_checker.check(total_energy)
         energy_std = convergence_checker.current_std()
         dt = time.time() - start
         cumulative_time = time.time() - overall_start
