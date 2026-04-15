@@ -133,6 +133,8 @@ default_config = {
       "parallel_over_k_mesh": False,
       "parallel_over_k_path": True,
       "profile": False,
+      "compile_cache": True,
+      "compile_cache_dir": "~/.cache/jrystal/jax_compile_cache",
       "xla_preallocate": True,
       "jax_enable_x64": True,
       "jax_debug_nans": False,
@@ -234,6 +236,8 @@ _GROUP_FIELDS = {
       "parallel_over_k_path",
       "parallel_over_k",
       "profile",
+      "compile_cache",
+      "compile_cache_dir",
       "xla_preallocate",
       "jax_enable_x64",
       "jax_debug_nans",
@@ -413,6 +417,8 @@ _LEGACY_FIELD_MAP = {
   "parallel_over_k_mesh": ("execution", "parallel_over_k_mesh"),
   "parallel_over_k_path": ("execution", "parallel_over_k_path"),
   "profile": ("execution", "profile"),
+  "compile_cache": ("execution", "compile_cache"),
+  "compile_cache_dir": ("execution", "compile_cache_dir"),
   "xla_preallocate": ("execution", "xla_preallocate"),
   "jax_enable_x64": ("execution", "jax_enable_x64"),
   "jax_debug_nans": ("execution", "jax_debug_nans"),
@@ -1432,6 +1438,13 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
     "execution.parallel_over_k_path",
   )
   _validate_bool(config["execution"]["profile"], "execution.profile")
+  _validate_bool(
+    config["execution"]["compile_cache"], "execution.compile_cache"
+  )
+  _validate_optional_string(
+    config["execution"]["compile_cache_dir"],
+    "execution.compile_cache_dir",
+  )
   _validate_bool(
     config["execution"]["xla_preallocate"],
     "execution.xla_preallocate",
