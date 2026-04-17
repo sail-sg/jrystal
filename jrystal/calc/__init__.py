@@ -23,6 +23,8 @@ Usage::
 """
 from __future__ import annotations
 
+import time
+from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -52,7 +54,7 @@ from .solver_direct_opt import run_direct_opt
 from .solver_nscf import run_nscf
 from .solver_scf import run_scf
 from .types import BandStructureResult, GroundStateResult
-from .workflow_logging import log_system_info
+from .workflow_logging import log_system_info, log_workflow_timing_summary
 
 if TYPE_CHECKING:
   from ..config import JrystalConfigDict
@@ -123,7 +125,8 @@ def _run_ground_state(
   backend,
   ctx,
   output_dir: Path,
-) -> GroundStateResult:
+) -> tuple[GroundStateResult, OrderedDict[str, float]]:
+  timings: OrderedDict[str, float] = OrderedDict()
   requested_solver_mode = config.solver.mode
   restart_state = None
   if config.io.restart != "from_scratch":
@@ -134,7 +137,8 @@ def _run_ground_state(
     )
 
   if requested_solver_mode in ("scf", "direct_opt"):
-    return _run_with_mode(
+    start = time.perf_counter()
+    result = _run_with_mode(
       config,
       backend,
       ctx,
@@ -143,6 +147,8 @@ def _run_ground_state(
       restart_state=restart_state,
       output_dir=output_dir,
     )
+    timings[requested_solver_mode] = time.perf_counter() - start
+    return result, timings
 
   if requested_solver_mode != "auto":
     raise ValueError(
@@ -156,6 +162,7 @@ def _run_ground_state(
   fallback_on_error = config.solver.auto.fallback_on_error
 
   try:
+    start = time.perf_counter()
     result = _run_with_mode(
       config,
       backend,
@@ -165,6 +172,7 @@ def _run_ground_state(
       restart_state=restart_state,
       output_dir=output_dir,
     )
+    timings[primary] = time.perf_counter() - start
   except Exception as exc:
     if not fallback_on_error:
       raise
@@ -175,7 +183,8 @@ def _run_ground_state(
     )
     fallback_config = deepcopy(config)
     fallback_config.solver.mode = fallback
-    return _run_with_mode(
+    start = time.perf_counter()
+    result = _run_with_mode(
       fallback_config,
       backend,
       ctx,
@@ -184,9 +193,11 @@ def _run_ground_state(
       restart_state=restart_state,
       output_dir=output_dir,
     )
+    timings[fallback] = time.perf_counter() - start
+    return result, timings
 
   if result.converged or not fallback_on_nonconverged:
-    return result
+    return result, timings
 
   stage_warning(
     "AUTO",
@@ -196,7 +207,8 @@ def _run_ground_state(
   fallback_config = deepcopy(config)
   fallback_config.solver.mode = fallback
   fallback_state = _physical_state_from_result(result) or restart_state
-  return _run_with_mode(
+  start = time.perf_counter()
+  result = _run_with_mode(
     fallback_config,
     backend,
     ctx,
@@ -205,6 +217,8 @@ def _run_ground_state(
     restart_state=fallback_state,
     output_dir=output_dir,
   )
+  timings[fallback] = time.perf_counter() - start
+  return result, timings
 
 
 def _run_metadata(
@@ -268,6 +282,7 @@ def energy(config: JrystalConfigDict) -> GroundStateResult:
   previous_log_level = get_log_level()
   set_log_level(config.io.log_level)
   started_at = datetime.now().isoformat()
+  workflow_start = time.perf_counter()
   try:
     set_env_params(config)
     backend = get_backend(config)
@@ -279,7 +294,7 @@ def energy(config: JrystalConfigDict) -> GroundStateResult:
       task="energy",
       started_at=started_at,
     )
-    result = _run_ground_state(
+    result, step_timings = _run_ground_state(
       config,
       backend=backend,
       ctx=ctx,
@@ -309,6 +324,12 @@ def energy(config: JrystalConfigDict) -> GroundStateResult:
         finished_at=datetime.now().isoformat(),
       ),
     )
+    if not config.execution.profile:
+      log_workflow_timing_summary(
+        "energy",
+        total_wall_time=time.perf_counter() - workflow_start,
+        steps=step_timings,
+      )
     return result
   except Exception as exc:
     save_run_metadata(
@@ -351,6 +372,7 @@ def band(
   previous_log_level = get_log_level()
   set_log_level(config.io.log_level)
   started_at = datetime.now().isoformat()
+  workflow_start = time.perf_counter()
 
   try:
     set_env_params(config)
@@ -364,8 +386,9 @@ def band(
       started_at=started_at,
     )
 
+    step_timings: OrderedDict[str, float] = OrderedDict()
     if ground_state_result is None:
-      ground_state_result = _run_ground_state(
+      ground_state_result, step_timings = _run_ground_state(
         config,
         backend=backend_mesh,
         ctx=ctx_mesh,
@@ -387,7 +410,9 @@ def band(
 
     backend_path = get_backend(config)
     ctx_path = build_runtime_context(config, mode="path", backend=backend_path)
+    band_start = time.perf_counter()
     result = run_nscf(config, ctx_path, backend_path, ground_state_result)
+    step_timings["nscf"] = time.perf_counter() - band_start
     save_band_structure(config, result, run_dir)
     save_run_metadata(
       run_dir,
@@ -401,6 +426,12 @@ def band(
         finished_at=datetime.now().isoformat(),
       ),
     )
+    if not config.execution.profile:
+      log_workflow_timing_summary(
+        "band",
+        total_wall_time=time.perf_counter() - workflow_start,
+        steps=step_timings,
+      )
     return result
   except Exception as exc:
     save_run_metadata(

@@ -1,10 +1,12 @@
 import argparse
+from pathlib import Path
 from typing import Sequence
 
 import yaml
 
 import jrystal as jr
-from jrystal.terminal_ui import render_logo
+from jrystal.plot.band import _AUTO_REFERENCE as _AUTO_FERMI_REFERENCE
+from jrystal.terminal_ui import console_line, render_logo
 
 _LEGACY_OVERRIDE_PATHS = {
   "solver.type": "solver.mode",
@@ -41,6 +43,62 @@ def _build_parser() -> argparse.ArgumentParser:
       default="config.yaml",
       help="Path to YAML config file (default: config.yaml)",
     )
+
+  plot_parser = subparsers.add_parser(
+    "plot",
+    help="Plot saved jrystal outputs",
+  )
+  plot_subparsers = plot_parser.add_subparsers(
+    dest="plot_command",
+    required=True,
+  )
+
+  plot_band_parser = plot_subparsers.add_parser(
+    "band",
+    help="Plot a band structure from a saved output directory",
+  )
+  plot_band_parser.add_argument(
+    "source",
+    help="Path to the jrystal output directory containing band/ data",
+  )
+  plot_band_parser.add_argument(
+    "--output",
+    "-o",
+    help="Path to save the figure (default: <source>/band/band_structure.pdf)",
+  )
+  plot_band_parser.add_argument(
+    "--unit",
+    choices=("eV", "Ha", "Ry"),
+    default="eV",
+    help="Energy unit for the y-axis (default: eV)",
+  )
+  plot_band_parser.add_argument(
+    "--ymin",
+    type=float,
+    default=None,
+    help="Lower y-axis limit in the selected unit",
+  )
+  plot_band_parser.add_argument(
+    "--ymax",
+    type=float,
+    default=None,
+    help="Upper y-axis limit in the selected unit",
+  )
+  plot_band_parser.add_argument(
+    "--fermi",
+    nargs="?",
+    const="auto",
+    default="auto",
+    help=(
+      "Align to the saved Fermi/reference energy, or provide an explicit "
+      "reference energy in Hartree."
+    ),
+  )
+  plot_band_parser.add_argument(
+    "--absolute-energy",
+    action="store_true",
+    help="Do not shift eigenvalues by the saved or supplied Fermi level",
+  )
 
   return parser
 
@@ -111,11 +169,57 @@ def _run_energy_command(config):
   return jr.calc.energy(config)
 
 
+def _default_band_plot_path(source: str) -> Path:
+  return Path(source) / "band" / "band_structure.pdf"
+
+
+def _run_plot_band_command(args) -> None:
+  if args.absolute_energy and args.fermi != "auto":
+    raise ValueError("Use either `--fermi` or `--absolute-energy`, not both.")
+
+  output_path = (
+    Path(args.output)
+    if args.output is not None else _default_band_plot_path(args.source)
+  )
+  output_path.parent.mkdir(parents=True, exist_ok=True)
+
+  if args.absolute_energy:
+    reference_energy = None
+  elif args.fermi == "auto":
+    reference_energy = _AUTO_FERMI_REFERENCE
+  else:
+    reference_energy = float(args.fermi)
+
+  fig = jr.plot.band_structure(
+    args.source,
+    reference_energy=reference_energy,
+    unit=args.unit,
+    y_min=args.ymin,
+    y_max=args.ymax,
+    save_path=output_path,
+  )
+  try:
+    fig.clf()
+  except Exception:
+    pass
+  console_line(f"Saved band plot to {output_path}")
+
+
 def main(argv: Sequence[str] | None = None):
   render_logo(variant="utf8")
 
   parser = _build_parser()
   args, unknown = parser.parse_known_args(argv)
+
+  if args.command == "plot":
+    if unknown:
+      parser.error(f"Unexpected arguments: {' '.join(unknown)}")
+    try:
+      if args.plot_command == "band":
+        _run_plot_band_command(args)
+        return
+    except (ValueError, FileNotFoundError, ImportError) as exc:
+      parser.error(str(exc))
 
   try:
     overrides = _parse_overrides(unknown)

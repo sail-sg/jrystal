@@ -26,6 +26,7 @@ _STAGE_STYLES = {
   "Band": ("magenta", "::"),
   "DirectOpt": ("cyan", "<>"),
   "Init": ("blue", ".."),
+  "Run": ("green", ".."),
   "SCF": ("cyan", "<>"),
 }
 _LOG_LEVEL_ORDER = {

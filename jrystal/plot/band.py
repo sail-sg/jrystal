@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
 from ..calc.types import BandStructureResult, KSampling
 from ._style import energy_scale
+
+_AUTO_REFERENCE = object()
 
 
 def _load_from_directory(
@@ -77,7 +80,7 @@ def _resolve_energy_limits(
 
 def band_structure(
   source,
-  reference_energy=None,
+  reference_energy: float | None | Any = _AUTO_REFERENCE,
   energy_range=None,
   unit="eV",
   y_min=None,
@@ -99,11 +102,11 @@ def band_structure(
   if isinstance(source, BandStructureResult):
     eigenvalues = np.asarray(source.eigenvalues)
     kpath = source.kpath
-    if reference_energy is None:
+    if reference_energy is _AUTO_REFERENCE:
       reference_energy = source.reference_energy
   else:
     eigenvalues, kpath, detected_reference = _load_from_directory(Path(source))
-    if reference_energy is None:
+    if reference_energy is _AUTO_REFERENCE:
       reference_energy = detected_reference
 
   x = _kpath_distance(np.asarray(kpath.kpts))
@@ -168,7 +171,8 @@ def band_structure(
     ax.set_xticks(tick_positions[:len(tick_labels)])
     ax.set_xticklabels(tick_labels[:len(tick_positions)])
 
-  ax.legend(frameon=False)
+  if num_spin == 2:
+    ax.legend(frameon=False)
   fig.tight_layout()
   if save_path is not None:
     fig.savefig(save_path)

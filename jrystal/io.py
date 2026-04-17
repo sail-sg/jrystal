@@ -273,7 +273,7 @@ def _compute_ground_state_spectrum(config, ctx, backend, result):
   def _hvp(coeff_compact):
     coeff_full = expand_coefficient(coeff_compact.conj(), freq_mask)
     hpsi_full = backend.hamiltonian_apply(coeff_full, iteration_state, ctx)
-    return squeeze_coefficient(hpsi_full, freq_mask)
+    return squeeze_coefficient(hpsi_full.conj(), freq_mask)
 
   def _svp(c):
     coeff_batch = c.reshape(s, k, g, -1)
@@ -327,6 +327,13 @@ def save_ground_state(
   fermi_energy = result.fermi_energy
   if fermi_energy is None:
     fermi_energy = _infer_fermi_energy(result, k_weights=ctx.ksampling.weights)
+
+  if fermi_energy is None and result.eigenvalues is None and (
+    ctx is not None and backend is not None
+  ):
+    result = _compute_ground_state_spectrum(config, ctx, backend, result)
+    fermi_energy = _infer_fermi_energy(result, k_weights=ctx.ksampling.weights)
+
   if fermi_energy is not None and result.fermi_energy is None:
     result = replace(result, fermi_energy=fermi_energy)
 

@@ -108,6 +108,7 @@ class PseudoSpeciesSetup:
   l_max_rho: int | None
   valence_configuration: tuple[dict, ...]
   source_path: str
+  num_pseudo_waves: int | None = None
   augmentation: Optional[AugmentationChannel] = None
   nlcc_r: Optional[Float[Array, "num_r"]] = None
 
@@ -664,6 +665,13 @@ def _build_species_setup(
 ) -> PseudoSpeciesSetup:
   mesh = np.asarray(pp_dict["PP_MESH"]["PP_R"], dtype=np.float64)
   radial_mask = mesh > 0
+  valence_configuration = tuple(pp_dict["PP_INFO"]["Valence configuration"])
+  number_of_wfc = pp_dict["PP_HEADER"].get("number_of_wfc")
+  num_pseudo_waves = (
+    int(number_of_wfc)
+    if number_of_wfc is not None else
+    (len(valence_configuration) if valence_configuration else None)
+  )
   radial = RadialMesh(
     r_g=mesh[radial_mask],
     dr_g=np.asarray(pp_dict["PP_MESH"]["PP_RAB"], dtype=np.float64)[radial_mask],
@@ -685,8 +693,9 @@ def _build_species_setup(
     projectors=_build_projector_channel(pp_dict),
     l_max=int(pp_dict["PP_HEADER"]["l_max"]),
     l_max_rho=None if l_max_rho is None else int(l_max_rho),
-    valence_configuration=tuple(pp_dict["PP_INFO"]["Valence configuration"]),
+    valence_configuration=valence_configuration,
     source_path=source_path,
+    num_pseudo_waves=num_pseudo_waves,
     augmentation=_build_augmentation_channel(pp_dict, radial_mask)
     if family == "us" else None,
     nlcc_r=_build_nlcc_channel(pp_dict, radial_mask),

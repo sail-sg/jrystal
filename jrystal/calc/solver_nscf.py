@@ -39,13 +39,11 @@ import optax
 
 from .._src import hamiltonian as _hamiltonian
 from .._src import pw as _pw
-from .._src.linalg import batched_lobpcg
 from .._src.utils import expand_coefficient, squeeze_coefficient
 from ..pseudopotential import normcons as _normcons
 from ..pseudopotential import ultrasoft as _ultrasoft
 from ..pseudopotential.kernel import UltrasoftPathCache
 from ..terminal_ui import stage_line
-from .density_mixing import kerker_preconditioner
 from .opt_utils import create_optimizer
 from .timer import PhaseTimer
 from .types import BandStructureResult
@@ -77,6 +75,34 @@ def _block_tree(value):
 def _occupation_max(spin_restricted: bool) -> float:
   """Maximum occupation per state for the requested spin treatment."""
   return 2.0 if spin_restricted else 1.0
+
+
+def _kinetic_preconditioner(
+  g_vec,
+  freq_mask,
+  kpt,
+  *,
+  shift: float = 1.0,
+):
+  """Return a masked-G kinetic preconditioner ``1 / (|G+k|^2 / 2 + shift)``."""
+  eff_g = jnp.asarray(g_vec)[freq_mask]
+  kpt = jnp.asarray(kpt, dtype=eff_g.dtype)
+  if kpt.ndim == 2:
+    if kpt.shape[0] != 1:
+      raise ValueError(
+        "Expected one k-point for the kinetic preconditioner, "
+        f"got shape {kpt.shape}."
+      )
+    kpt = kpt[0]
+  elif kpt.ndim != 1:
+    raise ValueError(
+      "Expected a rank-1 or rank-2 k-point array, "
+      f"got shape {kpt.shape}."
+    )
+  kinetic = 0.5 * jnp.sum((eff_g + kpt[None, :])**2, axis=-1)
+  shift = jnp.asarray(shift, dtype=kinetic.dtype)
+  floor = jnp.maximum(shift, jnp.finfo(kinetic.dtype).eps)
+  return jnp.reciprocal(jnp.maximum(kinetic + shift, floor))
 
 
 def _run_nscf_ae(
@@ -495,82 +521,232 @@ def _run_nscf_us(
     raise TypeError("USPP band calculation requires an UltrasoftPathCache.")
 
   key = jax.random.PRNGKey(config.execution.seed)
+  del source_coeff
   g_vec = ctx.g_vec
   freq_mask = ctx.basis.freq_mask
   ksampling = ctx.ksampling
   vol = ctx.crystal.vol
   num_kpts = int(ksampling.kpts.shape[0])
-  g_dim = int(np.sum(np.asarray(freq_mask)))
-  num_spin = 1 if config.system.spin_restricted else 2
-  precond = kerker_preconditioner(g_vec, freq_mask)
   nscf_state = backend.prepare_nscf(density, ctx)
-
-  initial_guess = _initial_band_guess(
+  optimizer = create_optimizer(config)
+  params_pw = _pw.param_init(
     key,
     num_bands,
+    1,
     freq_mask,
-    source_coeff,
     spin_restricted=config.system.spin_restricted,
   )
-  coeff_guess = jnp.asarray(initial_guess)
-  eigenvalues = []
+  opt_state = optimizer.init(params_pw)
 
-  for k_idx in range(num_kpts):
-    with (
-      phase_timer.phase("operator_bundle")
-      if phase_timer is not None else nullcontext()
-    ):
+  def _normalize_channel_mask(channel_mask, channel_qii):
+    if channel_mask is None:
+      return jnp.ones(channel_qii.shape[:2], dtype=channel_qii.dtype)
+    return channel_mask
+
+  bundles = []
+  with (
+    phase_timer.phase("operator_bundle")
+    if phase_timer is not None else nullcontext()
+  ):
+    for k_idx in range(num_kpts):
       bundle = backend.build_kpoint_operator(k_idx, nscf_state, ctx)
-      coeff_guess = _canonicalize_uspp_subspace(
-        coeff_guess,
-        bundle,
-        g_vec,
-        freq_mask,
-        vol,
+      bundles.append(
+        (
+          bundle.kpt,
+          bundle.local_potential_r,
+          bundle.projector_channels_g,
+          bundle.channel_qii,
+          bundle.channel_dii_eff,
+          _normalize_channel_mask(bundle.channel_mask, bundle.channel_qii),
+        )
       )
 
-    def _matmul(c):
-      return _uspp_h_apply_compact(
-        c,
-        bundle,
-        g_vec,
-        freq_mask,
-        vol,
-      ).reshape(1, g_dim, -1)
-
-    def _b_matmul(c):
-      return _uspp_s_apply_compact(
-        c,
-        bundle,
-        freq_mask,
-        vol,
-      ).reshape(1, g_dim, -1)
-
-    phase_name = (
-      "first_call_overhead" if
-      (phase_timer is not None and phase_timer.enabled and
-       k_idx == 0) else "diagonalize_path"
+  def _projected_trace(
+    params,
+    kpt,
+    local_potential_r,
+    projector_channels_g,
+    channel_qii,
+    channel_dii_eff,
+    channel_mask,
+  ):
+    coeff = _pw.coeff(params, freq_mask)
+    coeff_compact = squeeze_coefficient(coeff, freq_mask)
+    coeff_canon = _canonicalize_uspp_subspace_arrays(
+      coeff_compact,
+      projector_channels_g=projector_channels_g,
+      channel_qii=channel_qii,
+      channel_mask=channel_mask,
+      freq_mask=freq_mask,
+      vol=vol,
     )
-    with (
-      phase_timer.phase(phase_name)
-      if phase_timer is not None else nullcontext()
-    ):
-      evals, evecs = batched_lobpcg(
-        matmul=_matmul,
-        b_matmul=_b_matmul,
-        k=num_bands,
-        v0=coeff_guess.reshape(num_spin, g_dim, num_bands),
-        which="smallest",
-        preconditioner=precond,
-        maxit=config.solver.scf.eigensolver.max_iter,
-        tol=1e-8,
-      )
-      if phase_timer is not None and phase_timer.enabled:
-        evals, evecs = _block_tree((evals, evecs))
-    coeff_guess = evecs.reshape(num_spin, 1, g_dim, num_bands).conj()
-    eigenvalues.append(evals)
+    h_coeff = _uspp_h_apply_compact_arrays(
+      coeff_canon,
+      kpt=kpt,
+      local_potential_r=local_potential_r,
+      projector_channels_g=projector_channels_g,
+      channel_dii_eff=channel_dii_eff,
+      channel_mask=channel_mask,
+      g_vec=g_vec,
+      freq_mask=freq_mask,
+      vol=vol,
+    )
+    hmat = jnp.einsum(
+      "...gb,...gc->...bc",
+      jnp.conj(coeff_canon),
+      h_coeff,
+    )
+    hmat = 0.5 * (hmat + jnp.swapaxes(jnp.conj(hmat), -1, -2))
+    return jnp.real(jnp.trace(hmat, axis1=-2, axis2=-1)).sum()
 
-  return jnp.stack(eigenvalues, axis=1)
+  @jax.jit
+  def _update(
+    params,
+    opt_state,
+    kpt,
+    local_potential_r,
+    projector_channels_g,
+    channel_qii,
+    channel_dii_eff,
+    channel_mask,
+  ):
+    val, grad = jax.value_and_grad(_projected_trace)(
+      params,
+      kpt,
+      local_potential_r,
+      projector_channels_g,
+      channel_qii,
+      channel_dii_eff,
+      channel_mask,
+    )
+    updates, opt_state = optimizer.update(grad, opt_state)
+    params = optax.apply_updates(params, updates)
+    return params, opt_state, val
+
+  def _make_optimize_kpoint(num_steps):
+
+    @jax.jit
+    def _optimize(
+      params,
+      opt_state,
+      kpt,
+      local_potential_r,
+      projector_channels_g,
+      channel_qii,
+      channel_dii_eff,
+      channel_mask,
+    ):
+
+      def _scan(carry, _):
+        params, opt_state = carry
+        params, opt_state, _ = _update(
+          params,
+          opt_state,
+          kpt,
+          local_potential_r,
+          projector_channels_g,
+          channel_qii,
+          channel_dii_eff,
+          channel_mask,
+        )
+        return (params, opt_state), None
+
+      (params, opt_state), _ = jax.lax.scan(
+        _scan,
+        (params, opt_state),
+        xs=None,
+        length=num_steps,
+        unroll=1,
+      )
+      return params, opt_state
+
+    return _optimize
+
+  @jax.jit
+  def _diagonalize_subspace(
+    params,
+    kpt,
+    local_potential_r,
+    projector_channels_g,
+    channel_qii,
+    channel_dii_eff,
+    channel_mask,
+  ):
+    coeff = _pw.coeff(params, freq_mask)
+    coeff_compact = squeeze_coefficient(coeff, freq_mask)
+    coeff_canon = _canonicalize_uspp_subspace_arrays(
+      coeff_compact,
+      projector_channels_g=projector_channels_g,
+      channel_qii=channel_qii,
+      channel_mask=channel_mask,
+      freq_mask=freq_mask,
+      vol=vol,
+    )
+    h_coeff = _uspp_h_apply_compact_arrays(
+      coeff_canon,
+      kpt=kpt,
+      local_potential_r=local_potential_r,
+      projector_channels_g=projector_channels_g,
+      channel_dii_eff=channel_dii_eff,
+      channel_mask=channel_mask,
+      g_vec=g_vec,
+      freq_mask=freq_mask,
+      vol=vol,
+    )
+    hmat = jnp.einsum(
+      "...gb,...gc->...bc",
+      jnp.conj(coeff_canon),
+      h_coeff,
+    )
+    hmat = 0.5 * (hmat + jnp.swapaxes(jnp.conj(hmat), -1, -2))
+    return jnp.linalg.eigvalsh(hmat)
+
+  optimize_first = _make_optimize_kpoint(config.band.epoch)
+  optimize_finetune = _make_optimize_kpoint(config.band.fine_tuning_epoch)
+
+  first_phase = (
+    "first_call_overhead"
+    if phase_timer is not None and phase_timer.enabled else "optimize_first_k"
+  )
+  with (
+    phase_timer.phase(first_phase) if phase_timer is not None else nullcontext()
+  ):
+    params_first, opt_state = optimize_first(
+      params_pw,
+      opt_state,
+      *bundles[0],
+    )
+    if phase_timer is not None and phase_timer.enabled:
+      params_first, opt_state = _block_tree((params_first, opt_state))
+
+  params_path = [params_first]
+  params_curr = params_first
+  opt_state_curr = opt_state
+  with (
+    phase_timer.phase("fine_tune_path")
+    if phase_timer is not None else nullcontext()
+  ):
+    for bundle_arrays in bundles[1:]:
+      params_curr, opt_state_curr = optimize_finetune(
+        params_curr,
+        opt_state_curr,
+        *bundle_arrays,
+      )
+      params_path.append(params_curr)
+    if phase_timer is not None and phase_timer.enabled:
+      params_path = _block_tree(params_path)
+
+  eigenvalues = []
+  with (
+    phase_timer.phase("diagonalize_path")
+    if phase_timer is not None else nullcontext()
+  ):
+    for params_k, bundle_arrays in zip(params_path, bundles):
+      eigenvalues.append(_diagonalize_subspace(params_k, *bundle_arrays))
+    if phase_timer is not None and phase_timer.enabled:
+      eigenvalues = _block_tree(eigenvalues)
+
+  return jnp.concatenate(eigenvalues, axis=1)
 
 
 # ---------------------------------------------------------------------------
@@ -634,43 +810,119 @@ def _solve_dense_generalized(h_dense, s_dense, k):
   return jnp.real(evals), vecs
 
 
-def _uspp_h_apply_compact(coeff_compact, bundle, g_vec, freq_mask, vol):
-  """Apply the fixed-density USPP Hamiltonian to compact masked-G coefficients."""
+def _uspp_h_apply_compact_arrays(
+  coeff_compact,
+  *,
+  kpt,
+  local_potential_r,
+  projector_channels_g,
+  channel_dii_eff,
+  channel_mask,
+  g_vec,
+  freq_mask,
+  vol,
+):
+  """Apply the fixed-density USPP Hamiltonian using data-only operator arrays."""
   coeff_compact = jnp.asarray(coeff_compact)
   if coeff_compact.ndim == 3:
     coeff_compact = coeff_compact[:, None, ...]
   coeff_full = expand_coefficient(coeff_compact.conj(), freq_mask)
-  kinetic = _ultrasoft.kinetic_apply(coeff_full, g_vec, bundle.kpt)
+  kinetic = _ultrasoft.kinetic_apply(coeff_full, g_vec, kpt)
   local = _ultrasoft.local_potential_apply(
     coeff_full,
-    bundle.local_potential_r,
+    local_potential_r,
     vol,
   )
   nonlocal_term = _ultrasoft.channel_nonlocal_apply(
     coeff_full,
-    bundle.projector_channels_g,
-    bundle.channel_dii_eff,
+    projector_channels_g,
+    channel_dii_eff,
     vol,
-    channel_mask=bundle.channel_mask,
+    channel_mask=channel_mask,
   )
   hpsi_full = jnp.conj(kinetic + local + nonlocal_term)
   return squeeze_coefficient(hpsi_full, freq_mask)
 
 
-def _uspp_s_apply_compact(coeff_compact, bundle, freq_mask, vol):
-  """Apply the USPP overlap operator to compact masked-G coefficients."""
+def _uspp_s_apply_compact_arrays(
+  coeff_compact,
+  *,
+  projector_channels_g,
+  channel_qii,
+  channel_mask,
+  freq_mask,
+  vol,
+):
+  """Apply the USPP overlap operator using data-only operator arrays."""
   coeff_compact = jnp.asarray(coeff_compact)
   if coeff_compact.ndim == 3:
     coeff_compact = coeff_compact[:, None, ...]
   coeff_full = expand_coefficient(coeff_compact.conj(), freq_mask)
   spsi_full = _ultrasoft.overlap_apply(
     coeff_full,
-    bundle.projector_channels_g,
-    bundle.channel_qii,
+    projector_channels_g,
+    channel_qii,
     vol,
-    channel_mask=bundle.channel_mask,
+    channel_mask=channel_mask,
   )
   return squeeze_coefficient(spsi_full.conj(), freq_mask)
+
+
+def _uspp_h_apply_compact(coeff_compact, bundle, g_vec, freq_mask, vol):
+  """Apply the fixed-density USPP Hamiltonian to compact masked-G coefficients."""
+  return _uspp_h_apply_compact_arrays(
+    coeff_compact,
+    kpt=bundle.kpt,
+    local_potential_r=bundle.local_potential_r,
+    projector_channels_g=bundle.projector_channels_g,
+    channel_dii_eff=bundle.channel_dii_eff,
+    channel_mask=bundle.channel_mask,
+    g_vec=g_vec,
+    freq_mask=freq_mask,
+    vol=vol,
+  )
+
+
+def _uspp_s_apply_compact(coeff_compact, bundle, freq_mask, vol):
+  """Apply the USPP overlap operator to compact masked-G coefficients."""
+  return _uspp_s_apply_compact_arrays(
+    coeff_compact,
+    projector_channels_g=bundle.projector_channels_g,
+    channel_qii=bundle.channel_qii,
+    channel_mask=bundle.channel_mask,
+    freq_mask=freq_mask,
+    vol=vol,
+  )
+
+
+def _canonicalize_uspp_subspace_arrays(
+  coeff_compact,
+  *,
+  projector_channels_g,
+  channel_qii,
+  channel_mask,
+  freq_mask,
+  vol,
+):
+  """Canonicalize compact coefficients using data-only USPP overlap arrays."""
+  coeff_compact = jnp.asarray(coeff_compact)
+  if coeff_compact.ndim == 3:
+    coeff_compact = coeff_compact[:, None, ...]
+  s_coeff = _uspp_s_apply_compact_arrays(
+    coeff_compact,
+    projector_channels_g=projector_channels_g,
+    channel_qii=channel_qii,
+    channel_mask=channel_mask,
+    freq_mask=freq_mask,
+    vol=vol,
+  )
+  overlap = jnp.einsum(
+    "...gb,...gc->...bc",
+    jnp.conj(coeff_compact),
+    s_coeff,
+  )
+  inv_sqrt = _hermitian_inverse_sqrt(overlap)
+  return jnp.einsum("...gb,...bc->...gc", coeff_compact, inv_sqrt)
 
 
 def _canonicalize_uspp_subspace(coeff_compact, bundle, g_vec, freq_mask, vol):

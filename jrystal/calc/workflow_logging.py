@@ -82,6 +82,62 @@ def _mask_ratio_percent(ctx) -> float:
   return 100.0 * float(ctx.basis.num_g) / float(total_grid)
 
 
+def _pseudo_family_label(family: object) -> str:
+  family_str = str(family).lower()
+  if family_str == "nc":
+    return "NC"
+  if family_str == "us":
+    return "USPP"
+  if family_str == "paw":
+    return "PAW"
+  return str(family)
+
+
+def _pseudo_shell_summary(setup) -> str:
+  entries = tuple(getattr(setup, "valence_configuration", ()) or ())
+  if not entries:
+    return "n/a"
+  shells = [str(entry.get("nl", "?")) for entry in entries[:4]]
+  if len(entries) > 4:
+    shells.append("...")
+  return ",".join(shells)
+
+
+def _log_pseudopotential_info(ctx) -> None:
+  pseudo_cache = getattr(ctx, "pseudo_cache", None)
+  species_setups = tuple(getattr(pseudo_cache, "species_setups", ()) or ())
+  if not species_setups:
+    return
+
+  cache_label = type(pseudo_cache).__name__
+  family = _pseudo_family_label(getattr(pseudo_cache, "family", "pseudo"))
+  console_line(
+    f"Pseudo   family={family} species={len(species_setups)} cache={cache_label}",
+    level="normal",
+  )
+  for setup in species_setups:
+    num_proj = int(np.asarray(setup.projectors.beta_jr).shape[0])
+    num_channel = len(setup.projectors.channel_map.channel_beta)
+    num_pseudo_waves = getattr(setup, "num_pseudo_waves", None)
+    waves_label = "n/a" if num_pseudo_waves is None else str(int(num_pseudo_waves))
+    console_line(
+      (
+        f"PP[{setup.symbol}]  waves={waves_label} "
+        f"shells={_pseudo_shell_summary(setup)} "
+        f"proj={num_proj} chan={num_channel} "
+        f"lmax={int(setup.l_max)} "
+        f"rho_lmax={setup.l_max_rho if setup.l_max_rho is not None else 'n/a'} "
+        f"nlcc={'yes' if setup.nlcc_r is not None else 'no'} "
+        f"aug={'yes' if setup.augmentation is not None else 'no'}"
+      ),
+      level="normal",
+    )
+    console_line(
+      f"PP[{setup.symbol}]  file={os.path.basename(str(setup.source_path))}",
+      level="normal",
+    )
+
+
 def log_system_info(
   config,
   ctx,
@@ -165,6 +221,7 @@ def log_system_info(
     f"a3=({lattice[2,0]:7.3f},{lattice[2,1]:7.3f},{lattice[2,2]:7.3f})",
     level="normal",
   )
+  _log_pseudopotential_info(ctx)
 
 
 def log_ground_state_start(
@@ -295,3 +352,39 @@ def log_timing_breakdown(
       level="normal",
     )
   console_line(f"{prefix} wall={total_wall_time:.3f}s", level="normal")
+
+
+def log_workflow_timing_summary(
+  task: str,
+  *,
+  total_wall_time: float,
+  steps: Mapping[str, float],
+) -> None:
+  """Log a coarse workflow-level timing summary.
+
+  This is intentionally lightweight and is meant for the default
+  non-profiling mode. The caller is expected to provide only coarse step
+  durations already measured at workflow boundaries.
+  """
+  prefix = stage_prefix("Run")
+  total_wall_time = float(total_wall_time)
+  console_line(
+    f"{prefix} workflow timing ({task}) total={total_wall_time:.2f}s",
+    level="quiet",
+  )
+  accounted = 0.0
+  for name, raw_duration in steps.items():
+    duration = float(raw_duration)
+    accounted += duration
+    pct = 100.0 * duration / max(total_wall_time, 1e-12)
+    console_line(
+      f"{prefix}   {name}={duration:.2f}s ({pct:.1f}%)",
+      level="quiet",
+    )
+  overhead = max(total_wall_time - accounted, 0.0)
+  if overhead > 1e-3:
+    pct = 100.0 * overhead / max(total_wall_time, 1e-12)
+    console_line(
+      f"{prefix}   overhead={overhead:.2f}s ({pct:.1f}%)",
+      level="quiet",
+    )

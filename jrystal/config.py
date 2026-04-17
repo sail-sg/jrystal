@@ -120,6 +120,7 @@ default_config = {
       "epoch": 5000,
       "fine_tuning": True,
       "fine_tuning_epoch": 300,
+      "eigensolver_max_iter": 100,
       "plot": {
         "enabled": True,
         "unit": "eV",
@@ -227,6 +228,7 @@ _GROUP_FIELDS = {
       "epoch",
       "fine_tuning",
       "fine_tuning_epoch",
+      "eigensolver_max_iter",
       "plot",
     },
   "execution":
@@ -412,6 +414,7 @@ _LEGACY_FIELD_MAP = {
   "band_structure_epoch": ("band", "epoch"),
   "k_path_fine_tuning": ("band", "fine_tuning"),
   "k_path_fine_tuning_epoch": ("band", "fine_tuning_epoch"),
+  "band_eigensolver_max_iter": ("band", "eigensolver_max_iter"),
   "seed": ("execution", "seed"),
   "parallel_over_k": ("execution", "parallel_over_k"),
   "parallel_over_k_mesh": ("execution", "parallel_over_k_mesh"),
@@ -1410,6 +1413,10 @@ def validate_config(config: Mapping[str, Any]) -> None:  # noqa: PLR0915
   _validate_int(
     config["band"]["fine_tuning_epoch"],
     "band.fine_tuning_epoch",
+  )
+  _validate_int(
+    config["band"]["eigensolver_max_iter"],
+    "band.eigensolver_max_iter",
   )
   _validate_bool(config["band"]["plot"]["enabled"], "band.plot.enabled")
   if config["band"]["plot"]["unit"] not in {"eV", "Ha", "Ry"}:

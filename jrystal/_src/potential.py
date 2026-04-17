@@ -188,7 +188,7 @@ def xc_density(
     else:
       v_xc = jnp.moveaxis(vrho, -1, 0)
   else:
-    v_xc = _xc.gga_xc_potential(
+    v_xc = _xc._gga_xc_potential(
       vxc_dict['vrho'],
       vxc_dict['vsigma'],
       density_grid,
@@ -265,7 +265,7 @@ def effective(
       v_xc = jnp.moveaxis(vrho, -1, 0)  # (2, x, y, z)
   else:
     # GGA (and MGGA local part): vrho − 2∇·(vsigma ∇ρ)
-    v_xc = _xc.gga_xc_potential(
+    v_xc = _xc._gga_xc_potential(
       vxc_dict['vrho'],
       vxc_dict['vsigma'],
       density_grid,

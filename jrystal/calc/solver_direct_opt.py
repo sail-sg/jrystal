@@ -368,6 +368,9 @@ def run_direct_opt(
   last_checkpointed_step = None
   spinner = Spinner("DirectOpt")
   interrupted = False
+  nonfinite_abort = False
+  last_finite_params = params
+  last_finite_opt_state = opt_state
 
   def _handle_sigint(sig, frame):
     del sig, frame
@@ -473,6 +476,20 @@ def run_direct_opt(
           )
           total_val, free_val = jax.block_until_ready((total_val, free_val))
         total_energy = float(_total_energy_metric(total_val, ew))
+        free_energy_display = float(free_val + ew)
+        if not np.isfinite(total_energy) or not np.isfinite(free_energy_display):
+          nonfinite_abort = True
+          params = last_finite_params
+          opt_state = last_finite_opt_state
+          stage_warning(
+            "DirectOpt",
+            (
+              f"Non-finite energy at step {step + 1}; "
+              "restoring previous finite state and stopping. "
+              "Reduce `solver.direct_opt.optimizer.learning_rate`."
+            ),
+          )
+          break
         delta_energy = None
         if total_energy_history:
           delta_energy = abs(total_energy - total_energy_history[-1])
@@ -489,13 +506,15 @@ def run_direct_opt(
           {
             "step": display_step,
             "total_energy": total_energy,
-            "free_energy": float(free_val + ew),
+            "free_energy": free_energy_display,
             "delta_energy": delta_energy,
             "energy_std": energy_std,
             "wall_time": dt,
             "cumulative_time_s": cumulative_time,
           }
         )
+        last_finite_params = params
+        last_finite_opt_state = opt_state
 
         if show_progress:
           spinner.update(
@@ -524,6 +543,9 @@ def run_direct_opt(
 
         if interrupted:
           stage_warning("DirectOpt", "Interrupted — checkpoint saved")
+          break
+
+        if nonfinite_abort:
           break
 
         if converged:
