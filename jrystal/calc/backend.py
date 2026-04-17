@@ -48,6 +48,10 @@ if TYPE_CHECKING:
   from ..config import JrystalConfigDict
   from .runtime import RuntimeContext
 
+
+def _ion_charge_dtype():
+  return jnp.float64 if jax.config.read("jax_enable_x64") else jnp.float32
+
 # ---------------------------------------------------------------------------
 # All-electron backend
 # ---------------------------------------------------------------------------
@@ -70,6 +74,10 @@ class AllElectronBackend:
   def build_potentials(self, ctx: RuntimeContext) -> RuntimeContext:
     # All-electron has no extra potentials to precompute.
     return ctx
+
+  def ion_charges(self, ctx: RuntimeContext):
+    """Bare nuclear charges for all-electron Ewald."""
+    return jnp.asarray(ctx.crystal.charges, dtype=_ion_charge_dtype())
 
   def total_energy(self, coeff, occ, ctx: RuntimeContext):
     """Electronic total energy (excluding Ewald)."""
@@ -243,6 +251,13 @@ class NormConservingBackend:
       potential_nonlocal=potential_nl,
     )
 
+  def ion_charges(self, ctx: RuntimeContext):
+    """Valence ionic charges for pseudopotential Ewald."""
+    return jnp.asarray(
+      ctx.pseudopotential.valence_charges,
+      dtype=_ion_charge_dtype(),
+    )
+
   def total_energy(self, coeff, occ, ctx: RuntimeContext):
     """Electronic total energy (excluding Ewald)."""
     crystal = ctx.crystal
@@ -403,7 +418,7 @@ class NormConservingBackend:
 
   def num_electrons(self, ctx: RuntimeContext) -> int:
     """Valence electron count from pseudopotential."""
-    return int(np.sum(ctx.pseudopotential.valence_charges))
+    return int(np.rint(np.sum(ctx.pseudopotential.valence_charges)))
 
 
 # ---------------------------------------------------------------------------
@@ -500,6 +515,13 @@ class UltrasoftBackend:
       pseudo_cache=pseudo_cache,
       potential_local=pseudo_cache.vloc_g,
       potential_nonlocal=potential_nl,
+    )
+
+  def ion_charges(self, ctx: RuntimeContext):
+    """Valence ionic charges for pseudopotential Ewald."""
+    return jnp.asarray(
+      ctx.pseudopotential.valence_charges,
+      dtype=_ion_charge_dtype(),
     )
 
   def _xc_density(self, total_density, ctx: RuntimeContext):
@@ -850,7 +872,7 @@ class UltrasoftBackend:
 
   def num_electrons(self, ctx: RuntimeContext) -> int:
     """Valence electron count from pseudopotential."""
-    return int(np.sum(ctx.pseudopotential.valence_charges))
+    return int(np.rint(np.sum(ctx.pseudopotential.valence_charges)))
 
 
 # ---------------------------------------------------------------------------

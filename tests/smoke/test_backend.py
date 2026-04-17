@@ -6,6 +6,8 @@ import jax.numpy as jnp
 import pytest
 
 from jrystal.calc import backend as backend_module
+from jrystal.calc import opt_utils as opt_utils_module
+from jrystal.calc import runtime as runtime_module
 from jrystal.calc.backend import (
   AllElectronBackend,
   NormConservingBackend,
@@ -79,8 +81,7 @@ def test_get_backend_returns_all_electron_by_default():
 
 def test_get_backend_returns_normconserving_when_enabled():
   config = make_config()
-  config.method.use_pseudopotential = True
-  config.method.pseudopotential_type = "nc"
+  config.method.family = "nc"
 
   backend = get_backend(config)
 
@@ -89,8 +90,7 @@ def test_get_backend_returns_normconserving_when_enabled():
 
 def test_get_backend_returns_ultrasoft_when_enabled():
   config = make_config()
-  config.method.use_pseudopotential = True
-  config.method.pseudopotential_type = "ultrasoft"
+  config.method.family = "us"
 
   backend = get_backend(config)
 
@@ -99,8 +99,7 @@ def test_get_backend_returns_ultrasoft_when_enabled():
 
 def test_ultrasoft_backend_accepts_multik_mesh_cache(monkeypatch):
   config = make_config()
-  config.method.use_pseudopotential = True
-  config.method.pseudopotential_type = "us"
+  config.method.family = "us"
   config.ksampling.k_grid_sizes = [2, 2, 2]
   backend = UltrasoftBackend(config)
   ctx = _make_runtime_context(num_kpts=3)
@@ -127,8 +126,7 @@ def test_ultrasoft_backend_rejects_multik_mesh_cache_with_wrong_projector_dim(
   monkeypatch,
 ):
   config = make_config()
-  config.method.use_pseudopotential = True
-  config.method.pseudopotential_type = "us"
+  config.method.family = "us"
   config.ksampling.k_grid_sizes = [2, 2, 2]
   backend = UltrasoftBackend(config)
   ctx = _make_runtime_context(num_kpts=3)
@@ -147,3 +145,98 @@ def test_ultrasoft_backend_rejects_multik_mesh_cache_with_wrong_projector_dim(
 
   with pytest.raises(ValueError, match="k-point dimension"):
     backend.build_potentials(ctx)
+
+
+def test_get_ewald_coulomb_repulsion_respects_ion_charge_override(monkeypatch):
+  config = make_config()
+  crystal = SimpleNamespace(
+    cell_vectors=jnp.eye(3, dtype=jnp.float32),
+    positions=jnp.zeros((2, 3), dtype=jnp.float32),
+    charges=jnp.asarray([14.0, 14.0], dtype=jnp.float32),
+    vol=1.0,
+  )
+  captured = {}
+
+  monkeypatch.setattr(
+    opt_utils_module,
+    "translation_vectors",
+    lambda cell_vectors, cutoff: jnp.zeros((1, 1, 1, 3), dtype=jnp.float32),
+  )
+
+  def _fake_ewald(positions, charges, g_vector_grid, vol, ewald_eta, ewald_grid):
+    del positions, g_vector_grid, vol, ewald_eta, ewald_grid
+    captured["charges"] = charges
+    return jnp.asarray(0.0, dtype=jnp.float32)
+
+  monkeypatch.setattr(opt_utils_module, "ewald_coulomb_repulsion", _fake_ewald)
+
+  opt_utils_module.get_ewald_coulomb_repulsion(
+    config,
+    crystal=crystal,
+    g_vector_grid=jnp.zeros((2, 2, 2, 3), dtype=jnp.float32),
+    ion_charges=jnp.asarray([4.0, 4.0], dtype=jnp.float32),
+  )
+
+  assert jnp.allclose(captured["charges"], jnp.asarray([4.0, 4.0]))
+
+
+def test_build_runtime_context_uses_backend_ion_charges_after_build(monkeypatch):
+  config = make_config()
+
+  crystal = SimpleNamespace(
+    cell_vectors=jnp.eye(3, dtype=jnp.float32),
+    positions=jnp.zeros((2, 3), dtype=jnp.float32),
+    charges=jnp.asarray([14.0, 14.0], dtype=jnp.float32),
+    vol=1.0,
+  )
+
+  monkeypatch.setattr(runtime_module, "create_crystal", lambda _config: crystal)
+  monkeypatch.setattr(
+    runtime_module,
+    "create_grids",
+    lambda _config, crystal=None, ksampling=None: (
+      jnp.zeros((2, 2, 2, 3), dtype=jnp.float32),
+      jnp.zeros((2, 2, 2, 3), dtype=jnp.float32),
+      ksampling if ksampling is not None else KSampling(
+        mode="mesh",
+        kpts=jnp.zeros((1, 3), dtype=jnp.float32),
+        weights=jnp.ones((1,), dtype=jnp.float32),
+      ),
+    ),
+  )
+  monkeypatch.setattr(
+    runtime_module,
+    "create_freq_mask",
+    lambda _config, crystal=None: jnp.ones((2, 2, 2), dtype=bool),
+  )
+
+  calls = []
+
+  class FakeBackend:
+    def build_potentials(self, ctx):
+      calls.append("build")
+      return ctx.replace(
+        pseudopotential=SimpleNamespace(
+          valence_charges=jnp.asarray([4.0, 4.0], dtype=jnp.float32),
+        )
+      )
+
+    def ion_charges(self, ctx):
+      calls.append("ion")
+      return ctx.pseudopotential.valence_charges
+
+    def num_electrons(self, ctx):
+      del ctx
+      return 8
+
+  def _fake_ewald(config, crystal=None, g_vector_grid=None, ion_charges=None):
+    del config, crystal, g_vector_grid
+    calls.append(("ewald", tuple(float(x) for x in ion_charges)))
+    return 1.25
+
+  monkeypatch.setattr(runtime_module, "get_ewald_coulomb_repulsion", _fake_ewald)
+
+  ctx = runtime_module.build_runtime_context(config, mode="mesh", backend=FakeBackend())
+
+  assert calls == ["build", "ion", ("ewald", (4.0, 4.0))]
+  assert float(ctx.ewald_energy) == pytest.approx(1.25)

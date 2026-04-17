@@ -70,7 +70,7 @@ class RadialMesh:
 @dataclass(frozen=True)
 class LocalChannel:
   vloc_r: Float[Array, "num_r"]
-  z_valence: int
+  z_valence: float
 
 
 @dataclass(frozen=True)
@@ -100,7 +100,7 @@ class AugmentationChannel:
 class PseudoSpeciesSetup:
   family: PseudoFamily
   symbol: str
-  valence_charge: int
+  valence_charge: float
   radial: RadialMesh
   local: LocalChannel
   projectors: ProjectorChannel
@@ -677,7 +677,7 @@ def _build_species_setup(
     dr_g=np.asarray(pp_dict["PP_MESH"]["PP_RAB"], dtype=np.float64)[radial_mask],
   )
 
-  valence_charge = int(float(pp_dict["PP_HEADER"]["z_valence"]))
+  valence_charge = float(pp_dict["PP_HEADER"]["z_valence"])
   local = LocalChannel(
     vloc_r=np.asarray(pp_dict["PP_LOCAL"], dtype=np.float64)[radial_mask] / 2.0,
     z_valence=valence_charge,
