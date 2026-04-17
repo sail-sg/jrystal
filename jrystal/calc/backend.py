@@ -642,6 +642,13 @@ class UltrasoftBackend:
     density = self._total_density(coeff, occ, ctx)
     density_reciprocal = jnp.fft.fftn(density, axes=range(-3, 0))
 
+    smooth_density = _pw.density_grid(
+      coeff, vol, occ, k_weights=k_weights,
+    )
+    smooth_density_reciprocal = jnp.fft.fftn(
+      smooth_density, axes=range(-3, 0),
+    )
+
     kin = _energy.kinetic(
       coeff,
       g_vec,
@@ -651,7 +658,7 @@ class UltrasoftBackend:
     )
     hart = _energy.hartree(density_reciprocal, g_vec, vol)
     ext_loc = _normcons.energy_local(
-      density_reciprocal,
+      smooth_density_reciprocal,
       ctx.potential_local,
       vol=vol,
     )
@@ -788,6 +795,13 @@ class UltrasoftBackend:
     density = self._total_density(coeff, occ, ctx)
     density_reciprocal = jnp.fft.fftn(density, axes=range(-3, 0))
 
+    smooth_density = _pw.density_grid(
+      coeff, vol, occ, k_weights=k_weights,
+    )
+    smooth_density_reciprocal = jnp.fft.fftn(
+      smooth_density, axes=range(-3, 0),
+    )
+
     return {
       "kinetic":
         _energy.kinetic(
@@ -801,7 +815,7 @@ class UltrasoftBackend:
         _energy.hartree(density_reciprocal, g_vec, vol),
       "external_local":
         _normcons.energy_local(
-          density_reciprocal,
+          smooth_density_reciprocal,
           ctx.potential_local,
           vol=vol,
         ),
