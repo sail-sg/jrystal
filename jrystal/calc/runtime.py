@@ -34,6 +34,10 @@ from .opt_utils import (
 from .types import ExecutionPlan, KSampling, PlaneWaveBasis
 
 
+def _ewald_charge_dtype():
+  return jnp.float64 if jax.config.read("jax_enable_x64") else jnp.float32
+
+
 @dataclass
 class RuntimeContext:
   """Collected runtime state for a calculation workflow."""
@@ -126,24 +130,39 @@ def build_runtime_context(
     if mode == "mesh" else config.execution.parallel_over_k_path,
   )
 
-  ew = get_ewald_coulomb_repulsion(
-    config,
-    crystal=crystal,
-    g_vector_grid=g_vec,
-  )
-
   ctx = RuntimeContext(
     crystal=crystal,
     g_vec=g_vec,
     r_vec=r_vec,
     ksampling=ksampling,
     basis=basis,
-    ewald_energy=ew,
+    ewald_energy=0.0,
     execution=execution,
   )
 
   if backend is not None:
     ctx = backend.build_potentials(ctx)
+
+  ion_charges = (
+    backend.ion_charges(ctx)
+    if backend is not None else
+    jnp.asarray(crystal.charges, dtype=_ewald_charge_dtype())
+  )
+  ion_charges = jnp.asarray(ion_charges, dtype=_ewald_charge_dtype())
+  if backend is not None:
+    num_electrons = float(backend.num_electrons(ctx))
+    if not np.isclose(float(jnp.sum(ion_charges)), num_electrons, atol=1e-8):
+      raise ValueError(
+        "Backend ionic charges are inconsistent with backend electron count."
+      )
+
+  ew = get_ewald_coulomb_repulsion(
+    config,
+    crystal=crystal,
+    g_vector_grid=g_vec,
+    ion_charges=ion_charges,
+  )
+  ctx = ctx.replace(ewald_energy=ew)
 
   return ctx
 

@@ -145,6 +145,10 @@ class ElectronicBackend(Protocol):
     """Compute backend-specific potentials and attach them to *ctx*."""
     ...
 
+  def ion_charges(self, ctx: "RuntimeContext") -> Any:
+    """Return ionic charges to use in the Ewald ion-ion term."""
+    ...
+
   def total_energy(
     self,
     coeff: Any,

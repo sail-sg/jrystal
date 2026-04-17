@@ -43,7 +43,7 @@ class Pseudopotential():
   positions: Float[Array, "atom 3"]
   charges: Int[Array, "atom"]
   atomic_symbols: List[str]
-  valence_charges: List[int]
+  valence_charges: List[float]
   species_setups: tuple[PseudoSpeciesSetup, ...]
   atom_species_map: Optional[AtomSpeciesMap]
 
@@ -66,11 +66,11 @@ class NormConservingPseudopotential(Pseudopotential):
       positions (np.ndarray): Atom positions.
       charges (np.ndarray): Atom charges.
       atomic_symbols (List[str]): Atomic symbols.
-      valence_charges (List[int]): Valence charges.
+      valence_charges (List[float]): Valence charges.
       r_grid (List[np.ndarray]): r grid.
       r_cutoff (List[float]): r cutoff.
       local_potential_grid (List[np.ndarray]): Local potential grid.
-      local_potential_charge (List[int]): Local potential charge.
+      local_potential_charge (List[float]): Local potential charge.
       num_beta (List[int]): Number of beta functions.
       nonlocal_beta_grid (List[np.ndarray]): Nonlocal beta grid.
       nonlocal_beta_cutoff_radius (List[List[float]]): Nonlocal beta cutoff
@@ -94,7 +94,7 @@ class NormConservingPseudopotential(Pseudopotential):
   l_max: List[int]
   l_max_rho: List[Optional[int]]
   local_potential_grid: List[Float[Array, "num_r"]]
-  local_potential_charge: List[int]
+  local_potential_charge: List[float]
   num_beta: List[int]
   nonlocal_beta_grid: List[Float[Array, "num_beta num_r"]]
   nonlocal_beta_cutoff_radius: List[List[float]]
@@ -213,11 +213,11 @@ class UltrasoftPseudopotential(NormConservingPseudopotential):
       positions (np.ndarray): Atom positions.
       charges (np.ndarray): Atom charges.
       atomic_symbols (List[str]): Atomic symbols.
-      valence_charges (List[int]): Valence charges.
+      valence_charges (List[float]): Valence charges.
       r_grid (List[np.ndarray]): r grid.
       r_cutoff (List[float]): r cutoff.
       local_potential_grid (List[np.ndarray]): Local potential grid.
-      local_potential_charge (List[int]): Local potential charge.
+      local_potential_charge (List[float]): Local potential charge.
       num_beta (List[int]): Number of beta functions.
       nonlocal_beta_grid (List[np.ndarray]): Nonlocal beta grid.
       nonlocal_beta_cutoff_radius (List[List[float]]): Nonlocal beta cutoff

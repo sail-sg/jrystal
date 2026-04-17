@@ -16,6 +16,7 @@ import os
 from typing import Optional
 
 import jax
+import jax.numpy as jnp
 import numpy as np
 import optax
 from optax._src import alias
@@ -39,6 +40,10 @@ from .._src.utils import check_spin_number
 from ..config import JrystalConfigDict
 from ..terminal_ui import stage_line
 from .types import KSampling
+
+
+def _ewald_charge_dtype():
+  return jnp.float64 if jax.config.read("jax_enable_x64") else jnp.float32
 
 
 def set_env_params(config: JrystalConfigDict):
@@ -326,14 +331,16 @@ def get_ewald_coulomb_repulsion(
   config: JrystalConfigDict,
   crystal: Optional[Crystal] = None,
   g_vector_grid=None,
+  ion_charges=None,
 ):
   crystal = create_crystal(config) if crystal is None else crystal
   ewald_grid = translation_vectors(crystal.cell_vectors, config.ewald.cutoff)
   if g_vector_grid is None:
     g_vector_grid, _, _ = create_grids(config, crystal=crystal)
+  charges = crystal.charges if ion_charges is None else ion_charges
   ew = ewald_coulomb_repulsion(
     crystal.positions,
-    crystal.charges,
+    jnp.asarray(charges, dtype=_ewald_charge_dtype()),
     g_vector_grid,
     crystal.vol,
     ewald_eta=config.ewald.eta,
