@@ -212,6 +212,135 @@ def _density_dtype_from_context(density, ctx):
   return density_dtype
 
 
+def _kinetic_preconditioner_batch(
+  g_vec,
+  freq_mask,
+  kpts,
+  *,
+  num_spin: int,
+  shift: float = 1.0,
+):
+  """Return a batched masked-G kinetic preconditioner for flattened (spin,k)."""
+  eff_g = jnp.asarray(g_vec)[freq_mask]
+  kpts = jnp.asarray(kpts, dtype=eff_g.dtype)
+  kinetic = 0.5 * jnp.sum((eff_g[None, :, :] + kpts[:, None, :])**2, axis=-1)
+  shift = jnp.asarray(shift, dtype=kinetic.dtype)
+  floor = jnp.maximum(shift, jnp.finfo(kinetic.dtype).eps)
+  precond = jnp.reciprocal(jnp.maximum(kinetic + shift, floor))
+  precond = jnp.broadcast_to(
+    precond[None, :, :, None],
+    (num_spin, precond.shape[0], precond.shape[1], 1),
+  )
+  return precond.reshape(num_spin * kpts.shape[0], eff_g.shape[0], 1)
+
+
+def _density_integral(density, vol: float) -> float:
+  """Integrate a real-space density over the unit cell."""
+  density = jnp.asarray(density)
+  total_grid = int(np.prod(density.shape[-3:]))
+  return float(jnp.sum(density).real) * float(vol) / float(total_grid)
+
+
+def _uspp_charge_diagnostics(
+  coeff_full,
+  total_density,
+  occ,
+  ctx,
+  *,
+  target_charge: float,
+):
+  """Return smooth/augmentation/total charge integrals for USPP SCF debug."""
+  smooth_density = _pw.density_grid(
+    coeff_full,
+    ctx.crystal.vol,
+    occ,
+    k_weights=ctx.ksampling.weights,
+  )
+  augmentation_density = jnp.asarray(total_density
+                                    ) - jnp.asarray(smooth_density)
+  total_charge = _density_integral(total_density, ctx.crystal.vol)
+  smooth_charge = _density_integral(smooth_density, ctx.crystal.vol)
+  augmentation_charge = _density_integral(
+    augmentation_density,
+    ctx.crystal.vol,
+  )
+  return {
+    "total_charge_e": total_charge,
+    "smooth_charge_e": smooth_charge,
+    "augmentation_charge_e": augmentation_charge,
+    "charge_delta_e": total_charge - target_charge,
+  }
+
+
+def _uspp_overlap_diagnostics(coeff_compact, ctx, occupied_bands: int):
+  """Return min/max eigenvalues of C^H S C on the occupied subspace."""
+  if occupied_bands <= 0:
+    return {}
+  overlap_eigs = _ultrasoft.subspace_overlap_eigenvalues_compact(
+    coeff_compact[..., :occupied_bands],
+    ctx.pseudo_cache.channel_projectors_compact_gk,
+    ctx.pseudo_cache.channel_qii,
+    ctx.crystal.vol,
+    channel_mask=ctx.pseudo_cache.channel_mask,
+  )
+  return {
+    "overlap_eig_min": float(jnp.min(overlap_eigs).real),
+    "overlap_eig_max": float(jnp.max(overlap_eigs).real),
+  }
+
+
+def _uspp_projector_charge_diagnostics(
+  coeff_compact,
+  occ,
+  ctx,
+  *,
+  smooth_charge: float,
+  augmentation_charge: float,
+  target_charge: float,
+):
+  """Compare real-space augmentation charge to projector-space Q expectation."""
+  f_matrix = _ultrasoft.projector_channel_overlap_compact(
+    coeff_compact,
+    ctx.pseudo_cache.channel_projectors_compact_gk,
+    channel_mask=ctx.pseudo_cache.channel_mask,
+  )
+  qf_matrix = jnp.einsum(
+    "aij,sakbj->sakbi",
+    ctx.pseudo_cache.channel_qii,
+    f_matrix,
+  )
+  q_diag = jnp.einsum(
+    "sakbi,sakbi->skb",
+    jnp.conj(f_matrix),
+    qf_matrix,
+  ).real / ctx.crystal.vol
+  weighted_occ = occ * ctx.ksampling.weights[None, :, None]
+  augmentation_charge_q_expected = float(jnp.sum(q_diag * weighted_occ).real)
+  return {
+    "augmentation_charge_q_expected_e":
+      augmentation_charge_q_expected,
+    "augmentation_charge_residual_e":
+      (float(augmentation_charge) - augmentation_charge_q_expected),
+    "charge_closure_error_e":
+      (
+        float(smooth_charge) + augmentation_charge_q_expected -
+        float(target_charge)
+      ),
+  }
+
+
+def _require_finite(name: str, value) -> None:
+  """Raise a clear error when a solver intermediate becomes non-finite."""
+  arr = np.asarray(value)
+  if np.all(np.isfinite(arr)):
+    return
+  raise FloatingPointError(
+    f"Encountered non-finite values in {name}; "
+    "this usually indicates the eigensolver or density reconstruction "
+    "has become unstable."
+  )
+
+
 @partial(jax.jit, inline=False, static_argnums=(2,))
 def _uspp_hvp_compact(
   coeff_compact_conj,
@@ -374,6 +503,12 @@ def run_scf(
   occ_max = _occupation_max(config.system.spin_restricted)
   num_kpts = ctx.ksampling.kpts.shape[0]
   num_bands = ceil(num_electrons / occ_max) + config.occupation.empty_bands
+  occupied_bands = max(
+    ceil(count / occ_max) for count in _spin_channel_electron_counts(
+      num_electrons,
+      crystal.spin,
+      config.system.spin_restricted,)
+  )
   smearing = config.occupation.smearing
 
   scf_config = config.solver.scf
@@ -412,6 +547,11 @@ def run_scf(
   if output_dir is not None and config.io.save_checkpoint:
     checkpoint_manager = make_checkpoint_manager(output_dir)
 
+  uspp_cache = (
+    ctx.pseudo_cache
+    if isinstance(ctx.pseudo_cache, UltrasoftMeshCache) else None
+  )
+
   # --- Init wavefunctions (compact, in masked G-space) ---
   start_step = 0
   previous_total_energy = None
@@ -425,6 +565,14 @@ def run_scf(
     )
     coeff_compact = pw_params["w_re"] + 1.0j * pw_params["w_im"]
     coeff_compact = jnp.linalg.qr(coeff_compact)[0]  # [s, k, g, band]
+    if uspp_cache is not None:
+      coeff_compact = _ultrasoft.overlap_inv_sqrt_apply_compact(
+        coeff_compact,
+        uspp_cache.channel_projectors_compact_gk,
+        uspp_cache.channel_qii,
+        crystal.vol,
+        channel_mask=uspp_cache.channel_mask,
+      )
 
     # --- Init eigenvalues, occupation, density ---
     evals = jax.random.normal(key, [num_spin, num_kpts, num_bands])
@@ -477,11 +625,15 @@ def run_scf(
   )
 
   # --- Preconditioner ---
-  precond = kerker_preconditioner(g_vec, freq_mask)
-  uspp_cache = (
-    ctx.pseudo_cache
-    if isinstance(ctx.pseudo_cache, UltrasoftMeshCache) else None
-  )
+  if uspp_cache is not None:
+    precond = _kinetic_preconditioner_batch(
+      g_vec,
+      freq_mask,
+      ctx.ksampling.kpts,
+      num_spin=num_spin,
+    )
+  else:
+    precond = kerker_preconditioner(g_vec, freq_mask)
   if uspp_cache is not None and uspp_cache.channel_projectors_compact_gk is None:
     raise ValueError(
       "USPP SCF requires compact active-G channel projectors in the mesh cache."
@@ -585,6 +737,12 @@ def run_scf(
           )
         if config.execution.profile:
           coeff_new, evals_new = jax.block_until_ready((coeff_new, evals_new))
+        if uspp_cache is not None:
+          _require_finite(f"USPP SCF eigensolve (step {step + 1})", coeff_new)
+          _require_finite(
+            f"USPP SCF eigenvalues (step {step + 1})",
+            evals_new,
+          )
       coeff_new = coeff_new.conj()
 
       # 2. Update occupation
@@ -615,11 +773,21 @@ def run_scf(
         )
         if config.execution.profile:
           density_new = jax.block_until_ready(density_new)
+        if uspp_cache is not None:
+          _require_finite(
+            f"USPP SCF density update (step {step + 1})",
+            density_new,
+          )
 
       # 4. Check convergence
       with phase_timer.phase("energy"):
         total_energy_new = float(
           backend.total_energy(coeff_full_new, occ, ctx) + ew
+        )
+      if uspp_cache is not None:
+        _require_finite(
+          f"USPP SCF total energy (step {step + 1})",
+          total_energy_new,
         )
       delta_total_energy = None
       if total_energy_history:
@@ -640,6 +808,36 @@ def run_scf(
         "wall_time": dt,
         "cumulative_time_s": cumulative_time,
       }
+      charge_delta = None
+      overlap_eig_min = None
+      overlap_eig_max = None
+      if uspp_cache is not None:
+        charge_info = _uspp_charge_diagnostics(
+          coeff_full_new,
+          density_new,
+          occ,
+          ctx,
+          target_charge=float(num_electrons),
+        )
+        projector_charge_info = _uspp_projector_charge_diagnostics(
+          coeff_new,
+          occ,
+          ctx,
+          smooth_charge=charge_info["smooth_charge_e"],
+          augmentation_charge=charge_info["augmentation_charge_e"],
+          target_charge=float(num_electrons),
+        )
+        overlap_info = _uspp_overlap_diagnostics(
+          coeff_new,
+          ctx,
+          occupied_bands=occupied_bands,
+        )
+        record.update(charge_info)
+        record.update(projector_charge_info)
+        record.update(overlap_info)
+        charge_delta = charge_info["charge_delta_e"]
+        overlap_eig_min = overlap_info.get("overlap_eig_min")
+        overlap_eig_max = overlap_info.get("overlap_eig_max")
       if chemical_potential is not None:
         chemical_potential_arr = np.asarray(chemical_potential)
         if chemical_potential_arr.ndim == 0:
@@ -661,6 +859,9 @@ def run_scf(
             step_time=dt,
             cumulative_time=cumulative_time,
             density_delta=d_density,
+            charge_delta=charge_delta,
+            overlap_eig_min=overlap_eig_min,
+            overlap_eig_max=overlap_eig_max,
             chemical_potential=scalar_chemical_potential,
           )
         )

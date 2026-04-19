@@ -139,7 +139,8 @@ class UltrasoftBaseCache(BasePseudoCache):
   channel_beta: Int[Array, "atom channel"] | None = None
   channel_dii: Float[Array, "atom channel channel"] | None = None
   channel_coupling: Float[Array, "atom channel channel l m"] | None = None
-  augmentation_radial_fields_g: Float[Array, "atom beta beta l x y z"] | None = None
+  augmentation_radial_fields_g: Float[Array,
+                                      "atom beta beta l x y z"] | None = None
   augmentation_harmonics_g: Float[Array, "atom l m x y z"] | None = None
   nlcc_g: Optional[Float[Array, "x y z"]] = None
   augmentation_l_max: int = 0
@@ -149,7 +150,8 @@ class UltrasoftBaseCache(BasePseudoCache):
 @dataclass(frozen=True)
 class UltrasoftMeshCache(UltrasoftBaseCache):
   channel_projectors_gk: Complex[Array, "atom kpt channel x y z"] | None = None
-  channel_projectors_compact_gk: Complex[Array, "atom kpt channel gpt"] | None = None
+  channel_projectors_compact_gk: Complex[Array,
+                                         "atom kpt channel gpt"] | None = None
 
 
 @dataclass(frozen=True)
@@ -331,23 +333,23 @@ def _real_gaunt_lookup(
     # ``batch_sph_harm_real()`` uses the local convention
     # (theta=azimuth, phi=polar).  The quadrature grid above is generated in
     # the SciPy/JAX convention (theta=polar, phi=azimuth), so swap them here.
-    l_val: np.asarray(batch_sph_harm_real(l_val, flat_phi, flat_theta)).reshape(
-      num_theta,
-      num_phi,
-      2 * l_val + 1,
-    )
-    for l_val in range(max_l + 1)
+    l_val:
+      np.asarray(batch_sph_harm_real(l_val, flat_phi, flat_theta)).reshape(
+        num_theta,
+        num_phi,
+        2 * l_val + 1,
+      ) for l_val in range(max_l + 1)
   }
   gram_inverse = {
-    l_val: np.linalg.inv(
-      np.einsum(
-        "tpm,tpn,tp->mn",
-        harmonics[l_val],
-        harmonics[l_val],
-        quad_weight,
-      ),
-    )
-    for l_val in range(l_max_aug + 1)
+    l_val:
+      np.linalg.inv(
+        np.einsum(
+          "tpm,tpn,tp->mn",
+          harmonics[l_val],
+          harmonics[l_val],
+          quad_weight,
+        ),
+      ) for l_val in range(l_max_aug + 1)
   }
 
   coeffs: dict[tuple[int, int, int, int, int, int], float] = {}
@@ -397,9 +399,8 @@ def _build_channel_augmentation_coupling(
       l_hi = min(l_i + l_j, l_max_aug)
       for l_val in range(l_min, l_hi + 1):
         for m_val in range(-l_val, l_val + 1):
-          coupling[i, j, l_val, m_val + l_max_aug] = gaunt[
-            (l_i, m_i, l_j, m_j, l_val, m_val)
-          ]
+          coupling[i, j, l_val, m_val +
+                   l_max_aug] = gaunt[(l_i, m_i, l_j, m_j, l_val, m_val)]
 
   return coupling
 
@@ -417,13 +418,26 @@ def _real_spherical_harmonics_grid(
   ]
 
 
+def _minimum_image_relative_vectors(
+  r_vec: np.ndarray,
+  atom_positions: np.ndarray,
+  cell_vectors: np.ndarray,
+) -> np.ndarray:
+  """Return periodic minimum-image vectors from atoms to the real-space grid."""
+  inv_cell = np.linalg.inv(cell_vectors)
+  grid_frac = np.einsum("...j,jk->...k", r_vec, inv_cell)
+  atom_frac = np.einsum("aj,jk->ak", atom_positions, inv_cell)
+  rel_frac = grid_frac[None, ...] - atom_frac[:, None, None, None, :]
+  rel_frac -= np.round(rel_frac)
+  return np.einsum("a...j,jk->a...k", rel_frac, cell_vectors)
+
+
 def _expand_projector_channels(
   projector_gk,
   atom_setups: tuple[PseudoSpeciesSetup, ...],
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
   max_channel = max(
-    len(setup.projectors.channel_map.channel_beta)
-    for setup in atom_setups
+    len(setup.projectors.channel_map.channel_beta) for setup in atom_setups
   )
   phi_center = projector_gk.projectors.shape[3] // 2
 
@@ -466,8 +480,7 @@ def _build_compact_projector_channels(
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
   """Build compact ultrasoft channel projectors directly on the active G mask."""
   max_channel = max(
-    len(setup.projectors.channel_map.channel_beta)
-    for setup in atom_setups
+    len(setup.projectors.channel_map.channel_beta) for setup in atom_setups
   )
   g_indices = np.flatnonzero(np.asarray(freq_mask).reshape(-1))
   active_g = np.asarray(g_vec).reshape(-1, 3)[g_indices]
@@ -475,9 +488,8 @@ def _build_compact_projector_channels(
   gk_vectors = kpts_np[:, None, :] + active_g[None, :, :]
 
   l_max = max(
-    int(np.max(np.asarray(setup.projectors.l_j)))
-    if np.asarray(setup.projectors.l_j).size else 0
-    for setup in atom_setups
+    int(np.max(np.asarray(setup.projectors.l_j))) if np.
+    asarray(setup.projectors.l_j).size else 0 for setup in atom_setups
   )
   spherical = cartesian_to_spherical(jnp.asarray(gk_vectors))
   theta = spherical[..., 1]
@@ -518,11 +530,8 @@ def _build_compact_projector_channels(
     ):
       y_lm = harmonics_by_l[int(l_val)][..., int(m_val) + int(l_val)]
       atom_projectors[:, channel_idx] = (
-        4.0 * np.pi *
-        (1.0j ** int(l_val)) *
-        y_lm *
-        beta_compact[:, int(beta_idx)] *
-        structure_factor
+        4.0 * np.pi * (1.0j**int(l_val)) * y_lm *
+        beta_compact[:, int(beta_idx)] * structure_factor
       )
 
     projector_channels.append(atom_projectors)
@@ -541,9 +550,8 @@ def squeeze_projector_channels_to_mask(
   freq_mask: Array,
 ) -> jnp.ndarray:
   """Project full reciprocal-grid channel projectors onto the active G basis."""
-  flat = np.asarray(projector_channels_gk).reshape(
-    projector_channels_gk.shape[:3] + (-1,),
-  )
+  flat = np.asarray(projector_channels_gk
+                   ).reshape(projector_channels_gk.shape[:3] + (-1,),)
   g_indices = np.flatnonzero(np.asarray(freq_mask).reshape(-1))
   return jnp.asarray(flat[..., g_indices])
 
@@ -573,7 +581,9 @@ def build_uspp_projector_channels_for_k(
   """Build full ultrasoft channel projectors lazily for a single k-point."""
   from .nloc import potential_nonlocal_psi_reciprocal
 
-  atom_setups = expand_species_setups(cache.species_setups, cache.atom_species_map)
+  atom_setups = expand_species_setups(
+    cache.species_setups, cache.atom_species_map
+  )
   atom_positions = jnp.asarray(cache.atom_species_map.positions)
   atom_r_grid = [setup.radial.r_g for setup in atom_setups]
   atom_beta = [setup.projectors.beta_jr for setup in atom_setups]
@@ -619,8 +629,7 @@ def _build_augmentation_channel(
 
   q_with_l = bool(augmentation["q_with_l"])
   num_l = (
-    int(pp_dict["PP_HEADER"].get("l_max_rho") or 0) + 1
-    if q_with_l else 1
+    int(pp_dict["PP_HEADER"].get("l_max_rho") or 0) + 1 if q_with_l else 1
   )
   q_jjlr = np.zeros(
     (num_beta, num_beta, num_l, int(np.sum(radial_mask))),
@@ -668,13 +677,13 @@ def _build_species_setup(
   valence_configuration = tuple(pp_dict["PP_INFO"]["Valence configuration"])
   number_of_wfc = pp_dict["PP_HEADER"].get("number_of_wfc")
   num_pseudo_waves = (
-    int(number_of_wfc)
-    if number_of_wfc is not None else
+    int(number_of_wfc) if number_of_wfc is not None else
     (len(valence_configuration) if valence_configuration else None)
   )
   radial = RadialMesh(
     r_g=mesh[radial_mask],
-    dr_g=np.asarray(pp_dict["PP_MESH"]["PP_RAB"], dtype=np.float64)[radial_mask],
+    dr_g=np.asarray(pp_dict["PP_MESH"]["PP_RAB"],
+                    dtype=np.float64)[radial_mask],
   )
 
   valence_charge = float(pp_dict["PP_HEADER"]["z_valence"])
@@ -742,6 +751,7 @@ def build_pseudo_cache(
   ksampling,
   vol: float,
   freq_mask: Array | None = None,
+  cell_vectors: Float[Array, "3 3"] | None = None,
 ) -> BasePseudoCache | UltrasoftBaseCache:
   """Build reusable pseudo caches from normalized species setups."""
   from .beta import beta_sbt_grid
@@ -769,16 +779,16 @@ def build_pseudo_cache(
   )
 
   beta_radial_gk = tuple(
-    jnp.asarray(arr)
-    for arr in beta_sbt_grid(
+    jnp.asarray(arr) for arr in beta_sbt_grid(
       [setup.radial.r_g for setup in setups],
       [setup.projectors.beta_jr for setup in setups],
       [setup.projectors.l_j for setup in setups],
       np.asarray(g_vec),
-      np.asarray(ksampling.kpts),
-    )
+      np.asarray(ksampling.kpts),)
   )
-  atom_beta_gk = [beta_radial_gk[int(idx)] for idx in atom_species_map.species_index]
+  atom_beta_gk = [
+    beta_radial_gk[int(idx)] for idx in atom_species_map.species_index
+  ]
 
   projector_gk = None
   projector_mask = None
@@ -809,8 +819,7 @@ def build_pseudo_cache(
 
   max_beta = max(setup.projectors.beta_jr.shape[0] for setup in atom_setups)
   max_channel = max(
-    len(setup.projectors.channel_map.channel_beta)
-    for setup in atom_setups
+    len(setup.projectors.channel_map.channel_beta) for setup in atom_setups
   )
   l_max_aug = max(
     (
@@ -820,10 +829,18 @@ def build_pseudo_cache(
     ),
     default=0,
   )
-  atom_radius_grid = np.linalg.norm(
-    np.asarray(r_vec)[None, ...] - np.asarray(atom_positions)[:, None, None, None, :],
-    axis=-1,
-  )
+  if cell_vectors is None:
+    atom_relative_vectors = (
+      np.asarray(r_vec)[None, ...] -
+      np.asarray(atom_positions)[:, None, None, None, :]
+    )
+  else:
+    atom_relative_vectors = _minimum_image_relative_vectors(
+      np.asarray(r_vec),
+      np.asarray(atom_positions),
+      np.asarray(cell_vectors, dtype=np.float64),
+    )
+  atom_radius_grid = np.linalg.norm(atom_relative_vectors, axis=-1)
 
   def _interpolate_radial_field(
     radius_grid: np.ndarray,
@@ -848,10 +865,6 @@ def build_pseudo_cache(
   nlcc_grid = np.zeros(r_vec.shape[:3], dtype=np.float64)
   has_nlcc = False
   has_angular_augmentation = False
-
-  atom_relative_vectors = (
-    np.asarray(r_vec)[None, ...] - np.asarray(atom_positions)[:, None, None, None, :]
-  )
 
   for setup, radius_grid, relative_vectors in zip(
     atom_setups,

@@ -52,6 +52,7 @@ if TYPE_CHECKING:
 def _ion_charge_dtype():
   return jnp.float64 if jax.config.read("jax_enable_x64") else jnp.float32
 
+
 # ---------------------------------------------------------------------------
 # All-electron backend
 # ---------------------------------------------------------------------------
@@ -236,6 +237,7 @@ class NormConservingBackend:
       ctx.ksampling,
       crystal.vol,
       freq_mask=ctx.basis.freq_mask,
+      cell_vectors=crystal.cell_vectors,
     )
 
     potential_loc = pseudo_cache.vloc_g
@@ -460,6 +462,7 @@ class UltrasoftBackend:
       ctx.ksampling,
       crystal.vol,
       freq_mask=ctx.basis.freq_mask,
+      cell_vectors=crystal.cell_vectors,
     )
     if not isinstance(pseudo_cache, UltrasoftBaseCache):
       raise TypeError("Ultrasoft cache construction returned the wrong type.")
@@ -665,10 +668,14 @@ class UltrasoftBackend:
     density_reciprocal = jnp.fft.fftn(density, axes=range(-3, 0))
 
     smooth_density = _pw.density_grid(
-      coeff, vol, occ, k_weights=k_weights,
+      coeff,
+      vol,
+      occ,
+      k_weights=k_weights,
     )
     smooth_density_reciprocal = jnp.fft.fftn(
-      smooth_density, axes=range(-3, 0),
+      smooth_density,
+      axes=range(-3, 0),
     )
 
     kin = _energy.kinetic(
@@ -818,10 +825,14 @@ class UltrasoftBackend:
     density_reciprocal = jnp.fft.fftn(density, axes=range(-3, 0))
 
     smooth_density = _pw.density_grid(
-      coeff, vol, occ, k_weights=k_weights,
+      coeff,
+      vol,
+      occ,
+      k_weights=k_weights,
     )
     smooth_density_reciprocal = jnp.fft.fftn(
-      smooth_density, axes=range(-3, 0),
+      smooth_density,
+      axes=range(-3, 0),
     )
 
     return {

@@ -119,7 +119,9 @@ def _log_pseudopotential_info(ctx) -> None:
     num_proj = int(np.asarray(setup.projectors.beta_jr).shape[0])
     num_channel = len(setup.projectors.channel_map.channel_beta)
     num_pseudo_waves = getattr(setup, "num_pseudo_waves", None)
-    waves_label = "n/a" if num_pseudo_waves is None else str(int(num_pseudo_waves))
+    waves_label = "n/a" if num_pseudo_waves is None else str(
+      int(num_pseudo_waves)
+    )
     console_line(
       (
         f"PP[{setup.symbol}]  waves={waves_label} "
@@ -254,6 +256,9 @@ def format_ground_state_iteration(
   density_delta: Optional[float] = None,
   energy_std: Optional[float] = None,
   chemical_potential: Optional[float] = None,
+  charge_delta: Optional[float] = None,
+  overlap_eig_min: Optional[float] = None,
+  overlap_eig_max: Optional[float] = None,
 ) -> str:
   """Create a compact <=80-char-ish iteration-progress string."""
   del solver_name
@@ -264,14 +269,20 @@ def format_ground_state_iteration(
   ]
   if density_delta is not None:
     parts.append(f"dR={density_delta:.1e}")
+  if charge_delta is not None:
+    parts.append(f"dN={charge_delta:+.1e}")
   if energy_std is not None:
     parts.append(f"sd={energy_std:.1e}")
   if step_time is not None:
     parts.append(f"dt={step_time:.2f}s")
   if get_log_level() == "verbose":
-    if chemical_potential is not None:
+    if overlap_eig_min is not None and overlap_eig_max is not None:
+      parts.append(f"S={overlap_eig_min:.3f}..{overlap_eig_max:.3f}")
+    elif chemical_potential is not None:
       parts.append(f"mu={chemical_potential:.6f}")
-    if cumulative_time is not None:
+    if cumulative_time is not None and (
+      overlap_eig_min is None or overlap_eig_max is None
+    ):
       parts.append(f"T={cumulative_time:.1f}s")
   return " ".join(parts)
 

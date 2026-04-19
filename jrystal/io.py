@@ -178,8 +178,10 @@ def _convergence_payload(result) -> dict[str, Any]:
     for column in columns:
       if column in {"step"}:
         units.append("")
-      elif column in {"delta_density"}:
+      elif column in {"delta_density", "overlap_eig_min", "overlap_eig_max"}:
         units.append("")
+      elif column.endswith("_e"):
+        units.append("e")
       elif column in {"wall_time"} or column.endswith("_s"):
         units.append("s")
       else:
