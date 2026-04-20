@@ -1,0 +1,49 @@
+name: Lint and Format
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install lint and format tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff isort yapf
+
+      - name: Run ruff
+        run: |
+          mapfile -t TARGETS < <(
+            find . \
+              \( -path "./.git" -o -path "./.venv" -o -path "./build" -o -path "./out" \
+                 -o -path "./_cache" -o -path "./docs/_build" -o -path "./__pycache__" \) -prune \
+              -o -type f -name "*.py" -print | sort
+          )
+          ruff check "${TARGETS[@]}"
+
+      - name: Run format checks
+        run: |
+          mapfile -t PYTHON_FILES < <(
+            find . \
+              \( -path "./.git" -o -path "./.venv" -o -path "./build" -o -path "./out" \
+                 -o -path "./_cache" -o -path "./docs/_build" -o -path "./__pycache__" \) -prune \
+              -o -type f -name "*.py" -print | sort
+          )
+          isort --check "${PYTHON_FILES[@]}"
+          yapf -r -d "${PYTHON_FILES[@]}"

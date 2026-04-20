@@ -14,11 +14,14 @@
 """Planewave module."""
 
 from ._src.pw import (
-  param_init,
   coeff,
-  wave_grid,
   density_grid,
   density_grid_reciprocal,
+  density_r,
+  nabla_density_grid,
+  nabla_density_r,
+  param_init,
+  wave_grid,
   wave_r,
 )
 
@@ -28,5 +31,8 @@ __all__ = [
   "wave_grid",
   "density_grid",
   "density_grid_reciprocal",
+  "density_r",
+  "nabla_density_r",
+  "nabla_density_grid",
   "wave_r",
 ]

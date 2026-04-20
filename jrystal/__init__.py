@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 from pathlib import Path
 
@@ -27,11 +27,13 @@ from . import (
   grid,
   hamiltonian,
   occupation,
+  plot,
   potential,
   pseudopotential,
   pw,
   sbt,
-  utils
+  smearing,
+  utils,
 )
 from .crystal import Crystal
 
@@ -42,20 +44,22 @@ def get_pkg_path():
 
 __all__ = [
   "_src",
+  "calc",
+  "config",
   "crystal",
   "Crystal",
-  "calc",
-  "pseudopotential",
-  "utils",
-  "sbt",
-  "pw",
-  "occupation",
+  "energy",
+  "entropy",
+  "ewald",
+  "get_pkg_path",
   "grid",
   "hamiltonian",
-  "energy",
+  "occupation",
+  "plot",
   "potential",
-  "entropy",
-  "get_pkg_path",
-  "config",
-  "ewald",
+  "pseudopotential",
+  "pw",
+  "sbt",
+  "smearing",
+  "utils",
 ]

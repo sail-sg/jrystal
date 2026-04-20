@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import numpy as np
+from scipy.fft import ifft, irfft, rfft
 from scipy.special import gamma, spherical_jn
-from scipy.fft import ifft, rfft, irfft
 
 # usefull constants
 PI = np.pi
@@ -22,7 +22,7 @@ TPI = 2.0 * np.pi
 II = 1.0j
 
 
-class pyNumSBT(object):
+class pyNumSBT(object):  # noqa: N801
   r'''
     Numerically perform spherical Bessel transform (SBT) in :math:`O(Nln(N))` time based
     on the algorithm proposed by J. Talman.
@@ -171,9 +171,8 @@ class pyNumSBT(object):
     xx = np.exp(self.rho_min + self.kappa_min + np.arange(self.nr2) * self.drho)
 
     # M_lt2 is just the Fourier transform of spherical Bessel function j_l
-    self.M_lt2 = ifft(
-      spherical_jn(ll[:, None], xx[None, :]), axis=1
-    ).conj()[:, :self.nr + 1]
+    self.M_lt2 = ifft(spherical_jn(ll[:, None], xx[None, :]),
+                      axis=1).conj()[:, :self.nr + 1]
 
   def run(
     self,
@@ -192,7 +191,7 @@ class pyNumSBT(object):
         ff: the function defined on the logarithmic radial grid
         l: the "l" as in the underscript of "j_l(kr)" of Eq. (c1) and (c2)
         direction: 1 for forward SBT and -1 for inverse SBT
-        norm: whether to multiply the prefactor \sqrt{2\over\pi} in Eq. (c1) and
+        norm: whether to multiply the prefactor \\sqrt{2\\over\\pi} in Eq. (c1) and
           (c2). If False, then subsequent applicaton of SBT and iSBT will yield
           the original data scaled by a factor of 2/pi.
         np_in: the asymptotic bahavior of ff when  r -> 0
@@ -297,7 +296,7 @@ class pyNumSBT(object):
     return_rr: bool = False,
     include_zero: bool = False,
   ):
-    '''
+    r'''
         Perform SBT or inverse-SBT by numerically integrating Eq. (c1) and (c2).
         Input parapeters:
         ff: the function defined on the logarithmic radial grid

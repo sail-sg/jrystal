@@ -1,0 +1,33 @@
+# name: Smoke Tests
+
+# on:
+#   push:
+#     branches:
+#       - main
+#   pull_request:
+
+# jobs:
+#   smoke:
+#     runs-on: ubuntu-22.04
+#     permissions:
+#       contents: read
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+
+#       - name: Setup Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: "3.11"
+#           cache: pip
+#           cache-dependency-path: pyproject.toml
+
+#       - name: Install package and test dependencies
+#         run: |
+#           python -m pip install --upgrade pip
+#           python -m pip install jax jaxlib                                        # CPU-only (no CUDA on CI)
+#           python -m pip install -e ".[test]"
+
+#       - name: Run smoke tests
+#         run: |
+#           python -m pytest tests/smoke -q

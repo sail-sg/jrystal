@@ -13,10 +13,9 @@
 # limitations under the License.
 
 from functools import wraps
-from typing import List, Callable, Any
-import jax
+from typing import Any, Callable, List
+
 import numpy as np
-import jax.numpy as jnp
 
 
 def map_over_atoms(fun: Callable[..., Any]) -> Callable[..., List]:

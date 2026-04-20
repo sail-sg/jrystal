@@ -18,14 +18,15 @@ contributions in plane wave basis sets, including reciprocal space
 transformations and Hamiltonian matrix elements.
 """
 from typing import List
-import numpy as np
+
 import jax.numpy as jnp
+import numpy as np
 from interpax import CubicSpline
 from jaxtyping import Array, Complex, Float
 
 from .._src import braket
-from ..sbt import sbt, sbt_numerical
 from ..grid import g2r_vector_grid
+from ..sbt import sbt_numerical
 from .utils import map_over_atoms
 
 
@@ -34,7 +35,7 @@ def potential_local_reciprocal(
   g_vector_grid: Float[Array, "x y z 3"],
   r_grid: List[Float[Array, "r"]],
   local_potential_grid: List[Float[Array, "r"]],
-  local_potential_charge: List[int],
+  local_potential_charge: List[float],
   vol: float,
   fourier_transform_method: str = "sbt"
 ) -> Float[Array, "x y z"]:
@@ -56,7 +57,8 @@ def potential_local_reciprocal(
     type.
     local_potential_grid (List[Float[Array, "r"]]): Local potential values on
     radial grids.
-    local_potential_charge (List[int]): Nuclear charges for each atom type.
+    local_potential_charge (List[float]): Pseudopotential valence charges for
+    each atom type.
     vol (float): Unit cell volume.
     fourier_transform (str): Fourier transform method. Can be either "sbt" or
     "fft".
@@ -88,6 +90,7 @@ def potential_local_reciprocal(
       return f_k
 
   elif fourier_transform_method == "fft":
+
     @map_over_atoms
     def g(r, v_r, z):
       v_r_modified = v_r + z / r

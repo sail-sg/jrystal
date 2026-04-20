@@ -13,14 +13,13 @@
 # limitations under the License.
 
 from .._src.utils import (
+  expand_coefficient,
   safe_real,
+  squeeze_coefficient,
   vmapstack,
   wave_to_density,
   wave_to_density_reciprocal,
-  expand_coefficient,
-  squeeze_coefficient,
 )
-
 
 __all__ = [
   'safe_real',

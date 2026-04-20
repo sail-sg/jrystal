@@ -30,7 +30,7 @@ def pre_calc_beta_sbt(pseudopot, g_vector_grid, kpts, save_cache=False):
 
   # Use multiprocessing Pool to parallelize computation
   mp.set_start_method("spawn", force=True)
-  with ProcessPoolExecutor(max_workers=mp.cpu_count()//2) as exe:
+  with ProcessPoolExecutor(max_workers=mp.cpu_count() // 2) as exe:
     output = list(exe.map(_to_map, args_list))
 
   # Create cache directory if it doesn't exist

@@ -19,6 +19,13 @@ hartree for energy and Bohr for length. The input positions of atoms should be
 in angstrom.
 """
 
-from ._src.crystal import Crystal
+from ._src.crystal import (
+  Crystal,
+  create_from_ase_atoms,
+  create_from_file,
+  create_from_symbols,
+)
 
-__all__ = ["Crystal"]
+__all__ = [
+  "Crystal", "create_from_symbols", "create_from_file", "create_from_ase_atoms"
+]

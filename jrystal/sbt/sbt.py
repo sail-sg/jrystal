@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Spherical Bessel Transform. """
+from typing import Sequence, Tuple, Union
+
 import jax.numpy as jnp
-from typing import Tuple, Sequence, Union
-from jaxtyping import Array, Float
 import numpy as np
 import scipy
+from jaxtyping import Array, Float
 
 from .pysbt import pyNumSBT
 
@@ -28,7 +29,7 @@ def sbt(
   kmax: float = 100,
   norm: bool = False
 ) -> Tuple[Float[Array, "num_r"], Float[Array, "num_r"]]:
-  """Spherical Bessel Transform.
+  r"""Spherical Bessel Transform.
 
   ..math::
     g(k) = int_0^\infty f(r) j_l(r) r^2 dr
@@ -71,7 +72,7 @@ def batch_sbt(
   kmax: float = 100,
   norm: bool = False
 ) -> Tuple:
-  """batched spherical bessel transform for multiple functions.
+  r"""batched spherical bessel transform for multiple functions.
 
     sbt: g(k) = int_0^\infty f(r) j_l(r) r^2 dr
 

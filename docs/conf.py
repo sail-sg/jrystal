@@ -74,6 +74,7 @@ napoleon_include_init_with_doc = True
 html_static_path = ['_static']
 html_css_files = ['custom.css']
 
+
 # conf.py
 def setup(app):
   app.add_css_file('custom.css')

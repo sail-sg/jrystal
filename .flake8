@@ -1,0 +1,14 @@
+[flake8]
+max-line-length = 80
+indent-size = 2
+extend-ignore =
+  F722,
+  W293,
+  W291,
+  E731,
+  E124,
+  W605,
+  E722,
+  F821,
+  E111,
+  E114
