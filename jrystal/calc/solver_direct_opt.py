@@ -141,6 +141,33 @@ def _freeze_occupation_gradient(grad: dict) -> dict:
   }
 
 
+def _tree_all_finite(tree) -> jax.Array:
+  """Return whether every array leaf in a pytree is finite."""
+  leaves = jax.tree_util.tree_leaves(tree)
+  if not leaves:
+    return jnp.asarray(True)
+  checks = [jnp.all(jnp.isfinite(jnp.asarray(leaf))) for leaf in leaves]
+  return jnp.all(jnp.stack(checks))
+
+
+def _tree_global_norm(tree) -> jax.Array:
+  """Return the global L2 norm of a pytree of arrays."""
+  leaves = jax.tree_util.tree_leaves(tree)
+  if not leaves:
+    return jnp.asarray(0.0)
+  sq_norms = [jnp.sum(jnp.abs(jnp.asarray(leaf))**2) for leaf in leaves]
+  return jnp.sqrt(jnp.sum(jnp.stack(sq_norms)))
+
+
+def _clip_gradient_tree(grad, max_norm: float):
+  """Clip a gradient pytree by global norm."""
+  max_norm = jnp.asarray(max_norm)
+  grad_norm = _tree_global_norm(grad)
+  scale = jnp.minimum(1.0, max_norm / jnp.maximum(grad_norm, max_norm))
+  clipped = jax.tree_util.tree_map(lambda g: g * scale, grad)
+  return clipped, grad_norm
+
+
 def _occupation_params_from_tensor(
   occupation: jax.Array,
   *,
@@ -208,6 +235,7 @@ def run_direct_opt(
     config.solver.direct_opt.canonical_transform or
     getattr(backend, "requires_canonical_transform", False)
   )
+  canonical_grad_clip = 0.1 if canonical_transform else None
   if (
     getattr(backend, "requires_canonical_transform", False) and
     not config.solver.direct_opt.canonical_transform
@@ -228,6 +256,7 @@ def run_direct_opt(
       f"lr={config.solver.direct_opt.optimizer.learning_rate:g} "
       f"occ_lr={config.solver.direct_opt.occupation_optimizer.learning_rate:g} "
       f"warmup={occupation_warmup_steps} "
+      f"{f'clip={canonical_grad_clip:g} ' if canonical_grad_clip is not None else ''}"
       f"win={config.solver.direct_opt.convergence.window_size} "
       f"tol={config.solver.direct_opt.convergence.energy_std_tol:.1e}"
     ),
@@ -321,6 +350,14 @@ def run_direct_opt(
     free, _ = _free_energy_from_total_energy(total, occ, smearing)
     return free, (total, free)
 
+  def evaluate_params(params):
+    coeff = _pw.coeff(params["pw"], freq_mask, sharding=sharding)
+    coeff = _to_physical_coeff(coeff)
+    occ = occ_fn(params["occ"])
+    total = backend.total_energy(coeff, occ, ctx)
+    free, _ = _free_energy_from_total_energy(total, occ, smearing)
+    return total, free
+
   # --- Init params + optimiser ---
   optimizer = create_direct_opt_optimizer(config)
   start_step = 0
@@ -394,13 +431,18 @@ def run_direct_opt(
       (_loss_val, aux), grad = jax.value_and_grad(
         loss_fn, has_aux=True,
       )(params)
+      total_energy, _free_energy_value = aux
+      grad_finite = _tree_all_finite(grad)
       grad = jax.lax.cond(
         freeze_occupation,
         _freeze_occupation_gradient,
         lambda g: g,
         grad,
       )
-      total_energy, free_energy_value = aux
+      if canonical_grad_clip is not None:
+        grad, grad_norm = _clip_gradient_tree(grad, canonical_grad_clip)
+      else:
+        grad_norm = _tree_global_norm(grad)
       total_energy_metric = _total_energy_metric(total_energy, ew)
       updates, new_opt_state = optimizer.update(
         grad,
@@ -408,12 +450,16 @@ def run_direct_opt(
         params,
         value=total_energy_metric,
       )
+      updates_finite = _tree_all_finite(updates)
       new_params = optax.apply_updates(params, updates)
+      params_finite = _tree_all_finite(new_params)
       return (
         new_params,
         new_opt_state,
-        total_energy,
-        free_energy_value,
+        grad_finite,
+        updates_finite,
+        params_finite,
+        grad_norm,
       )
 
     old_handler = signal.signal(signal.SIGINT, _handle_sigint)
@@ -469,15 +515,54 @@ def run_direct_opt(
           (config.execution.profile and step == start_step) else "update_step"
         )
         with phase_timer.phase(update_phase):
-          params, opt_state, total_val, free_val = update(
+          (
+            new_params,
+            new_opt_state,
+            grad_finite,
+            updates_finite,
+            params_finite,
+            grad_norm,
+          ) = update(
             params,
             opt_state,
             freeze_now,
           )
-          total_val, free_val = jax.block_until_ready((total_val, free_val))
+          (
+            grad_finite,
+            updates_finite,
+            params_finite,
+            grad_norm,
+          ) = jax.block_until_ready(
+            (
+              grad_finite,
+              updates_finite,
+              params_finite,
+              grad_norm,
+            )
+          )
+        if (
+          not bool(np.asarray(grad_finite)) or
+          not bool(np.asarray(updates_finite)) or
+          not bool(np.asarray(params_finite))
+        ):
+          nonfinite_abort = True
+          params = last_finite_params
+          opt_state = last_finite_opt_state
+          stage_warning(
+            "DirectOpt",
+            (
+              f"Non-finite gradient/update at step {step + 1}; "
+              "restoring previous finite state and stopping. "
+              "Reduce `solver.direct_opt.optimizer.learning_rate`."
+            ),
+          )
+          break
+        total_val, free_val = evaluate_params(new_params)
+        total_val, free_val = jax.block_until_ready((total_val, free_val))
         total_energy = float(_total_energy_metric(total_val, ew))
         free_energy_display = float(free_val + ew)
-        if not np.isfinite(total_energy) or not np.isfinite(free_energy_display):
+        if not np.isfinite(total_energy
+                          ) or not np.isfinite(free_energy_display):
           nonfinite_abort = True
           params = last_finite_params
           opt_state = last_finite_opt_state
@@ -490,6 +575,8 @@ def run_direct_opt(
             ),
           )
           break
+        params = new_params
+        opt_state = new_opt_state
         delta_energy = None
         if total_energy_history:
           delta_energy = abs(total_energy - total_energy_history[-1])

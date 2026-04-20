@@ -267,15 +267,15 @@ def format_ground_state_iteration(
     f"E={total_energy:.6f}",
     f"dE={_format_optional(delta_energy, '{:.1e}')}",
   ]
-  if density_delta is not None:
-    parts.append(f"dR={density_delta:.1e}")
-  if charge_delta is not None:
-    parts.append(f"dN={charge_delta:+.1e}")
   if energy_std is not None:
     parts.append(f"sd={energy_std:.1e}")
   if step_time is not None:
     parts.append(f"dt={step_time:.2f}s")
   if get_log_level() == "verbose":
+    if density_delta is not None:
+      parts.append(f"dR={density_delta:.1e}")
+    if charge_delta is not None:
+      parts.append(f"dN={charge_delta:+.1e}")
     if overlap_eig_min is not None and overlap_eig_max is not None:
       parts.append(f"S={overlap_eig_min:.3f}..{overlap_eig_max:.3f}")
     elif chemical_potential is not None:
